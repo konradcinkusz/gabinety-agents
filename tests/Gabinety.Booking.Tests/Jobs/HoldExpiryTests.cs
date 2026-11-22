@@ -143,15 +143,15 @@ public class HoldExpiryTests : IDisposable
     }
 
     [Fact]
-    public async Task After_expiry_a_new_booking_for_the_same_slot_succeeds()
+    public async Task After_expiry_a_new_purchase_of_the_same_offering_succeeds()
     {
         await h.WorkWeek();
         var (first, _) = await Pay.CreateBooking(h, "demo-client-1");
-        var taken = await CreateHost.Post(h.ClientFor("demo-client-2"), h.Req(), CreateHost.Key());
-        Assert.Equal(HttpStatusCode.Conflict, taken.StatusCode); // the live hold blocks the slot
+        var other = await CreateHost.Post(h.ClientFor("demo-client-2"), h.Req(), CreateHost.Key());
+        Assert.Equal(HttpStatusCode.Created, other.StatusCode); // a live hold blocks nothing: there are no slots (A-02)
 
         h.Clock.Advance(Hold10);
-        Assert.Equal(1, await Hold.Job(h).ExpireDueAsync(h.Clock.GetUtcNow(), default));
+        Assert.Equal(2, await Hold.Job(h).ExpireDueAsync(h.Clock.GetUtcNow(), default));
         Assert.Equal(BookingStatus.Expired, await Hold.StatusOf(h, first));
 
         var second = await CreateHost.Post(h.ClientFor("demo-client-2"), h.Req(), CreateHost.Key());

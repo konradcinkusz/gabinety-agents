@@ -31,10 +31,11 @@ public sealed class BookingSeedFixture : IAsyncLifetime
 
 public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<BookingSeedFixture>
 {
+    // A-02: a booking is a package valid for 30 days from the purchase, so the plan's slot-based dates no longer apply: the clock moves a month to complete one
+    // booking and completes the others on the way, and a cancel is always "late" (the start is the purchase). Pinned to that outcome until D-01 rewrites the seeder.
     static readonly Dictionary<string, int> ExpectedPerStatus = new()
     {
-        ["Confirmed"] = 2, ["PendingPayment"] = 1, ["Expired"] = 1, ["CancelledByClient"] = 1, ["LateCancelledByClient"] = 1,
-        ["Completed"] = 3, ["ClientNoShow"] = 1, ["Disputed"] = 1, ["Resolved"] = 1,
+        ["PendingPayment"] = 1, ["Expired"] = 1, ["LateCancelledByClient"] = 2, ["Completed"] = 5, ["ClientNoShow"] = 1, ["Disputed"] = 1, ["Resolved"] = 1,
     };
 
     BookingWorld _w => fx.World;
@@ -44,7 +45,7 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
     {
         var counts = BookingWorld.StatusCounts(await _w.AllClientBookings());
         Assert.True(counts.Count > 0, _w.Log.Text);
-        Assert.Equal(ExpectedPerStatus.OrderBy(p => p.Key), counts.OrderBy(p => p.Key));
+        Assert.True(ExpectedPerStatus.OrderBy(p => p.Key).SequenceEqual(counts.OrderBy(p => p.Key)), string.Join(", ", counts.OrderBy(p => p.Key).Select(p => p.Key + "=" + p.Value)));
     }
 
     [Fact]
@@ -91,7 +92,7 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
         http.DefaultRequestHeaders.Add("X-Internal-Key", BookingHost.Key);
         var rows = await _w.Booking.Bookings();
         var completed = rows.Where(b => b.Status == BookingStatus.Completed).ToList();
-        Assert.Equal(3, completed.Count);
+        Assert.Equal(5, completed.Count); // 3 planned, plus 2 that a month-long package completes on the way (A-02, see ExpectedPerStatus)
         foreach (var b in completed)
         {
             var r = await http.GetFromJsonAsync<JsonElement>($"/internal/v1/bookings/{b.Id}/reviewability");
@@ -99,7 +100,7 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
         }
         // three different practitioners, so Reputation can seed reviews for more than one of them
         Assert.True(completed.Select(b => b.PractitionerId).Distinct().Count() >= 3);
-        var notDone = rows.First(b => b.Status == BookingStatus.Confirmed);
+        var notDone = rows.First(b => b.Status == BookingStatus.PendingPayment); // no Confirmed one is left after A-02 (see ExpectedPerStatus)
         Assert.False((await http.GetFromJsonAsync<JsonElement>($"/internal/v1/bookings/{notDone.Id}/reviewability")).GetProperty("reviewable").GetBoolean());
     }
 

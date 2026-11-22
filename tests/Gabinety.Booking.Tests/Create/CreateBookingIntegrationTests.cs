@@ -7,7 +7,7 @@ using Testcontainers.PostgreSql;
 
 namespace Gabinety.Booking.Tests;
 
-/// <summary>Booking creation on real PostgreSQL 17 through the real HTTP pipeline: advisory lock, exclusion constraint, unique keys, retrying execution strategy.</summary>
+/// <summary>Booking creation on real PostgreSQL 17 through the real HTTP pipeline: unique keys, retrying execution strategy.</summary>
 [Trait("tier", "integration")]
 public class CreateBookingIntegrationTests : IAsyncLifetime
 {
@@ -42,25 +42,6 @@ public class CreateBookingIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Two_different_clients_booking_the_same_slot_at_once_exactly_one_gets_201_and_the_other_409_slot_taken()
-    {
-        for (var round = 0; round < 10; round++)
-        {
-            // A client of its own per round: the fake clock never moves, and one user may book 10 a minute and 30 a day (CONTRACTS 10.2).
-            var a = host.ClientFor($"demo-client-a-r{round}");
-            var b = host.ClientFor($"demo-client-b-r{round}");
-            var start = Day(round);
-            var rs = await Task.WhenAll(Task.Run(() => CreateHost.Post(a, host.Req(start), CreateHost.Key())), Task.Run(() => CreateHost.Post(b, host.Req(start), CreateHost.Key())));
-            var codes = rs.Select(r => r.StatusCode).Order().ToArray();
-            Assert.True(codes.SequenceEqual([HttpStatusCode.Created, HttpStatusCode.Conflict]), $"round {round} ({start}): {string.Join(",", codes)} {await rs[0].Content.ReadAsStringAsync()} {await rs[1].Content.ReadAsStringAsync()}");
-            var loser = rs.Single(r => r.StatusCode == HttpStatusCode.Conflict);
-            Assert.Equal("slot_taken", (await loser.Body()).GetProperty("code").GetString());
-            await using var db = Db();
-            Assert.Equal(1, await db.Bookings.CountAsync(x => x.PractitionerId == host.Practitioner && x.StartUtc == DateTimeOffset.Parse(start)));
-        }
-    }
-
-    [Fact]
     public async Task Two_requests_with_the_same_key_at_once_create_one_booking_and_both_answers_carry_the_same_booking_id()
     {
         for (var round = 0; round < 10; round++)
@@ -75,28 +56,6 @@ public class CreateBookingIntegrationTests : IAsyncLifetime
             Assert.Equal(1, await db.Bookings.CountAsync(x => x.IdempotencyKey == Guid.Parse(key)));
             Assert.Equal(1, await db.IdempotencyRecords.CountAsync(x => x.IdempotencyKey == Guid.Parse(key)));
         }
-    }
-
-    [Fact]
-    public async Task The_same_key_for_a_different_slot_at_once_ends_in_one_booking_and_a_conflict_not_a_500()
-    {
-        var c = host.ClientFor("demo-client-a");
-        var key = CreateHost.Key();
-        var rs = await Task.WhenAll(Task.Run(() => CreateHost.Post(c, host.Req(Day(40)), key)), Task.Run(() => CreateHost.Post(c, host.Req(Day(41)), key)));
-        Assert.Equal([HttpStatusCode.Created, HttpStatusCode.Conflict], rs.Select(r => r.StatusCode).Order().ToArray());
-        await using var db = Db();
-        Assert.Equal(1, await db.Bookings.CountAsync(x => x.IdempotencyKey == Guid.Parse(key)));
-    }
-
-    [Fact]
-    public async Task An_expired_hold_that_the_database_still_counts_is_expired_first_and_the_slot_can_be_booked()
-    {
-        var start = Day(35); // must stay inside the 60-day horizon
-        await host.Seed(db => db.Bookings.Add(Slots.NewBooking(host.Practitioner, DateTimeOffset.Parse(start), 60, Gabinety.Billing.BookingStatus.PendingPayment, host.Clock.GetUtcNow().AddMinutes(-1))));
-        var r = await CreateHost.Post(host.ClientFor("demo-client-a"), host.Req(start), CreateHost.Key());
-        Assert.Equal(HttpStatusCode.Created, r.StatusCode);
-        await using var db = Db();
-        Assert.Equal(1, await db.Bookings.CountAsync(x => x.PractitionerId == host.Practitioner && x.Status == Gabinety.Billing.BookingStatus.Expired && x.StartUtc == DateTimeOffset.Parse(start)));
     }
 
     [Fact]

@@ -55,13 +55,22 @@ public class ContractsTests
     [Fact]
     public void A_booking_request_round_trips()
     {
-        var req = new CreateBookingRequest(Guid.NewGuid(), new DateTimeOffset(2026, 12, 1, 9, 30, 0, TimeSpan.Zero),
-            new BriefDto("Opis problemu dłuższy niż dwadzieścia znaków", "audyt-kodu", true));
+        var req = new CreateBookingRequest(Guid.NewGuid(), new BriefDto("Opis problemu dłuższy niż dwadzieścia znaków", "audyt-kodu", true),
+            new DateTimeOffset(2026, 12, 1, 9, 30, 0, TimeSpan.Zero));
         var json = JsonSerializer.Serialize(req, Web);
         Assert.Contains("\"startUtc\":\"2026-12-01T09:30:00Z\"", json); // CONTRACTS 0: UTC with Z, not +00:00
         var back = JsonSerializer.Deserialize<CreateBookingRequest>(json, Web)!;
         Assert.Equal(req.Brief, back.Brief);
         Assert.Equal(req.StartUtc, back.StartUtc);
+    }
+
+    [Fact]
+    public void A_booking_request_does_not_need_startUtc()
+    {
+        var back = JsonSerializer.Deserialize<CreateBookingRequest>(
+            """{"offeringId":"5b0f4f0e-3a56-4c2b-9d5e-0a1b2c3d4e5f","brief":{"text":"Opis problemu dłuższy niż dwadzieścia znaków","aiAssisted":false}}""", Web)!;
+        Assert.Null(back.StartUtc);
+        Assert.False(JsonSerializer.Serialize(back, Web).Contains("\"startUtc\":\"", StringComparison.Ordinal));
     }
 }
 

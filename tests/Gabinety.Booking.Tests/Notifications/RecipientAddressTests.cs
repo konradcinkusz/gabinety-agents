@@ -94,12 +94,12 @@ public class RecipientAddressTests
     }
 
     [Fact]
-    public async Task Confirming_a_booking_by_payment_schedules_the_two_confirmations_the_reminder_still_ahead_and_the_review_request()
+    public async Task Confirming_a_booking_by_payment_schedules_the_two_confirmations_and_the_review_request()
     {
         using var t = new Rig(smtp: false);
         var id = await t.ConfirmedBooking();
         var kinds = (await t.Rows(id)).Select(n => n.Kind).Order().ToList();
-        Assert.Equal(new[] { NotificationKind.BookingConfirmed, NotificationKind.BookingConfirmed, NotificationKind.Reminder1h, NotificationKind.ReviewRequest }.Order(), kinds); // the start is 22 h away: no 24 h reminder
+        Assert.Equal(new[] { NotificationKind.BookingConfirmed, NotificationKind.BookingConfirmed, NotificationKind.ReviewRequest }.Order(), kinds); // a package starts at purchase: nothing to remind of (A-02)
     }
 
     [Fact]

@@ -224,6 +224,8 @@ public sealed class StripeHostTests : IDisposable
     {
         var id = await NewBooking();
         Assert.Equal("Applied", await Outcome(await Webhook(Load("event.checkout.session.completed.paid"))));
+        // A package starts at purchase, so the 24 h rule would call every cancel late. The rule is replaced in A-03; until then the booking is moved ahead to keep this test on the early path.
+        await h.Seed(db => { var b = db.Bookings.Single(x => x.Id == id); b.StartUtc = b.StartUtc.AddDays(3); b.EndUtc = b.EndUtc.AddDays(3); });
 
         var cancel = await Life.Cancel(h, id, Client);
         Assert.Equal(HttpStatusCode.OK, cancel.StatusCode);
