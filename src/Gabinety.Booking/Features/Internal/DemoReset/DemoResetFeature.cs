@@ -34,12 +34,14 @@ public sealed class DemoResetFeature : IServiceFeature
         var payments = await db.Payments.Where(p => ids.Contains(p.BookingId)).ToListAsync(ct);
         var ledger = await db.LedgerEntries.Where(l => ids.Contains(l.BookingId)).ToListAsync(ct);
         var idempotency = await db.IdempotencyRecords.Where(r => r.ClientUserId.StartsWith(Ns)).ToListAsync(ct);
+        var apiKeys = await db.ApiKeys.Where(k => k.ClientUserId.StartsWith(Ns)).ToListAsync(ct);
         var events = await db.WebhookEvents.Where(e => e.EventId.StartsWith(Ns)).ToListAsync(ct);
 
         db.RemoveRange(payments);
         db.RemoveRange(ledger);
         db.RemoveRange(idempotency);
         db.RemoveRange(events);
+        db.RemoveRange(apiKeys);
         db.RemoveRange(bookings);
         await db.SaveChangesAsync(ct); // one unit of work: all or nothing
         practitioners.Clear(); // the practitioner ids it cached belong to a Directory that is being reset too
@@ -47,7 +49,7 @@ public sealed class DemoResetFeature : IServiceFeature
         return Results.Ok(new
         {
             bookings = bookings.Count, payments = payments.Count, ledgerEntries = ledger.Count,
-            idempotencyRecords = idempotency.Count, webhookEvents = events.Count,
+            idempotencyRecords = idempotency.Count, webhookEvents = events.Count, apiKeys = apiKeys.Count,
         });
     }
 }

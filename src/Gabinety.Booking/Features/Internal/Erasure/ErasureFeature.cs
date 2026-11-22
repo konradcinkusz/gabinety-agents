@@ -93,6 +93,11 @@ public sealed class ErasureFeature : IServiceFeature
             db.ChangeTracker.Clear();
             records += batch.Count;
         }
+
+        // API keys carry the plain user id and nothing the accounting needs: they are deleted, not anonymised.
+        db.ApiKeys.RemoveRange(await db.ApiKeys.Where(k => k.ClientUserId == userId).ToListAsync(ct));
+        await db.SaveChangesAsync(ct);
+        db.ChangeTracker.Clear();
         return (bookings, records);
     }
 

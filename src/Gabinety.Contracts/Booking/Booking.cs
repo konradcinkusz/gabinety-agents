@@ -59,3 +59,13 @@ public sealed record ReviewabilityDto(bool Reviewable, string ClientUserId, Guid
 
 /// <summary>One row of <c>GET /internal/v1/analytics/pair-counts</c> (T-10.03): a client-practitioner pair and its paid bookings. <c>PairKey</c> is the fee hook's key. Ids and a count only.</summary>
 public sealed record PairCountDto(string PairKey, string ClientUserId, Guid PractitionerId, int Bookings);
+
+/// <summary>Body of <c>POST /api/v1/me/api-keys</c> (docs/agentic/PLAN.md B-01). The name is user free text: 1 to 60 characters.</summary>
+public sealed record CreateApiKeyRequest(string? Name);
+
+/// <summary>An API key as listed: never the key itself, only its 8-character <c>Prefix</c> (the characters after <c>gab_</c>).</summary>
+public sealed record ApiKeyDto(Guid Id, string Name, string Prefix, [property: System.Text.Json.Serialization.JsonConverter(typeof(Gabinety.Contracts.Common.UtcInstantConverter))] DateTimeOffset CreatedAt,
+    [property: System.Text.Json.Serialization.JsonConverter(typeof(Gabinety.Contracts.Common.UtcInstantNullableConverter))] DateTimeOffset? LastUsedAt);
+
+/// <summary>Answer of <c>POST /api/v1/me/api-keys</c>: the only time the plain <c>Key</c> is ever returned.</summary>
+public sealed record ApiKeyCreatedDto(Guid Id, string Name, string Prefix, string Key, [property: System.Text.Json.Serialization.JsonConverter(typeof(Gabinety.Contracts.Common.UtcInstantConverter))] DateTimeOffset CreatedAt);
