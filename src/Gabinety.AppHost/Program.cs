@@ -39,6 +39,7 @@ IResourceBuilder<ProjectResource> Service<TProject>(string name, int port) where
              .WithEnvironment("Llm__Provider", "Fake")
              .WithEnvironment("Database__Provider", "InMemory")
              .WithEnvironment("Payments__Provider", "Mock")
+             .WithEnvironment("Agents__Provider", "Fake")
              .WithEnvironment("Notifications__Provider", "Log")
              .WithEnvironment("Identity__Authority", "http://localhost:5100");
     }
