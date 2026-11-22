@@ -1,0 +1,16 @@
+bin/
+obj/
+.vs/
+*.user
+.env
+secrets.env
+node_modules/
+.next/
+TestResults/
+*.log
+*.tsbuildinfo
+apphost.log
+evals/reports/
+
+# Signing keys are secrets (T-09.04)
+*.pem

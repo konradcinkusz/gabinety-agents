@@ -1,0 +1,22 @@
+.offer__title { margin: 0; font-size: var(--text-lg); }
+.row-actions { margin-top: var(--space-2); }
+
+/* Duration and price share a row from 48 rem; below that they stack. The name and the description stay full width. */
+.offer-form__pair { display: grid; gap: var(--space-4); }
+@media (min-width: 48rem) { .offer-form__pair { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.chip:has(input:checked) { background: var(--color-accent-soft); border-color: var(--color-accent); }
+
+/* The form and the preview of the public card: side by side from 56 rem, the preview follows the form on a phone. */
+.offer-editor { display: grid; gap: var(--space-5); }
+@media (min-width: 56rem) {
+    .offer-editor { grid-template-columns: minmax(0, 1fr) 22rem; align-items: start; }
+    .offer-preview { position: sticky; top: var(--space-5); }
+}
+.offer-preview__label { margin: 0 0 var(--space-1); font-size: var(--text-lg); }
+.offer-preview__note { margin: 0 0 var(--space-4); font-size: var(--text-sm); }
+.offer-preview__title { margin: 0 0 var(--space-2); font-size: var(--text-lg); overflow-wrap: anywhere; }
+.offer-preview__desc { margin: 0 0 var(--space-3); white-space: pre-line; overflow-wrap: anywhere; }
+.offer-preview__meta { margin: 0; }
+
+.callout__title { font-size: var(--text-lg); margin-bottom: var(--space-2); }

@@ -1,0 +1,55 @@
+# booking (T-09.02, SPEC 4.3): Bookings, payments and jobs; owns bookingdb.
+# Deploy (T-09.03 automates this): fly deploy --config deploy/fly/booking.fly.toml --ha=false   (run from the repository root)
+# Nothing secret and no real hostname lives in this file. Placeholders in <angle brackets> are filled by the owner after T-09.01 (Fly organisation) and the domain decision.
+# Fly ignores a Dockerfile HEALTHCHECK, so the checks below repeat what the Dockerfile asks.
+
+app = "gabinety-booking-staging"
+primary_region = "fra"
+
+[build]
+  # Both paths are relative to THIS file. The context is the repository root (the Dockerfile copies src/** and the solution files).
+  dockerfile = "../../src/Gabinety.Booking/Dockerfile"
+  context = "../.."
+
+[env]
+  ASPNETCORE_ENVIRONMENT = "Production"
+  ASPNETCORE_HTTP_PORTS = "8080"
+  TZ = "Europe/Warsaw"
+  Database__Provider = "PostgreSQL"
+  # NOT set here, on purpose: Environment__Kind and GABINETY_FAKE (CONTRACTS 10.4: the /internal/v1/test and demo endpoints must stay unmapped in staging).
+  # Authservice is public (it is the JWT issuer): the same URL the web app and every validator use.
+  Identity__Authority = "https://<authservice-public-host>"
+  Identity__Audience = "gabinety"
+  Backend__Directory = "http://gabinety-directory-staging.internal:8080"
+  Site__BaseUrl = "https://<web-public-host>"
+  # Stripe (T-09.05, ADR proposal 0011). The host refuses to start without both Stripe secrets below, and the deploy refuses to run without them (deploy/secrets.map: required).
+  Payments__Provider = "Stripe"
+  # Notifications__Provider is NOT set here on purpose: the code default is Log and the deploy stages Smtp (a secret) only when NOTIFICATIONS_SMTP_HOST and NOTIFICATIONS_SMTP_FROM
+  # are set (deploy/secrets.map). Log outside the fake profile is announced at startup and as email: Degraded in /health/details; it never claims delivery.
+  # Billing__FirstConsultationFeeBps is the owner's constant (CONTRACTS 9, D-17): not set here, the code default applies.
+# Secrets (NOT here), set once with `fly secrets set --app gabinety-booking-staging`:
+#   ConnectionStrings__bookingdb
+#   Internal__Callers__Reputation, Internal__Callers__Directory, Internal__Keys__Directory   (one key per caller and callee, never shared; F-03)
+#   optional Internal__Callers__Owner
+#   Payments__Stripe__SecretKey, Payments__Stripe__WebhookSecret   (required: GitHub secrets PAYMENTS_STRIPE_SECRET_KEY and PAYMENTS_STRIPE_WEBHOOK_SECRET; docs/operations/PAYMENTS-GO-LIVE.md)
+#   optional Notifications__Provider (staged as Smtp only with host and sender), Notifications__Smtp__Host/FromAddress/Port/TlsMode/User/Password   (docs/operations/EMAIL.md)
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+  # Public listener (F-03): the payment webhook POST /webhooks/payments/{provider} (SPEC 4.3). Fly cannot expose one path, so the whole app answers on <app>.fly.dev and the CODE filters what the public edge may reach (src/Gabinety.Booking/PublicEdge.cs): the webhook, /alive and /api/v1/* except /api/v1/admin/*; /internal/*, /health, OpenAPI and admin are 404 from the edge. The web app reaches Booking over .internal. Owner decision on which apps are public: see the PR. Min 1: in-request and it runs the jobs (stats push, payouts, notifications).
+
+  # Liveness only (/alive runs no dependency check, P7); /health reports optional dependencies and must never fail a deploy. Always on, it runs the jobs (SPEC 4.3).
+  [[http_service.checks]]
+    method = "GET"
+    path = "/alive"
+    interval = "15s"
+    timeout = "3s"
+    grace_period = "30s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

@@ -1,0 +1,127 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-test:
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: scripts/check-solution-projects.sh
+      - run: scripts/check-fly-toml.sh # T-09.02: deploy/fly/*.fly.toml parse, name existing Dockerfiles, checks match HEALTHCHECK
+      - run: scripts/check-private-topology.sh # F-03 / T-10.10: private apps stay private, web uses .internal/.flycast
+      - run: scripts/check-authservice-pin.sh # one authservice digest in the fly toml, the AppHost, the integration tests and this file
+      - run: dotnet build -warnaserror
+      - run: dotnet test --no-build --filter "tier!=integration"
+  # e2e runs the journeys J1-J7 (docs/operations, tests/e2e/README.md) against the Blazor web host (ADR-0010) on a fresh fake profile (the journeys write data, J3 cannot run twice on one stack).
+  # The check name `e2e` is a required check.
+  e2e:
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: tests/e2e/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Start the fake profile (no Docker, no credentials)
+        run: |
+          nohup dotnet run --project src/Gabinety.AppHost --launch-profile fake > apphost.log 2>&1 &
+      - name: Every service answers /health
+        run: scripts/check-fake-profile.sh
+      # --- e2e harness (T-08.03a): Playwright against the running fake profile. Journeys J1-J7 only add specs under tests/e2e/journeys. ---
+      - run: pnpm --dir tests/e2e install --frozen-lockfile
+      - run: pnpm --dir tests/e2e exec playwright install --with-deps chromium
+      - name: Playwright (harness smoke and journeys)
+        run: pnpm --dir tests/e2e test
+        env:
+          CI: "true" # the web host is src/Gabinety.Web on :3000 (tests/e2e/harness/env.ts)
+      - name: Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            tests/e2e/playwright-report
+            tests/e2e/test-results
+          retention-days: 7
+      # --- end e2e harness ---
+      - name: AppHost log on failure
+        if: failure()
+        run: tail -100 apphost.log
+  # --- docker-build (the service images and the web host's; T-09.02). ---
+  docker-build-backend:
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # `web` is the Blazor Web App frontend (ADR-0010), project Gabinety.Web; the check name `docker-build-backend (web)` is a required check.
+        include:
+          - { service: directory, project: Directory }
+          - { service: booking, project: Booking }
+          - { service: reputation, project: Reputation }
+          - { service: assistant, project: Assistant }
+          - { service: web, project: Web }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the image (context = repository root)
+        run: docker build -f "src/Gabinety.$PROJECT/Dockerfile" --build-arg VCS_REF="$GITHUB_SHA" -t "gabinety-$MATRIX_SERVICE:ci" .
+        env:
+          MATRIX_SERVICE: ${{ matrix.service }}
+          PROJECT: ${{ matrix.project }}
+      - name: Non-root, /alive, Europe/Warsaw
+        run: scripts/check-docker-image.sh "gabinety-${{ matrix.service }}:ci" ${{ matrix.service == 'assistant' && '--copilot-runtime' || '' }}
+  # --- end docker-build (backend) ---
+  integration:
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS || '["ubuntu-latest"]') }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet build -warnaserror
+      # One real authservice for the AuthContract suite and the web host's real-service tests (AUTH_BASE_URL). The Testcontainers tests (tests/Gabinety.Integration.Tests/RealAuth, ThinSlice)
+      # start their own instances of the same image. Network__ClientIpHeader lets each test name its own client address: authservice limits auth calls to 20 a minute per address.
+      # The InitialAdmin and the dummy OAuth values are synthetic (CI only); GitHub sign-in can only be STARTED with them, never completed.
+      - name: Start PostgreSQL and the real authservice image (pinned by digest)
+        run: |
+          set -euo pipefail
+          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out "$RUNNER_TEMP/jwt.pem"
+          docker network create authnet
+          docker run -d --name authpg --network authnet -e POSTGRES_PASSWORD=ci-only -e POSTGRES_DB=authdb postgres:17-alpine
+          until docker exec authpg pg_isready -U postgres -d authdb; do sleep 1; done
+          docker run -d --name authsvc --network authnet -p 8081:8080 \
+            -e ConnectionStrings__DefaultConnection="Host=authpg;Port=5432;Database=authdb;Username=postgres;Password=ci-only" \
+            -e DATABASE_PROVIDER=PostgreSQL -e Jwt__Algorithm=RS256 -e Jwt__Issuer=gabinety-contract -e Jwt__Audience=gabinety \
+            -e Auth__RequireConfirmedEmail=false -e "Jwt__PrivateKeyPem=$(cat "$RUNNER_TEMP/jwt.pem")" \
+            -e Network__ClientIpHeader=Fly-Client-IP \
+            -e InitialAdmin__Email=owner@example.test -e 'InitialAdmin__Password=Owner-Pass-1234!' \
+            -e OAuth__GitHub__ClientId=dummy-github-client-id -e OAuth__GitHub__ClientSecret=dummy-github-client-secret \
+            -e OAuth__CallbackBaseUrl=http://localhost:8081 -e OAuth__PostLoginRedirectBaseUrl=http://localhost:3000 \
+            -e OAuth__PostLoginRedirectAllowedBaseUrls__0=http://localhost:3000 \
+            ghcr.io/konradcinkusz/authservice@sha256:d0309a94f6b6300d4b8091381786c160ae7717a022416debaaa6d8d19a244645
+          for i in $(seq 1 90); do
+            [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8081/health/ready)" = 200 ] && break
+            sleep 2
+          done
+          curl -fsS http://localhost:8081/health/ready
+          echo "AUTH_BASE_URL=http://localhost:8081" >> "$GITHUB_ENV"
+      - run: dotnet test --no-build --filter "tier=integration" --logger "console;verbosity=detailed"
+      - name: authservice log on failure
+        if: failure()
+        run: docker logs authsvc 2>&1 | tail -60

@@ -1,0 +1,18 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.6.5">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsAspireHost>true</IsAspireHost>
+    <AspireUseCliBundle>true</AspireUseCliBundle>
+    <UserSecretsId>gabinety-tech-apphost</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" />
+    <ProjectReference Include="../Gabinety.Directory/Gabinety.Directory.csproj" />
+    <ProjectReference Include="../Gabinety.Booking/Gabinety.Booking.csproj" />
+    <ProjectReference Include="../Gabinety.Reputation/Gabinety.Reputation.csproj" />
+    <ProjectReference Include="../Gabinety.Assistant/Gabinety.Assistant.csproj" />
+    <ProjectReference Include="../Gabinety.Web/Gabinety.Web.csproj" />
+    <ProjectReference Include="../../tools/Gabinety.DevIdentity/Gabinety.DevIdentity.csproj" />
+    <ProjectReference Include="../../tools/Gabinety.DemoSeeder/Gabinety.DemoSeeder.csproj" />
+  </ItemGroup>
+</Project>

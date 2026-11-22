@@ -1,0 +1,82 @@
+@* The header of DESIGN-CONTRACT 5.1: brand, main navigation, the account area by session. Under 40 rem the navigation and the account area become ONE native <details> menu (no JavaScript, 44 px target);
+   both renderings are in the page and CSS shows one, so the links are never reachable twice at the same width. The session is read once, from the authentication state (never HttpContext). Static: no render mode. *@
+@inject NavigationManager Navigation
+@inject MeClient Me
+@inject TimeProvider Time
+
+<header class="site-header">
+    <div class="site-header__inner">
+        <a class="brand" href="/">
+            @* The mark is decorative: the name is the link text. Colour comes from CSS (fill currentColor, the glyph from the contrast token). *@
+            <svg class="brand__mark" viewBox="8 12 96 96" aria-hidden="true" focusable="false">
+                <rect x="8" y="12" width="96" height="96" rx="22" fill="currentColor" />
+                <path class="brand__glyph" d="M42 46 28 60l14 14M70 46l14 14-14 14M61 42 51 78" fill="none" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <span>@Pl.Site.Name</span>
+        </a>
+        <nav class="site-nav" aria-label="@Pl.Nav.Label">
+            <ul class="nav-list">
+                @foreach (var item in Model.Links)
+                {
+                    <li><a href="@item.Href" aria-current="@Current(item)">@item.Label</a></li>
+                }
+            </ul>
+        </nav>
+        <div class="site-account">
+            @if (Model.SignedIn)
+            {
+                <details class="account-menu">
+                    <summary data-testid="account-menu">
+                        @if (Model.Initials.Length > 0)
+                        {
+                            <span class="account-menu__avatar" aria-hidden="true">@Model.Initials</span>
+                        }
+                        <span class="account-menu__email" title="@Model.Email">@(Model.Email ?? Pl.Nav.AccountMenu)</span>
+                    </summary>
+                    <ul>
+                        @foreach (var item in Model.AccountMenu)
+                        {
+                            <li><a href="@item.Href" aria-current="@Current(item)">@item.Label</a></li>
+                        }
+                    </ul>
+                </details>
+            }
+            else
+            {
+                <a class="btn btn--ghost" href="@Model.SignIn!.Href">@Model.SignIn!.Label</a>
+                <a class="btn btn--primary" href="@Model.Register!.Href">@Model.Register!.Label</a>
+            }
+        </div>
+        <details class="site-menu">
+            <summary>@Pl.Nav.Menu</summary>
+            <nav aria-label="@Pl.Nav.Label">
+                <ul>
+                    @foreach (var item in Model.Flat)
+                    {
+                        <li><a href="@item.Href" aria-current="@Current(item)">@item.Label</a></li>
+                    }
+                </ul>
+            </nav>
+        </details>
+    </div>
+</header>
+
+@code {
+    [CascadingParameter] Task<AuthenticationState>? AuthState { get; set; }
+
+    HeaderModel Model { get; set; } = SiteNavigation.For(null, "/");
+
+    string Path => "/" + Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0];
+
+    /// <summary>The page a visitor came from becomes the return target of sign-in, except on the sign-in pages themselves (a loop; <see cref="ReturnTarget.Safe"/> turns those into "/").</summary>
+    string Back => ReturnTarget.Safe(Path == "/" ? null : "/" + Navigation.ToBaseRelativePath(Navigation.Uri));
+
+    string? Current(NavItem item) => item.IsCurrent(Path) ? "page" : null;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var user = AuthState is null ? null : (await AuthState).User;
+        var practitioner = await PractitionerProfileCheck.HasProfileAsync(user, Me, Time);
+        Model = SiteNavigation.For(user, Path, Back, practitioner);
+    }
+}

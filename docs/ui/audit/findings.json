@@ -1,0 +1,7894 @@
+{
+ "generatedAt": "2026-11-22T15:10:57.970Z",
+ "base": "http://localhost:3000",
+ "shots": 99,
+ "guards": [
+  {
+   "who": "visitor",
+   "path": "/konto",
+   "status": 302,
+   "location": "http://localhost:3000/logowanie?redirect=%2Fkonto"
+  },
+  {
+   "who": "visitor",
+   "path": "/moje/rezerwacje",
+   "status": 302,
+   "location": "http://localhost:3000/logowanie?redirect=%2Fmoje%2Frezerwacje"
+  },
+  {
+   "who": "visitor",
+   "path": "/gabinet-programisty",
+   "status": 302,
+   "location": "http://localhost:3000/logowanie?redirect=%2Fgabinet-programisty"
+  },
+  {
+   "who": "visitor",
+   "path": "/admin/spory",
+   "status": 302,
+   "location": "http://localhost:3000/logowanie?redirect=%2Fadmin%2Fspory"
+  },
+  {
+   "who": "visitor",
+   "path": "/checkout/mock/00000000-0000-0000-0000-000000000000",
+   "status": 302,
+   "location": "http://localhost:3000/logowanie?redirect=%2Fcheckout%2Fmock%2F00000000-0000-0000-0000-000000000000"
+  },
+  {
+   "who": "client",
+   "path": "/admin/weryfikacja",
+   "status": 403,
+   "location": null
+  },
+  {
+   "who": "client",
+   "path": "/admin/ksiega",
+   "status": 403,
+   "location": null
+  },
+  {
+   "who": "client",
+   "path": "/gabinet-programisty",
+   "status": 200,
+   "location": null
+  }
+ ],
+ "deadLinks": [
+  {
+   "role": "visitor",
+   "href": "/oauth/github/start",
+   "status": 400
+  }
+ ],
+ "deadButtons": [],
+ "flows": [
+  {
+   "390": {
+    "screenshot": null,
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 2,
+    "clipped": [],
+    "axe": []
+   },
+   "1440": {
+    "screenshot": "docs/ui/audit/client/flow-01-category-1440-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [],
+    "axe": []
+   },
+   "flow": "client",
+   "step": "01-category",
+   "note": "after choosing a category",
+   "url": "/programisci/audyt-kodu"
+  },
+  {
+   "390": {
+    "screenshot": "docs/ui/audit/client/flow-02-booking-form-390-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [],
+    "axe": []
+   },
+   "1440": {
+    "screenshot": "docs/ui/audit/client/flow-02-booking-form-1440-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [],
+    "axe": []
+   },
+   "flow": "client",
+   "step": "02-booking-form",
+   "note": "booking page, empty",
+   "url": "/rezerwacja/5fd52de2-15da-4c81-a176-204564e2fc34?start=2026-11-23T08%3A30%3A00Z&gabinet=demo-celina-przykladowska"
+  },
+  {
+   "390": {
+    "screenshot": "docs/ui/audit/client/flow-03-booking-validation-390-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 1,
+    "clipped": [
+     "span[Błąd:] scroll=34 client=1"
+    ],
+    "axe": []
+   },
+   "1440": {
+    "screenshot": "docs/ui/audit/client/flow-03-booking-validation-1440-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [
+     "span[Błąd:] scroll=34 client=1"
+    ],
+    "axe": []
+   },
+   "flow": "client",
+   "step": "03-booking-validation",
+   "note": "pay pressed with empty brief",
+   "url": "/rezerwacja/5fd52de2-15da-4c81-a176-204564e2fc34?start=2026-11-23T08%3A30%3A00Z&gabinet=demo-celina-przykladowska"
+  },
+  {
+   "390": {
+    "screenshot": null,
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [],
+    "axe": []
+   },
+   "1440": {
+    "screenshot": "docs/ui/audit/client/flow-04-booking-assistant-1440-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [],
+    "axe": []
+   },
+   "flow": "client",
+   "step": "04-booking-assistant",
+   "note": "after asking the assistant",
+   "url": "/rezerwacja/5fd52de2-15da-4c81-a176-204564e2fc34?start=2026-11-23T08%3A30%3A00Z&gabinet=demo-celina-przykladowska"
+  },
+  {
+   "390": {
+    "screenshot": "docs/ui/audit/client/flow-05-checkout-390-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [],
+    "axe": []
+   },
+   "1440": {
+    "screenshot": "docs/ui/audit/client/flow-05-checkout-1440-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [],
+    "axe": []
+   },
+   "flow": "client",
+   "step": "05-checkout",
+   "note": "mock checkout",
+   "url": "/checkout/mock/01a203ce-2577-71f4-bb9f-29452c686c1e"
+  },
+  {
+   "390": {
+    "screenshot": null,
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 1,
+    "clipped": [],
+    "axe": []
+   },
+   "1440": {
+    "screenshot": "docs/ui/audit/client/flow-06-confirmation-1440-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [],
+    "axe": []
+   },
+   "flow": "client",
+   "step": "06-confirmation",
+   "note": "confirmation",
+   "url": "/rezerwacja/potwierdzenie/01a203ce-2577-71f4-bb9f-29452c686c1e"
+  },
+  {
+   "390": {
+    "screenshot": null,
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [
+     "a[/moje/rezerwacje] x a[Programista]",
+     "a[/gabinet-programisty] x a[Programista]",
+     "a[/konto] x select#status[Wszystkie Oczekuje na płatność Potwierdz]"
+    ],
+    "tapTotal": 0,
+    "clipped": [
+     "span[: Pierwszy prototyp z modelem językowym] scroll=331 client=1",
+     "span[: Audyt kodu aplikacji .NET] scroll=207 client=1",
+     "span[: Konsultacja nad jedną decyzją architek] scroll=377 client=1",
+     "span[: Pierwszy prototyp z modelem językowym] scroll=331 client=1"
+    ],
+    "axe": []
+   },
+   "1440": {
+    "screenshot": "docs/ui/audit/client/flow-07-my-bookings-1440-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [
+     "span[: Pierwszy prototyp z modelem językowym] scroll=331 client=1",
+     "span[: Audyt kodu aplikacji .NET] scroll=207 client=1",
+     "span[: Konsultacja nad jedną decyzją architek] scroll=377 client=1",
+     "span[: Pierwszy prototyp z modelem językowym] scroll=331 client=1"
+    ],
+    "axe": []
+   },
+   "flow": "client",
+   "step": "07-my-bookings",
+   "note": "list with the new booking",
+   "url": "/moje/rezerwacje"
+  },
+  {
+   "390": {
+    "screenshot": "docs/ui/audit/client/flow-08-booking-detail-390-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 2,
+    "clipped": [],
+    "axe": []
+   },
+   "1440": {
+    "screenshot": "docs/ui/audit/client/flow-08-booking-detail-1440-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [],
+    "axe": []
+   },
+   "flow": "client",
+   "step": "08-booking-detail",
+   "note": "new booking, confirmed",
+   "url": "/moje/rezerwacje/01a203ce-2577-71f4-bb9f-29452c686c1e?role=client"
+  },
+  {
+   "390": {
+    "screenshot": "docs/ui/audit/client/flow-09-cancel-dialog-390-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 2,
+    "clipped": [],
+    "axe": []
+   },
+   "1440": {
+    "screenshot": "docs/ui/audit/client/flow-09-cancel-dialog-1440-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [],
+    "axe": []
+   },
+   "flow": "client",
+   "step": "09-cancel-dialog",
+   "note": "cancel confirmation dialog",
+   "url": "/moje/rezerwacje/01a203ce-2577-71f4-bb9f-29452c686c1e?role=client&action=cancel"
+  },
+  {
+   "390": {
+    "screenshot": null,
+    "hscroll": {
+     "scrollWidth": 429,
+     "clientWidth": 390
+    },
+    "offscreen": [
+     "span[Anulowana przez klienta (bez zwrotu)] right=429 left=177"
+    ],
+    "overlaps": [],
+    "tapTotal": 1,
+    "clipped": [],
+    "axe": []
+   },
+   "1440": {
+    "screenshot": "docs/ui/audit/client/flow-10-cancelled-1440-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [],
+    "axe": []
+   },
+   "flow": "client",
+   "step": "10-cancelled",
+   "note": "after cancel",
+   "url": "/moje/rezerwacje/01a203ce-2577-71f4-bb9f-29452c686c1e?role=client&done=cancelled"
+  },
+  {
+   "390": {
+    "screenshot": "docs/ui/audit/client/flow-13-review-validation-390-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [
+     "a[/wyloguj] x a[Wybierz ocenę od 1 do 5.]"
+    ],
+    "tapTotal": 1,
+    "clipped": [
+     "span[1 z 5] scroll=34 client=1",
+     "span[2 z 5] scroll=37 client=1",
+     "span[3 z 5] scroll=37 client=1",
+     "span[4 z 5] scroll=38 client=1",
+     "span[5 z 5] scroll=37 client=1",
+     "span[Błąd:] scroll=34 client=1",
+     "span[Błąd:] scroll=34 client=1"
+    ],
+    "axe": []
+   },
+   "1440": {
+    "screenshot": "docs/ui/audit/client/flow-13-review-validation-1440-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [
+     "span[1 z 5] scroll=34 client=1",
+     "span[2 z 5] scroll=37 client=1",
+     "span[3 z 5] scroll=37 client=1",
+     "span[4 z 5] scroll=38 client=1",
+     "span[5 z 5] scroll=37 client=1",
+     "span[Błąd:] scroll=34 client=1",
+     "span[Błąd:] scroll=34 client=1"
+    ],
+    "axe": []
+   },
+   "flow": "client",
+   "step": "13-review-validation",
+   "note": "review submitted empty",
+   "url": "/moje/opinie/01a203c2-e8e9-7ee8-8a6b-1231d938f43d"
+  },
+  {
+   "390": {
+    "screenshot": null,
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 1,
+    "clipped": [],
+    "axe": []
+   },
+   "1440": {
+    "screenshot": "docs/ui/audit/client/flow-14-review-sent-1440-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [],
+    "axe": []
+   },
+   "flow": "client",
+   "step": "14-review-sent",
+   "note": "after sending the review",
+   "url": "/moje/opinie/01a203c2-e8e9-7ee8-8a6b-1231d938f43d"
+  },
+  {
+   "390": {
+    "screenshot": "docs/ui/audit/client/flow-11-dispute-validation-390-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 1,
+    "clipped": [
+     "span[Błąd:] scroll=34 client=1"
+    ],
+    "axe": []
+   },
+   "1440": {
+    "screenshot": "docs/ui/audit/client/flow-11-dispute-validation-1440-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [
+     "span[Błąd:] scroll=34 client=1"
+    ],
+    "axe": []
+   },
+   "flow": "client",
+   "step": "11-dispute-validation",
+   "note": "dispute form submitted empty",
+   "url": "/moje/rezerwacje/01a203c2-e8e9-7ee8-8a6b-1231d938f43d?role=client&action=dispute"
+  },
+  {
+   "390": {
+    "screenshot": null,
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 1,
+    "clipped": [],
+    "axe": []
+   },
+   "1440": {
+    "screenshot": "docs/ui/audit/client/flow-12-dispute-sent-1440-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [],
+    "axe": []
+   },
+   "flow": "client",
+   "step": "12-dispute-sent",
+   "note": "after sending the dispute",
+   "url": "/moje/rezerwacje/01a203c2-e8e9-7ee8-8a6b-1231d938f43d?role=client&done=disputed"
+  },
+  {
+   "390": {
+    "screenshot": "docs/ui/audit/newpractitioner/flow-01-register-validation-390-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [
+     "a[/rejestracja] x a[Podaj adres e-mail.]",
+     "a[Regulamin] x a[Politykę prywatności]"
+    ],
+    "tapTotal": 5,
+    "clipped": [
+     "span[Błąd:] scroll=34 client=1",
+     "span[Błąd:] scroll=34 client=1",
+     "span[Błąd:] scroll=34 client=1"
+    ],
+    "axe": []
+   },
+   "1440": {
+    "screenshot": "docs/ui/audit/newpractitioner/flow-01-register-validation-1440-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [
+     "span[Błąd:] scroll=34 client=1",
+     "span[Błąd:] scroll=34 client=1",
+     "span[Błąd:] scroll=34 client=1"
+    ],
+    "axe": []
+   },
+   "flow": "newpractitioner",
+   "step": "01-register-validation",
+   "note": "register submitted empty",
+   "url": "/rejestracja"
+  },
+  {
+   "390": {
+    "screenshot": null,
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [
+     "a[/rejestracja] x a[Hasło musi mieć co najmniej 8 znaków ora]",
+     "a[Regulamin] x a[Politykę prywatności]"
+    ],
+    "tapTotal": 3,
+    "clipped": [
+     "span[Błąd:] scroll=34 client=1",
+     "span[Błąd:] scroll=34 client=1"
+    ],
+    "axe": []
+   },
+   "1440": {
+    "screenshot": "docs/ui/audit/newpractitioner/flow-02-register-short-password-1440-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [
+     "span[Błąd:] scroll=34 client=1",
+     "span[Błąd:] scroll=34 client=1"
+    ],
+    "axe": []
+   },
+   "flow": "newpractitioner",
+   "step": "02-register-short-password",
+   "note": "short password, no consent",
+   "url": "/rejestracja"
+  },
+  {
+   "390": {
+    "screenshot": null,
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 1,
+    "clipped": [],
+    "axe": []
+   },
+   "1440": {
+    "screenshot": "docs/ui/audit/visitor/flow-login-wrong-password-1440-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [],
+    "axe": []
+   },
+   "flow": "visitor",
+   "step": "login-wrong-password",
+   "note": "wrong password",
+   "url": "/logowanie"
+  },
+  {
+   "390": {
+    "screenshot": null,
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [
+     "a[/programisci] x a[Oferty]",
+     "a[/programisci] x a[Dostępność]",
+     "a[/moje/rezerwacje] x a[Oferty]",
+     "a[/moje/rezerwacje] x a[Dostępność]"
+    ],
+    "tapTotal": 0,
+    "clipped": [],
+    "axe": []
+   },
+   "1440": {
+    "screenshot": "docs/ui/audit/newpractitioner/flow-03-create-profile-1440-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [],
+    "axe": []
+   },
+   "flow": "newpractitioner",
+   "step": "03-create-profile",
+   "note": "no profile yet",
+   "url": "/gabinet-programisty"
+  },
+  {
+   "390": {
+    "screenshot": "docs/ui/audit/newpractitioner/flow-04-dashboard-draft-390-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [
+     "a[/gabinet-programisty] x a[Oferty]",
+     "a[/gabinet-programisty] x a[Dostępność]",
+     "a[/konto] x a[Oferty]",
+     "a[/konto] x a[Dostępność]"
+    ],
+    "tapTotal": 7,
+    "clipped": [
+     "h2#status-title[Status profilu] scroll=142 client=1"
+    ],
+    "axe": []
+   },
+   "1440": {
+    "screenshot": "docs/ui/audit/newpractitioner/flow-04-dashboard-draft-1440-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [
+     "h2#status-title[Status profilu] scroll=142 client=1"
+    ],
+    "axe": []
+   },
+   "flow": "newpractitioner",
+   "step": "04-dashboard-draft",
+   "note": "draft dashboard with checklist",
+   "url": "/gabinet-programisty?flash=gabinet-created"
+  },
+  {
+   "390": {
+    "screenshot": "docs/ui/audit/newpractitioner/flow-05-profile-validation-390-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [
+     "a[/programisci] x a[Oferty]",
+     "a[/programisci] x a[Dostępność]",
+     "a[/moje/rezerwacje] x a[Oferty]",
+     "a[/moje/rezerwacje] x a[Dostępność]",
+     "a[/wyloguj] x a[Nagłówek ma mieć od 10 do 120 znaków.]"
+    ],
+    "tapTotal": 0,
+    "clipped": [
+     "span[Błąd:] scroll=34 client=1"
+    ],
+    "axe": []
+   },
+   "1440": {
+    "screenshot": "docs/ui/audit/newpractitioner/flow-05-profile-validation-1440-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [
+     "span[Błąd:] scroll=34 client=1"
+    ],
+    "axe": []
+   },
+   "flow": "newpractitioner",
+   "step": "05-profile-validation",
+   "note": "profile saved empty",
+   "url": "/gabinet-programisty/profil"
+  },
+  {
+   "390": {
+    "screenshot": "docs/ui/audit/newpractitioner/flow-06-offerings-validation-390-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [
+     "a[/programisci] x a[Oferty]",
+     "a[/programisci] x a[Dostępność]",
+     "a[/moje/rezerwacje] x a[Oferty]",
+     "a[/moje/rezerwacje] x a[Dostępność]"
+    ],
+    "tapTotal": 13,
+    "clipped": [
+     "span[Błąd:] scroll=34 client=1",
+     "span[Błąd:] scroll=34 client=1",
+     "span[Błąd:] scroll=34 client=1"
+    ],
+    "axe": []
+   },
+   "1440": {
+    "screenshot": "docs/ui/audit/newpractitioner/flow-06-offerings-validation-1440-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [
+     "span[Błąd:] scroll=34 client=1",
+     "span[Błąd:] scroll=34 client=1",
+     "span[Błąd:] scroll=34 client=1"
+    ],
+    "axe": []
+   },
+   "flow": "newpractitioner",
+   "step": "06-offerings-validation",
+   "note": "offer saved empty",
+   "url": "/gabinet-programisty/oferty"
+  },
+  {
+   "390": {
+    "screenshot": null,
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [
+     "a[/programisci] x a[Oferty]",
+     "a[/programisci] x a[Dostępność]",
+     "a[/moje/rezerwacje] x a[Oferty]",
+     "a[/moje/rezerwacje] x a[Dostępność]"
+    ],
+    "tapTotal": 0,
+    "clipped": [
+     "button[Zapisz] scroll=39 client=1"
+    ],
+    "axe": []
+   },
+   "1440": {
+    "screenshot": "docs/ui/audit/newpractitioner/flow-07-availability-empty-1440-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [
+     "button[Zapisz] scroll=39 client=1"
+    ],
+    "axe": []
+   },
+   "flow": "newpractitioner",
+   "step": "07-availability-empty",
+   "note": "availability, nothing set",
+   "url": "/gabinet-programisty/dostepnosc"
+  },
+  {
+   "390": {
+    "screenshot": "docs/ui/audit/admin/flow-01-dispute-resolve-form-390-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [
+     "a[/moje/rezerwacje] x a[Weryfikacja programistów]",
+     "a[/moje/rezerwacje] x a[Spory]",
+     "a[/moje/rezerwacje] x a[Księga]"
+    ],
+    "tapTotal": 3,
+    "clipped": [],
+    "axe": []
+   },
+   "1440": {
+    "screenshot": "docs/ui/audit/admin/flow-01-dispute-resolve-form-1440-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [],
+    "axe": []
+   },
+   "flow": "admin",
+   "step": "01-dispute-resolve-form",
+   "note": "resolve form opened",
+   "url": "/admin/spory?status=open&rozstrzygnij=01a203c2-e944-75d3-89df-4ca4c3b92d18"
+  },
+  {
+   "390": {
+    "screenshot": null,
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [
+     "a[/moje/rezerwacje] x a[Weryfikacja programistów]",
+     "a[/moje/rezerwacje] x a[Spory]",
+     "a[/moje/rezerwacje] x a[Księga]"
+    ],
+    "tapTotal": 3,
+    "clipped": [
+     "span[Błąd:] scroll=33 client=1"
+    ],
+    "axe": []
+   },
+   "1440": {
+    "screenshot": "docs/ui/audit/admin/flow-02-dispute-resolve-validation-1440-light.png",
+    "hscroll": null,
+    "offscreen": [],
+    "overlaps": [],
+    "tapTotal": 0,
+    "clipped": [
+     "span[Błąd:] scroll=33 client=1"
+    ],
+    "axe": []
+   },
+   "flow": "admin",
+   "step": "02-dispute-resolve-validation",
+   "note": "continue pressed without choice",
+   "url": "/admin/spory?status=open&rozstrzygnij=01a203c2-e944-75d3-89df-4ca4c3b92d18"
+  }
+ ],
+ "findings": [
+  {
+   "role": "visitor",
+   "route": "home",
+   "path": "/",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/",
+   "title": "Gabinety Tech: płatna konsultacja ze zweryfikowanym programistą",
+   "hscroll": null,
+   "docHeight": 1302,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 1377,
+   "h1": [
+    "Umów płatną konsultację ze zweryfikowanym programistą"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 21,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/home-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "programisci",
+   "path": "/programisci",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/programisci",
+   "title": "Programiści do konsultacji online | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1386,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 1190,
+   "h1": [
+    "Programiści"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 29,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/programisci-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "programisci-category",
+   "path": "/programisci/audyt-kodu",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/programisci/audyt-kodu",
+   "title": "Audyt kodu: konsultacje z programistą | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1548,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 698,
+   "h1": [
+    "Audyt kodu"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 30,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/programisci-category-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "programisci-category-tech",
+   "path": "/programisci/audyt-kodu/dotnet",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/programisci/audyt-kodu/dotnet",
+   "title": "Audyt kodu i .NET: konsultacje z programistą | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1548,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 705,
+   "h1": [
+    "Audyt kodu: .NET"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 30,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "programisci-filtered-empty",
+   "path": "/programisci?q=zzzzzz",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/programisci?q=zzzzzz",
+   "title": "Programiści do konsultacji online | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1119,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 469,
+   "h1": [
+    "Programiści"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 27,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "gabinet-profile",
+   "path": "/gabinet/demo-celina-przykladowska",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/gabinet/demo-celina-przykladowska",
+   "title": "Celina Przykładowska: konsultacje online | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1126,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 1114,
+   "h1": [
+    "Celina Przykładowska"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 29,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/gabinet-profile-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "gabinet-unknown",
+   "path": "/gabinet/demo-nie-ma-takiego",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 404,
+   "finalUrl": "/gabinet/demo-nie-ma-takiego",
+   "title": "Nie znaleziono programisty | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 202,
+   "h1": [
+    "Nie znaleziono programisty"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 11,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+   ],
+   "failedRequests": [],
+   "badResponses": [
+    "404 GET /gabinet/demo-nie-ma-takiego"
+   ]
+  },
+  {
+   "role": "visitor",
+   "route": "jak-to-dziala",
+   "path": "/jak-to-dziala",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/jak-to-dziala",
+   "title": "Jak to działa | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 1045,
+   "h1": [
+    "Jak to działa"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 9,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "zasady-rankingu",
+   "path": "/zasady-rankingu",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/zasady-rankingu",
+   "title": "Zasady rankingu | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1621,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 1611,
+   "h1": [
+    "Zasady rankingu"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 10,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "cennik",
+   "path": "/cennik",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/cennik",
+   "title": "Cennik | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 623,
+   "h1": [
+    "Cennik"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 8,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/cennik-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "regulamin",
+   "path": "/regulamin",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/regulamin",
+   "title": "Regulamin | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1106,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 938,
+   "h1": [
+    "Regulamin"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 11,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/regulamin-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "polityka-prywatnosci",
+   "path": "/polityka-prywatnosci",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/polityka-prywatnosci",
+   "title": "Polityka prywatności | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 949,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 848,
+   "h1": [
+    "Polityka prywatności"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 10,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "logowanie",
+   "path": "/logowanie",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/logowanie",
+   "title": "Logowanie | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 100,
+   "h1": [
+    "Logowanie"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 12,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/logowanie-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "rejestracja",
+   "path": "/rejestracja",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/rejestracja",
+   "title": "Załóż konto | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 222,
+   "h1": [
+    "Załóż konto"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 15,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "rejestracja-sprawdz-skrzynke",
+   "path": "/rejestracja/sprawdz-skrzynke",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/rejestracja/sprawdz-skrzynke",
+   "title": "Sprawdź skrzynkę | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 224,
+   "h1": [
+    "Sprawdź skrzynkę"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 8,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "not-found",
+   "path": "/nie-ma-takiej-strony",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 404,
+   "finalUrl": "/nie-ma-takiej-strony",
+   "title": "Nie znaleziono strony",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 85,
+   "h1": [
+    "Nie znaleziono strony"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 7,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+   ],
+   "failedRequests": [],
+   "badResponses": [
+    "404 GET /nie-ma-takiej-strony"
+   ]
+  },
+  {
+   "role": "visitor",
+   "route": "home",
+   "path": "/",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/",
+   "title": "Gabinety Tech: płatna konsultacja ze zweryfikowanym programistą",
+   "hscroll": null,
+   "docHeight": 1302,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 1377,
+   "h1": [
+    "Umów płatną konsultację ze zweryfikowanym programistą"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 21,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/home-1440-dark.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "programisci",
+   "path": "/programisci",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/programisci",
+   "title": "Programiści do konsultacji online | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1386,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 1190,
+   "h1": [
+    "Programiści"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 29,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/programisci-1440-dark.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "programisci-category",
+   "path": "/programisci/audyt-kodu",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/programisci/audyt-kodu",
+   "title": "Audyt kodu: konsultacje z programistą | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1548,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 698,
+   "h1": [
+    "Audyt kodu"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 30,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "programisci-category-tech",
+   "path": "/programisci/audyt-kodu/dotnet",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/programisci/audyt-kodu/dotnet",
+   "title": "Audyt kodu i .NET: konsultacje z programistą | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1548,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 705,
+   "h1": [
+    "Audyt kodu: .NET"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 30,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "programisci-filtered-empty",
+   "path": "/programisci?q=zzzzzz",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/programisci?q=zzzzzz",
+   "title": "Programiści do konsultacji online | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1119,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 469,
+   "h1": [
+    "Programiści"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 27,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "gabinet-profile",
+   "path": "/gabinet/demo-celina-przykladowska",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/gabinet/demo-celina-przykladowska",
+   "title": "Celina Przykładowska: konsultacje online | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1126,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 1114,
+   "h1": [
+    "Celina Przykładowska"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 29,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/gabinet-profile-1440-dark.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "gabinet-unknown",
+   "path": "/gabinet/demo-nie-ma-takiego",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 404,
+   "finalUrl": "/gabinet/demo-nie-ma-takiego",
+   "title": "Nie znaleziono programisty | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 202,
+   "h1": [
+    "Nie znaleziono programisty"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 11,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+   ],
+   "failedRequests": [],
+   "badResponses": [
+    "404 GET /gabinet/demo-nie-ma-takiego"
+   ]
+  },
+  {
+   "role": "visitor",
+   "route": "jak-to-dziala",
+   "path": "/jak-to-dziala",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/jak-to-dziala",
+   "title": "Jak to działa | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 1045,
+   "h1": [
+    "Jak to działa"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 9,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "zasady-rankingu",
+   "path": "/zasady-rankingu",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/zasady-rankingu",
+   "title": "Zasady rankingu | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1621,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 1611,
+   "h1": [
+    "Zasady rankingu"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 10,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "cennik",
+   "path": "/cennik",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/cennik",
+   "title": "Cennik | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 623,
+   "h1": [
+    "Cennik"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 8,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/cennik-1440-dark.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "regulamin",
+   "path": "/regulamin",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/regulamin",
+   "title": "Regulamin | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1106,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 938,
+   "h1": [
+    "Regulamin"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 11,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "polityka-prywatnosci",
+   "path": "/polityka-prywatnosci",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/polityka-prywatnosci",
+   "title": "Polityka prywatności | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 949,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 848,
+   "h1": [
+    "Polityka prywatności"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 10,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "logowanie",
+   "path": "/logowanie",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/logowanie",
+   "title": "Logowanie | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 100,
+   "h1": [
+    "Logowanie"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 12,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/logowanie-1440-dark.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "rejestracja",
+   "path": "/rejestracja",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/rejestracja",
+   "title": "Załóż konto | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 222,
+   "h1": [
+    "Załóż konto"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 15,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "rejestracja-sprawdz-skrzynke",
+   "path": "/rejestracja/sprawdz-skrzynke",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/rejestracja/sprawdz-skrzynke",
+   "title": "Sprawdź skrzynkę | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 224,
+   "h1": [
+    "Sprawdź skrzynkę"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 8,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "not-found",
+   "path": "/nie-ma-takiej-strony",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 404,
+   "finalUrl": "/nie-ma-takiej-strony",
+   "title": "Nie znaleziono strony",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 85,
+   "h1": [
+    "Nie znaleziono strony"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 7,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+   ],
+   "failedRequests": [],
+   "badResponses": [
+    "404 GET /nie-ma-takiej-strony"
+   ]
+  },
+  {
+   "role": "visitor",
+   "route": "home",
+   "path": "/",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/",
+   "title": "Gabinety Tech: płatna konsultacja ze zweryfikowanym programistą",
+   "hscroll": null,
+   "docHeight": 2420,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 12,
+   "tapSmall": [
+    "a[Audyt kodu] 102x21 (inline link)",
+    "a[Migracja legacy .NET] 186x21 (inline link)",
+    "a[Integracja AI] 111x21 (inline link)",
+    "a[Automatyzacja procesów] 225x21 (inline link)",
+    "a[Architektura systemu] 190x21 (inline link)",
+    "a[Code review] 109x21 (inline link)",
+    "a[Wycena i plan projektu] 201x21 (inline link)",
+    "a[Rozwiązanie awarii] 168x21 (inline link)",
+    "a[Wszyscy programiści] 162x20",
+    "a[Szczegóły: jak to działa] 177x20 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 1377,
+   "h1": [
+    "Umów płatną konsultację ze zweryfikowanym programistą"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 19,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/home-390-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "programisci",
+   "path": "/programisci",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/programisci",
+   "title": "Programiści do konsultacji online | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 2292,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 6,
+   "tapSmall": [
+    "a[Anna Demowska] 145x21 (inline link)",
+    "a[Bartosz Testowy] 144x21 (inline link)",
+    "a[Ewa Wzorcowa] 132x21 (inline link)",
+    "a[Celina Przykładowska] 190x21 (inline link)",
+    "a[Dariusz Fikcyjny] 142x21 (inline link)",
+    "a[Filip Syntetyczny] 149x21 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 1190,
+   "h1": [
+    "Programiści"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 29,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/programisci-390-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "programisci-category",
+   "path": "/programisci/audyt-kodu",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/programisci/audyt-kodu",
+   "title": "Audyt kodu: konsultacje z programistą | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1623,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 2,
+   "tapSmall": [
+    "a[Programiści] 79x17 (inline link)",
+    "a[Anna Demowska] 145x21 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 698,
+   "h1": [
+    "Audyt kodu"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 30,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/programisci-category-390-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "programisci-category-tech",
+   "path": "/programisci/audyt-kodu/dotnet",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/programisci/audyt-kodu/dotnet",
+   "title": "Audyt kodu i .NET: konsultacje z programistą | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1623,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/programisci] x a[Audyt kodu]"
+   ],
+   "tapTotal": 3,
+   "tapSmall": [
+    "a[Programiści] 79x17 (inline link)",
+    "a[Audyt kodu] 76x17 (inline link)",
+    "a[Anna Demowska] 145x21 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 705,
+   "h1": [
+    "Audyt kodu: .NET"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 30,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "programisci-filtered-empty",
+   "path": "/programisci?q=zzzzzz",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/programisci?q=zzzzzz",
+   "title": "Programiści do konsultacji online | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1327,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 469,
+   "h1": [
+    "Programiści"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 25,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/programisci-filtered-empty-390-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "gabinet-profile",
+   "path": "/gabinet/demo-celina-przykladowska",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/gabinet/demo-celina-przykladowska",
+   "title": "Celina Przykładowska: konsultacje online | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1612,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 1114,
+   "h1": [
+    "Celina Przykładowska"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 29,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/gabinet-profile-390-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "gabinet-unknown",
+   "path": "/gabinet/demo-nie-ma-takiego",
+   "vp": 390,
+   "scheme": "light",
+   "status": 404,
+   "finalUrl": "/gabinet/demo-nie-ma-takiego",
+   "title": "Nie znaleziono programisty | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 844,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 202,
+   "h1": [
+    "Nie znaleziono programisty"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 9,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/gabinet-unknown-390-light.png",
+   "truncated": false,
+   "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+   ],
+   "failedRequests": [],
+   "badResponses": [
+    "404 GET /gabinet/demo-nie-ma-takiego"
+   ]
+  },
+  {
+   "role": "visitor",
+   "route": "jak-to-dziala",
+   "path": "/jak-to-dziala",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/jak-to-dziala",
+   "title": "Jak to działa | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1232,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 2,
+   "tapSmall": [
+    "a[Zasady rankingu] 126x20 (inline link)",
+    "a[Cennik] 53x20 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 1045,
+   "h1": [
+    "Jak to działa"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 7,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/jak-to-dziala-390-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "zasady-rankingu",
+   "path": "/zasady-rankingu",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/zasady-rankingu",
+   "title": "Zasady rankingu | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 2158,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 1611,
+   "h1": [
+    "Zasady rankingu"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 8,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/zasady-rankingu-390-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "cennik",
+   "path": "/cennik",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/cennik",
+   "title": "Cennik | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1008,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 623,
+   "h1": [
+    "Cennik"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 6,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/cennik-390-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "regulamin",
+   "path": "/regulamin",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/regulamin",
+   "title": "Regulamin | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1324,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 4,
+   "tapSmall": [
+    "a[1. Postanowienia ogólne] 182x33",
+    "a[2. Rezerwacja i płatność] 184x33",
+    "a[3. Spory] 64x33",
+    "a[4. Prowizja] 83x33"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 938,
+   "h1": [
+    "Regulamin"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 9,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "polityka-prywatnosci",
+   "path": "/polityka-prywatnosci",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/polityka-prywatnosci",
+   "title": "Polityka prywatności | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1219,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 3,
+   "tapSmall": [
+    "a[1. Jakie dane przetwarzamy] 210x33",
+    "a[2. Pliki cookie] 104x33",
+    "a[3. Prawa użytkownika] 165x33"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 848,
+   "h1": [
+    "Polityka prywatności"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 8,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "logowanie",
+   "path": "/logowanie",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/logowanie",
+   "title": "Logowanie | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 844,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/rejestracja] x input#login-email[Model.Email]"
+   ],
+   "tapTotal": 1,
+   "tapSmall": [
+    "a[Załóż konto] 88x20 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 100,
+   "h1": [
+    "Logowanie"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 10,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/logowanie-390-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "rejestracja",
+   "path": "/rejestracja",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/rejestracja",
+   "title": "Załóż konto | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 844,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/rejestracja] x input#register-email[Model.Email]",
+    "a[Regulamin] x a[Politykę prywatności]"
+   ],
+   "tapTotal": 3,
+   "tapSmall": [
+    "input#register-consent[Model.Consent] 24x24",
+    "a[Regulamin] 79x20",
+    "a[Zaloguj się] 82x20 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 222,
+   "h1": [
+    "Załóż konto"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 13,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "rejestracja-sprawdz-skrzynke",
+   "path": "/rejestracja/sprawdz-skrzynke",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/rejestracja/sprawdz-skrzynke",
+   "title": "Sprawdź skrzynkę | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 844,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 224,
+   "h1": [
+    "Sprawdź skrzynkę"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 6,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/rejestracja-sprawdz-skrzynke-390-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "not-found",
+   "path": "/nie-ma-takiej-strony",
+   "vp": 390,
+   "scheme": "light",
+   "status": 404,
+   "finalUrl": "/nie-ma-takiej-strony",
+   "title": "Nie znaleziono strony",
+   "hscroll": null,
+   "docHeight": 844,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 85,
+   "h1": [
+    "Nie znaleziono strony"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 5,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/not-found-390-light.png",
+   "truncated": false,
+   "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+   ],
+   "failedRequests": [],
+   "badResponses": [
+    "404 GET /nie-ma-takiej-strony"
+   ]
+  },
+  {
+   "role": "visitor",
+   "route": "home",
+   "path": "/",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/",
+   "title": "Gabinety Tech: płatna konsultacja ze zweryfikowanym programistą",
+   "hscroll": null,
+   "docHeight": 2420,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 12,
+   "tapSmall": [
+    "a[Audyt kodu] 102x21 (inline link)",
+    "a[Migracja legacy .NET] 186x21 (inline link)",
+    "a[Integracja AI] 111x21 (inline link)",
+    "a[Automatyzacja procesów] 225x21 (inline link)",
+    "a[Architektura systemu] 190x21 (inline link)",
+    "a[Code review] 109x21 (inline link)",
+    "a[Wycena i plan projektu] 201x21 (inline link)",
+    "a[Rozwiązanie awarii] 168x21 (inline link)",
+    "a[Wszyscy programiści] 162x20",
+    "a[Szczegóły: jak to działa] 177x20 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 1377,
+   "h1": [
+    "Umów płatną konsultację ze zweryfikowanym programistą"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 19,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/home-390-dark.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "programisci",
+   "path": "/programisci",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/programisci",
+   "title": "Programiści do konsultacji online | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 2292,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 6,
+   "tapSmall": [
+    "a[Anna Demowska] 145x21 (inline link)",
+    "a[Bartosz Testowy] 144x21 (inline link)",
+    "a[Ewa Wzorcowa] 132x21 (inline link)",
+    "a[Celina Przykładowska] 190x21 (inline link)",
+    "a[Dariusz Fikcyjny] 142x21 (inline link)",
+    "a[Filip Syntetyczny] 149x21 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 1190,
+   "h1": [
+    "Programiści"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 29,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/programisci-390-dark.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "programisci-category",
+   "path": "/programisci/audyt-kodu",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/programisci/audyt-kodu",
+   "title": "Audyt kodu: konsultacje z programistą | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1623,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 2,
+   "tapSmall": [
+    "a[Programiści] 79x17 (inline link)",
+    "a[Anna Demowska] 145x21 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 698,
+   "h1": [
+    "Audyt kodu"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 30,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "programisci-category-tech",
+   "path": "/programisci/audyt-kodu/dotnet",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/programisci/audyt-kodu/dotnet",
+   "title": "Audyt kodu i .NET: konsultacje z programistą | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1623,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/programisci] x a[Audyt kodu]"
+   ],
+   "tapTotal": 3,
+   "tapSmall": [
+    "a[Programiści] 79x17 (inline link)",
+    "a[Audyt kodu] 76x17 (inline link)",
+    "a[Anna Demowska] 145x21 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 705,
+   "h1": [
+    "Audyt kodu: .NET"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 30,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "programisci-filtered-empty",
+   "path": "/programisci?q=zzzzzz",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/programisci?q=zzzzzz",
+   "title": "Programiści do konsultacji online | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1327,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 469,
+   "h1": [
+    "Programiści"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 25,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "gabinet-profile",
+   "path": "/gabinet/demo-celina-przykladowska",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/gabinet/demo-celina-przykladowska",
+   "title": "Celina Przykładowska: konsultacje online | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1612,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 1114,
+   "h1": [
+    "Celina Przykładowska"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 29,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/visitor/gabinet-profile-390-dark.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "gabinet-unknown",
+   "path": "/gabinet/demo-nie-ma-takiego",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 404,
+   "finalUrl": "/gabinet/demo-nie-ma-takiego",
+   "title": "Nie znaleziono programisty | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 844,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 202,
+   "h1": [
+    "Nie znaleziono programisty"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 9,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+   ],
+   "failedRequests": [],
+   "badResponses": [
+    "404 GET /gabinet/demo-nie-ma-takiego"
+   ]
+  },
+  {
+   "role": "visitor",
+   "route": "jak-to-dziala",
+   "path": "/jak-to-dziala",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/jak-to-dziala",
+   "title": "Jak to działa | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1232,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 2,
+   "tapSmall": [
+    "a[Zasady rankingu] 126x20 (inline link)",
+    "a[Cennik] 53x20 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 1045,
+   "h1": [
+    "Jak to działa"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 7,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "zasady-rankingu",
+   "path": "/zasady-rankingu",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/zasady-rankingu",
+   "title": "Zasady rankingu | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 2158,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 1611,
+   "h1": [
+    "Zasady rankingu"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 8,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "cennik",
+   "path": "/cennik",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/cennik",
+   "title": "Cennik | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1008,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 623,
+   "h1": [
+    "Cennik"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 6,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "regulamin",
+   "path": "/regulamin",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/regulamin",
+   "title": "Regulamin | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1324,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 4,
+   "tapSmall": [
+    "a[1. Postanowienia ogólne] 182x33",
+    "a[2. Rezerwacja i płatność] 184x33",
+    "a[3. Spory] 64x33",
+    "a[4. Prowizja] 83x33"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 938,
+   "h1": [
+    "Regulamin"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 9,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "polityka-prywatnosci",
+   "path": "/polityka-prywatnosci",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/polityka-prywatnosci",
+   "title": "Polityka prywatności | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1219,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 3,
+   "tapSmall": [
+    "a[1. Jakie dane przetwarzamy] 210x33",
+    "a[2. Pliki cookie] 104x33",
+    "a[3. Prawa użytkownika] 165x33"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 848,
+   "h1": [
+    "Polityka prywatności"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 8,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "logowanie",
+   "path": "/logowanie",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/logowanie",
+   "title": "Logowanie | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 844,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/rejestracja] x input#login-email[Model.Email]"
+   ],
+   "tapTotal": 1,
+   "tapSmall": [
+    "a[Załóż konto] 88x20 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 100,
+   "h1": [
+    "Logowanie"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 10,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "rejestracja",
+   "path": "/rejestracja",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/rejestracja",
+   "title": "Załóż konto | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 844,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/rejestracja] x input#register-email[Model.Email]",
+    "a[Regulamin] x a[Politykę prywatności]"
+   ],
+   "tapTotal": 3,
+   "tapSmall": [
+    "input#register-consent[Model.Consent] 24x24",
+    "a[Regulamin] 79x20",
+    "a[Zaloguj się] 82x20 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 222,
+   "h1": [
+    "Załóż konto"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 13,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "rejestracja-sprawdz-skrzynke",
+   "path": "/rejestracja/sprawdz-skrzynke",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/rejestracja/sprawdz-skrzynke",
+   "title": "Sprawdź skrzynkę | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 844,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 224,
+   "h1": [
+    "Sprawdź skrzynkę"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 6,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "visitor",
+   "route": "not-found",
+   "path": "/nie-ma-takiej-strony",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 404,
+   "finalUrl": "/nie-ma-takiej-strony",
+   "title": "Nie znaleziono strony",
+   "hscroll": null,
+   "docHeight": 844,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 85,
+   "h1": [
+    "Nie znaleziono strony"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 5,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+   ],
+   "failedRequests": [],
+   "badResponses": [
+    "404 GET /nie-ma-takiej-strony"
+   ]
+  },
+  {
+   "role": "client",
+   "route": "home-signed-in",
+   "path": "/",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/",
+   "title": "Gabinety Tech: płatna konsultacja ze zweryfikowanym programistą",
+   "hscroll": null,
+   "docHeight": 1302,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 1377,
+   "h1": [
+    "Umów płatną konsultację ze zweryfikowanym programistą"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 22,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/client/home-signed-in-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "client",
+   "route": "konto",
+   "path": "/konto",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/konto",
+   "title": "Konto | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1091,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 424,
+   "h1": [
+    "Konto"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 14,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/client/konto-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "client",
+   "route": "moje-rezerwacje",
+   "path": "/moje/rezerwacje",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/moje/rezerwacje",
+   "title": "Moje rezerwacje | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [
+    "span[: Pierwszy prototyp z modelem językowym] scroll=331 client=1",
+    "span[: Audyt kodu aplikacji .NET] scroll=207 client=1",
+    "span[: Konsultacja nad jedną decyzją architek] scroll=377 client=1"
+   ],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 759,
+   "h1": [
+    "Moje rezerwacje"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 15,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/client/moje-rezerwacje-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "client",
+   "route": "moje-rezerwacje-practitioner-tab",
+   "path": "/moje/rezerwacje?role=practitioner",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/moje/rezerwacje?role=practitioner",
+   "title": "Moje rezerwacje | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 334,
+   "h1": [
+    "Moje rezerwacje"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 12,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "client",
+   "route": "moje-opinie",
+   "path": "/moje/opinie",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/moje/opinie",
+   "title": "Opinie o mnie | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 182,
+   "h1": [
+    "Opinie o mnie"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 9,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/client/moje-opinie-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "client",
+   "route": "admin-forbidden",
+   "path": "/admin/spory",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 403,
+   "finalUrl": "/admin/spory",
+   "title": "Brak dostępu | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 131,
+   "h1": [
+    "Brak dostępu"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 9,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/client/admin-forbidden-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+   ],
+   "failedRequests": [],
+   "badResponses": [
+    "403 GET /admin/spory"
+   ]
+  },
+  {
+   "role": "client",
+   "route": "gabinet-programisty-forbidden",
+   "path": "/gabinet-programisty",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/gabinet-programisty",
+   "title": "Załóż gabinet | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 675,
+   "h1": [
+    "Załóż swój gabinet"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 15,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/client/gabinet-programisty-forbidden-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "client",
+   "route": "home-signed-in",
+   "path": "/",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/",
+   "title": "Gabinety Tech: płatna konsultacja ze zweryfikowanym programistą",
+   "hscroll": null,
+   "docHeight": 1302,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 1377,
+   "h1": [
+    "Umów płatną konsultację ze zweryfikowanym programistą"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 22,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "client",
+   "route": "konto",
+   "path": "/konto",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/konto",
+   "title": "Konto | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1091,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 424,
+   "h1": [
+    "Konto"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 14,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "client",
+   "route": "moje-rezerwacje",
+   "path": "/moje/rezerwacje",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/moje/rezerwacje",
+   "title": "Moje rezerwacje | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [
+    "span[: Pierwszy prototyp z modelem językowym] scroll=331 client=1",
+    "span[: Audyt kodu aplikacji .NET] scroll=207 client=1",
+    "span[: Konsultacja nad jedną decyzją architek] scroll=377 client=1"
+   ],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 759,
+   "h1": [
+    "Moje rezerwacje"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 15,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/client/moje-rezerwacje-1440-dark.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "client",
+   "route": "moje-rezerwacje-practitioner-tab",
+   "path": "/moje/rezerwacje?role=practitioner",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/moje/rezerwacje?role=practitioner",
+   "title": "Moje rezerwacje | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 334,
+   "h1": [
+    "Moje rezerwacje"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 12,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "client",
+   "route": "moje-opinie",
+   "path": "/moje/opinie",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/moje/opinie",
+   "title": "Opinie o mnie | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 182,
+   "h1": [
+    "Opinie o mnie"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 9,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "client",
+   "route": "admin-forbidden",
+   "path": "/admin/spory",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 403,
+   "finalUrl": "/admin/spory",
+   "title": "Brak dostępu | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 131,
+   "h1": [
+    "Brak dostępu"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 9,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+   ],
+   "failedRequests": [],
+   "badResponses": [
+    "403 GET /admin/spory"
+   ]
+  },
+  {
+   "role": "client",
+   "route": "gabinet-programisty-forbidden",
+   "path": "/gabinet-programisty",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/gabinet-programisty",
+   "title": "Załóż gabinet | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 675,
+   "h1": [
+    "Załóż swój gabinet"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 15,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "client",
+   "route": "home-signed-in",
+   "path": "/",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/",
+   "title": "Gabinety Tech: płatna konsultacja ze zweryfikowanym programistą",
+   "hscroll": null,
+   "docHeight": 2420,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 12,
+   "tapSmall": [
+    "a[Audyt kodu] 102x21 (inline link)",
+    "a[Migracja legacy .NET] 186x21 (inline link)",
+    "a[Integracja AI] 111x21 (inline link)",
+    "a[Automatyzacja procesów] 225x21 (inline link)",
+    "a[Architektura systemu] 190x21 (inline link)",
+    "a[Code review] 109x21 (inline link)",
+    "a[Wycena i plan projektu] 201x21 (inline link)",
+    "a[Rozwiązanie awarii] 168x21 (inline link)",
+    "a[Wszyscy programiści] 162x20",
+    "a[Szczegóły: jak to działa] 177x20 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 1377,
+   "h1": [
+    "Umów płatną konsultację ze zweryfikowanym programistą"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 19,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "client",
+   "route": "konto",
+   "path": "/konto",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/konto",
+   "title": "Konto | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1210,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 1,
+   "tapSmall": [
+    "input#delete-confirm[Delete.Confirm] 24x24"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 424,
+   "h1": [
+    "Konto"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 11,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/client/konto-390-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "client",
+   "route": "moje-rezerwacje",
+   "path": "/moje/rezerwacje",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/moje/rezerwacje",
+   "title": "Moje rezerwacje | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1096,
+   "offscreen": [],
+   "clipped": [
+    "span[: Pierwszy prototyp z modelem językowym] scroll=331 client=1",
+    "span[: Audyt kodu aplikacji .NET] scroll=207 client=1",
+    "span[: Konsultacja nad jedną decyzją architek] scroll=377 client=1"
+   ],
+   "overlaps": [
+    "a[/moje/rezerwacje] x a[Programista]",
+    "a[/gabinet-programisty] x a[Programista]",
+    "a[/konto] x select#status[Wszystkie Oczekuje na płatność Potwierdz]"
+   ],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 759,
+   "h1": [
+    "Moje rezerwacje"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 12,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/client/moje-rezerwacje-390-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "client",
+   "route": "moje-rezerwacje-practitioner-tab",
+   "path": "/moje/rezerwacje?role=practitioner",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/moje/rezerwacje?role=practitioner",
+   "title": "Moje rezerwacje | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 844,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/moje/rezerwacje] x a[Programista]",
+    "a[/gabinet-programisty] x a[Programista]",
+    "a[/konto] x select#status[Wszystkie Oczekuje na płatność Potwierdz]"
+   ],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 334,
+   "h1": [
+    "Moje rezerwacje"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 9,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "client",
+   "route": "moje-opinie",
+   "path": "/moje/opinie",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/moje/opinie",
+   "title": "Opinie o mnie | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 844,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 182,
+   "h1": [
+    "Opinie o mnie"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 6,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "client",
+   "route": "admin-forbidden",
+   "path": "/admin/spory",
+   "vp": 390,
+   "scheme": "light",
+   "status": 403,
+   "finalUrl": "/admin/spory",
+   "title": "Brak dostępu | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 844,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/wyloguj] x a[Wróć na stronę główną]"
+   ],
+   "tapTotal": 1,
+   "tapSmall": [
+    "a[Wróć na stronę główną] 174x20 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 131,
+   "h1": [
+    "Brak dostępu"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 6,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+   ],
+   "failedRequests": [],
+   "badResponses": [
+    "403 GET /admin/spory"
+   ]
+  },
+  {
+   "role": "client",
+   "route": "gabinet-programisty-forbidden",
+   "path": "/gabinet-programisty",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/gabinet-programisty",
+   "title": "Załóż gabinet | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1003,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/programisci] x a[Oferty]",
+    "a[/programisci] x a[Dostępność]",
+    "a[/moje/rezerwacje] x a[Oferty]",
+    "a[/moje/rezerwacje] x a[Dostępność]"
+   ],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 675,
+   "h1": [
+    "Załóż swój gabinet"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 12,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "client",
+   "route": "home-signed-in",
+   "path": "/",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/",
+   "title": "Gabinety Tech: płatna konsultacja ze zweryfikowanym programistą",
+   "hscroll": null,
+   "docHeight": 2420,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 12,
+   "tapSmall": [
+    "a[Audyt kodu] 102x21 (inline link)",
+    "a[Migracja legacy .NET] 186x21 (inline link)",
+    "a[Integracja AI] 111x21 (inline link)",
+    "a[Automatyzacja procesów] 225x21 (inline link)",
+    "a[Architektura systemu] 190x21 (inline link)",
+    "a[Code review] 109x21 (inline link)",
+    "a[Wycena i plan projektu] 201x21 (inline link)",
+    "a[Rozwiązanie awarii] 168x21 (inline link)",
+    "a[Wszyscy programiści] 162x20",
+    "a[Szczegóły: jak to działa] 177x20 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 1377,
+   "h1": [
+    "Umów płatną konsultację ze zweryfikowanym programistą"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 19,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "client",
+   "route": "konto",
+   "path": "/konto",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/konto",
+   "title": "Konto | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1210,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 1,
+   "tapSmall": [
+    "input#delete-confirm[Delete.Confirm] 24x24"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 424,
+   "h1": [
+    "Konto"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 11,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "client",
+   "route": "moje-rezerwacje",
+   "path": "/moje/rezerwacje",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/moje/rezerwacje",
+   "title": "Moje rezerwacje | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1096,
+   "offscreen": [],
+   "clipped": [
+    "span[: Pierwszy prototyp z modelem językowym] scroll=331 client=1",
+    "span[: Audyt kodu aplikacji .NET] scroll=207 client=1",
+    "span[: Konsultacja nad jedną decyzją architek] scroll=377 client=1"
+   ],
+   "overlaps": [
+    "a[/moje/rezerwacje] x a[Programista]",
+    "a[/gabinet-programisty] x a[Programista]",
+    "a[/konto] x select#status[Wszystkie Oczekuje na płatność Potwierdz]"
+   ],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 759,
+   "h1": [
+    "Moje rezerwacje"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 12,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "client",
+   "route": "moje-rezerwacje-practitioner-tab",
+   "path": "/moje/rezerwacje?role=practitioner",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/moje/rezerwacje?role=practitioner",
+   "title": "Moje rezerwacje | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 844,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/moje/rezerwacje] x a[Programista]",
+    "a[/gabinet-programisty] x a[Programista]",
+    "a[/konto] x select#status[Wszystkie Oczekuje na płatność Potwierdz]"
+   ],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 334,
+   "h1": [
+    "Moje rezerwacje"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 9,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "client",
+   "route": "moje-opinie",
+   "path": "/moje/opinie",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/moje/opinie",
+   "title": "Opinie o mnie | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 844,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 182,
+   "h1": [
+    "Opinie o mnie"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 6,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "client",
+   "route": "admin-forbidden",
+   "path": "/admin/spory",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 403,
+   "finalUrl": "/admin/spory",
+   "title": "Brak dostępu | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 844,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/wyloguj] x a[Wróć na stronę główną]"
+   ],
+   "tapTotal": 1,
+   "tapSmall": [
+    "a[Wróć na stronę główną] 174x20 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 131,
+   "h1": [
+    "Brak dostępu"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 6,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+   ],
+   "failedRequests": [],
+   "badResponses": [
+    "403 GET /admin/spory"
+   ]
+  },
+  {
+   "role": "client",
+   "route": "gabinet-programisty-forbidden",
+   "path": "/gabinet-programisty",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/gabinet-programisty",
+   "title": "Załóż gabinet | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1003,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/programisci] x a[Oferty]",
+    "a[/programisci] x a[Dostępność]",
+    "a[/moje/rezerwacje] x a[Oferty]",
+    "a[/moje/rezerwacje] x a[Dostępność]"
+   ],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 675,
+   "h1": [
+    "Załóż swój gabinet"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 12,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "gabinet-programisty",
+   "path": "/gabinet-programisty",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/gabinet-programisty",
+   "title": "Panel programisty | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1016,
+   "offscreen": [],
+   "clipped": [
+    "h2#status-title[Status profilu] scroll=142 client=1"
+   ],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 501,
+   "h1": [
+    "Panel programisty"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 13,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/practitioner/gabinet-programisty-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "gabinet-programisty-profil",
+   "path": "/gabinet-programisty/profil",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/gabinet-programisty/profil",
+   "title": "Profil | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1308,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 597,
+   "h1": [
+    "Profil"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 20,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/practitioner/gabinet-programisty-profil-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "gabinet-programisty-oferty",
+   "path": "/gabinet-programisty/oferty",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/gabinet-programisty/oferty",
+   "title": "Oferty | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1624,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 802,
+   "h1": [
+    "Oferty"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [
+    {
+     "id": "heading-order",
+     "impact": "moderate",
+     "count": 1,
+     "sample": [
+      {
+       "target": "h3"
+      }
+     ]
+    }
+   ],
+   "focus": {
+    "reached": 21,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/practitioner/gabinet-programisty-oferty-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "gabinet-programisty-dostepnosc",
+   "path": "/gabinet-programisty/dostepnosc",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/gabinet-programisty/dostepnosc",
+   "title": "Dostępność | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1696,
+   "offscreen": [],
+   "clipped": [
+    "button[Zapisz] scroll=39 client=1"
+   ],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 5686,
+   "h1": [
+    "Dostępność"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 25,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/practitioner/gabinet-programisty-dostepnosc-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "gabinet-programisty-platnosci",
+   "path": "/gabinet-programisty/platnosci",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/gabinet-programisty/platnosci",
+   "title": "Płatności | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 336,
+   "h1": [
+    "Płatności"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 13,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/practitioner/gabinet-programisty-platnosci-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "moje-rezerwacje-practitioner",
+   "path": "/moje/rezerwacje?role=practitioner",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/moje/rezerwacje?role=practitioner",
+   "title": "Moje rezerwacje | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [
+    "span[: Pierwszy prototyp z modelem językowym] scroll=331 client=1",
+    "span[: Pierwszy prototyp z modelem językowym] scroll=331 client=1"
+   ],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 594,
+   "h1": [
+    "Moje rezerwacje"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 14,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/practitioner/moje-rezerwacje-practitioner-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "konto",
+   "path": "/konto",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/konto",
+   "title": "Konto | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1091,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 432,
+   "h1": [
+    "Konto"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 14,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "booking-detail-practitioner",
+   "path": "/moje/rezerwacje/01a203c2-e7d5-7d62-9150-5485ce0bf415?role=practitioner",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/moje/rezerwacje/01a203c2-e7d5-7d62-9150-5485ce0bf415?role=practitioner",
+   "title": "Szczegóły rezerwacji | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 415,
+   "h1": [
+    "Szczegóły rezerwacji"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 9,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/practitioner/booking-detail-practitioner-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "gabinet-programisty",
+   "path": "/gabinet-programisty",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/gabinet-programisty",
+   "title": "Panel programisty | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1016,
+   "offscreen": [],
+   "clipped": [
+    "h2#status-title[Status profilu] scroll=142 client=1"
+   ],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 501,
+   "h1": [
+    "Panel programisty"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 13,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/practitioner/gabinet-programisty-1440-dark.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "gabinet-programisty-profil",
+   "path": "/gabinet-programisty/profil",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/gabinet-programisty/profil",
+   "title": "Profil | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1308,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 597,
+   "h1": [
+    "Profil"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 20,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "gabinet-programisty-oferty",
+   "path": "/gabinet-programisty/oferty",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/gabinet-programisty/oferty",
+   "title": "Oferty | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1624,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 802,
+   "h1": [
+    "Oferty"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [
+    {
+     "id": "heading-order",
+     "impact": "moderate",
+     "count": 1,
+     "sample": [
+      {
+       "target": "h3"
+      }
+     ]
+    }
+   ],
+   "focus": {
+    "reached": 21,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "gabinet-programisty-dostepnosc",
+   "path": "/gabinet-programisty/dostepnosc",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/gabinet-programisty/dostepnosc",
+   "title": "Dostępność | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1696,
+   "offscreen": [],
+   "clipped": [
+    "button[Zapisz] scroll=39 client=1"
+   ],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 5686,
+   "h1": [
+    "Dostępność"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 25,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/practitioner/gabinet-programisty-dostepnosc-1440-dark.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "gabinet-programisty-platnosci",
+   "path": "/gabinet-programisty/platnosci",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/gabinet-programisty/platnosci",
+   "title": "Płatności | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 336,
+   "h1": [
+    "Płatności"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 13,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "moje-rezerwacje-practitioner",
+   "path": "/moje/rezerwacje?role=practitioner",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/moje/rezerwacje?role=practitioner",
+   "title": "Moje rezerwacje | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [
+    "span[: Pierwszy prototyp z modelem językowym] scroll=331 client=1",
+    "span[: Pierwszy prototyp z modelem językowym] scroll=331 client=1"
+   ],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 594,
+   "h1": [
+    "Moje rezerwacje"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 14,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "konto",
+   "path": "/konto",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/konto",
+   "title": "Konto | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1091,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 432,
+   "h1": [
+    "Konto"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 14,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "booking-detail-practitioner",
+   "path": "/moje/rezerwacje/01a203c2-e7d5-7d62-9150-5485ce0bf415?role=practitioner",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/moje/rezerwacje/01a203c2-e7d5-7d62-9150-5485ce0bf415?role=practitioner",
+   "title": "Szczegóły rezerwacji | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 415,
+   "h1": [
+    "Szczegóły rezerwacji"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 9,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "gabinet-programisty",
+   "path": "/gabinet-programisty",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/gabinet-programisty",
+   "title": "Panel programisty | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1110,
+   "offscreen": [],
+   "clipped": [
+    "h2#status-title[Status profilu] scroll=142 client=1"
+   ],
+   "overlaps": [
+    "a[/programisci] x a[Oferty]",
+    "a[/programisci] x a[Dostępność]",
+    "a[/moje/rezerwacje] x a[Oferty]",
+    "a[/moje/rezerwacje] x a[Dostępność]"
+   ],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 501,
+   "h1": [
+    "Panel programisty"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 10,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/practitioner/gabinet-programisty-390-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "gabinet-programisty-profil",
+   "path": "/gabinet-programisty/profil",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/gabinet-programisty/profil",
+   "title": "Profil | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1393,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/programisci] x a[Oferty]",
+    "a[/programisci] x a[Dostępność]",
+    "a[/moje/rezerwacje] x a[Oferty]",
+    "a[/moje/rezerwacje] x a[Dostępność]",
+    "a[/konto] x input#displayName[displayName]",
+    "a[/wyloguj] x input#displayName[displayName]"
+   ],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 597,
+   "h1": [
+    "Profil"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 17,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/practitioner/gabinet-programisty-profil-390-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "gabinet-programisty-oferty",
+   "path": "/gabinet-programisty/oferty",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/gabinet-programisty/oferty",
+   "title": "Oferty | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1940,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/programisci] x a[Oferty]",
+    "a[/programisci] x a[Dostępność]",
+    "a[/moje/rezerwacje] x a[Oferty]",
+    "a[/moje/rezerwacje] x a[Dostępność]"
+   ],
+   "tapTotal": 12,
+   "tapSmall": [
+    "input[techs] 24x24",
+    "input[techs] 24x24",
+    "input[techs] 24x24",
+    "input[techs] 24x24",
+    "input[techs] 24x24",
+    "input[techs] 24x24",
+    "input[techs] 24x24",
+    "input[techs] 24x24",
+    "input[techs] 24x24",
+    "input[techs] 24x24"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 802,
+   "h1": [
+    "Oferty"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [
+    {
+     "id": "heading-order",
+     "impact": "moderate",
+     "count": 1,
+     "sample": [
+      {
+       "target": "h3"
+      }
+     ]
+    }
+   ],
+   "focus": {
+    "reached": 25,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/practitioner/gabinet-programisty-oferty-390-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "gabinet-programisty-dostepnosc",
+   "path": "/gabinet-programisty/dostepnosc",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/gabinet-programisty/dostepnosc",
+   "title": "Dostępność | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 2527,
+   "offscreen": [],
+   "clipped": [
+    "button[Zapisz] scroll=39 client=1"
+   ],
+   "overlaps": [
+    "a[/programisci] x a[Oferty]",
+    "a[/programisci] x a[Dostępność]",
+    "a[/moje/rezerwacje] x a[Oferty]",
+    "a[/moje/rezerwacje] x a[Dostępność]"
+   ],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 5686,
+   "h1": [
+    "Dostępność"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 30,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/practitioner/gabinet-programisty-dostepnosc-390-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "gabinet-programisty-platnosci",
+   "path": "/gabinet-programisty/platnosci",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/gabinet-programisty/platnosci",
+   "title": "Płatności | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 844,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/programisci] x a[Oferty]",
+    "a[/programisci] x a[Dostępność]",
+    "a[/moje/rezerwacje] x a[Oferty]",
+    "a[/moje/rezerwacje] x a[Dostępność]"
+   ],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 336,
+   "h1": [
+    "Płatności"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 10,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "moje-rezerwacje-practitioner",
+   "path": "/moje/rezerwacje?role=practitioner",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/moje/rezerwacje?role=practitioner",
+   "title": "Moje rezerwacje | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 885,
+   "offscreen": [],
+   "clipped": [
+    "span[: Pierwszy prototyp z modelem językowym] scroll=331 client=1",
+    "span[: Pierwszy prototyp z modelem językowym] scroll=331 client=1"
+   ],
+   "overlaps": [
+    "a[/moje/rezerwacje] x a[Programista]",
+    "a[/gabinet-programisty] x a[Programista]",
+    "a[/konto] x select#status[Wszystkie Oczekuje na płatność Potwierdz]"
+   ],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 594,
+   "h1": [
+    "Moje rezerwacje"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 11,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/practitioner/moje-rezerwacje-practitioner-390-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "konto",
+   "path": "/konto",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/konto",
+   "title": "Konto | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1210,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 1,
+   "tapSmall": [
+    "input#delete-confirm[Delete.Confirm] 24x24"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 432,
+   "h1": [
+    "Konto"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 11,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "booking-detail-practitioner",
+   "path": "/moje/rezerwacje/01a203c2-e7d5-7d62-9150-5485ce0bf415?role=practitioner",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/moje/rezerwacje/01a203c2-e7d5-7d62-9150-5485ce0bf415?role=practitioner",
+   "title": "Szczegóły rezerwacji | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 916,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 1,
+   "tapSmall": [
+    "a[Wróć do listy rezerwacji] 181x20 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 415,
+   "h1": [
+    "Szczegóły rezerwacji"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 6,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/practitioner/booking-detail-practitioner-390-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "gabinet-programisty",
+   "path": "/gabinet-programisty",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/gabinet-programisty",
+   "title": "Panel programisty | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1110,
+   "offscreen": [],
+   "clipped": [
+    "h2#status-title[Status profilu] scroll=142 client=1"
+   ],
+   "overlaps": [
+    "a[/programisci] x a[Oferty]",
+    "a[/programisci] x a[Dostępność]",
+    "a[/moje/rezerwacje] x a[Oferty]",
+    "a[/moje/rezerwacje] x a[Dostępność]"
+   ],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 501,
+   "h1": [
+    "Panel programisty"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 10,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "gabinet-programisty-profil",
+   "path": "/gabinet-programisty/profil",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/gabinet-programisty/profil",
+   "title": "Profil | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1393,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/programisci] x a[Oferty]",
+    "a[/programisci] x a[Dostępność]",
+    "a[/moje/rezerwacje] x a[Oferty]",
+    "a[/moje/rezerwacje] x a[Dostępność]",
+    "a[/konto] x input#displayName[displayName]",
+    "a[/wyloguj] x input#displayName[displayName]"
+   ],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 597,
+   "h1": [
+    "Profil"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 17,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "gabinet-programisty-oferty",
+   "path": "/gabinet-programisty/oferty",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/gabinet-programisty/oferty",
+   "title": "Oferty | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1940,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/programisci] x a[Oferty]",
+    "a[/programisci] x a[Dostępność]",
+    "a[/moje/rezerwacje] x a[Oferty]",
+    "a[/moje/rezerwacje] x a[Dostępność]"
+   ],
+   "tapTotal": 12,
+   "tapSmall": [
+    "input[techs] 24x24",
+    "input[techs] 24x24",
+    "input[techs] 24x24",
+    "input[techs] 24x24",
+    "input[techs] 24x24",
+    "input[techs] 24x24",
+    "input[techs] 24x24",
+    "input[techs] 24x24",
+    "input[techs] 24x24",
+    "input[techs] 24x24"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 802,
+   "h1": [
+    "Oferty"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [
+    {
+     "id": "heading-order",
+     "impact": "moderate",
+     "count": 1,
+     "sample": [
+      {
+       "target": "h3"
+      }
+     ]
+    }
+   ],
+   "focus": {
+    "reached": 25,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "gabinet-programisty-dostepnosc",
+   "path": "/gabinet-programisty/dostepnosc",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/gabinet-programisty/dostepnosc",
+   "title": "Dostępność | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 2527,
+   "offscreen": [],
+   "clipped": [
+    "button[Zapisz] scroll=39 client=1"
+   ],
+   "overlaps": [
+    "a[/programisci] x a[Oferty]",
+    "a[/programisci] x a[Dostępność]",
+    "a[/moje/rezerwacje] x a[Oferty]",
+    "a[/moje/rezerwacje] x a[Dostępność]"
+   ],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 5686,
+   "h1": [
+    "Dostępność"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 30,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "gabinet-programisty-platnosci",
+   "path": "/gabinet-programisty/platnosci",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/gabinet-programisty/platnosci",
+   "title": "Płatności | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 844,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/programisci] x a[Oferty]",
+    "a[/programisci] x a[Dostępność]",
+    "a[/moje/rezerwacje] x a[Oferty]",
+    "a[/moje/rezerwacje] x a[Dostępność]"
+   ],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 336,
+   "h1": [
+    "Płatności"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 10,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "moje-rezerwacje-practitioner",
+   "path": "/moje/rezerwacje?role=practitioner",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/moje/rezerwacje?role=practitioner",
+   "title": "Moje rezerwacje | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 885,
+   "offscreen": [],
+   "clipped": [
+    "span[: Pierwszy prototyp z modelem językowym] scroll=331 client=1",
+    "span[: Pierwszy prototyp z modelem językowym] scroll=331 client=1"
+   ],
+   "overlaps": [
+    "a[/moje/rezerwacje] x a[Programista]",
+    "a[/gabinet-programisty] x a[Programista]",
+    "a[/konto] x select#status[Wszystkie Oczekuje na płatność Potwierdz]"
+   ],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 594,
+   "h1": [
+    "Moje rezerwacje"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 11,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "konto",
+   "path": "/konto",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/konto",
+   "title": "Konto | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1210,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 1,
+   "tapSmall": [
+    "input#delete-confirm[Delete.Confirm] 24x24"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 432,
+   "h1": [
+    "Konto"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 11,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "practitioner",
+   "route": "booking-detail-practitioner",
+   "path": "/moje/rezerwacje/01a203c2-e7d5-7d62-9150-5485ce0bf415?role=practitioner",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/moje/rezerwacje/01a203c2-e7d5-7d62-9150-5485ce0bf415?role=practitioner",
+   "title": "Szczegóły rezerwacji | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 916,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 1,
+   "tapSmall": [
+    "a[Wróć do listy rezerwacji] 181x20 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 415,
+   "h1": [
+    "Szczegóły rezerwacji"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 3,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 6,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-weryfikacja",
+   "path": "/admin/weryfikacja",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/admin/weryfikacja",
+   "title": "Weryfikacja programistów | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 412,
+   "h1": [
+    "Weryfikacja programistów"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 22,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/admin/admin-weryfikacja-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-weryfikacja-submitted",
+   "path": "/admin/weryfikacja?status=Submitted",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/admin/weryfikacja?status=Submitted",
+   "title": "Weryfikacja programistów | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 412,
+   "h1": [
+    "Weryfikacja programistów"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 22,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-weryfikacja-detail",
+   "path": "/admin/weryfikacja/4718bbd3-29e8-4556-b7e5-56f7af05bbc1",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/admin/weryfikacja/4718bbd3-29e8-4556-b7e5-56f7af05bbc1",
+   "title": "Szczegóły programisty | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1053,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 865,
+   "h1": [
+    "Grażyna Pokazowa"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 17,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/admin/admin-weryfikacja-detail-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-spory",
+   "path": "/admin/spory",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/admin/spory",
+   "title": "Spory | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 544,
+   "h1": [
+    "Spory"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 17,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/admin/admin-spory-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-ksiega",
+   "path": "/admin/ksiega",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/admin/ksiega",
+   "title": "Księga | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1277,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 1011,
+   "h1": [
+    "Księga"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 22,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/admin/admin-ksiega-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-podejrzane",
+   "path": "/admin/podejrzane",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/admin/podejrzane",
+   "title": "Podejrzane pary | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 270,
+   "h1": [
+    "Podejrzane pary"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 14,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/admin/admin-podejrzane-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-opinie",
+   "path": "/admin/opinie",
+   "vp": 1440,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/admin/opinie",
+   "title": "Opinie do moderacji | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 247,
+   "h1": [
+    "Opinie do moderacji"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 17,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/admin/admin-opinie-1440-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-weryfikacja",
+   "path": "/admin/weryfikacja",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/admin/weryfikacja",
+   "title": "Weryfikacja programistów | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 412,
+   "h1": [
+    "Weryfikacja programistów"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 22,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/admin/admin-weryfikacja-1440-dark.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-weryfikacja-submitted",
+   "path": "/admin/weryfikacja?status=Submitted",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/admin/weryfikacja?status=Submitted",
+   "title": "Weryfikacja programistów | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 412,
+   "h1": [
+    "Weryfikacja programistów"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 22,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-weryfikacja-detail",
+   "path": "/admin/weryfikacja/4718bbd3-29e8-4556-b7e5-56f7af05bbc1",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/admin/weryfikacja/4718bbd3-29e8-4556-b7e5-56f7af05bbc1",
+   "title": "Szczegóły programisty | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1053,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 865,
+   "h1": [
+    "Grażyna Pokazowa"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 17,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-spory",
+   "path": "/admin/spory",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/admin/spory",
+   "title": "Spory | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 544,
+   "h1": [
+    "Spory"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 17,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/admin/admin-spory-1440-dark.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-ksiega",
+   "path": "/admin/ksiega",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/admin/ksiega",
+   "title": "Księga | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1277,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 1011,
+   "h1": [
+    "Księga"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 22,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-podejrzane",
+   "path": "/admin/podejrzane",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/admin/podejrzane",
+   "title": "Podejrzane pary | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 270,
+   "h1": [
+    "Podejrzane pary"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 14,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-opinie",
+   "path": "/admin/opinie",
+   "vp": 1440,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/admin/opinie",
+   "title": "Opinie do moderacji | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 900,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 247,
+   "h1": [
+    "Opinie do moderacji"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 17,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-weryfikacja",
+   "path": "/admin/weryfikacja",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/admin/weryfikacja",
+   "title": "Weryfikacja programistów | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 946,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/moje/rezerwacje] x a[Weryfikacja programistów]",
+    "a[/moje/rezerwacje] x a[Spory]",
+    "a[/moje/rezerwacje] x a[Księga]"
+   ],
+   "tapTotal": 2,
+   "tapSmall": [
+    "a[Grażyna Pokazowa] 165x21 (inline link)",
+    "a[demo-dev-7] 93x20 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 412,
+   "h1": [
+    "Weryfikacja programistów"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 18,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/admin/admin-weryfikacja-390-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-weryfikacja-submitted",
+   "path": "/admin/weryfikacja?status=Submitted",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/admin/weryfikacja?status=Submitted",
+   "title": "Weryfikacja programistów | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 946,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/moje/rezerwacje] x a[Weryfikacja programistów]",
+    "a[/moje/rezerwacje] x a[Spory]",
+    "a[/moje/rezerwacje] x a[Księga]"
+   ],
+   "tapTotal": 2,
+   "tapSmall": [
+    "a[Grażyna Pokazowa] 165x21 (inline link)",
+    "a[demo-dev-7] 93x20 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 412,
+   "h1": [
+    "Weryfikacja programistów"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 18,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-weryfikacja-detail",
+   "path": "/admin/weryfikacja/4718bbd3-29e8-4556-b7e5-56f7af05bbc1",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/admin/weryfikacja/4718bbd3-29e8-4556-b7e5-56f7af05bbc1",
+   "title": "Szczegóły programisty | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1400,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/moje/rezerwacje] x a[Weryfikacja programistów]",
+    "a[/moje/rezerwacje] x a[Spory]",
+    "a[/moje/rezerwacje] x a[Księga]"
+   ],
+   "tapTotal": 2,
+   "tapSmall": [
+    "a[Wróć do kolejki] 116x20 (inline link)",
+    "a[demo-dev-7] 93x20 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 865,
+   "h1": [
+    "Grażyna Pokazowa"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 13,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/admin/admin-weryfikacja-detail-390-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-spory",
+   "path": "/admin/spory",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/admin/spory",
+   "title": "Spory | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1035,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/moje/rezerwacje] x a[Weryfikacja programistów]",
+    "a[/moje/rezerwacje] x a[Spory]",
+    "a[/moje/rezerwacje] x a[Księga]"
+   ],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 544,
+   "h1": [
+    "Spory"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 13,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/admin/admin-spory-390-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-ksiega",
+   "path": "/admin/ksiega",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/admin/ksiega",
+   "title": "Księga | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 2546,
+   "offscreen": [],
+   "clipped": [
+    "thead[Data Rodzaj Rezerwacja Kwota] scroll=305 client=1"
+   ],
+   "overlaps": [
+    "a[/moje/rezerwacje] x a[Weryfikacja programistów]",
+    "a[/moje/rezerwacje] x a[Spory]",
+    "a[/moje/rezerwacje] x a[Księga]"
+   ],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 1011,
+   "h1": [
+    "Księga"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 18,
+    "missing": [],
+    "missingCount": 0
+   },
+   "screenshot": "docs/ui/audit/admin/admin-ksiega-390-light.png",
+   "truncated": false,
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-podejrzane",
+   "path": "/admin/podejrzane",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/admin/podejrzane",
+   "title": "Podejrzane pary | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 844,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/moje/rezerwacje] x a[Weryfikacja programistów]",
+    "a[/moje/rezerwacje] x a[Spory]",
+    "a[/moje/rezerwacje] x a[Księga]"
+   ],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 270,
+   "h1": [
+    "Podejrzane pary"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 10,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-opinie",
+   "path": "/admin/opinie",
+   "vp": 390,
+   "scheme": "light",
+   "status": 200,
+   "finalUrl": "/admin/opinie",
+   "title": "Opinie do moderacji | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 844,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/moje/rezerwacje] x a[Weryfikacja programistów]",
+    "a[/moje/rezerwacje] x a[Spory]",
+    "a[/moje/rezerwacje] x a[Księga]"
+   ],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 247,
+   "h1": [
+    "Opinie do moderacji"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(246, 247, 249)",
+   "bodyColor": "rgb(20, 24, 31)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 13,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-weryfikacja",
+   "path": "/admin/weryfikacja",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/admin/weryfikacja",
+   "title": "Weryfikacja programistów | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 946,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/moje/rezerwacje] x a[Weryfikacja programistów]",
+    "a[/moje/rezerwacje] x a[Spory]",
+    "a[/moje/rezerwacje] x a[Księga]"
+   ],
+   "tapTotal": 2,
+   "tapSmall": [
+    "a[Grażyna Pokazowa] 165x21 (inline link)",
+    "a[demo-dev-7] 93x20 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 412,
+   "h1": [
+    "Weryfikacja programistów"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 18,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-weryfikacja-submitted",
+   "path": "/admin/weryfikacja?status=Submitted",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/admin/weryfikacja?status=Submitted",
+   "title": "Weryfikacja programistów | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 946,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/moje/rezerwacje] x a[Weryfikacja programistów]",
+    "a[/moje/rezerwacje] x a[Spory]",
+    "a[/moje/rezerwacje] x a[Księga]"
+   ],
+   "tapTotal": 2,
+   "tapSmall": [
+    "a[Grażyna Pokazowa] 165x21 (inline link)",
+    "a[demo-dev-7] 93x20 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 412,
+   "h1": [
+    "Weryfikacja programistów"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 18,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-weryfikacja-detail",
+   "path": "/admin/weryfikacja/4718bbd3-29e8-4556-b7e5-56f7af05bbc1",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/admin/weryfikacja/4718bbd3-29e8-4556-b7e5-56f7af05bbc1",
+   "title": "Szczegóły programisty | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1400,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/moje/rezerwacje] x a[Weryfikacja programistów]",
+    "a[/moje/rezerwacje] x a[Spory]",
+    "a[/moje/rezerwacje] x a[Księga]"
+   ],
+   "tapTotal": 2,
+   "tapSmall": [
+    "a[Wróć do kolejki] 116x20 (inline link)",
+    "a[demo-dev-7] 93x20 (inline link)"
+   ],
+   "imgNoAlt": [],
+   "mainTextLength": 865,
+   "h1": [
+    "Grażyna Pokazowa"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 13,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-spory",
+   "path": "/admin/spory",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/admin/spory",
+   "title": "Spory | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 1035,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/moje/rezerwacje] x a[Weryfikacja programistów]",
+    "a[/moje/rezerwacje] x a[Spory]",
+    "a[/moje/rezerwacje] x a[Księga]"
+   ],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 544,
+   "h1": [
+    "Spory"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 13,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-ksiega",
+   "path": "/admin/ksiega",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/admin/ksiega",
+   "title": "Księga | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 2546,
+   "offscreen": [],
+   "clipped": [
+    "thead[Data Rodzaj Rezerwacja Kwota] scroll=305 client=1"
+   ],
+   "overlaps": [
+    "a[/moje/rezerwacje] x a[Weryfikacja programistów]",
+    "a[/moje/rezerwacje] x a[Spory]",
+    "a[/moje/rezerwacje] x a[Księga]"
+   ],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 1011,
+   "h1": [
+    "Księga"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 18,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-podejrzane",
+   "path": "/admin/podejrzane",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/admin/podejrzane",
+   "title": "Podejrzane pary | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 844,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/moje/rezerwacje] x a[Weryfikacja programistów]",
+    "a[/moje/rezerwacje] x a[Spory]",
+    "a[/moje/rezerwacje] x a[Księga]"
+   ],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 270,
+   "h1": [
+    "Podejrzane pary"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 4,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 10,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  },
+  {
+   "role": "admin",
+   "route": "admin-opinie",
+   "path": "/admin/opinie",
+   "vp": 390,
+   "scheme": "dark",
+   "status": 200,
+   "finalUrl": "/admin/opinie",
+   "title": "Opinie do moderacji | Gabinety Tech",
+   "hscroll": null,
+   "docHeight": 844,
+   "offscreen": [],
+   "clipped": [],
+   "overlaps": [
+    "a[/moje/rezerwacje] x a[Weryfikacja programistów]",
+    "a[/moje/rezerwacje] x a[Spory]",
+    "a[/moje/rezerwacje] x a[Księga]"
+   ],
+   "tapTotal": 0,
+   "tapSmall": [],
+   "imgNoAlt": [],
+   "mainTextLength": 247,
+   "h1": [
+    "Opinie do moderacji"
+   ],
+   "emptyLists": 0,
+   "landmarks": {
+    "header": true,
+    "nav": 5,
+    "main": 1,
+    "footer": true,
+    "skip": true
+   },
+   "formControlsNoLabel": [],
+   "bodyBg": "rgb(14, 18, 24)",
+   "bodyColor": "rgb(238, 241, 246)",
+   "cls": 0,
+   "axe": [],
+   "focus": {
+    "reached": 13,
+    "missing": [],
+    "missingCount": 0
+   },
+   "consoleErrors": [],
+   "failedRequests": [],
+   "badResponses": []
+  }
+ ]
+}

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup><IsPackable>false</IsPackable><IsTestProject>true</IsTestProject></PropertyGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <ProjectReference Include="../../src/Gabinety.Directory/Gabinety.Directory.csproj" Aliases="DirectoryApp" />
+    <ProjectReference Include="../../src/Gabinety.Booking/Gabinety.Booking.csproj" Aliases="BookingApp" />
+    <ProjectReference Include="../../src/Gabinety.Reputation/Gabinety.Reputation.csproj" Aliases="ReputationApp" />
+    <ProjectReference Include="../../src/Gabinety.Web/Gabinety.Web.csproj" Aliases="WebApp" />
+    <ProjectReference Include="../../tools/Gabinety.DevIdentity/Gabinety.DevIdentity.csproj" />
+    <ProjectReference Include="../../tools/Gabinety.DemoSeeder/Gabinety.DemoSeeder.csproj" />
+  </ItemGroup>
+</Project>
