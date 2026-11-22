@@ -32,7 +32,7 @@ public class NotificationSchedulingTests
         h.Seed(db => db.Notifications.Single(n => n.BookingId == id && n.Kind == kind && (user == null || n.ToUserId == user)).SentAt = h.Clock.GetUtcNow());
 
     [Fact]
-    public async Task Confirming_schedules_two_confirmations_two_reminders_and_one_review_request_at_their_times()
+    public async Task Confirming_schedules_two_confirmations_and_one_review_request_and_no_reminders()
     {
         using var h = new CreateHost();
         var id = await Seed(h, TimeSpan.FromDays(3));
@@ -41,15 +41,12 @@ public class NotificationSchedulingTests
         Assert.True((await Fee.Apply(h, id, BookingTrigger.PaymentSucceeded)).Applied);
 
         var rows = await Rows(h, id);
-        Assert.Equal(5, rows.Count);
+        Assert.Equal(3, rows.Count); // A-03: no reminders, a package starts at the purchase
         var confirmations = rows.Where(r => r.Kind == NotificationKind.BookingConfirmed).ToList();
         Assert.Equal(new[] { Client, Practitioner }.Order(), confirmations.Select(r => r.ToUserId).Order());
         Assert.All(confirmations, r => Assert.Equal(h.Clock.GetUtcNow(), r.DueAt));
-        var r24 = Assert.Single(rows, r => r.Kind == NotificationKind.Reminder24h);
-        var r1 = Assert.Single(rows, r => r.Kind == NotificationKind.Reminder1h);
+        Assert.DoesNotContain(rows, r => r.Kind is NotificationKind.Reminder24h or NotificationKind.Reminder1h);
         var review = Assert.Single(rows, r => r.Kind == NotificationKind.ReviewRequest);
-        Assert.Equal((Client, b.StartUtc.AddHours(-24)), (r24.ToUserId, r24.DueAt));
-        Assert.Equal((Client, b.StartUtc.AddHours(-1)), (r1.ToUserId, r1.DueAt));
         Assert.Equal((Client, b.EndUtc.AddHours(2)), (review.ToUserId, review.DueAt));
         Assert.All(rows, r => Assert.Equal((null, 0), (r.SentAt, r.Attempts)));
     }
@@ -70,32 +67,23 @@ public class NotificationSchedulingTests
         var id = await ConfirmedWithRows(h, TimeSpan.FromDays(3));
         await h.Seed(db => db.Bookings.Single(b => b.Id == id).Status = BookingStatus.PendingPayment); // a repair or replay that confirms the booking again
         Assert.True((await Fee.Apply(h, id, BookingTrigger.PaymentSucceeded)).Applied);
-        Assert.Equal(5, (await Rows(h, id)).Count);
+        Assert.Equal(3, (await Rows(h, id)).Count);
     }
 
-    [Fact]
-    public async Task A_booking_confirmed_less_than_24_h_before_the_start_gets_no_24_h_reminder()
+    [Theory]
+    [InlineData(72)]
+    [InlineData(20)]
+    [InlineData(0)]
+    public async Task No_reminder_is_scheduled_whatever_the_start(int startInHours)
     {
         using var h = new CreateHost();
-        var id = await Seed(h, TimeSpan.FromHours(20));
-        await Fee.Apply(h, id, BookingTrigger.PaymentSucceeded);
-        var kinds = await Kinds(h, id);
-        Assert.DoesNotContain(NotificationKind.Reminder24h, kinds);
-        Assert.Contains(NotificationKind.Reminder1h, kinds);
-        Assert.Contains(NotificationKind.ReviewRequest, kinds);
-        Assert.Equal(2, kinds.Count(k => k == NotificationKind.BookingConfirmed));
-    }
-
-    [Fact]
-    public async Task A_booking_confirmed_less_than_1_h_before_the_start_gets_no_reminders()
-    {
-        using var h = new CreateHost();
-        var id = await Seed(h, TimeSpan.FromMinutes(30));
+        var id = await Seed(h, TimeSpan.FromHours(startInHours));
         await Fee.Apply(h, id, BookingTrigger.PaymentSucceeded);
         var kinds = await Kinds(h, id);
         Assert.DoesNotContain(NotificationKind.Reminder24h, kinds);
         Assert.DoesNotContain(NotificationKind.Reminder1h, kinds);
         Assert.Contains(NotificationKind.ReviewRequest, kinds);
+        Assert.Equal(2, kinds.Count(k => k == NotificationKind.BookingConfirmed));
     }
 
     [Theory]
@@ -140,15 +128,13 @@ public class NotificationSchedulingTests
     }
 
     [Fact]
-    public async Task A_cancellation_keeps_an_already_sent_reminder()
+    public async Task A_cancellation_keeps_an_already_sent_review_request()
     {
         using var h = new CreateHost();
         var id = await ConfirmedWithRows(h, TimeSpan.FromDays(3));
-        await MarkSent(h, id, NotificationKind.Reminder24h);
+        await MarkSent(h, id, NotificationKind.ReviewRequest);
         await Fee.Apply(h, id, BookingTrigger.PractitionerCancels);
-        var kinds = await Kinds(h, id);
-        Assert.Contains(NotificationKind.Reminder24h, kinds);
-        Assert.DoesNotContain(NotificationKind.Reminder1h, kinds);
+        Assert.Contains(NotificationKind.ReviewRequest, await Kinds(h, id));
     }
 
     [Fact]
@@ -167,7 +153,7 @@ public class NotificationSchedulingTests
         var id = await ConfirmedWithRows(h, TimeSpan.FromDays(3));
         await Fee.Apply(h, id, BookingTrigger.ClientDisputes);
         await Fee.Apply(h, id, BookingTrigger.AdminResolves, c => c.Booking.DisputeResolution = "release");
-        Assert.Equal(5, (await Rows(h, id)).Count);
+        Assert.Equal(3, (await Rows(h, id)).Count);
     }
 
     [Fact]
@@ -183,7 +169,7 @@ public class NotificationSchedulingTests
     }
 
     [Fact]
-    public async Task A_scheduled_reminder_is_sent_by_the_dispatcher_when_its_time_comes_and_not_before()
+    public async Task A_scheduled_review_request_is_sent_by_the_dispatcher_when_its_time_comes_and_not_before()
     {
         using var nh = new NotificationHost();
         var id = await Seed(nh.Host, TimeSpan.FromDays(3));
@@ -192,9 +178,11 @@ public class NotificationSchedulingTests
         Assert.Equal(2, await nh.Run()); // the two confirmations are due now, nothing else
         Assert.All(nh.Sender.Sent, m => Assert.Equal(NotificationKind.BookingConfirmed, m.Kind));
 
-        nh.Host.Clock.Advance(TimeSpan.FromDays(2)); // start - 24 h
+        nh.Host.Clock.Advance(TimeSpan.FromDays(3)); // the end of the one-hour booking is 1 h later: not due yet
+        Assert.Equal(0, await nh.Run());
+        nh.Host.Clock.Advance(TimeSpan.FromHours(3)); // end + 2 h
         Assert.Equal(1, await nh.Run());
-        Assert.Contains(nh.Sender.Sent, m => m.Kind == NotificationKind.Reminder24h);
+        Assert.Contains(nh.Sender.Sent, m => m.Kind == NotificationKind.ReviewRequest);
     }
 
     [Fact]

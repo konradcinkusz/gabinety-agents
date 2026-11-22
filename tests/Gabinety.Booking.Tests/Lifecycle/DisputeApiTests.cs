@@ -19,23 +19,21 @@ public class DisputeApiTests
 
     public static TheoryData<string, int, bool> Windows => new()
     {
-        // kind, seconds from now to START, allowed. The session lasts 3600 s, so END = START + 3600.
-        { "other", -3601, true },                       // ended 1 s ago
-        { "other", -3600, true },                       // ends exactly now
-        { "other", -3599, false },                      // ends in 1 s
-        { "other", -(49 * 3600) + 1, true },            // end + 48 h is 1 s ahead
-        { "other", -(49 * 3600), false },               // end + 48 h is exactly now (auto-completion is due)
-        { "other", -(49 * 3600) - 1, false },           // 1 s past
-        { "not_as_described", -3599, false },
-        { "not_as_described", -(49 * 3600) + 1, true },
-        { "practitioner_no_show", 1, false },           // not started
-        { "practitioner_no_show", 0, true },            // starts exactly now
-        { "practitioner_no_show", -1, true },           // started 1 s ago, still running
-        { "practitioner_no_show", -(72 * 3600) + 1, true },
-        { "practitioner_no_show", -(72 * 3600), false },
-        { "practitioner_no_show", -(72 * 3600) - 1, false },
-        { "practitioner_no_show", -(60 * 3600), true }, // past end + 48 h but inside start + 72 h
-        { "other", -(60 * 3600), false },               // the same time is too late for the other kinds
+        // kind, seconds from now to START, allowed. A-03: any kind, from the purchase until END + 72 h (END = START + 3600 s); the kind does not change it.
+        { "other", 1, true },                           // not started yet
+        { "other", 0, true },
+        { "other", -3599, true },                       // still running
+        { "other", -3600, true },
+        { "other", -(73 * 3600) + 1, true },            // end + 72 h is 1 s ahead
+        { "other", -(73 * 3600), false },               // end + 72 h is exactly now
+        { "other", -(73 * 3600) - 1, false },
+        { "not_as_described", 1, true },
+        { "not_as_described", -(60 * 3600), true },
+        { "not_as_described", -(73 * 3600), false },
+        { "practitioner_no_show", 1, true },
+        { "practitioner_no_show", -(60 * 3600), true },
+        { "practitioner_no_show", -(73 * 3600) + 1, true },
+        { "practitioner_no_show", -(73 * 3600), false },
     };
 
     [Theory]

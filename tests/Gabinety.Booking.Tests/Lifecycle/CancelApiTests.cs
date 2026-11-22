@@ -41,25 +41,49 @@ public class CancelApiTests
         Assert.Contains(id.ToString("N"), asked.IdempotencyKey);
     }
 
-    [Fact]
-    public async Task A_client_cancel_1s_inside_24h_is_late_with_no_refund_and_payout_due_at_start()
+    // A-03: the time of the cancel does not matter, only whether a unit was used.
+    [Theory]
+    [InlineData(60 * 60 * 24 - 1)]  // 1 s inside the old 24 h rule: used to be a late cancel
+    [InlineData(0)]
+    [InlineData(-60 * 60 * 24 * 3)] // days after the purchase
+    public async Task A_client_cancel_of_an_unused_package_is_a_full_refund_at_any_time(int startInSeconds)
     {
         var p = new RecordingProvider();
         await using var h = Life.Host(p);
-        var id = await Life.Seed(h, BookingStatus.Confirmed, H24 - TimeSpan.FromSeconds(1));
+        var id = await Life.Seed(h, BookingStatus.Confirmed, TimeSpan.FromSeconds(startInSeconds), TimeSpan.FromDays(30));
         var r = await Life.Cancel(h, id, Life.Client);
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
-        Assert.Equal("LateCancelledByClient", (await r.Body()).GetProperty("status").GetString());
-
-        var row = await Life.Row(h, id);
-        Assert.Equal(BookingStatus.LateCancelledByClient, row.Status);
-        Assert.Equal(row.StartUtc, row.PayoutDueAt);
-        Assert.Equal(h.Clock.GetUtcNow(), row.CancelledAt);
-        Assert.Empty(p.Refunds);
+        Assert.Equal("CancelledByClient", (await r.Body()).GetProperty("status").GetString());
+        Assert.Equal(10000, Assert.Single(p.Refunds).AmountMinor);
         var pay = await Life.PaymentOf(h, id);
-        Assert.Equal(PaymentStatus.Succeeded, pay.Status);
-        Assert.Equal(0, pay.RefundedMinor);
-        Assert.DoesNotContain(await Life.Ledger(h, id), l => l.Kind == LedgerKind.Refund);
+        Assert.Equal((PaymentStatus.Refunded, 10000L), (pay.Status, pay.RefundedMinor));
+        Assert.Null((await Life.Row(h, id)).PayoutDueAt);
+    }
+
+    [Fact]
+    public async Task A_client_cancel_after_a_unit_was_used_is_409_invalid_transition_and_the_package_stays()
+    {
+        var p = new RecordingProvider();
+        await using var h = Life.Host(p);
+        var id = await Life.Seed(h, BookingStatus.Confirmed, TimeSpan.Zero, TimeSpan.FromDays(30), unitsUsed: 1);
+        var r = await Life.Cancel(h, id, Life.Client);
+        Assert.Equal(HttpStatusCode.Conflict, r.StatusCode);
+        Assert.Equal("invalid_transition", await Code(r));
+        Assert.Empty(p.Refunds);
+        Assert.Equal(BookingStatus.Confirmed, (await Life.Row(h, id)).Status);
+        Assert.Equal(PaymentStatus.Succeeded, (await Life.PaymentOf(h, id)).Status);
+    }
+
+    [Fact]
+    public async Task The_practitioner_may_still_withdraw_a_package_that_was_used()
+    {
+        var p = new RecordingProvider();
+        await using var h = Life.Host(p);
+        var id = await Life.Seed(h, BookingStatus.Confirmed, TimeSpan.Zero, TimeSpan.FromDays(30), unitsUsed: 2);
+        var r = await Life.Cancel(h, id, Life.Practitioner);
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        Assert.Equal(10000, Assert.Single(p.Refunds).AmountMinor);
+        Assert.Equal(BookingStatus.CancelledByPractitioner, (await Life.Row(h, id)).Status);
     }
 
     [Theory]
@@ -232,12 +256,12 @@ public class CancelApiTests
         var p = new RecordingProvider();
         await using var h = Life.Host(p);
         await h.WorkWeek();
-        var (id, _) = await Pay.CreateBooking(h, Life.Client); // Tuesday 10:00 UTC, 22 h away
+        var (id, _) = await Pay.CreateBooking(h, Life.Client); // valid from now for 30 days, nothing used
         Assert.Equal(HttpStatusCode.OK, (await Pay.Simulate(h.ClientFor(Life.Client), id, "succeeded")).StatusCode);
         var r = await Life.Cancel(h, id, Life.Client);
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
-        Assert.Equal("LateCancelledByClient", (await r.Body()).GetProperty("status").GetString()); // 22 h < 24 h
-        Assert.Empty(p.Refunds);
+        Assert.Equal("CancelledByClient", (await r.Body()).GetProperty("status").GetString());
+        Assert.Equal(10000, Assert.Single(p.Refunds).AmountMinor);
     }
 
     [Fact]

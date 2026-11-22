@@ -29,7 +29,6 @@ public class StatsPushJobTests : IDisposable
         "completed" => StatsFx.Seed(h, BookingStatus.Completed),
         "practitioner cancel" => StatsFx.Seed(h, BookingStatus.CancelledByPractitioner),
         "no-show upheld" => StatsFx.Seed(h, BookingStatus.Resolved, "refund_full", "practitioner_no_show"),
-        "open slots" => h.Seed(db => db.Exceptions.Add(new() { Id = Guid.NewGuid(), PractitionerId = h.Practitioner, DateLocal = new(2026, 11, 18) })),
         _ => throw new ArgumentOutOfRangeException(nameof(what)),
     };
 
@@ -37,8 +36,7 @@ public class StatsPushJobTests : IDisposable
     [InlineData("completed")]
     [InlineData("practitioner cancel")]
     [InlineData("no-show upheld")]
-    [InlineData("open slots")]
-    public async Task Any_one_of_the_four_values_changing_triggers_exactly_one_new_push(string what)
+    public async Task Any_one_of_the_three_counts_changing_triggers_exactly_one_new_push(string what)
     {
         await h.WorkWeek();
         await StatsFx.Seed(h, BookingStatus.Completed);

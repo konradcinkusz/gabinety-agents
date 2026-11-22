@@ -18,7 +18,7 @@ public readonly record struct TransitionResult(bool Allowed, BookingStatus? Next
 /// <summary>
 /// CONTRACTS 8.1 as a transition table. No I/O, no clock. Time conditions the table cannot see
 /// (practitioner cancel before end, dispute window, 48 h completion) are the caller's: it only
-/// sends the trigger when the condition holds. <c>start</c> and <c>now</c> decide ClientCancels only.
+/// sends the trigger when the condition holds (the client may cancel a package only while no unit was used, also the caller's check). <c>start</c> and <c>now</c> are kept for the signature.
 /// </summary>
 public static class BookingStateMachine
 {
@@ -39,10 +39,8 @@ public static class BookingStateMachine
 
     public static TransitionResult Next(BookingStatus from, BookingTrigger trigger, DateTimeOffset start, DateTimeOffset now)
     {
-        if (from == BookingStatus.Confirmed && trigger == BookingTrigger.ClientCancels)
-            return new(true, RefundPolicy.ForClientCancellation(start, now) == MoneyEvent.ClientCancelledEarly
-                ? BookingStatus.CancelledByClient
-                : BookingStatus.LateCancelledByClient);
+        // A package is cancelled in full or not at all (the caller checks that nothing was used): there is no late cancellation any more (A-03).
+        if (from == BookingStatus.Confirmed && trigger == BookingTrigger.ClientCancels) return new(true, BookingStatus.CancelledByClient);
         return Table.TryGetValue((from, trigger), out var to) ? new(true, to) : new(false, null);
     }
 }

@@ -31,11 +31,12 @@ public sealed class BookingSeedFixture : IAsyncLifetime
 
 public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<BookingSeedFixture>
 {
-    // A-02: a booking is a package valid for 30 days from the purchase, so the plan's slot-based dates no longer apply: the clock moves a month to complete one
-    // booking and completes the others on the way, and a cancel is always "late" (the start is the purchase). Pinned to that outcome until D-01 rewrites the seeder.
+    // A-02/A-03: a booking is a package valid for 30 days from the purchase, so the plan's slot-based dates no longer apply: the clock moves a month to complete one
+    // booking and completes the others on the way, every cancel by the client is a full one (CancelledByClient), and a no-show cannot be reported any more.
+    // Pinned to that outcome until D-01 rewrites the seeder.
     static readonly Dictionary<string, int> ExpectedPerStatus = new()
     {
-        ["PendingPayment"] = 1, ["Expired"] = 1, ["LateCancelledByClient"] = 2, ["Completed"] = 5, ["ClientNoShow"] = 1, ["Disputed"] = 1, ["Resolved"] = 1,
+        ["PendingPayment"] = 1, ["Expired"] = 1, ["CancelledByClient"] = 2, ["Completed"] = 5, ["ClientNoShow"] = 1, ["Disputed"] = 1, ["Resolved"] = 1,
     };
 
     BookingWorld _w => fx.World;
