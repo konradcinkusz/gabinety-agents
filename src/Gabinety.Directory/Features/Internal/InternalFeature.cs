@@ -12,7 +12,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace Gabinety.Directory.Features.Internal;
 
 public sealed record InternalOfferingDto(Guid OfferingId, Guid PractitionerId, string PractitionerUserId, PractitionerStatus PractitionerStatus,
-    string Title, int DurationMinutes, MoneyDto Price, string? MeetingUrl, bool IsActive);
+    string Title, int DurationMinutes, MoneyDto Price, string? MeetingUrl, bool IsActive,
+    OfferingKind Kind = OfferingKind.Tasks, int Units = 1, string PractitionerSlug = "");
 public sealed record InternalPractitionerDto(Guid PractitionerId, PractitionerStatus Status);
 
 /// <summary><c>GET /internal/v1/practitioners/{id}</c>: what Booking shows next to a booking (ADR-0012 section 6). Display name and slug only; an erased practitioner reads <see cref="InternalFeature.ErasedName"/>.</summary>
@@ -53,10 +54,10 @@ public sealed class InternalFeature : IServiceFeature
         var row = await (from o in db.Offerings.AsNoTracking()
                          join p in db.Practitioners.AsNoTracking() on o.PractitionerId equals p.Id
                          where o.Id == id
-                         select new { o, p.UserId, p.Status, p.MeetingUrlDefault }).SingleOrDefaultAsync(ct);
+                         select new { o, p.UserId, p.Status, p.MeetingUrlDefault, p.Slug }).SingleOrDefaultAsync(ct);
         if (row is null) return Problem(404, ErrorCodes.NotFound, "Not found");
         return Results.Ok(new InternalOfferingDto(row.o.Id, row.o.PractitionerId, row.UserId, row.Status, row.o.Title, row.o.DurationMinutes,
-            new MoneyDto(row.o.PriceMinor, row.o.Currency), row.o.MeetingUrl ?? row.MeetingUrlDefault, row.o.IsActive));
+            new MoneyDto(row.o.PriceMinor, row.o.Currency), row.o.MeetingUrl ?? row.MeetingUrlDefault, row.o.IsActive, row.o.Kind, row.o.Units, row.Slug));
     }
 
     static async Task<IResult> GetByUser(string userId, DirectoryDbContext db, CancellationToken ct)

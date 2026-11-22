@@ -52,6 +52,14 @@ namespace Gabinety.Directory.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_active");
 
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("Tasks")
+                        .HasColumnName("kind");
+
                     b.Property<string>("MeetingUrl")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)")
@@ -81,6 +89,12 @@ namespace Gabinety.Directory.Persistence.Migrations
                         .HasMaxLength(80)
                         .HasColumnType("character varying(80)")
                         .HasColumnName("title");
+
+                    b.Property<int>("Units")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("units");
 
                     b.HasKey("Id");
 
