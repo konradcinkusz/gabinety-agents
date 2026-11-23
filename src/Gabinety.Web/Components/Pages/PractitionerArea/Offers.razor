@@ -48,7 +48,7 @@ else if (_loaded)
                             <h3 class="offer__title">@o.Title</h3>
                             <KindBadge Label="@(o.IsActive ? PlPractitioner.Offers.Active : PlPractitioner.Offers.Inactive)" Kind="@(o.IsActive ? "success" : "neutral")" />
                         </div>
-                        <p class="muted"><span class="num">@Money.Pln(o.Price.AmountMinor)</span> · @o.DurationMinutes min</p>
+                        <p class="muted"><span data-testid="offer-units">@Gabinety.Web.Components.Pages.Gabinet.Profile.UnitsLine(o.Kind, o.Units, o.DurationMinutes)</span> · <span class="num">@Money.Pln(o.Price.AmountMinor)</span></p>
                         <div class="cluster row-actions">
                             @if (o.IsActive)
                             {
@@ -98,6 +98,17 @@ else if (_loaded)
                         <textarea id="@context.Id" name="description" rows="5" maxlength="600" aria-describedby="@context.DescribedBy" aria-invalid="@Invalid(context)">@_f.Description</textarea>
                     </FormField>
                     <div class="offer-form__pair">
+                        <FormField Id="kind" Label="@PlPractitioner.Offers.Kind" Hint="@PlPractitioner.Offers.KindHint" Error="@Error("kind")">
+                            <select id="@context.Id" name="kind" aria-describedby="@context.DescribedBy" aria-invalid="@Invalid(context)">
+                                <option value="Tasks" selected="@(_f.Kind != "Chat")">@PlPractitioner.Offers.KindTasks</option>
+                                <option value="Chat" selected="@(_f.Kind == "Chat")">@PlPractitioner.Offers.KindChat</option>
+                            </select>
+                        </FormField>
+                        <FormField Id="units" Label="@PlPractitioner.Offers.Units" Hint="@($"{PlPractitioner.Offers.UnitsHintTasks} {PlPractitioner.Offers.UnitsHintChat}")" Error="@Error("units")">
+                            <input id="@context.Id" name="units" inputmode="numeric" autocomplete="off" value="@_f.Units" aria-describedby="@context.DescribedBy" aria-invalid="@Invalid(context)" />
+                        </FormField>
+                    </div>
+                    <div class="offer-form__pair">
                         <FormField Id="duration" Label="@PlPractitioner.Offers.Duration" Error="@Error("durationMinutes")">
                             <select id="@context.Id" name="duration" aria-describedby="@context.DescribedBy" aria-invalid="@Invalid(context)">
                                 <option value="30" selected="@(_f.Duration != "60")">@PlPractitioner.Offers.D30</option>
@@ -129,9 +140,6 @@ else if (_loaded)
                         <p class="muted" id="techs-count">@string.Format(PlPractitioner.Offers.TechCount, _f.Techs.Count)</p>
                         @if (Error("techSlugs") is { } techError) {<p class="field__error" id="techSlugs-error"><span class="visually-hidden">@($"{PlPractitioner.Common.ErrorWord} ")</span>@techError</p>}
                     </fieldset>
-                    <FormField Id="meetingUrl" Label="@PlPractitioner.Offers.Meeting" Hint="@PlPractitioner.Offers.MeetingHint" Error="@Error("meetingUrl")" Optional="true">
-                        <input id="@context.Id" name="meetingUrl" type="url" inputmode="url" maxlength="300" value="@_f.Meeting" aria-describedby="@context.DescribedBy" aria-invalid="@Invalid(context)" />
-                    </FormField>
                     <div class="form-actions cluster">
                         <button class="btn btn--primary" type="submit" disabled="@(_editing is null && _active >= OfferForm.MaxActive)">@PlPractitioner.Common.Save</button>
                         <a class="btn btn--ghost" href="@PractitionerPaths.Offers">@PlPractitioner.Offers.Cancel</a>
@@ -146,7 +154,7 @@ else if (_loaded)
                 <p class="muted offer-preview__note">@PlPractitioner.Offers.PreviewNote</p>
                 <h3 class="offer-preview__title @(string.IsNullOrWhiteSpace(_f.Title) ? "muted" : null)">@(string.IsNullOrWhiteSpace(_f.Title) ? PlPractitioner.Offers.PreviewTitle : _f.Title)</h3>
                 <p class="offer-preview__desc @(string.IsNullOrWhiteSpace(_f.Description) ? "muted" : null)">@(string.IsNullOrWhiteSpace(_f.Description) ? PlPractitioner.Offers.PreviewDescription : _f.Description)</p>
-                <p class="cluster offer-preview__meta"><span>@string.Format(PlPractitioner.Offers.Minutes, _f.Duration == "60" ? 60 : 30)</span> · <span class="num @(PreviewPriceIsPlaceholder ? "muted" : null)">@PreviewPrice</span></p>
+                <p class="cluster offer-preview__meta"><span>@PreviewUnits</span> · <span class="num @(PreviewPriceIsPlaceholder ? "muted" : null)">@PreviewPrice</span></p>
             </section>
         </div>
     }
@@ -179,6 +187,7 @@ else if (_loaded)
         var (problem, grosz) = PriceInput.Parse(_f.Price);
         return problem == PriceProblem.None ? (Money.Pln(grosz), false) : (PlPractitioner.Offers.PreviewPrice, true);
     }
+    string PreviewUnits => int.TryParse(_f.Units, out var units) && units > 0 ? Gabinety.Web.Components.Pages.Gabinet.Profile.UnitsLine(_f.Kind, units, _f.Duration == "60" ? 60 : 30) : string.Format(PlPractitioner.Offers.Minutes, _f.Duration == "60" ? 60 : 30);
     string PreviewPrice => Preview().Text;
     bool PreviewPriceIsPlaceholder => Preview().IsPlaceholder;
 

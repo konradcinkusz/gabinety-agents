@@ -81,8 +81,8 @@ public class AdminComponentTests : BunitContext
     }
 
     [Theory]
-    [InlineData("/admin/spory", "Spory")]
-    [InlineData("/admin/weryfikacja/0b9e1d2c-aaaa-bbbb-cccc-1234567890ab", "Weryfikacja programistów")]
+    [InlineData("/admin/spory", "Reklamacje")]
+    [InlineData("/admin/weryfikacja/0b9e1d2c-aaaa-bbbb-cccc-1234567890ab", "Weryfikacja agentów")]
     [InlineData("/admin/ksiega", "Księga")]
     public void The_admin_layout_marks_the_section_of_the_current_address_and_nothing_else(string path, string current)
     {

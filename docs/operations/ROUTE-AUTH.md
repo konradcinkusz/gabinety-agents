@@ -176,7 +176,6 @@ The middleware is UX, the services are the boundary: a signed-in page still call
 | Web | PAGE | `/gabinet-programisty` | Authenticated | all | practitioner dashboard and onboarding, static server rendering; any signed-in account may become a practitioner (ADR-0012, "Practitioner area") |
 | Web | PAGE | `/gabinet-programisty/profil` | Authenticated | all | practitioner profile form |
 | Web | PAGE | `/gabinet-programisty/oferty` | Authenticated | all | offers: list, confirmation before disabling, re-enable, form |
-| Web | PAGE | `/gabinet-programisty/dostepnosc` | Authenticated | all | weekly availability and blocked days |
 | Web | PAGE | `/gabinet-programisty/platnosci` | Authenticated | all | payments account status and onboarding link (PAYMENTS-GO-LIVE) |
 | Web | PAGE | `/practitioner/payments` | Authenticated | all | the return and refresh address Booking gives Stripe; forwards to `/gabinet-programisty/platnosci` |
 | Web | PAGE | `/not-found` | Anonymous | all | status code re-execution target |

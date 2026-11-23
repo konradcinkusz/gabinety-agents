@@ -183,9 +183,11 @@ else
     static string BookHref(string slug, OfferingDto o) => $"/rezerwacja/{o.Id}?gabinet={Uri.EscapeDataString(slug)}";
 
     /// <summary>"10 zadań, typowy czas ok. 30 min" for a task package, "500 tys. tokenów, API zgodne z OpenAI" for a chat package (<c>Units</c> are thousands of tokens).</summary>
-    public static string UnitsLine(OfferingDto o) => o.Kind == "Chat"
-        ? string.Format(PlPages.Profile.ChatLine, o.Units)
-        : string.Format(PlPages.Profile.TasksLine, o.Units, TaskWord(o.Units), o.DurationMinutes);
+    public static string UnitsLine(OfferingDto o) => UnitsLine(o.Kind, o.Units, o.DurationMinutes);
+
+    public static string UnitsLine(string kind, int units, int minutes) => kind == "Chat"
+        ? string.Format(PlPages.Profile.ChatLine, units)
+        : string.Format(PlPages.Profile.TasksLine, units, TaskWord(units), minutes);
 
     /// <summary>Polish plural of "zadanie": 1 zadanie, 2-4 zadania (not 12-14), the rest zadań.</summary>
     public static string TaskWord(int n) => n == 1 ? PlPages.Profile.TaskOne

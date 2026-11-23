@@ -18,7 +18,7 @@ public class AdminSharedMarkupTests
 
         var nav = page.One("nav.tabs[aria-label='Sekcje administracji']")!;
         Assert.Equal(5, nav.QuerySelectorAll("a.tabs__link").Length);
-        Assert.Equal(["Spory"], nav.QuerySelectorAll("a[aria-current=page]").Select(a => a.TextContent));
+        Assert.Equal(["Reklamacje"], nav.QuerySelectorAll("a[aria-current=page]").Select(a => a.TextContent));
         Assert.DoesNotContain("(", nav.TextContent); // a count would be one more backend call on every admin page
         Assert.Empty(page.All("[class*=admin-tabs], [class*=admin-segmented], [class*=admin-option], [class*=admin-table]"));
     }

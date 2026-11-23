@@ -99,7 +99,7 @@ public class AdminLogicTests
     public void The_confirm_step_words_the_money_for_each_outcome()
     {
         Assert.Contains("180,00", Form("refund_full").Consequence());
-        Assert.Contains("Programista nie otrzyma nic", Form("refund_full").Consequence());
+        Assert.Contains("Dostawca nie otrzyma nic", Form("refund_full").Consequence());
         Assert.Contains("nie dostanie zwrotu", Form("release").Consequence());
         var partial = Form("refund_partial", "100,00").Consequence();
         Assert.Contains("100,00", partial);

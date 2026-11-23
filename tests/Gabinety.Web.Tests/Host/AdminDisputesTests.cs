@@ -34,7 +34,7 @@ public class AdminDisputesTests
         var page = await host.Browser.GetAsync(Open);
 
         Assert.Equal(HttpStatusCode.OK, page.Status);
-        Assert.Equal("Spory", Assert.Single(page.All("h1")).TextContent);
+        Assert.Equal("Reklamacje", Assert.Single(page.All("h1")).TextContent);
         var card = Assert.Single(page.All("main ul[aria-label] > li"));
         var text = Page.Squash(card.TextContent).Replace(' ', ' ');
         Assert.Contains(BookingId.ToString(), text); // J6: the listitem that names the booking id
@@ -42,8 +42,8 @@ public class AdminDisputesTests
         Assert.Contains("Audyt kodu .NET", text); // the offer
         Assert.Contains("180,00 zł", text); // the amount at issue (P-ADM-1)
         Assert.Equal("180,00 zł", AdminHost.Fact(card, "Najwyższy możliwy zwrot"));
-        Assert.Equal("180,00 zł", AdminHost.Fact(card, "Cena rezerwacji"));
-        Assert.Equal("Anna Demowska", AdminHost.Fact(card, "Programista"));
+        Assert.Equal("180,00 zł", AdminHost.Fact(card, "Cena pakietu"));
+        Assert.Equal("Anna Demowska", AdminHost.Fact(card, "Agent"));
         Assert.Contains("Anna Demowska", text); // the practitioner by name, read from Directory
         Assert.Contains("Opłacona", text);
         Assert.Contains("24 lis 2026, 13:00", text); // no seconds, short month
@@ -73,7 +73,7 @@ public class AdminDisputesTests
         await using var _h = host;
         var page = await host.Browser.GetAsync($"{Open}&rozstrzygnij={BookingId}");
         var card = Assert.Single(page.All("main ul[aria-label] > li"));
-        Assert.Equal(["Wypłać programiście", "Zwróć klientowi całość", "Zwróć klientowi część"], card.QuerySelectorAll("input[type=radio]").Select(r => Page.Squash(r.ParentElement!.QuerySelector("span")!.ChildNodes[0].TextContent)));
+        Assert.Equal(["Wypłać dostawcy", "Zwróć klientowi całość", "Zwróć klientowi część"], card.QuerySelectorAll("input[type=radio]").Select(r => Page.Squash(r.ParentElement!.QuerySelector("span")!.ChildNodes[0].TextContent)));
         Assert.Equal("Kwota zwrotu w zł", card.QuerySelector("label[for^=amount]")!.TextContent);
         Assert.StartsWith("Notatka", card.QuerySelector("label[for^=note]")!.TextContent);
         Assert.Contains("Od 0,01 zł do 180,00", Page.Squash(card.QuerySelector(".field__hint")!.TextContent).Replace(' ', ' ') + Page.Squash(card.TextContent).Replace(' ', ' ')); // the maximum is the field's hint
@@ -175,7 +175,7 @@ public class AdminDisputesTests
     [InlineData(HttpStatusCode.Conflict, "invalid_transition", "Stan się zmienił, odśwież stronę.")]
     [InlineData(HttpStatusCode.ServiceUnavailable, "dependency_unavailable", "Operator płatności jest chwilowo niedostępny")]
     [InlineData(HttpStatusCode.BadRequest, "validation_failed", "Serwer odrzucił dane rozstrzygnięcia.")]
-    [InlineData(HttpStatusCode.NotFound, "not_found", "Nie znaleziono rezerwacji.")]
+    [InlineData(HttpStatusCode.NotFound, "not_found", "Nie znaleziono dostępu.")]
     public async Task A_refusal_of_the_service_is_a_clear_message_never_a_crash_and_never_the_servers_own_text(HttpStatusCode status, string code, string expected)
     {
         var (host, _) = await HostWithDisputeAsync();
@@ -264,7 +264,7 @@ public class AdminDisputesTests
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Equal(PlAdmin.Disputes.Unavailable, page.TextOf("[data-testid=unavailable]"));
         Assert.Equal("alert", page.One("[data-testid=unavailable]")!.GetAttribute("role"));
-        Assert.Equal("Spory", page.TextOf("h1"));
+        Assert.Equal("Reklamacje", page.TextOf("h1"));
         Assert.DoesNotContain("SERVER-TITLE", page.Html);
     }
 

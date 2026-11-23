@@ -118,25 +118,18 @@ public sealed record CreatePractitionerBody(string DisplayName);
 /// <summary>An empty optional field is omitted, not sent as null (CONTRACTS 0): the attribute is on the body, not on the shared options.</summary>
 public sealed record UpdatePractitionerBody(string DisplayName, string Headline, string Bio,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] string? PortfolioUrl,
-    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] string? MeetingUrlDefault,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] string? Nip);
 
 public sealed record OfferingPrivateDto(Guid Id, string Title, string Description, int DurationMinutes, MoneyDto Price, string ProblemSlug, IReadOnlyList<string> TechSlugs, bool IsActive, string? MeetingUrl, string Kind = "Tasks", int Units = 1);
 
 public sealed record OfferingsDto(IReadOnlyList<OfferingPrivateDto> Items);
 
-public sealed record OfferingBody(string Title, string Description, int DurationMinutes, long PriceMinor, string ProblemSlug, IReadOnlyList<string> TechSlugs,
-    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] string? MeetingUrl);
+/// <summary><c>Kind</c> is <c>Tasks</c> or <c>Chat</c>; <c>Units</c> counts tasks, or thousands of tokens for <c>Chat</c>. The meeting link of the old model is not sent (docs/agentic/PLAN.md C-04).</summary>
+public sealed record OfferingBody(string Title, string Description, int DurationMinutes, long PriceMinor, string ProblemSlug, IReadOnlyList<string> TechSlugs, string Kind = "Tasks", int Units = 1);
 
 public sealed record GithubLinkBody(string GithubLogin);
 
 public sealed record GithubChallengeDto(string Code);
-
-public sealed record AvailabilityRuleDto(int IsoWeekday, string StartLocal, string EndLocal);
-
-public sealed record AvailabilityExceptionDto(string DateLocal);
-
-public sealed record AvailabilityDto(IReadOnlyList<AvailabilityRuleDto> Rules, IReadOnlyList<AvailabilityExceptionDto> Exceptions);
 
 /// <summary><c>GET /api/v1/me/payments/account</c>: <c>State</c> is <c>none | pending | ready</c>. A provider with no connected accounts (the mock) answers 404.</summary>
 public sealed record PaymentAccountDto(string Provider, string State);

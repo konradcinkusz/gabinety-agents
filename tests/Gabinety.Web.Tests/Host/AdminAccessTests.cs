@@ -37,7 +37,7 @@ public class AdminAccessTests
         Assert.Contains(PlAdmin.Forbidden.Body, page.Text);
         Assert.Equal("/", page.One("[data-testid=forbidden] a")!.GetAttribute("href"));
         Assert.Contains("noindex", page.One("meta[name=robots]")!.GetAttribute("content"));
-        Assert.DoesNotContain("Weryfikacja programistów", page.TextOf("main")); // nothing of the area is rendered
+        Assert.DoesNotContain("Weryfikacja agentów", page.TextOf("main")); // nothing of the area is rendered
         Assert.All([host.Web.Directory, host.Web.Booking, host.Web.Reputation], b => Assert.Equal(0, b.CallsExceptShellCheck));
     }
 
@@ -92,8 +92,8 @@ public class AdminAccessTests
         var page = await host.Browser.GetAsync("/admin/spory");
         Assert.Single(page.All("h1"));
         var tabs = page.All("nav[aria-label='Sekcje administracji'] a");
-        Assert.Equal(["Weryfikacja programistów", "Spory", "Księga", "Opinie", "Podejrzane pary"], tabs.Select(a => a.TextContent.Trim()));
-        Assert.Equal(["Spory"], tabs.Where(a => a.GetAttribute("aria-current") == "page").Select(a => a.TextContent.Trim()));
+        Assert.Equal(["Weryfikacja agentów", "Reklamacje", "Księga", "Opinie", "Podejrzane pary"], tabs.Select(a => a.TextContent.Trim()));
+        Assert.Equal(["Reklamacje"], tabs.Where(a => a.GetAttribute("aria-current") == "page").Select(a => a.TextContent.Trim()));
         Assert.Contains("noindex", page.One("meta[name=robots]")!.GetAttribute("content"));
         Assert.Single(page.All("nav"), n => n.GetAttribute("aria-label") == "Sekcje administracji"); // the area's own navs have names of their own (contract 7.5)
         Assert.Single(page.All("nav"), n => n.GetAttribute("aria-label") == "Status");

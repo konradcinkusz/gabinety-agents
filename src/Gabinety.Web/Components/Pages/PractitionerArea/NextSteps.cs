@@ -10,7 +10,7 @@ public enum PaymentsState { Unknown, NotApplicable, None, Pending, Ready }
 public sealed record NextStep(string Title, string Text, bool Done, string Href, string Key, bool Known = true);
 
 /// <summary>
-/// "What next": verification, offers, availability, payments, in that order, each with the one place it is done. The first step that is not done is the next step. Pure: the dashboard
+/// "What next": verification, offers, payments, in that order, each with the one place it is done. The first step that is not done is the next step. Pure: the dashboard
 /// loads the facts and this class decides. Payments counts as done when the provider needs nothing (the mock) and is left out of the "next" choice when it could not be read.
 /// </summary>
 public static class NextSteps
@@ -27,7 +27,7 @@ public static class NextSteps
     /// <summary>The banner is for a real provider whose account is not ready; the mock (fake profile) and an unreadable answer show none.</summary>
     public static bool ShowPaymentsBanner(PaymentsState s) => s is PaymentsState.None or PaymentsState.Pending;
 
-    public static IReadOnlyList<NextStep> Build(PractitionerPrivateDto profile, IReadOnlyList<OfferingPrivateDto> offers, int? availabilityRules, PaymentsState payments)
+    public static IReadOnlyList<NextStep> Build(PractitionerPrivateDto profile, IReadOnlyList<OfferingPrivateDto> offers, PaymentsState payments)
     {
         var approved = profile.Status == "Approved";
         return
@@ -35,7 +35,6 @@ public static class NextSteps
             new(PlPractitioner.Dashboard.StepVerification, approved ? PlPractitioner.Dashboard.StepVerificationDone : profile.Status == "Submitted" ? PlPractitioner.Dashboard.StepVerificationWaiting : PlPractitioner.Dashboard.StepVerificationTodo,
                 approved, PractitionerPaths.Home, "verification"),
             new(PlPractitioner.Dashboard.StepOffers, offers.Any(o => o.IsActive) ? PlPractitioner.Dashboard.StepOffersDone : PlPractitioner.Dashboard.StepOffersTodo, offers.Any(o => o.IsActive), PractitionerPaths.Offers, "offers"),
-            new(PlPractitioner.Dashboard.StepAvailability, availabilityRules > 0 ? PlPractitioner.Dashboard.StepAvailabilityDone : PlPractitioner.Dashboard.StepAvailabilityTodo, availabilityRules > 0, PractitionerPaths.Availability, "availability"),
             new(PlPractitioner.Dashboard.StepPayments, payments switch
             {
                 PaymentsState.Ready => PlPractitioner.Dashboard.StepPaymentsDone, PaymentsState.NotApplicable => PlPractitioner.Dashboard.StepPaymentsDemo,

@@ -39,13 +39,13 @@ public class ChecklistTests
     static PractitionerPrivateDto Profile(string headline = "", string bio = "", bool github = false, bool nip = false, string? portfolio = null, bool email = false, string status = "Draft") =>
         new(Guid.NewGuid(), "demo-x", status, null, "Demo X", headline, bio, portfolio, null, null, email, github, nip, null);
 
-    static OfferingPrivateDto Offer(bool active) => new(Guid.NewGuid(), "Oferta", "", 30, new MoneyDto(10000, "PLN"), "code-review", [], active, null);
+    static OfferingPrivateDto Offer(bool active) => new(Guid.NewGuid(), "Oferta", "", 30, new MoneyDto(10000, "PLN"), "code-review", [], active, null, "Tasks", 1);
 
     [Fact]
     public void An_empty_draft_has_seven_open_steps_in_the_order_of_the_contract()
     {
         var items = OnboardingChecklist.Build(Profile(), []);
-        Assert.Equal(["Nagłówek profilu", "Opis (co najmniej 200 znaków)", "Co najmniej jedna aktywna oferta", "Połączone konto GitHub", "Poprawny numer NIP", "Link do portfolio", "Potwierdzony adres e-mail"], items.Select(i => i.Title));
+        Assert.Equal(["Nagłówek profilu", "Opis (co najmniej 200 znaków)", "Co najmniej jeden aktywny pakiet", "Połączone konto GitHub", "Poprawny numer NIP", "Link do portfolio", "Potwierdzony adres e-mail"], items.Select(i => i.Title));
         Assert.All(items, i => Assert.False(i.Done));
         Assert.Equal(7, OnboardingChecklist.Remaining(items));
     }
@@ -86,39 +86,37 @@ public class ChecklistTests
 public class NextStepsTests
 {
     static PractitionerPrivateDto Profile(string status) => new(Guid.NewGuid(), "demo-x", status, null, "Demo X", "", "", null, null, null, false, false, false, null);
-    static OfferingPrivateDto Offer(bool active) => new(Guid.NewGuid(), "Oferta", "", 30, new MoneyDto(10000, "PLN"), "code-review", [], active, null);
+    static OfferingPrivateDto Offer(bool active) => new(Guid.NewGuid(), "Oferta", "", 30, new MoneyDto(10000, "PLN"), "code-review", [], active, null, "Tasks", 1);
 
     [Fact]
-    public void The_order_is_verification_offers_availability_payments_and_the_first_open_one_is_next()
+    public void The_order_is_verification_offers_payments_and_the_first_open_one_is_next()
     {
-        var steps = NextSteps.Build(Profile("Draft"), [], 0, PaymentsState.None);
-        Assert.Equal(["Weryfikacja profilu", "Oferty", "Dostępność", "Płatności"], steps.Select(s => s.Title));
+        var steps = NextSteps.Build(Profile("Draft"), [], PaymentsState.None);
+        Assert.Equal(["Weryfikacja profilu", "Pakiety", "Płatności"], steps.Select(s => s.Title));
+        Assert.DoesNotContain(steps, s => s.Key == "availability"); // C-04: an agent is always available
         Assert.Equal("verification", NextSteps.Next(steps)!.Key);
-        steps = NextSteps.Build(Profile("Approved"), [], 0, PaymentsState.None);
+        steps = NextSteps.Build(Profile("Approved"), [], PaymentsState.None);
         Assert.Equal("offers", NextSteps.Next(steps)!.Key);
-        steps = NextSteps.Build(Profile("Approved"), [Offer(true)], 0, PaymentsState.None);
-        Assert.Equal("availability", NextSteps.Next(steps)!.Key);
-        steps = NextSteps.Build(Profile("Approved"), [Offer(true)], 3, PaymentsState.Pending);
+        steps = NextSteps.Build(Profile("Approved"), [Offer(true)], PaymentsState.Pending);
         Assert.Equal("payments", NextSteps.Next(steps)!.Key);
-        steps = NextSteps.Build(Profile("Approved"), [Offer(true)], 3, PaymentsState.Ready);
+        steps = NextSteps.Build(Profile("Approved"), [Offer(true)], PaymentsState.Ready);
         Assert.Null(NextSteps.Next(steps));
     }
 
     [Fact]
-    public void An_inactive_offer_and_unknown_availability_are_not_done()
+    public void An_inactive_offer_is_not_done()
     {
-        var steps = NextSteps.Build(Profile("Approved"), [Offer(false)], null, PaymentsState.Ready);
+        var steps = NextSteps.Build(Profile("Approved"), [Offer(false)], PaymentsState.Ready);
         Assert.False(steps[1].Done);
-        Assert.False(steps[2].Done);
     }
 
     [Fact]
     public void The_demo_provider_needs_nothing_and_an_unreadable_answer_is_never_the_next_step()
     {
-        var demo = NextSteps.Build(Profile("Approved"), [Offer(true)], 1, PaymentsState.NotApplicable);
-        Assert.True(demo[3].Done);
-        var unknown = NextSteps.Build(Profile("Approved"), [Offer(true)], 1, PaymentsState.Unknown);
-        Assert.False(unknown[3].Done);
+        var demo = NextSteps.Build(Profile("Approved"), [Offer(true)], PaymentsState.NotApplicable);
+        Assert.True(demo[2].Done);
+        var unknown = NextSteps.Build(Profile("Approved"), [Offer(true)], PaymentsState.Unknown);
+        Assert.False(unknown[2].Done);
         Assert.Null(NextSteps.Next(unknown));
     }
 
@@ -138,169 +136,6 @@ public class NextStepsTests
     }
 }
 
-public class AvailabilityDraftTests
-{
-    static AvailabilityDraft Draft(params (int Day, string From, string To)[] rules)
-    {
-        var d = new AvailabilityDraft();
-        foreach (var r in rules) d.Rules.Add(new AvailabilityRuleDto(r.Day, r.From, r.To));
-        return d;
-    }
-
-    static IReadOnlyList<AvailabilityIssueCode> Codes(AvailabilityDraft d) => [.. d.Validate().Select(i => i.Code)];
-
-    [Fact]
-    public void Copying_a_weekday_replaces_the_other_working_days_and_leaves_the_weekend_alone()
-    {
-        var d = Draft((1, "09:00", "12:00"), (1, "13:00", "15:00"), (3, "08:00", "09:00"), (6, "10:00", "11:00"));
-        d.CopyToWeekdays(1);
-        foreach (var day in new[] { 1, 2, 3, 4, 5 }) Assert.Equal([("09:00", "12:00"), ("13:00", "15:00")], d.Rules.Where(r => r.IsoWeekday == day).Select(r => (r.StartLocal, r.EndLocal)));
-        Assert.Equal([("10:00", "11:00")], d.Rules.Where(r => r.IsoWeekday == 6).Select(r => (r.StartLocal, r.EndLocal)));
-        Assert.Equal(11, d.Rules.Count);
-        Assert.Empty(d.Validate());
-    }
-
-    [Theory]
-    [InlineData(6)]
-    [InlineData(7)]
-    [InlineData(0)]
-    public void Only_a_working_day_with_intervals_is_a_source_for_copying(int source)
-    {
-        var d = Draft((1, "09:00", "12:00"), (6, "10:00", "11:00"));
-        d.CopyToWeekdays(source);
-        Assert.Equal(2, d.Rules.Count);
-        d.CopyToWeekdays(2); // Tuesday has nothing: the week is not cleared
-        Assert.Equal(2, d.Rules.Count);
-    }
-
-    [Fact]
-    public void Copying_stops_at_the_row_limit_and_validation_still_reports_it()
-    {
-        var d = Draft();
-        for (var i = 0; i < 8; i++) d.Rules.Add(new AvailabilityRuleDto(1, $"{8 + i:00}:00", $"{8 + i:00}:30"));
-        d.CopyToWeekdays(1);
-        Assert.Equal(AvailabilityDraft.MaxRules + 1, d.Rules.Count);
-        Assert.Contains(AvailabilityIssueCode.TooManyRules, Codes(d));
-    }
-
-    [Fact]
-    public void Adding_for_a_day_uses_that_day_and_an_unknown_day_falls_back_to_monday()
-    {
-        var d = Draft();
-        d.AddRule(4);
-        d.AddRule(99);
-        Assert.Equal([4, 1], d.Rules.Select(r => r.IsoWeekday));
-    }
-
-    [Theory]
-    [InlineData("2026-12-24", "czwartek, 24 grudnia 2026")]
-    [InlineData("2027-02-03", "środa, 3 lutego 2027")]
-    [InlineData("2027-02-30", "2027-02-30")]
-    [InlineData("", "")]
-    public void An_exception_date_reads_in_polish_and_an_invalid_one_is_left_as_typed(string iso, string expected) => Assert.Equal(expected, AvailabilityDraft.LongDate(iso));
-
-    [Fact] public void A_sound_draft_has_no_issue() => Assert.Empty(Draft((1, "09:00", "12:00"), (1, "13:00", "17:30"), (3, "10:00", "11:00")).Validate());
-
-    [Theory]
-    [InlineData("09:15", "10:00")] [InlineData("09:00", "10:10")] [InlineData("9:00", "10:00")] [InlineData("09:00", "24:00")] [InlineData("", "10:00")]
-    public void Times_must_be_on_the_hour_or_half_past_and_at_most_23_30(string from, string to) => Assert.Equal([AvailabilityIssueCode.NotHalfHour], Codes(Draft((1, from, to))));
-
-    [Theory] [InlineData("10:00", "10:00")] [InlineData("11:00", "10:00")]
-    public void The_end_must_be_after_the_start(string from, string to) => Assert.Equal([AvailabilityIssueCode.EndBeforeStart], Codes(Draft((1, from, to))));
-
-    [Fact]
-    public void Windows_of_one_weekday_must_not_overlap_but_may_touch_and_other_days_do_not_matter()
-    {
-        Assert.Empty(Draft((1, "09:00", "10:00"), (1, "10:00", "11:00")).Validate());
-        Assert.Empty(Draft((1, "09:00", "10:00"), (2, "09:30", "10:30")).Validate());
-        var issues = Draft((3, "09:00", "11:00"), (3, "10:30", "12:00")).Validate();
-        var overlap = Assert.Single(issues);
-        Assert.Equal((AvailabilityIssueCode.Overlap, 3), (overlap.Code, overlap.Weekday));
-        Assert.Contains("środa", overlap.Message);
-    }
-
-    [Theory] [InlineData(0)] [InlineData(8)] [InlineData(-1)]
-    public void A_weekday_is_1_to_7(int day) => Assert.Contains(AvailabilityIssueCode.BadWeekday, Codes(Draft((day, "09:00", "10:00"))));
-
-    [Fact]
-    public void A_row_issue_names_the_row_counting_from_one()
-    {
-        var issue = Assert.Single(Draft((1, "09:00", "10:00"), (2, "10:00", "09:00")).Validate());
-        Assert.Equal(1, issue.Row);
-        Assert.StartsWith("Przedział 2: ", issue.Message);
-    }
-
-    [Fact]
-    public void At_most_28_windows_and_90_blocked_days()
-    {
-        var d = new AvailabilityDraft();
-        for (var i = 0; i < 28; i++) d.Rules.Add(new AvailabilityRuleDto(i % 7 + 1, $"{i / 7 * 4 + 8:00}:00", $"{i / 7 * 4 + 9:00}:00"));
-        Assert.Empty(d.Validate());
-        d.AddRule();
-        Assert.Contains(AvailabilityIssueCode.TooManyRules, Codes(d));
-        var e = new AvailabilityDraft();
-        for (var i = 0; i < 91; i++) e.Exceptions.Add(new DateOnly(2027, 1, 1).AddDays(i).ToString("yyyy-MM-dd"));
-        Assert.Contains(AvailabilityIssueCode.TooManyExceptions, Codes(e));
-    }
-
-    [Fact]
-    public void A_blocked_day_must_be_a_real_date_and_appear_once()
-    {
-        var d = new AvailabilityDraft();
-        d.AddException("2027-02-30");
-        Assert.Equal([AvailabilityIssueCode.BadDate], Codes(d));
-        var twice = new AvailabilityDraft();
-        twice.AddException("2027-03-01");
-        twice.AddException("2027-03-01");
-        Assert.Equal([AvailabilityIssueCode.DuplicateException], Codes(twice));
-        var ok = new AvailabilityDraft();
-        ok.AddException("2024-02-29");
-        Assert.Empty(ok.Validate());
-    }
-
-    [Fact]
-    public void The_draft_travels_in_the_form_and_the_commands_change_it()
-    {
-        var values = new Dictionary<string, string> { ["rule-0-day"] = "2", ["rule-0-from"] = "09:00", ["rule-0-to"] = "10:30", ["rule-1-day"] = "5", ["rule-1-from"] = "12:00", ["rule-1-to"] = "13:00", ["exception-0"] = "2027-01-06" };
-        var d = AvailabilityDraft.FromForm(k => values.GetValueOrDefault(k));
-        Assert.Equal(new AvailabilityRuleDto(2, "09:00", "10:30"), d.Rules[0]);
-        Assert.Equal(["2027-01-06"], d.Exceptions);
-        d.AddRule();
-        Assert.Equal(3, d.Rules.Count);
-        d.RemoveRule(0);
-        Assert.Equal([5, 1], d.Rules.Select(r => r.IsoWeekday));
-        d.RemoveRule(99); d.RemoveRule(-1); // out of range: nothing happens
-        Assert.Equal(2, d.Rules.Count);
-        d.AddException("  "); // blank: ignored
-        d.RemoveException(0);
-        Assert.Empty(d.Exceptions);
-    }
-
-    [Fact]
-    public void A_hostile_form_cannot_make_the_draft_long_and_a_bad_number_becomes_an_issue_not_an_exception()
-    {
-        var d = AvailabilityDraft.FromForm(k => k.StartsWith("rule-") && k.EndsWith("-day") ? "x" : k.StartsWith("rule-") ? "09:00" : null);
-        Assert.Equal(AvailabilityDraft.MaxRules + 1, d.Rules.Count);
-        Assert.Contains(AvailabilityIssueCode.TooManyRules, Codes(d));
-        Assert.Equal(0, d.Rules[0].IsoWeekday);
-    }
-
-    [Fact]
-    public void A_loaded_availability_is_sorted_by_weekday_and_time_so_the_rows_read_as_a_week()
-    {
-        var d = AvailabilityDraft.From(new AvailabilityDto([new(3, "10:00", "11:00"), new(1, "13:00", "14:00"), new(1, "09:00", "10:00")], [new("2027-02-01"), new("2027-01-01")]));
-        Assert.Equal([(1, "09:00"), (1, "13:00"), (3, "10:00")], d.Rules.Select(r => (r.IsoWeekday, r.StartLocal)));
-        Assert.Equal(["2027-01-01", "2027-02-01"], d.Exceptions);
-        Assert.Equal(48, AvailabilityDraft.Times.Length);
-        Assert.Equal(["00:00", "00:30", "23:30"], [AvailabilityDraft.Times[0], AvailabilityDraft.Times[1], AvailabilityDraft.Times[^1]]);
-    }
-
-    [Fact]
-    public void The_servers_row_fields_become_row_notes_without_any_server_text()
-    {
-        Assert.Equal(["Przedział 3: sprawdź dzień i godziny"], AvailabilityDraft.ServerRows(["rules[2].endLocal", "rules[2].startLocal", "rules", "exceptions"]));
-    }
-}
 
 public class FieldErrorsTests
 {

@@ -29,9 +29,6 @@ else if (Profile is not null)
             <FormField Id="portfolioUrl" Label="@PlPractitioner.Profile.Portfolio" Hint="@PlPractitioner.Profile.PortfolioHint" Error="@Error("portfolioUrl")" Optional="true">
                 <input id="@context.Id" name="portfolioUrl" type="url" inputmode="url" value="@_v.PortfolioUrl" maxlength="300" aria-describedby="@context.DescribedBy" aria-invalid="@Invalid(context)" />
             </FormField>
-            <FormField Id="meetingUrlDefault" Label="@PlPractitioner.Profile.Meeting" Hint="@PlPractitioner.Profile.MeetingHint" Error="@Error("meetingUrlDefault")" Optional="true">
-                <input id="@context.Id" name="meetingUrlDefault" type="url" inputmode="url" value="@_v.MeetingUrl" maxlength="300" aria-describedby="@context.DescribedBy" aria-invalid="@Invalid(context)" />
-            </FormField>
             <FormField Id="nip" Label="@PlPractitioner.Profile.Nip" Hint="@(Profile.Status == "Approved" ? PlPractitioner.Profile.NipChangeWarning : PlPractitioner.Profile.NipHint)" Error="@Error("nip")" Optional="true">
                 <input id="@context.Id" name="nip" inputmode="numeric" value="@_v.Nip" maxlength="10" autocomplete="off" aria-describedby="@context.DescribedBy" aria-invalid="@Invalid(context)" />
             </FormField>
@@ -47,9 +44,9 @@ else if (Profile is not null)
 }
 
 @code {
-    sealed record Values(string DisplayName, string Headline, string Bio, string PortfolioUrl, string MeetingUrl, string Nip);
+    sealed record Values(string DisplayName, string Headline, string Bio, string PortfolioUrl, string Nip);
 
-    Values _v = new("", "", "", "", "", "");
+    Values _v = new("", "", "", "", "");
     string? _general;
     readonly Dictionary<string, string> _errors = [];
 
@@ -57,21 +54,21 @@ else if (Profile is not null)
     static string? Invalid(FormField.FieldContext c) => c.Invalid ? "true" : null;
 
     /// <summary>The errors in the order of the form, each pointing at its field's id.</summary>
-    IReadOnlyList<KeyValuePair<string, string>> Summary => [.. new[] { "displayName", "headline", "bio", "portfolioUrl", "meetingUrlDefault", "nip" }.Where(_errors.ContainsKey).Select(f => KeyValuePair.Create(f, _errors[f]))];
+    IReadOnlyList<KeyValuePair<string, string>> Summary => [.. new[] { "displayName", "headline", "bio", "portfolioUrl", "nip" }.Where(_errors.ContainsKey).Select(f => KeyValuePair.Create(f, _errors[f]))];
 
     protected override async Task OnInitializedAsync()
     {
         if (!await LoadProfileAsync()) return;
         var p = Profile!;
-        _v = new(p.DisplayName, p.Headline, p.Bio, p.PortfolioUrl ?? "", p.MeetingUrlDefault ?? "", p.Nip ?? "");
+        _v = new(p.DisplayName, p.Headline, p.Bio, p.PortfolioUrl ?? "", p.Nip ?? "");
     }
 
     async Task SaveAsync()
     {
         var f = Posted;
-        _v = new(f.Text("displayName"), f.Text("headline"), f.Text("bio"), f.Text("portfolioUrl"), f.Text("meetingUrlDefault"), f.Text("nip"));
+        _v = new(f.Text("displayName"), f.Text("headline"), f.Text("bio"), f.Text("portfolioUrl"), f.Text("nip"));
         static string? Blank(string s) => s.Length == 0 ? null : s; // an empty optional field is omitted, not sent as null (CONTRACTS 0)
-        var r = await Practitioner.SaveProfileAsync(new UpdatePractitionerBody(_v.DisplayName, _v.Headline, _v.Bio, Blank(_v.PortfolioUrl), Blank(_v.MeetingUrl), Blank(_v.Nip)));
+        var r = await Practitioner.SaveProfileAsync(new UpdatePractitionerBody(_v.DisplayName, _v.Headline, _v.Bio, Blank(_v.PortfolioUrl), Blank(_v.Nip)));
         if (r.IsOk) { Done(PractitionerPaths.Profile, FlashKey.Saved); return; }
         foreach (var (field, message) in FieldErrors.From(r.Failure!, new Dictionary<string, string?> { ["headline"] = _v.Headline, ["bio"] = _v.Bio })) _errors[field] = message;
         if (_errors.Count == 0) _general = FieldErrors.General(r.Failure!, PlPractitioner.Common.Unavailable);

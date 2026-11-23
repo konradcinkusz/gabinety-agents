@@ -29,7 +29,7 @@ public class AdminReviewsAndPairsTests
         Assert.Equal("Opinie do moderacji", Assert.Single(page.All("h1")).TextContent);
         var card = Assert.Single(page.All("main ul[aria-label] > li"));
         Assert.Equal("Ocena: 4/5", card.QuerySelector("h2")!.TextContent);
-        Assert.Equal("Anna Demowska", AdminHost.Fact(card, "Programista")); // a name, from Directory
+        Assert.Equal("Anna Demowska", AdminHost.Fact(card, "Agent")); // a name, from Directory
         Assert.Equal("Wstrzymana przez asystenta", AdminHost.Fact(card, "Wstępna ocena asystenta"));
         Assert.Equal(["Dane osobowe", "Inny powód"], card.QuerySelectorAll("dd li").Select(l => l.TextContent)); // an unknown reason is "other", not "banana"
         Assert.DoesNotContain("banana", page.Html);
@@ -147,7 +147,7 @@ public class AdminReviewsAndPairsTests
         host.Web.Directory.Respond = r => r.RequestUri!.AbsolutePath == $"/api/v1/admin/practitioners/{PractitionerId}" ? FakeBackend.Json(AdminHost.DetailOf(PractitionerId)) : new HttpResponseMessage(HttpStatusCode.NotFound);
         var page = await host.Browser.GetAsync("/admin/podejrzane");
         Assert.Equal("Podejrzane pary", Assert.Single(page.All("h1")).TextContent);
-        Assert.Equal(["Klient", "Programista", "Opłacone rezerwacje", "Opinie (wszystkie 5/5)"], page.All("table thead th[scope=col]").Select(t => t.TextContent));
+        Assert.Equal(["Klient", "Agent", "Opłacone pakiety", "Opinie (wszystkie 5/5)"], page.All("table thead th[scope=col]").Select(t => t.TextContent));
         var cells = page.All("table tbody tr td").Select(t => Page.Squash(t.TextContent)).ToList();
         Assert.Equal(["Klient demo-cli", "Anna Demowska", "4", "4"], cells);
         Assert.Equal("region", page.One(".table-wrap")!.GetAttribute("role"));
@@ -161,7 +161,7 @@ public class AdminReviewsAndPairsTests
         await using var host = await AdminHost.StartAsync();
         host.Web.Reputation.Respond = _ => AdminHost.Paged(new SuspiciousPairDto("pair-1", "demo-client-9", PractitionerId, 3, 3));
         host.Web.Directory.Respond = _ => FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable");
-        Assert.Contains("Programista aaaaaaaa", (await host.Browser.GetAsync("/admin/podejrzane")).Text);
+        Assert.Contains("Agent aaaaaaaa", (await host.Browser.GetAsync("/admin/podejrzane")).Text);
 
         host.Web.Reputation.Respond = _ => FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable");
         var down = await host.Browser.GetAsync("/admin/podejrzane");

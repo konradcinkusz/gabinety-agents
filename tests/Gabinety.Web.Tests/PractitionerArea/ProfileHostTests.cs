@@ -14,7 +14,7 @@ public class ProfileHostTests
         var page = await browser.GetAsync("/gabinet-programisty/profil");
         Assert.Equal("Profil", page.TextOf("h1"));
         var labels = page.All("form label").Select(l => l.TextContent.Trim()).ToList();
-        Assert.Equal(["Nazwa wyświetlana", "Nagłówek", "Opis (o mnie)", "Link do portfolio (opcjonalnie)", "Domyślny link do spotkań (opcjonalnie)", "NIP (opcjonalnie)"], labels);
+        Assert.Equal(["Nazwa wyświetlana", "Nagłówek", "Opis (o mnie)", "Link do portfolio (opcjonalnie)", "NIP (opcjonalnie)"], labels);
         // J2: getByLabel is a substring match: each of these must match ONE control.
         foreach (var needle in new[] { "Nagłówek", "Opis", "Link do portfolio", "NIP", "Nazwa wyświetlana" }) Assert.Equal(1, labels.Count(l => l.Contains(needle, StringComparison.OrdinalIgnoreCase)));
         Assert.All(page.All("form label"), l => Assert.NotNull(page.One($"#{l.GetAttribute("for")}"))); // a label points at a real control
@@ -116,7 +116,7 @@ public class ProfileHostTests
     {
         var (web, browser, _) = await PractitionerBrowsers.SignedIn();
         await using var _ = web;
-        foreach (var path in new[] { "/gabinet-programisty/profil", "/gabinet-programisty/oferty", "/gabinet-programisty/dostepnosc" })
+        foreach (var path in new[] { "/gabinet-programisty/profil", "/gabinet-programisty/oferty" })
         {
             var page = await browser.GetAsync(path);
             Assert.Contains((int)page.Status, new[] { 302, 303 });
@@ -129,7 +129,7 @@ public class ProfileHostTests
     {
         await using var anonymous = new WebFactory();
         var visitor = anonymous.NewBrowser();
-        foreach (var path in new[] { "/gabinet-programisty/profil", "/gabinet-programisty/oferty", "/gabinet-programisty/dostepnosc", "/gabinet-programisty/platnosci", "/practitioner/payments" })
+        foreach (var path in new[] { "/gabinet-programisty/profil", "/gabinet-programisty/oferty", "/gabinet-programisty/platnosci", "/practitioner/payments" })
         {
             var page = await visitor.GetAsync(path);
             Assert.Equal(HttpStatusCode.Found, page.Status);
@@ -149,8 +149,8 @@ public class ProfileHostTests
         await using var _ = web;
         var page = await browser.GetAsync("/gabinet-programisty/profil");
         var nav = page.One("nav.tabs")!;
-        Assert.Equal("Sekcje panelu programisty", nav.GetAttribute("aria-label"));
-        Assert.Equal(["Start", "Profil", "Oferty", "Dostępność", "Płatności"], nav.QuerySelectorAll("a").Select(a => a.TextContent));
+        Assert.Equal("Sekcje panelu dostawcy", nav.GetAttribute("aria-label"));
+        Assert.Equal(["Start", "Profil", "Pakiety", "Płatności"], nav.QuerySelectorAll("a").Select(a => a.TextContent));
         Assert.Equal(["Profil"], nav.QuerySelectorAll("a[aria-current=page]").Select(a => a.TextContent));
         Assert.Equal("noindex,nofollow", page.One("meta[name=robots]")!.GetAttribute("content"));
         var start = await browser.GetAsync("/gabinet-programisty");

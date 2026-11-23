@@ -16,7 +16,7 @@ public class AdminVerificationTests
         var page = await host.Browser.GetAsync("/admin/weryfikacja");
 
         Assert.Equal(HttpStatusCode.OK, page.Status);
-        Assert.Equal("Weryfikacja programistów", Assert.Single(page.All("h1")).TextContent);
+        Assert.Equal("Weryfikacja agentów", Assert.Single(page.All("h1")).TextContent);
         var rows = page.All("main ul[aria-label] > li");
         Assert.Equal(2, rows.Count);
         // J2: a listitem that has a link named exactly the display name, with a button named Zatwierdź in it
@@ -26,7 +26,7 @@ public class AdminVerificationTests
         Assert.Single(row.QuerySelectorAll("button"), b => b.TextContent.Trim() == "Odrzuć"); // reveal button of the reject step
         Assert.Single(row.QuerySelectorAll(".badge"), b => b.TextContent == "Czeka na weryfikację");
         Assert.Contains("24 lis 2026, 13:00", Page.Squash(row.TextContent)); // short date in Warsaw time, no seconds
-        Assert.Contains("Weryfikacja programistów", page.TextOf("nav.tabs a.tabs__link[aria-current=page]"));
+        Assert.Contains("Weryfikacja agentów", page.TextOf("nav.tabs a.tabs__link[aria-current=page]"));
         Assert.Equal("Czeka na weryfikację\u00A0(2)", page.TextOf(".segmented a.chip[aria-current=true]")); // the chip of the status on screen counts the rows the page loaded
         var queue = host.Web.Directory.Requests.Single(r => r.PathAndQuery != "/api/v1/me");
         Assert.Equal("Bearer", queue.Authorization?.Split(' ')[0]); // the user's own token

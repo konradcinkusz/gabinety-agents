@@ -9,7 +9,14 @@ public class OffersHostTests
 
     static (string, string)[] Valid(string title = "Przegląd testów end to end", string price = "180") => [("title", title), ("price", price), ("problemSlug", "code-review")];
 
-    static KeyValuePair<string, string>[] Fields(params (string, string)[] f) => [.. f.Select(x => KeyValuePair.Create(x.Item1, x.Item2))];
+    /// <summary>The posted fields; the kind and the units default to one task, as the form's own first option and value would send.</summary>
+    static KeyValuePair<string, string>[] Fields(params (string, string)[] f)
+    {
+        var all = f.ToList();
+        if (!all.Any(x => x.Item1 == "kind")) all.Add(("kind", "Tasks"));
+        if (!all.Any(x => x.Item1 == "units")) all.Add(("units", "1"));
+        return [.. all.Select(x => KeyValuePair.Create(x.Item1, x.Item2))];
+    }
 
     [Fact]
     public async Task The_form_has_the_labels_the_journey_uses_a_select_whose_first_option_is_wybierz_and_a_group_of_technology_checkboxes()
@@ -17,9 +24,9 @@ public class OffersHostTests
         var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
         var page = await browser.GetAsync("/gabinet-programisty/oferty?nowa=1");
-        Assert.Equal("Oferty", page.TextOf("h1"));
+        Assert.Equal("Pakiety", page.TextOf("h1"));
         var labels = page.All("form[data-testid], form.form label, .field label").Select(l => l.TextContent.Trim()).ToList();
-        foreach (var name in new[] { "Nazwa oferty", "Opis oferty", "Cena (zł)", "Rodzaj problemu" }) Assert.Equal(1, labels.Count(l => l.StartsWith(name))); // J2: getByLabel
+        foreach (var name in new[] { "Nazwa pakietu", "Opis pakietu", "Cena (zł)", "Rodzaj problemu" }) Assert.Equal(1, labels.Count(l => l.StartsWith(name))); // J2: getByLabel
         var problem = page.One("#problemSlug")!;
         Assert.Equal("Wybierz…", problem.QuerySelectorAll("option")[0].TextContent); // J2: selectOption({index: 1}) skips it
         Assert.Equal(["Przegląd kodu", "Migracja"], problem.QuerySelectorAll("option").Skip(1).Select(o => o.TextContent));
@@ -40,7 +47,8 @@ public class OffersHostTests
         Assert.Equal(18050, body["priceMinor"]!.GetValue<long>()); // grosz, never a float
         Assert.Equal(60, body["durationMinutes"]!.GetValue<int>());
         Assert.Equal("Przegląd testów end to end", body["title"]!.GetValue<string>());
-        Assert.Null(body["meetingUrl"]); // empty optional: omitted
+        Assert.Null(body["meetingUrl"]); // C-04: the meeting link is not sent at all
+        Assert.Equal(("Tasks", 1), (body["kind"]!.GetValue<string>(), body["units"]!.GetValue<int>()));
         Assert.Equal("/gabinet-programisty/oferty?flash=saved", response.Location);
         Assert.Single(world.Offers);
         var after = await browser.GetAsync(response.Location!);
@@ -125,13 +133,13 @@ public class OffersHostTests
         Assert.DoesNotContain(web.Directory.Requests, r => r.PathAndQuery.EndsWith("deactivate"));
         var dialog = confirm.One("[data-testid=confirm-disable]")!;
         Assert.Equal("alertdialog", dialog.GetAttribute("role"));
-        Assert.Equal("Wyłączyć ofertę „Przegląd testów”?", dialog.QuerySelector("h2")!.TextContent);
+        Assert.Equal("Wyłączyć pakiet „Przegląd testów”?", dialog.QuerySelector("h2")!.TextContent);
         Assert.Equal("confirm-title", dialog.GetAttribute("aria-labelledby"));
-        Assert.Contains("Klienci nie zobaczą jej na profilu", dialog.TextContent);
-        Assert.Equal("Tak, wyłącz ofertę", dialog.QuerySelector("button")!.TextContent);
+        Assert.Contains("Klienci nie zobaczą go na profilu", dialog.TextContent);
+        Assert.Equal("Tak, wyłącz pakiet", dialog.QuerySelector("button")!.TextContent);
         Assert.Contains("btn--danger", dialog.QuerySelector("button")!.ClassName);
         var cancel = dialog.QuerySelector("a")!;
-        Assert.Equal(("Nie, zostaw aktywną", "/gabinet-programisty/oferty"), (cancel.TextContent, cancel.GetAttribute("href")));
+        Assert.Equal(("Nie, zostaw aktywny", "/gabinet-programisty/oferty"), (cancel.TextContent, cancel.GetAttribute("href")));
     }
 
     [Fact]
@@ -144,10 +152,10 @@ public class OffersHostTests
         Assert.Equal("/gabinet-programisty/oferty?flash=offer-disabled", done.Location);
         Assert.False(world.Offers[0].Active);
         var list = await browser.GetAsync(done.Location!);
-        Assert.Equal("Oferta została wyłączona. Możesz ją włączyć z powrotem na liście.", list.TextOf("[data-testid=flash]"));
+        Assert.Equal("Pakiet został wyłączony. Możesz go włączyć z powrotem na liście.", list.TextOf("[data-testid=flash]"));
         var row = list.One(".offer")!;
         Assert.Equal("false", row.GetAttribute("data-active"));
-        Assert.Contains("Wyłączona", row.TextContent);
+        Assert.Contains("Wyłączony", row.TextContent);
         Assert.DoesNotContain(row.QuerySelectorAll("a"), a => a.TextContent == "Wyłącz"); // nothing left to disable
         var enable = row.QuerySelector("button")!;
         Assert.Equal("Włącz", enable.TextContent);
@@ -165,11 +173,11 @@ public class OffersHostTests
         var off = world.Offers[5].Id;
         var page = await browser.Submit("/gabinet-programisty/oferty", "offer-enable", Fields(("enable", off.ToString())));
         Assert.Equal(HttpStatusCode.OK, page.Status);
-        Assert.Contains("najwyżej 5 aktywnych ofert", page.TextOf("[data-testid=offers-error]"));
+        Assert.Contains("najwyżej 5 aktywnych pakietów", page.TextOf("[data-testid=offers-error]"));
         Assert.False(world.Offers[5].Active);
-        Assert.Empty(page.All("a.btn--primary")); // no "Dodaj ofertę" at the limit; the reason is shown in its place
-        Assert.Contains("najwyżej 5 aktywnych ofert", page.Text);
-        Assert.Equal("Aktywne oferty: 5 z 5", page.TextOf("[data-testid=active-count]"));
+        Assert.Empty(page.All("a.btn--primary")); // no "Dodaj pakiet" at the limit; the reason is shown in its place
+        Assert.Contains("najwyżej 5 aktywnych pakietów", page.Text);
+        Assert.Equal("Aktywne pakiety: 5 z 5", page.TextOf("[data-testid=active-count]"));
         var at_limit = await browser.GetAsync("/gabinet-programisty/oferty?nowa=1");
         Assert.True(at_limit.One("form.form button[type=submit]")!.HasAttribute("disabled")); // a direct link to the form still shows it disabled, with the reason next to it
     }
@@ -181,10 +189,10 @@ public class OffersHostTests
         await using var _ = web;
         var id = world.Offers[0].Id;
         var edit = await browser.GetAsync($"/gabinet-programisty/oferty?edit={id}");
-        Assert.Equal("Edycja oferty", edit.TextOf("#offer-form-title"));
+        Assert.Equal("Edycja pakietu", edit.TextOf("#offer-form-title"));
         Assert.Equal("180,50", edit.One("#price")!.GetAttribute("value"));
         Assert.Equal("60", edit.One("#duration option[selected]")!.GetAttribute("value"));
-        Assert.Contains("tylko rezerwacji dokonanych po zapisie", edit.Text);
+        Assert.Contains("tylko zakupów dokonanych po zapisie", edit.Text);
         var saved = await browser.Submit($"/gabinet-programisty/oferty?edit={id}", "offer", Fields(("title", "Przegląd testów v2"), ("price", "200")));
         Assert.Equal(HttpStatusCode.Found, saved.Status);
         Assert.Equal(("Przegląd testów v2", 20000L), (world.Offers[0].Title, world.Offers[0].Price));
@@ -198,9 +206,9 @@ public class OffersHostTests
         await using var _ = web;
         var page = await browser.GetAsync($"/gabinet-programisty/oferty?edit={Guid.NewGuid()}&wylacz={Guid.NewGuid()}");
         Assert.Equal(HttpStatusCode.OK, page.Status);
-        Assert.Equal("Nowa oferta", page.TextOf("#offer-form-title"));
+        Assert.Equal("Nowy pakiet", page.TextOf("#offer-form-title"));
         Assert.Null(page.One("[data-testid=confirm-disable]"));
-        Assert.Contains("Nie masz jeszcze żadnej oferty", page.TextOf(".empty-state"));
+        Assert.Contains("Nie masz jeszcze żadnego pakietu", page.TextOf(".empty-state"));
         var junk = await browser.GetAsync("/gabinet-programisty/oferty?edit=not-a-guid");
         Assert.Equal(HttpStatusCode.OK, junk.Status);
     }
@@ -240,7 +248,7 @@ public class OffersHostTests
         Assert.Equal(HttpStatusCode.BadRequest, forged.Status); // no such confirmation form on the page: the framework refuses the post before any handler
         var enable = await browser.SendAsync(new HttpRequestMessage(HttpMethod.Post, "/gabinet-programisty/oferty") { Content = new FormUrlEncodedContent(new Dictionary<string, string> { ["_handler"] = "offer-enable", ["enable"] = id, ["__RequestVerificationToken"] = token }) });
         Assert.Equal(HttpStatusCode.OK, enable.Status);
-        Assert.Contains("Nie znaleziono tej oferty", enable.TextOf("[data-testid=offers-error]")); // asked of the practitioner's own list first
+        Assert.Contains("Nie znaleziono tego pakietu", enable.TextOf("[data-testid=offers-error]")); // asked of the practitioner's own list first
         Assert.DoesNotContain(web.Directory.Requests, r => r.PathAndQuery.EndsWith("deactivate") || r.PathAndQuery.EndsWith("activate"));
     }
 
@@ -253,13 +261,13 @@ public class OffersHostTests
         Assert.Null(list.One("form.form"));
         Assert.Null(list.One("#offer-form-title"));
         Assert.Null(list.One("input[name=title]"));
-        var add = list.All("a.btn--primary").Single(a => a.TextContent == "Dodaj ofertę");
+        var add = list.All("a.btn--primary").Single(a => a.TextContent == "Dodaj pakiet");
         Assert.Equal("/gabinet-programisty/oferty?nowa=1", add.GetAttribute("href"));
 
         var opened = await browser.GetAsync(add.GetAttribute("href")!);
-        Assert.Equal("Nowa oferta", opened.TextOf("#offer-form-title"));
+        Assert.Equal("Nowy pakiet", opened.TextOf("#offer-form-title"));
         Assert.NotNull(opened.One("form.form button[type=submit]"));
-        Assert.DoesNotContain(opened.All("a"), a => a.TextContent == "Dodaj ofertę"); // the form is open: the button is not needed
+        Assert.DoesNotContain(opened.All("a"), a => a.TextContent == "Dodaj pakiet"); // the form is open: the button is not needed
         Assert.Equal("Wybrano 0 z 4", opened.TextOf("#techs-count"));
         Assert.Single(opened.All("#offer-form-title"));
     }
@@ -273,7 +281,7 @@ public class OffersHostTests
         var post = await browser.Submit($"/gabinet-programisty/oferty?edit={id}", "offer", Fields(("title", "abc"), ("price", "x"), ("problemSlug", "")));
         Assert.Equal(HttpStatusCode.OK, post.Status);
         Assert.NotNull(post.One("form.form"));
-        Assert.Equal("Edycja oferty", post.TextOf("#offer-form-title"));
+        Assert.Equal("Edycja pakietu", post.TextOf("#offer-form-title"));
         Assert.Equal("Popraw 3 pola", post.One("[data-testid=form-summary] h2")!.TextContent);
         Assert.Equal("Przegląd testów", world.Offers.Single().Title); // nothing was saved
     }
@@ -293,7 +301,7 @@ public class OffersHostTests
             Assert.Equal("Przegląd testów", page.TextOf("h3.offer__title"));
             var firstH3 = levels.IndexOf(3);
             Assert.True(firstH3 < 0 || levels.Take(firstH3).Contains(2), $"{path}: an h2 must come before the first h3");
-            Assert.Equal("Twoje oferty", page.TextOf("#offers-list-title"));
+            Assert.Equal("Twoje pakiety", page.TextOf("#offers-list-title"));
         }
     }
 
@@ -303,13 +311,56 @@ public class OffersHostTests
         var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.Offers.Add(Offer("Przegląd testów", price: 18050)); });
         await using var _ = web;
         var created = await browser.GetAsync("/gabinet-programisty/oferty?nowa=1");
-        Assert.Equal("Podgląd oferty", created.TextOf("#offer-preview-title"));
-        Assert.Equal("Tytuł oferty", created.TextOf(".offer-preview__title"));
+        Assert.Equal("Podgląd pakietu", created.TextOf("#offer-preview-title"));
+        Assert.Equal("Tytuł pakietu", created.TextOf(".offer-preview__title"));
         Assert.Contains("muted", created.One(".offer-preview__title")!.ClassName);
         var edit = await browser.GetAsync($"/gabinet-programisty/oferty?edit={world.Offers[0].Id}");
         Assert.Equal("Przegląd testów", edit.TextOf(".offer-preview__title"));
         Assert.DoesNotContain("muted", edit.One(".offer-preview__title")!.ClassName);
         Assert.Contains("60 min", edit.TextOf(".offer-preview__meta"));
         Assert.Contains("180,50", edit.TextOf(".offer-preview__meta"));
+    }
+
+    [Fact]
+    public async Task The_form_has_the_kind_and_units_fields_and_no_meeting_link_field_C04()
+    {
+        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
+        await using var _ = web;
+        var page = await browser.GetAsync("/gabinet-programisty/oferty?nowa=1");
+        Assert.Equal("Rodzaj pakietu", page.One("label[for=kind]")!.TextContent.Replace(" opcjonalnie", "").Trim());
+        Assert.Equal(["Zadania", "Czat API"], page.All("#kind option").Select(o => o.TextContent));
+        Assert.Equal("Liczba jednostek", page.One("label[for=units]")!.TextContent.Trim());
+        Assert.Equal("Typowy czas wykonania", page.One("label[for=duration]")!.TextContent.Trim());
+        Assert.Null(page.One("#meetingUrl")); Assert.DoesNotContain("spotkania", page.Text);
+    }
+
+    [Theory]
+    [InlineData("Tasks", "0", "units", "Dla zadań wpisz liczbę od 1 do 1000.")]
+    [InlineData("Tasks", "1001", "units", "Dla zadań wpisz liczbę od 1 do 1000.")]
+    [InlineData("Chat", "99", "units", "Dla czatu API wpisz liczbę od 100 do 100000 (tysięcy tokenów).")]
+    [InlineData("Chat", "100001", "units", "Dla czatu API wpisz liczbę od 100 do 100000 (tysięcy tokenów).")]
+    [InlineData("Chat", "abc", "units", "Dla czatu API wpisz liczbę od 100 do 100000 (tysięcy tokenów).")]
+    public async Task Units_outside_the_range_of_the_kind_are_refused_inline_before_any_call(string kind, string units, string field, string message)
+    {
+        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
+        await using var _ = web;
+        var response = await browser.Submit("/gabinet-programisty/oferty?nowa=1", "offer", Fields([.. Valid(), ("kind", kind), ("units", units)]));
+        Assert.Equal(HttpStatusCode.OK, response.Status);
+        Assert.Empty(world.Offers);
+        Assert.DoesNotContain(web.Directory.Requests, r => r.Method == HttpMethod.Post && r.PathAndQuery.EndsWith("/offerings"));
+        Assert.Contains(message, response.TextOf("#" + field + "-error"));
+    }
+
+    [Fact]
+    public async Task A_chat_package_sends_its_kind_and_the_units_in_thousands_of_tokens_and_the_list_says_so()
+    {
+        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
+        await using var _ = web;
+        var response = await browser.Submit("/gabinet-programisty/oferty?nowa=1", "offer", Fields([.. Valid("Dostęp do API czatu", "99"), ("kind", "Chat"), ("units", "500")]));
+        Assert.Contains((int)response.Status, new[] { 302, 303 });
+        var body = JsonNode.Parse(web.Directory.Requests.Single(r => r.Method == HttpMethod.Post && r.PathAndQuery.EndsWith("/offerings")).Body!)!;
+        Assert.Equal(("Chat", 500), (body["kind"]!.GetValue<string>(), body["units"]!.GetValue<int>()));
+        var after = await browser.GetAsync(response.Location!);
+        Assert.Equal("500 tys. tokenów, API zgodne z OpenAI", after.TextOf("[data-testid=offer-units]"));
     }
 }
