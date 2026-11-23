@@ -185,7 +185,7 @@ else
     /// <summary>"10 zadań, typowy czas ok. 30 min" for a task package, "500 tys. tokenów, API zgodne z OpenAI" for a chat package (<c>Units</c> are thousands of tokens).</summary>
     public static string UnitsLine(OfferingDto o) => UnitsLine(o.Kind, o.Units, o.DurationMinutes);
 
-    public static string UnitsLine(string kind, int units, int minutes) => kind == "Chat"
+    public static string UnitsLine(string kind, int units, int minutes) => string.Equals(kind, "Chat", StringComparison.OrdinalIgnoreCase) // the public profile writes the kind in lower case ("chat"), the provider's own list in capitals
         ? string.Format(PlPages.Profile.ChatLine, units)
         : string.Format(PlPages.Profile.TasksLine, units, TaskWord(units), minutes);
 

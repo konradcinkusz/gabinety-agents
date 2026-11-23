@@ -60,6 +60,20 @@ public class ProfilePageTests
         Assert.All(offers, o => Assert.Equal("Ważność: 30 dni", o.QuerySelector("[data-testid=offering-validity]")!.TextContent));
     }
 
+    [Fact]
+    public async Task The_kind_is_read_as_the_public_profile_writes_it_in_lower_case()
+    {
+        // the Directory's public JSON writes the kind camelCased ("tasks", "chat"); the page must not show a chat package as "500 zadań"
+        await using var web = PublicSupport.Host(PublicSupport.DefaultDirectory(PublicSupport.Profile(offerings:
+        [
+            new(PublicSupport.OfferA, "Plan migracji", "Plan", 30, new MoneyDto(18000, "PLN"), "audyt-kodu", ["dotnet"], "tasks", 10),
+            new(PublicSupport.OfferB, "Dostęp do API czatu", "Czat", 30, new MoneyDto(9900, "PLN"), "audyt-kodu", [], "chat", 500),
+        ])));
+        var offers = (await Get(web)).All("ul.offerings > li");
+        Assert.Equal("10 zadań, typowy czas ok. 30 min", offers[0].QuerySelector("[data-testid=offering-units]")!.TextContent);
+        Assert.Equal("500 tys. tokenów, API zgodne z OpenAI", offers[1].QuerySelector("[data-testid=offering-units]")!.TextContent);
+    }
+
     [Theory]
     [InlineData(1, "zadanie")] [InlineData(2, "zadania")] [InlineData(4, "zadania")] [InlineData(5, "zadań")] [InlineData(12, "zadań")] [InlineData(22, "zadania")] [InlineData(25, "zadań")]
     public void Task_word_follows_polish_plural_rules(int n, string word) => Assert.Equal(word, Gabinety.Web.Components.Pages.Gabinet.Profile.TaskWord(n));
