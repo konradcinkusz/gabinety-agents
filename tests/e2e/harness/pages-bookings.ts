@@ -1,7 +1,7 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import { gotoInteractive } from "./circuit";
 
-/** Page objects of the booking detail (/moje/rezerwacje/{id}) and the administrator's disputes list (/admin/spory), for J5 and J6. Role and label locators only. */
+/** Page objects of the booking detail (/moje/rezerwacje/{id}), the API keys page (/moje/klucze) and the administrator's claims list (/admin/spory), for J3, J5, J6 and J8. Role and label locators only. */
 export class BookingDetailPage {
   constructor(readonly page: Page) {}
   /** Opens the detail; a page that shows an error banner instead (the services answered 429/503 under the shared rate limit) is reloaded a few times. */
@@ -42,12 +42,53 @@ export class BookingDetailPage {
       }
     }
   }
+  /** "wykorzystano X z Y" (tasks) or "... tys. tokenów" (chat) next to the bar. */
+  usage(): Locator { return this.page.getByText(/^wykorzystano /); }
+  /** The task form (a Confirmed task package that is not used up) and the list of tasks with state and result. */
+  taskInput(): Locator { return this.page.getByLabel("Treść zadania"); }
+  taskSubmit(): Locator { return this.page.getByRole("button", { name: "Zleć zadanie" }); }
+  tasks(): Locator { return this.page.getByRole("list", { name: "Lista zadań" }).getByRole("listitem"); }
+  async orderTask(text: string) {
+    await this.taskInput().fill(text);
+    await this.taskSubmit().click();
+    await expect(this.page.getByText("Zadanie zostało zlecone. Wynik pojawi się poniżej.")).toBeVisible();
+  }
+  /**
+   * Waits until the text of an answer is on the page. The page says it refreshes itself while a task is queued or running, but a meta refresh does not fire after the enhanced redirect that
+   * follows the order, and it does not reload an address with a fragment (#zadania); what a client can always do is "Odśwież listę", so that is what this does until the answer is there.
+   */
+  async waitForAnswer(text: string) {
+    await expect(async () => {
+      if (!(await this.page.getByText(text).first().isVisible())) await this.page.getByRole("link", { name: "Odśwież listę" }).first().click();
+      await expect(this.page.getByText(text).first()).toBeVisible({ timeout: 3_000 });
+    }).toPass({ timeout: 60_000, intervals: [1_000, 2_000, 5_000] });
+  }
+  reviewLink(): Locator { return this.page.getByRole("link", { name: "Wystaw opinię" }); }
   disputeButton(): Locator { return this.page.getByRole("button", { name: "Zgłoś reklamację" }); }
   async openDispute(text: string) {
     await this.disputeButton().click();
     await this.page.getByLabel("Opis reklamacji").fill(text);
     await this.page.getByRole("button", { name: "Wyślij zgłoszenie" }).click();
   }
+}
+
+/** /moje/klucze: the client's API keys. The key is in the response to the creating POST only, once. */
+export class ApiKeysPage {
+  constructor(readonly page: Page) {}
+  async goto() {
+    await gotoInteractive(this.page, "/moje/klucze");
+    await expect(this.page.getByRole("heading", { level: 1, name: "Klucze API" })).toBeVisible();
+  }
+  /** Creates a key through the form and returns the full key shown in that response (never log it). */
+  async create(name: string): Promise<string> {
+    await this.page.getByLabel("Nazwa klucza").fill(name);
+    await this.page.getByRole("button", { name: "Utwórz klucz" }).click();
+    const shown = this.page.getByTestId("new-key-value"); // a bare <code> labelled by the paragraph above it; no role to find it by
+    await expect(shown).toBeVisible();
+    return (await shown.textContent())!.trim();
+  }
+  /** The list rows hold the prefix only. */
+  rows(): Locator { return this.page.getByRole("table", { name: "Lista kluczy API" }).getByRole("row"); }
 }
 
 export class AdminDisputesPage {

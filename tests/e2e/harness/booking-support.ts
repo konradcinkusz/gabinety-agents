@@ -58,7 +58,7 @@ export async function actorContext(browser: Browser, userName: string): Promise<
   return ctx;
 }
 
-export interface PublicOffering { id: string; durationMinutes: number; price: { amountMinor: number }; problemSlug: string; techSlugs: string[] }
+export interface PublicOffering { id: string; title: string; durationMinutes: number; price: { amountMinor: number }; problemSlug: string; techSlugs: string[]; kind: "tasks" | "chat"; units: number }
 export interface PublicProfile { id: string; offerings: PublicOffering[] }
 
 export async function publicProfile(slug: string): Promise<PublicProfile> {
@@ -66,14 +66,16 @@ export async function publicProfile(slug: string): Promise<PublicProfile> {
 }
 
 /**
- * Adds an offering of the given price to a seeded approved practitioner (signed-in `practitionerCtx`), so a journey's money arithmetic does not depend on
+ * Adds a one-task package of the given price to a seeded approved agent (signed-in `practitionerCtx`), so a journey's money arithmetic does not depend on
  * the seeded catalogue. The title is unique (`demo-`), the text carries no contact data. Returns the offering id.
  */
-export async function addOffering(practitionerCtx: APIRequestContext, like: PublicOffering, priceMinor: number, tag: string): Promise<string> {
+export async function addOffering(practitionerCtx: APIRequestContext, like: PublicOffering, priceMinor: number, tag: string, units = 1): Promise<string> {
   const res = await bff(practitionerCtx, "POST", "/api/proxy/directory/api/v1/me/practitioner/offerings", {
     body: {
-      title: `Konsultacja testowa ${tag}`,
-      description: "Konsultacja utworzona na potrzeby testu automatycznego, wyłącznie z danymi syntetycznymi.",
+      title: `Pakiet testowy ${tag}`,
+      description: "Pakiet utworzony na potrzeby testu automatycznego, wyłącznie z danymi syntetycznymi.",
+      kind: "Tasks",
+      units,
       durationMinutes: like.durationMinutes,
       priceMinor,
       problemSlug: like.problemSlug,
@@ -89,49 +91,34 @@ export async function addOffering(practitionerCtx: APIRequestContext, like: Publ
   return ((await res.json()) as { id: string }).id;
 }
 
-/** Open slots of an offering from `fromDay` to `toDay` (UTC dates, at most 14 days apart), earliest first. */
-export async function openSlots(practitionerId: string, offeringId: string, fromDay: string, toDay: string): Promise<Date[]> {
-  const url = `${urls.booking}/api/v1/practitioners/${practitionerId}/slots?offeringId=${offeringId}&from=${fromDay}&to=${toDay}`;
-  const { slots } = await json<{ slots: { startUtc: string }[] }>(await fetchRetrying(url), "slots");
-  return slots.map((s) => new Date(s.startUtc)).sort((a, b) => a.getTime() - b.getTime());
-}
-
 export const day = (d: Date): string => d.toISOString().slice(0, 10);
 export const addDays = (d: Date, n: number): Date => new Date(d.getTime() + n * 86_400_000);
 
 export interface PlacedBooking { id: string; start: Date; end: Date }
 
-/**
- * Books the first free slot at least `minAheadHours` after `now` and pays it on the mock (`payments/simulate`), so the booking is `Confirmed`.
- * `skip` starts further into the list so that two journeys that book the same practitioner do not fight for one slot; a `slot_taken` moves on to the next.
- */
-export async function bookAndPay(
-  client: BrowserContext,
-  o: { practitionerId: string; offeringId: string; now: Date; minAheadHours: number; skip?: number },
-): Promise<PlacedBooking> {
-  const from = addDays(o.now, Math.ceil(o.minAheadHours / 24));
-  const slots = (await openSlots(o.practitionerId, o.offeringId, day(from), day(addDays(from, 10)))).filter(
-    (s) => s.getTime() - o.now.getTime() >= o.minAheadHours * 3_600_000,
-  );
-  for (const start of slots.slice(o.skip ?? 0, (o.skip ?? 0) + 8)) {
-    const res = await bff(client.request, "POST", "/api/proxy/booking/api/v1/bookings", {
-      headers: { "Idempotency-Key": randomUUID() },
-      body: {
-        offeringId: o.offeringId,
-        startUtc: start.toISOString().replace(/\.\d{3}Z$/, "Z"),
-        brief: { text: "Opis testowy dla automatycznego scenariusza end to end, dane syntetyczne.", aiAssisted: false },
-      },
-    });
-    if (res.status() === 409 || res.status() === 422) continue; // slot_taken, slot_unavailable: somebody else's slot, try the next
-    expect(res.status(), "create booking").toBe(201);
-    const { bookingId } = (await res.json()) as { bookingId: string };
-    const paid = await bff(client.request, "POST", "/api/proxy/booking/api/v1/payments/simulate", { body: { bookingId, outcome: "succeeded" } });
-    expect(paid.status(), "simulate payment").toBe(200);
-    const view = await getBooking(client, bookingId);
-    expect(view.status).toBe("Confirmed");
-    return { id: bookingId, start: new Date(view.startUtc), end: new Date(view.endUtc) };
-  }
-  throw new Error("no free slot to book");
+/** A task as the client reads it (`GET /api/v1/me/bookings/{id}/tasks`). */
+export interface TaskDto { id: string; status: string; output: string | null }
+
+/** Orders one task on a package as the signed-in client (the panel's route); returns the task id. The text is user text: never logged. */
+export async function orderTask(ctx: BrowserContext, bookingId: string, input: string): Promise<string> {
+  const res = await bff(ctx.request, "POST", `/api/proxy/booking/api/v1/bookings/${bookingId}/tasks`, { body: { input } });
+  expect(res.status(), "order task").toBe(202);
+  return ((await res.json()) as { id: string }).id;
+}
+
+/** Buys a package (no date) and pays it on the mock (`payments/simulate`), so the booking is `Confirmed`. */
+export async function bookAndPay(client: BrowserContext, o: { offeringId: string }): Promise<PlacedBooking> {
+  const res = await bff(client.request, "POST", "/api/proxy/booking/api/v1/bookings", {
+    headers: { "Idempotency-Key": randomUUID() },
+    body: { offeringId: o.offeringId, brief: { text: "Opis testowy dla automatycznego scenariusza end to end, dane syntetyczne.", aiAssisted: false } },
+  });
+  expect(res.status(), "create booking").toBe(201);
+  const { bookingId } = (await res.json()) as { bookingId: string };
+  const paid = await bff(client.request, "POST", "/api/proxy/booking/api/v1/payments/simulate", { body: { bookingId, outcome: "succeeded" } });
+  expect(paid.status(), "simulate payment").toBe(200);
+  const view = await getBooking(client, bookingId);
+  expect(view.status).toBe("Confirmed");
+  return { id: bookingId, start: new Date(view.startUtc), end: new Date(view.endUtc) };
 }
 
 export interface BookingViewDto {
@@ -143,6 +130,12 @@ export interface BookingViewDto {
   payment: { status: string; refunded: { amountMinor: number } };
   fee?: { amountMinor: number } | null;
   payout?: { amountMinor: number } | null;
+  kind: "Tasks" | "Chat";
+  unitsTotal: number;
+  unitsUsed: number;
+  canCancel: boolean;
+  canDispute: boolean;
+  canReview: boolean;
 }
 
 export async function getBooking(ctx: BrowserContext, id: string): Promise<BookingViewDto> {

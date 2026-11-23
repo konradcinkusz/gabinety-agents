@@ -26,19 +26,21 @@ export class PractitionerProfilePage {
   offering(title: string): Locator {
     return this.page.getByRole("listitem").filter({ has: this.page.getByRole("heading", { level: 3, name: title }) });
   }
-  /** C-01: a package has no time slot; "Wykup dostęp" of the offering's card leads straight to the purchase form (the slot picker is gone). */
-  slotLinks(offeringTitle: string): Locator { return this.offering(offeringTitle).getByRole("link", { name: `Wykup dostęp: ${offeringTitle}` }); }
-  /** The purchase link of the offering (kept under its old name for J3/J4, which D-02 rewrites). */
-  async firstSlot(offeringTitle: string): Promise<Locator> {
-    const link = this.slotLinks(offeringTitle).first();
+  /** C-01: a package has no time slot; "Wykup dostęp" of the offering's card leads straight to the purchase form. */
+  async purchaseLink(offeringTitle: string): Promise<Locator> {
+    const link = this.offering(offeringTitle).getByRole("link", { name: `Wykup dostęp: ${offeringTitle}` });
     await expect(link).toBeVisible();
     return link;
   }
+  /** What the card says about the package: "5 zadań, typowy czas ok. 30 min" or "500 tys. tokenów, API zgodne z OpenAI", and its validity. */
+  offeringFacts(title: string): Locator { return this.offering(title); }
+  /** The "Agent AI" label next to the agent's name (PLAN decision 8). */
+  aiBadge(): Locator { return this.page.getByText("Agent AI", { exact: true }).first(); }
   /** Clicks the purchase link and waits for the booking form. If the host renders it interactively, nothing typed before its circuit is live would count, so the circuit is awaited. */
-  async openBookingForm(slot: Locator) {
+  async openBookingForm(link: Locator) {
     const circuit = watchCircuit(this.page);
     const answer = this.page.waitForResponse((r) => ["document", "fetch", "xhr"].includes(r.request().resourceType()) && /\/rezerwacja\/[0-9a-f-]{36}/.test(new URL(r.url()).pathname));
-    await slot.click();
+    await link.click();
     const res = await answer;
     await this.page.waitForURL(/\/rezerwacja\//);
     await awaitCircuitIfInteractive(res, circuit); // enhanced navigation answers a fetch, not a document; a static form has no circuit, an interactive one is awaited
@@ -89,6 +91,16 @@ export class MockCheckoutPage {
       await expect(this.page.getByText("Dostęp aktywny. Dziękujemy!")).toBeVisible({ timeout: 5_000 });
     }).toPass({ timeout: 90_000, intervals: [2_000, 5_000, 10_000] });
   }
+}
+
+/** The confirmation page of an active package (/rezerwacja/potwierdzenie/{id}). */
+export class ConfirmationPage {
+  constructor(readonly page: Page) {}
+  heading(): Locator { return this.page.getByRole("heading", { level: 1, name: "Dostęp aktywny" }); }
+  createKeyLink(): Locator { return this.page.getByRole("link", { name: "Utwórz klucz API" }); }
+  firstTaskLink(): Locator { return this.page.getByRole("link", { name: "Zleć pierwsze zadanie" }); }
+  connectModel(): Locator { return this.page.getByTestId("connect-model"); } // no accessible name: a bare <code> in a definition list
+  connectBaseUrl(): Locator { return this.page.getByTestId("connect-base-url"); }
 }
 
 export class ReviewFormPage {

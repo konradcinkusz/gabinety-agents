@@ -45,7 +45,7 @@ export async function retrying(call: () => Promise<APIResponse>, budgetMs = 120_
 }
 
 export type Money = { amountMinor: number; currency: string };
-export interface PublicOffering { id: string; title: string; durationMinutes: number; price: Money }
+export interface PublicOffering { id: string; title: string; durationMinutes: number; price: Money; kind: "tasks" | "chat"; units: number } // the public profile writes the kind in lower case (PublicJson); Booking's views write "Tasks" / "Chat"
 export interface PublicProfile {
   id: string;
   slug: string;
@@ -64,47 +64,26 @@ export interface BookingState {
   brief?: { text: string; problemSlug?: string | null; aiAssisted: boolean } | null;
   payment: { status: string; refunded: Money };
   canReview: boolean;
+  canCancel: boolean;
+  canDispute: boolean;
+  kind: "Tasks" | "Chat";
+  unitsTotal: number;
+  unitsUsed: number;
 }
-export interface Slot { startUtc: string; endUtc: string }
+/** A task as the client reads it (`GET /api/v1/me/bookings/{id}/tasks`): `status` is lowercase, `output` is null until it succeeded. */
+export interface TaskState { id: string; status: "queued" | "running" | "succeeded" | "failed"; output: string | null }
 
 /** The Directory's public profile, read directly (fresh: the web page of the same data is cached for 5 minutes). */
 export async function publicProfile(slug: string): Promise<PublicProfile> {
   return json<PublicProfile>(await fetchRetrying(`${urls.directory}/api/v1/practitioners/${encodeURIComponent(slug)}`), `profile ${slug}`); // flat per CONTRACTS 3.2 (#100)
 }
 
-const warsawDay = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Warsaw", year: "numeric", month: "2-digit", day: "2-digit" });
-export const warsawDate = (d: Date | string): string => warsawDay.format(new Date(d));
-
-/** Free slots of one offering for the next 14 days (Booking computes them: lead time, buffers and existing bookings are already applied). */
-export async function freeSlots(request: APIRequestContext, practitionerId: string, offeringId: string): Promise<Slot[]> {
-  const from = warsawDate(new Date());
-  const to = warsawDate(new Date(Date.now() + 13 * 86_400_000));
-  const res = await retrying(() => booking(request).get(`/practitioners/${practitionerId}/slots`, { params: { offeringId, from, to } }));
-  expect(res.status(), "slots").toBe(200);
-  return ((await res.json()) as { slots: Slot[] }).slots;
-}
-
-/** The earliest slot of each of the next `count` distinct Warsaw days, skipping the days in `avoidDays`. Distinct days keep bookings clear of each other's buffer. */
-export function earliestOnDistinctDays(slots: Slot[], count: number, avoidDays: string[] = []): Slot[] {
-  const sorted = [...slots].sort((a, b) => Date.parse(a.startUtc) - Date.parse(b.startUtc));
-  const days = new Set(avoidDays);
-  const picked: Slot[] = [];
-  for (const s of sorted) {
-    const d = warsawDate(s.startUtc);
-    if (days.has(d)) continue;
-    days.add(d);
-    picked.push(s);
-    if (picked.length === count) break;
-  }
-  expect(picked.length, "enough free days to book").toBe(count);
-  return picked;
-}
-
-export async function createBooking(request: APIRequestContext, offeringId: string, startUtc: string, briefText: string): Promise<{ bookingId: string }> {
+/** Buys a package: no date, a package runs for 30 days from the purchase (PLAN A-02). The booking is `PendingPayment` until the simulated or mock payment. */
+export async function createBooking(request: APIRequestContext, offeringId: string, briefText: string): Promise<{ bookingId: string }> {
   const key = randomUUID(); // one key for every retry of this request: a replayed 429 never books twice
   const res = await retrying(() => booking(request).post(`/bookings`, {
     headers: { "Idempotency-Key": key },
-    data: { offeringId, startUtc, brief: { text: briefText, aiAssisted: false } },
+    data: { offeringId, brief: { text: briefText, aiAssisted: false } },
   }));
   expect(res.ok(), `create booking (HTTP ${res.status()})`).toBe(true);
   return (await res.json()) as { bookingId: string };
@@ -121,11 +100,34 @@ export async function getBooking(request: APIRequestContext, bookingId: string):
   return (await res.json()) as BookingState;
 }
 
-/** The auto-complete job runs every 60 s, so a Confirmed booking past end + 48 h becomes Completed within a minute or two: wait for the state, never sleep. */
+/** The auto-complete job runs every 60 s, so a package whose last unit is used (or whose validity ended) becomes Completed within a minute or two: wait for the state, never sleep. */
 export async function waitForStatus(request: APIRequestContext, bookingId: string, status: string, timeoutMs = 240_000): Promise<void> {
   await expect
     .poll(async () => (await getBooking(request, bookingId)).status, { message: `booking reaches ${status}`, timeout: timeoutMs, intervals: [5_000, 10_000] })
     .toBe(status);
+}
+
+/** Orders one task of a `Tasks` package as the signed-in client (the route of the panel's form, B-05). It takes a unit at once; returns the task id. The text is user text: never logged. */
+export async function orderTask(request: APIRequestContext, bookingId: string, input: string): Promise<string> {
+  const res = await retrying(() => booking(request).post(`/bookings/${bookingId}/tasks`, { data: { input } }));
+  expect(res.status(), "order task").toBe(202);
+  return ((await res.json()) as { id: string }).id;
+}
+
+export async function listTasks(request: APIRequestContext, bookingId: string): Promise<TaskState[]> {
+  const res = await retrying(() => booking(request).get(`/me/bookings/${bookingId}/tasks`));
+  expect(res.status(), "list tasks").toBe(200);
+  return (await res.json()) as TaskState[];
+}
+
+/** The task job runs every 5 s: wait until no task of the package is queued or running (never a sleep), and return them. */
+export async function waitForTasksDone(request: APIRequestContext, bookingId: string, timeoutMs = 60_000): Promise<TaskState[]> {
+  let last: TaskState[] = [];
+  await expect
+    .poll(async () => { last = await listTasks(request, bookingId); return last.filter((t) => t.status === "queued" || t.status === "running").length; },
+      { message: "the agent answers the tasks", timeout: timeoutMs, intervals: [1_000, 2_000, 5_000] })
+    .toBe(0);
+  return last;
 }
 
 export async function createReview(request: APIRequestContext, bookingId: string, rating: number, text: string): Promise<{ status: string }> {

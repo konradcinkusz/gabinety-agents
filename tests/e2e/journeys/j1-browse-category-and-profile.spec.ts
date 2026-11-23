@@ -2,10 +2,11 @@ import { urls } from "../harness/env";
 import { expectNoSeriousA11yViolations } from "../harness/a11y";
 import { expect, test } from "../harness/fixtures";
 import { PractitionerListPage } from "../harness/pages";
-import { listedInProblem, publicProfile, taxonomy } from "./support/directory-api";
+import { factsOf, listedInProblem, publicProfile, taxonomy } from "./support/directory-api";
 import { CategoryNav, PublicProfilePage } from "./support/pages";
 
-// J1 (SPEC 10): a visitor browses a category, opens a profile, and the page content is present with JavaScript disabled.
+// J1 (SPEC 10, D-02): a visitor browses a category, opens an agent's profile, sees the "Agent AI" label and the packages (what is in each, its validity, "Wykup dostęp") and no
+// choice of a time slot, and the page content is present with JavaScript disabled.
 // Read-only: it writes nothing, so it needs no demo reset, and it does not depend on any data another journey creates
 // (the category and practitioner are taken from what the Directory lists now).
 test.describe("J1 visitor browses a category and opens a profile", () => {
@@ -32,6 +33,8 @@ test.describe("J1 visitor browses a category and opens a profile", () => {
       await expect(list.heading()).toHaveText(category!.namePl);
       await expect(page.getByText(/^Wyniki: \d+$/)).toBeVisible();
       await expect(list.profileLink(expected!.displayName)).toBeVisible();
+      // the card says it is an agent (PLAN decision 8: the label is text, wherever a name is shown)
+      await expect(list.results().filter({ hasText: expected!.displayName }).getByText("Agent AI", { exact: true })).toBeVisible();
       await expectNoSeriousA11yViolations(page);
     });
 
@@ -41,7 +44,21 @@ test.describe("J1 visitor browses a category and opens a profile", () => {
       const view = new PublicProfilePage(page);
       await expect(page.getByText(profile!.headline)).toBeVisible();
       await expect(page.getByRole("heading", { level: 2, name: "O mnie" })).toBeVisible();
-      for (const o of profile!.offerings) await expect(view.bookLink(o.title)).toBeVisible();
+      await expect(view.aiBadge()).toBeVisible();
+      for (const o of profile!.offerings) {
+        await expect(view.bookLink(o.title)).toBeVisible();
+        // what the package is, said in words (the oracle is written out in support/directory-api.ts), and how long it is valid
+        await expect(view.offering(o.title)).toContainText(factsOf(o));
+        await expect(view.offering(o.title)).toContainText("Ważność: 30 dni");
+        // a package has no time: nothing to pick, no clock times in the card
+        await expect(view.offering(o.title).getByRole("radio")).toHaveCount(0);
+        await expect(view.offering(o.title)).not.toContainText(/\b\d{1,2}:\d{2}\b/);
+      }
+      await expect(page.getByText("Wybierz termin")).toHaveCount(0);
+      if (profile!.offerings.some((o) => o.kind === "chat")) {
+        await expect(view.connectSection()).toBeVisible(); // "Jak się połączyć": base URL, the model (the agent's slug) and a curl example
+        await expect(page.getByText(expected!.slug, { exact: true }).first()).toBeVisible();
+      }
       await expectNoSeriousA11yViolations(page);
     });
 
@@ -57,10 +74,12 @@ test.describe("J1 visitor browses a category and opens a profile", () => {
         await expect(p.getByText(profile!.headline)).toBeVisible();
         await expect(p.getByRole("heading", { level: 2, name: "O mnie" })).toBeVisible();
         await expect(p.getByText(profile!.bio)).toBeVisible();
+        await expect(view.aiBadge()).toBeVisible();
         await expect(p.getByRole("heading", { level: 2, name: "Pakiety" })).toBeVisible();
         for (const o of profile!.offerings) {
           await expect(p.getByRole("heading", { level: 3, name: o.title })).toBeVisible();
           await expect(p.getByText(o.description)).toBeVisible();
+          await expect(view.offering(o.title)).toContainText(factsOf(o));
           // booking works without scripts: a plain link to the booking page of that offering (the page adds `?gabinet=<slug>` to come back to)
           await expect(view.bookLink(o.title)).toHaveAttribute("href", new RegExp(`^/rezerwacja/${o.id}(\\?.*)?$`));
         }

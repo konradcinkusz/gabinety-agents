@@ -2,17 +2,19 @@ import { expect, test } from "../harness/fixtures";
 import { restoreClock } from "../harness/clock";
 import { resetAndReseed } from "../harness/demo-data";
 import { expectNoSeriousA11yViolations } from "../harness/a11y";
+import { waitForTasksDone } from "../harness/booking-api";
 import { AdminDisputesPage, BookingDetailPage } from "../harness/pages-bookings";
 import {
-  actorContext, addDays, addOffering, bookAndPay, day, feeOf, getBooking, ledgerDownload, ledgerRows, type LedgerRow, publicProfile, registerDemoUser, uniqueDemoName,
+  actorContext, addDays, addOffering, bookAndPay, day, feeOf, getBooking, ledgerDownload, ledgerRows, type LedgerRow, orderTask, publicProfile, registerDemoUser, uniqueDemoName,
 } from "../harness/booking-support";
 
-// J6 (SPEC 10): a dispute is opened, an administrator resolves it with a partial refund, the ledger CSV shows the entries.
+// J6 (SPEC 10, D-02): a claim ("reklamacja") is made on a used package, an administrator resolves it with a partial refund, the ledger CSV shows the entries.
 // The numbers are CONTRACTS 9.1 (T-08.05): price 25000, refund 10000, kept 15000, fee (15000 * 1500 + 5000) / 10000 = 2250, payout 12750.
-// A fresh client and an own 25000 offering make the figures independent of the seeded catalogue and of the "one fee per pair" rule.
+// A fresh client and an own 25000 five-task package make the figures independent of the seeded catalogue and of the "one fee per pair" rule. The package has units left, so the
+// auto-complete job never touches it while the claim is made; a claim is allowed on an active package until its end + 72 h (A-03), so no business time has to pass.
 const PRICE = 25000, REFUND = 10000, KEPT = PRICE - REFUND, FEE = 2250, PAYOUT = KEPT - FEE;
 
-test.describe("J6 dispute and partial refund", () => {
+test.describe("J6 claim and partial refund", () => {
   test.describe.configure({ retries: 0 });
   let failed = false;
 
@@ -37,33 +39,34 @@ test.describe("J6 dispute and partial refund", () => {
     for (const [price, fee] of [[25000, 3750], [33333, 5000], [5000, 750], [1, 0], [150000, 22500]]) expect(feeOf(price)).toBe(fee); // CONTRACTS 9.1 vectors
   });
 
-  test("dispute, partial refund by the administrator, ledger CSV", async ({ page, context, browser, clock }) => {
+  test("claim, partial refund by the administrator, ledger CSV", async ({ page, context, browser, clock }) => {
     test.setTimeout(4 * 60_000); // includes the payout job, which runs every 60 s
 
-    // set-up: a practitioner's own 25000 offering, a fresh client, a paid booking
+    // set-up: the agent's provider adds a five-task package at 25000, a fresh client buys and pays it and orders one task
     const profile = await publicProfile("demo-dariusz-fikcyjny");
     const practitioner = await actorContext(browser, "demo-practitioner-4");
-    const offeringId = await addOffering(practitioner.request, profile.offerings[0], PRICE, uniqueDemoName("j6").slice(5));
+    const offeringId = await addOffering(practitioner.request, profile.offerings[0], PRICE, uniqueDemoName("j6").slice(5), 5);
     await practitioner.close();
     await registerDemoUser(context, uniqueDemoName("j6-client"));
     const now = new Date((await clock.read()).now);
-    const b = await bookAndPay(context, { practitionerId: profile.id, offeringId, now, minAheadHours: 72 });
+    const b = await bookAndPay(context, { offeringId });
     expect((await getBooking(context, b.id)).price.amountMinor).toBe(PRICE);
+    await orderTask(context, b.id, "Opisz granice modułów opisanego monolitu i miejsca do wydzielenia (j6).");
+    // the page refreshes itself with a meta tag while a task is queued or running, and axe rejects that (meta-refresh, WCAG 2.2.1): the journey looks at it once the answer is there
+    await waitForTasksDone(context.request, b.id);
 
-    // a dispute needs the consultation to have ended (CONTRACTS 4.2): move the clock 30 minutes past the end, well inside the 48 h window
-    await clock.advanceMinutes(Math.ceil((b.end.getTime() - now.getTime()) / 60_000) + 30);
-
-    // the client opens the dispute in the UI
+    // the client makes the claim in the UI
     const detail = new BookingDetailPage(page);
     await detail.goto(b.id);
     await expect(detail.value("Aktywny")).toBeVisible();
+    await expect(detail.usage()).toHaveText("wykorzystano 1 z 5");
     await detail.openDispute("Agent działał inaczej, niż opisano, dane syntetyczne testu.");
     await expect(page.getByText("Reklamacja została zgłoszona.")).toBeVisible();
     await expect(detail.value("Reklamacja w toku")).toBeVisible();
     await expectNoSeriousA11yViolations(page);
     expect((await getBooking(context, b.id)).status).toBe("Disputed");
 
-    // the administrator resolves it with a partial refund of 100,00 zł in the UI
+    // the administrator resolves the claim with a partial refund of 100,00 zł in the UI
     const admin = await actorContext(browser, "demo-admin");
     try {
       const adminPage = await admin.newPage();
