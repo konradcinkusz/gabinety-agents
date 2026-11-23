@@ -27,6 +27,26 @@ public static class BookingFormat
         return $"{Pl.Format.Weekdays[(int)start.DayOfWeek]}, {start.Day} {Pl.Format.MonthsGenitive[start.Month - 1]}, {start:HH\\:mm}–{end:HH\\:mm}";
     }
 
+    /// <summary><c>10 zadań</c> for a task package, <c>500 tys. tokenów</c> for a chat package: what the package holds, from the booking's kind and total (tokens for chat).</summary>
+    public static string UnitsLine(string kind, long total) => kind == "Chat"
+        ? string.Format(Pl.Bookings.TokensThousands, total / 1000)
+        : string.Format(Pl.Bookings.TasksCount, total, Components.Pages.Gabinet.Profile.TaskWord((int)Math.Min(total, int.MaxValue)));
+
+    /// <summary>"wykorzystano X z Y" (tasks) or the same in thousands of tokens (chat); the remainder never goes below zero.</summary>
+    public static string UsageLine(string kind, long used, long total) => kind == "Chat"
+        ? string.Format(Pl.Bookings.UsedOfTokens, used / 1000, total / 1000)
+        : string.Format(Pl.Bookings.UsedOf, used, total);
+
+    /// <summary>Used as a share of the total, 0 to 100, for the progress bar.</summary>
+    public static int UsedPercent(long used, long total) => total <= 0 ? 0 : (int)Math.Clamp(used * 100 / total, 0, 100);
+
+    /// <summary><c>wtorek, 8 grudnia</c> of the end of validity, in Europe/Warsaw.</summary>
+    public static string ValidUntil(DateTimeOffset endUtc)
+    {
+        var end = TimeZoneInfo.ConvertTime(endUtc, Warsaw);
+        return $"{end.Day} {Pl.Format.MonthsGenitive[end.Month - 1]} {end.Year}";
+    }
+
     /// <summary>The parts that exist, joined by " · ": a missing name never leaves a stray separator at either end (F-03: "· poniedziałek, 23 listopada · 180,00 zł").</summary>
     public static string MetaLine(params string?[] parts) => string.Join(" · ", parts.Where(p => !string.IsNullOrWhiteSpace(p)).Select(p => p!.Trim()));
 

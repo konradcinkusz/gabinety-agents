@@ -10,8 +10,8 @@ namespace Gabinety.Web.Components.Pages.Booking;
 public static class BookingAttempt
 {
     /// <summary>A fingerprint of what the request says, not of the text: only the hash goes back to the browser, never the brief.</summary>
-    public static string Fingerprint(Guid offeringId, DateTimeOffset startUtc, string brief, string? problemSlug, bool aiAssisted) =>
-        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{offeringId:N}|{startUtc.UtcTicks}|{brief.Trim()}|{problemSlug}|{aiAssisted}")))[..32];
+    public static string Fingerprint(Guid offeringId, string brief, string? problemSlug, bool aiAssisted) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{offeringId:N}|{brief.Trim()}|{problemSlug}|{aiAssisted}")))[..32];
 
     /// <summary>The key to send: the posted one when it was made for this same body, otherwise a new one.</summary>
     public static Guid KeyFor(string? postedKey, string? postedFingerprint, string fingerprint, Func<Guid> newKey) =>

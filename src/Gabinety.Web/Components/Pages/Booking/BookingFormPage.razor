@@ -5,7 +5,6 @@
 @inject BriefAssistantClient Assistant
 @inject NavigationManager Navigation
 @inject Gabinety.Web.Hosting.WebOptions Site
-@inject TimeProvider Clock
 @* Static server rendering with plain form posts and antiforgery (ADR-0010: interactivity only where it is needed). Three buttons post the one form: ask the assistant, apply its proposal, pay. A form post
    cannot be lost to a circuit that is not connected yet, which is the failure a typed brief would otherwise meet (DESIGN-CONTRACT 9.7). The brief is user free text: it is never logged. *@
 
@@ -16,7 +15,7 @@
 @if (_missing)
 {
     <p>@BookFlowText.MissingSlot</p>
-    <a class="btn btn--secondary" href="@(_slug is { Length: > 0 } ? "/gabinet/" + Uri.EscapeDataString(_slug) : "/programisci")">@(_slug is { Length: > 0 } ? BookFlowText.ToProfile : BookFlowText.BackToSearch)</a>
+    <a class="btn btn--secondary" href="/programisci">@BookFlowText.BackToSearch</a>
 }
 else if (_unavailable)
 {
@@ -27,15 +26,14 @@ else if (_unavailable)
 }
 else if (_offering is not null)
 {
-    <BookingSteps Current="1" />
+    <BookingSteps Current="0" />
     <div class="booking-layout">
         <div class="booking-layout__summary">
-            <ConsultationSummary Offering="@_offering.Title" Party="@BookingFormat.Name(_practitionerName)" When="@BookingFormat.When(_start, _start.AddMinutes(_offering.DurationMinutes))"
-                                 Minutes="_offering.DurationMinutes" PriceMinor="_offering.Price.AmountMinor"
-                                 ChangeTimeHref="@ChangeTimeHref">
+            <ConsultationSummary Offering="@_offering.Title" Party="@BookingFormat.Name(_practitionerName)" Units="@Gabinety.Web.Components.Pages.Gabinet.Profile.UnitsLine(_offering)"
+                                 Validity="@string.Format(BookFlowText.Summary.ValidFor, PlPages.Profile.ValidityDays)" PriceMinor="_offering.Price.AmountMinor">
                 <div class="callout callout--info stack stack--tight">
                     <p>@BookFlowText.Summary.Hold</p>
-                    <p>@FreeCancellation.Line(_start, Clock.GetUtcNow())</p>
+                    <p>@BookFlowText.Summary.RefundRule</p>
                 </div>
             </ConsultationSummary>
         </div>
@@ -88,18 +86,13 @@ else if (_offering is not null)
 
 @code {
     [Parameter] public Guid OfferingId { get; set; }
-    /// <summary>The slot: a UTC instant (<c>?start=</c>).</summary>
-    [SupplyParameterFromQuery(Name = "start")] public string? StartParam { get; set; }
     /// <summary>The profile slug (<c>?gabinet=</c>): no endpoint resolves an offering id on its own, so the offering is looked up in the public profile.</summary>
     [SupplyParameterFromQuery(Name = "gabinet")] public string? SlugParam { get; set; }
     [SupplyParameterFromForm(FormName = "booking")] BookingFormModel? Model { get; set; }
 
-    /// <summary>Back to the offer in the profile's picker; the slug is known whenever the summary is shown.</summary>
-    string? ChangeTimeHref => _slug is null || _offering is null ? null : "/gabinet/" + Uri.EscapeDataString(_slug) + "#oferta-" + _offering.Id;
     string CurrentPath => "/" + Navigation.ToBaseRelativePath(Navigation.Uri);
     OfferingDto? _offering;
     string? _practitionerName, _slug, _categoryName, _assistNote, _briefError, _attemptKey, _attemptFingerprint;
-    DateTimeOffset _start;
     bool _missing, _unavailable, _assistApplied;
     BriefSuggestionDto? _suggestion;
     BookFailure? _failure;
@@ -121,10 +114,6 @@ else if (_offering is not null)
         _offering = profile.Value!.Offerings.FirstOrDefault(o => o.Id == OfferingId);
         if (_offering is null) { Navigation.NotFound(); return; }
         _practitionerName = profile.Value.DisplayName;
-        if (string.IsNullOrWhiteSpace(StartParam) || !DateTimeOffset.TryParse(StartParam, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal, out _start))
-        {
-            (_missing, _offering) = (true, null);
-        }
     }
 
     async Task SubmitAsync()
@@ -178,11 +167,11 @@ else if (_offering is not null)
 
         var applied = string.IsNullOrWhiteSpace(Model.AppliedSlug) ? null : Model.AppliedSlug.Trim();
         var text = Model.Brief!.Trim();
-        var fingerprint = BookingAttempt.Fingerprint(_offering!.Id, _start, text, applied, applied is not null);
+        var fingerprint = BookingAttempt.Fingerprint(_offering!.Id, text, applied, applied is not null);
         var key = BookingAttempt.KeyFor(Model.AttemptKey, Model.AttemptFingerprint, fingerprint, Guid.NewGuid);
         (_attemptKey, _attemptFingerprint) = (key.ToString(), fingerprint); // kept in the form: a retry of this same request reuses the key
 
-        var result = await Bookings.CreateAsync(key, new CreateBookingRequestDto(_offering.Id, _start.ToUniversalTime(), new BriefDto(text, applied, applied is not null)));
+        var result = await Bookings.CreateAsync(key, new CreateBookingRequestDto(_offering.Id, new BriefDto(text, applied, applied is not null)));
         if (result.IsOk)
         {
             if (CheckoutTarget.Safe(result.Value!.CheckoutUrl, Site.SiteBaseUrl, Site.MockPayments) is { } target) { Navigation.NavigateTo(target); return; }

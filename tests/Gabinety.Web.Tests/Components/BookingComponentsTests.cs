@@ -46,7 +46,7 @@ public class HoldTimerTests : BunitContext
         var timer = cut.Find("[role=timer]");
         Assert.Equal("Czas na płatność", timer.GetAttribute("aria-label"));
         Assert.Contains("callout--warning", timer.ClassName);
-        Assert.Equal("Termin jest wstrzymany jeszcze przez 9:58", timer.TextContent);
+        Assert.Equal("Zakup jest wstrzymany jeszcze przez 9:58", timer.TextContent);
         Assert.Equal("", cut.Find("[data-testid=hold-announcement]").TextContent);
         Assert.Equal("status", cut.Find("[data-testid=hold-announcement]").GetAttribute("role"));
     }
@@ -57,7 +57,7 @@ public class HoldTimerTests : BunitContext
         var cut = Show(TimeSpan.FromMinutes(10));
         Assert.Single(_time.Timers); // OnAfterRender: the circuit's first render; prerendering never calls it
         _time.Tick(TimeSpan.FromSeconds(1));
-        cut.WaitForAssertion(() => Assert.Equal("Termin jest wstrzymany jeszcze przez 9:59", cut.Find("[role=timer]").TextContent));
+        cut.WaitForAssertion(() => Assert.Equal("Zakup jest wstrzymany jeszcze przez 9:59", cut.Find("[role=timer]").TextContent));
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public class HoldTimerTests : BunitContext
             var text = cut.Find("[data-testid=hold-announcement]").TextContent;
             if (spoken.Count == 0 || spoken[^1] != text) spoken.Add(text);
         }
-        Assert.Equal(["", "Zostało 5 minut na płatność.", "Została 1 minuta na płatność.", "Czas na płatność minął, termin został zwolniony. Wybierz termin ponownie."], spoken);
+        Assert.Equal(["", "Zostało 5 minut na płatność.", "Została 1 minuta na płatność.", "Czas na płatność minął. Wykup pakiet ponownie."], spoken);
     }
 
     [Fact]
@@ -80,7 +80,7 @@ public class HoldTimerTests : BunitContext
         var cut = Show(TimeSpan.FromSeconds(2));
         _time.Tick(TimeSpan.FromSeconds(1));
         _time.Tick(TimeSpan.FromSeconds(1));
-        cut.WaitForAssertion(() => Assert.Equal("Czas na płatność minął, termin został zwolniony. Wybierz termin ponownie.", cut.Find("[role=timer]").TextContent));
+        cut.WaitForAssertion(() => Assert.Equal("Czas na płatność minął. Wykup pakiet ponownie.", cut.Find("[role=timer]").TextContent));
         Assert.True(_time.Timers.Single().Disposed);
         Assert.DoesNotContain("0:00", cut.Markup);
     }
@@ -157,16 +157,17 @@ public class BookingComponentsTests : BunitContext
     public void The_summary_heading_agrees_with_the_number_in_polish(int n, string heading) => Assert.Equal(heading, FormProblemText.Heading(n));
 
     [Fact]
-    public void The_summary_shows_the_party_only_when_there_is_one_and_the_total_in_the_money_format()
+    public void The_summary_shows_the_agent_with_the_badge_only_when_there_is_one_and_the_total_in_the_money_format()
     {
-        var with = Render<ConsultationSummary>(p => p.Add(c => c.Offering, "Audyt").Add(c => c.Party, "Anna").Add(c => c.When, "wtorek, 8 grudnia, 12:00–13:00").Add(c => c.Minutes, 60).Add(c => c.PriceMinor, 18000)
+        var with = Render<ConsultationSummary>(p => p.Add(c => c.Offering, "Audyt").Add(c => c.Party, "Anna").Add(c => c.Units, "10 zadań").Add(c => c.Validity, "30 dni od zakupu").Add(c => c.PriceMinor, 18000)
             .AddChildContent("<div class=\"callout--info\">Wstrzymany</div>"));
-        Assert.Equal(["Konsultacja", "Programista", "Termin", "Czas trwania", "Do zapłaty"], with.FindAll("dt").Select(d => d.TextContent));
+        Assert.Equal(["Pakiet", "Agent", "Zawartość", "Ważność", "Do zapłaty"], with.FindAll("dt").Select(d => d.TextContent));
+        Assert.Equal("Agent AI", with.Find("dd [data-testid=ai-badge]").TextContent);
         Assert.Equal("180,00 zł", with.Find("dd.booking-summary__total").TextContent);
         Assert.Contains("num", with.Find("dd.booking-summary__total").ClassName);
         Assert.NotNull(with.Find(".callout--info")); // the hold notice sits in the summary
-        var without = Render<ConsultationSummary>(p => p.Add(c => c.Offering, "Audyt").Add(c => c.When, "x").Add(c => c.PriceMinor, 100));
-        Assert.Equal(["Konsultacja", "Termin", "Do zapłaty"], without.FindAll("dt").Select(d => d.TextContent));
+        var without = Render<ConsultationSummary>(p => p.Add(c => c.Offering, "Audyt").Add(c => c.Units, "x").Add(c => c.Validity, "y").Add(c => c.PriceMinor, 100));
+        Assert.Equal(["Pakiet", "Zawartość", "Ważność", "Do zapłaty"], without.FindAll("dt").Select(d => d.TextContent));
         Assert.Equal("Podsumowanie", without.Find("h2").TextContent);
         Assert.Equal(without.Find("h2").Id, without.Find("section").GetAttribute("aria-labelledby"));
     }

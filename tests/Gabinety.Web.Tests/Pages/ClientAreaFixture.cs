@@ -11,7 +11,7 @@ public sealed class ClientAreaFixture : IAsyncDisposable
     public static readonly Guid OfferingId = Guid.Parse("018f0000-0000-7000-8000-0000000000a1");
     public static readonly Guid BookingId = Guid.Parse("018f0000-0000-7000-8000-0000000000b1");
     public static readonly DateTimeOffset Start = new(2026, 12, 8, 11, 0, 0, TimeSpan.Zero); // 12:00 in Warsaw
-    public static string BookingUrl => $"/rezerwacja/{OfferingId}?start={Uri.EscapeDataString("2026-12-08T11:00:00Z")}&gabinet=demo-anna-demowska";
+    public static string BookingUrl => $"/rezerwacja/{OfferingId}?gabinet=demo-anna-demowska";
 
     public WebFactory Web { get; }
     public Browser Browser { get; }
@@ -42,14 +42,14 @@ public sealed class ClientAreaFixture : IAsyncDisposable
 
     public static PractitionerProfileDto Profile(string name = "Anna Demowska", long price = 25000) =>
         new(Guid.NewGuid(), "demo-anna-demowska", name, "Audyty kodu .NET", null, ["email"], null, true, new MoneyDto(price, "PLN"), "Bio demo", null,
-            [new OfferingDto(OfferingId, "Audyt kodu demo", "Opis oferty demo", 60, new MoneyDto(price, "PLN"), "audyt-kodu", ["dotnet"])], 0, new DateTimeOffset(2026, 11, 3, 9, 0, 0, TimeSpan.Zero));
+            [new OfferingDto(OfferingId, "Audyt kodu demo", "Opis oferty demo", 60, new MoneyDto(price, "PLN"), "audyt-kodu", ["dotnet"], "Tasks", 10)], 0, new DateTimeOffset(2026, 11, 3, 9, 0, 0, TimeSpan.Zero));
 
     public static BookingDetailDto Detail(string status = "Confirmed", string practitioner = "Anna Demowska", string client = "demo-client", string payment = "Succeeded", long refunded = 0,
         bool cancel = false, bool dispute = false, bool noShow = false, bool review = false, string? meeting = null, DateTimeOffset? hold = null, string? brief = "Opis problemu demo, syntetyczny.", CancelOutcomeDto? outcome = null,
-        MoneyDto? fee = null, MoneyDto? payout = null) =>
-        new(BookingId, status, null, Start, Start.AddHours(1), 60, "Audyt kodu demo", new MoneyDto(25000, "PLN"), new PractitionerRefDto(Guid.NewGuid(), practitioner, "demo-anna-demowska"),
+        MoneyDto? fee = null, MoneyDto? payout = null, string kind = "Tasks", long unitsTotal = 10, long unitsUsed = 0, DateTimeOffset? end = null) =>
+        new(BookingId, status, null, Start, end ?? Start.AddHours(1), 60, "Audyt kodu demo", new MoneyDto(25000, "PLN"), new PractitionerRefDto(Guid.NewGuid(), practitioner, "demo-anna-demowska"),
             client.Length == 0 ? null : new ClientRefDto(client), brief is null ? null : new BriefDto(brief, null, false), meeting, hold, new PaymentViewDto(payment, new MoneyDto(refunded, "PLN")), fee, payout,
-            cancel, dispute, noShow, review, outcome);
+            cancel, dispute, noShow, review, outcome, kind, unitsTotal, unitsUsed);
 
     public static JsonElement Json(string json) => JsonDocument.Parse(json).RootElement.Clone();
 

@@ -32,27 +32,25 @@ public class BookingFormTests
         Assert.Equal(HttpStatusCode.Found, page.Status);
         Assert.StartsWith("/logowanie?redirect=%2Frezerwacja%2F", page.Location);
         Assert.Contains("gabinet%3Ddemo-anna-demowska", page.Location);
-        Assert.Contains("start%3D2026-12-08T11%253A00%253A00Z", page.Location);
         Assert.Empty(f.Web.Directory.Requests);
     }
 
     [Fact]
-    public async Task The_form_has_the_hooks_the_journeys_use_and_a_summary_with_the_name_the_time_and_the_price()
+    public async Task The_form_has_the_hooks_the_journeys_use_and_a_summary_with_the_agent_the_package_and_the_price()
     {
         await using var f = await Open();
         var page = await f.Browser.GetAsync(BookingUrl);
         Assert.Equal(HttpStatusCode.OK, page.Status);
-        Assert.Equal(["Rezerwacja konsultacji"], page.All("h1").Select(h => h.TextContent));
-        Assert.Equal("Opisz problem", page.One("label[for=brief]")!.TextContent);
+        Assert.Equal(["Wykup dostępu"], page.All("h1").Select(h => h.TextContent));
+        Assert.Equal("Do czego chcesz użyć agenta?", page.One("label[for=brief]")!.TextContent);
         Assert.Equal("textarea", page.One("#brief")!.TagName.ToLowerInvariant());
-        Assert.Equal(["Pomóż mi opisać problem", "Zapłać 250,00 zł"], page.All("form button").Select(b => b.TextContent));
+        Assert.Equal(["Pomóż mi opisać zastosowanie", "Zapłać 250,00 zł"], page.All("form button").Select(b => b.TextContent));
         Assert.Single(page.All("button"), b => b.TextContent.Contains("Zapłać", StringComparison.OrdinalIgnoreCase)); // J3: getByRole("button", { name: "Zapłać" }) must match exactly one
         var summary = page.One(".booking-summary")!;
         Assert.Equal("Podsumowanie", summary.QuerySelector("h2")!.TextContent);
-        Assert.Equal(["Konsultacja", "Programista", "Termin", "Czas trwania", "Do zapłaty"], summary.QuerySelectorAll("dt").Select(d => d.TextContent));
-        Assert.Equal(["Audyt kodu demo", "Anna Demowska", "wtorek, 8 grudnia, 12:00–13:00", "60 min", "250,00 zł"], summary.QuerySelectorAll("dd").Select(d => d.TextContent));
-        Assert.Contains("Europe/Warsaw", summary.TextContent);
-        Assert.Contains("Termin jest wstrzymany na 10 minut od kliknięcia „Zapłać”.", summary.QuerySelector(".callout--info")!.TextContent);
+        Assert.Equal(["Pakiet", "Agent", "Zawartość", "Ważność", "Do zapłaty"], summary.QuerySelectorAll("dt").Select(d => d.TextContent));
+        Assert.Equal(["Audyt kodu demo", "Anna Demowska Agent AI", "10 zadań, typowy czas ok. 60 min", "30 dni od zakupu", "250,00\u00a0zł"], summary.QuerySelectorAll("dd").Select(d => d.TextContent));
+        Assert.Contains("Zakup jest wstrzymany na 10 minut od kliknięcia „Zapłać”.", summary.QuerySelector(".callout--info")!.TextContent);
         Assert.Single(page.All("*"), e => e.ChildElementCount == 0 && e.TextContent == "Audyt kodu demo"); // J3: getByText(offering.title) must be one element
         Assert.NotNull(page.One("form input[name=__RequestVerificationToken]")); // antiforgery
         Assert.Empty(page.All("script:not([src])")); // no inline script (CSP)
@@ -78,26 +76,26 @@ public class BookingFormTests
     }
 
     [Theory]
-    [InlineData("")] [InlineData("&gabinet=")] [InlineData("&gabinet=%20")]
-    public async Task Without_a_profile_slug_the_page_says_the_slot_is_missing_and_goes_to_the_search(string slug)
+    [InlineData("")] [InlineData("?gabinet=")] [InlineData("?gabinet=%20")]
+    public async Task Without_a_profile_slug_the_page_says_the_address_is_incomplete_and_goes_to_the_search(string slug)
     {
         await using var f = await Open();
-        var page = await f.Browser.GetAsync($"/rezerwacja/{OfferingId}?start=2026-12-08T11:00:00Z{slug}");
+        var page = await f.Browser.GetAsync($"/rezerwacja/{OfferingId}{slug}");
         Assert.Equal(HttpStatusCode.OK, page.Status);
-        Assert.Contains("Nie wybrano terminu albo adres jest niepełny.", page.Text);
+        Assert.Contains("Adres jest niepełny.", page.Text);
         Assert.Equal("/programisci", page.One("a.btn")!.GetAttribute("href"));
         Assert.Empty(page.All("form"));
     }
 
-    [Theory]
-    [InlineData("")] [InlineData("&start=")] [InlineData("&start=jutro")]
-    public async Task Without_a_valid_start_the_page_says_so_and_goes_back_to_the_profile(string start)
+    [Fact]
+    public async Task The_form_has_no_slot_or_time_input_and_an_old_link_with_start_still_works()
     {
         await using var f = await Open();
-        var page = await f.Browser.GetAsync($"/rezerwacja/{OfferingId}?gabinet=demo-anna-demowska{start}");
-        Assert.Contains("Nie wybrano terminu albo adres jest niepełny.", page.Text);
-        Assert.Equal("/gabinet/demo-anna-demowska", page.One("a.btn")!.GetAttribute("href"));
-        Assert.Empty(page.All("form"));
+        var page = await f.Browser.GetAsync(BookingUrl + "&start=2026-12-08T11:00:00Z");
+        Assert.Equal(HttpStatusCode.OK, page.Status);
+        Assert.Empty(page.All("input[type=datetime-local], input[name*=start i], input[name*=slot i], .slot, .slot-days"));
+        Assert.DoesNotContain("Termin", page.All("dt").Select(d => d.TextContent));
+        Assert.DoesNotContain("Zmień termin", page.Text);
     }
 
     [Fact]
@@ -105,9 +103,9 @@ public class BookingFormTests
     {
         await using var f = await Open();
         f.Web.Directory.Respond = r => r.RequestUri!.AbsolutePath.EndsWith("demo-anna-demowska") ? FakeBackend.Json(Profile()) : FakeBackend.Problem(HttpStatusCode.NotFound, "not_found");
-        Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync($"/rezerwacja/{OfferingId}?start=2026-12-08T11:00:00Z&gabinet=demo-nikt")).Status);
-        Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync($"/rezerwacja/{Guid.NewGuid()}?start=2026-12-08T11:00:00Z&gabinet=demo-anna-demowska")).Status);
-        Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync("/rezerwacja/nie-guid?start=2026-12-08T11:00:00Z&gabinet=demo-anna-demowska")).Status);
+        Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync($"/rezerwacja/{OfferingId}?gabinet=demo-nikt")).Status);
+        Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync($"/rezerwacja/{Guid.NewGuid()}?gabinet=demo-anna-demowska")).Status);
+        Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync("/rezerwacja/nie-guid?gabinet=demo-anna-demowska")).Status);
     }
 
     [Fact]
@@ -118,7 +116,7 @@ public class BookingFormTests
         var page = await f.Browser.GetAsync(BookingUrl);
         Assert.Equal("alert", page.One("[data-testid=unavailable]")!.GetAttribute("role"));
         Assert.Equal(BookingUrl, page.One("[data-testid=unavailable] a")!.GetAttribute("href"));
-        Assert.Equal("Rezerwacja konsultacji", page.TextOf("h1"));
+        Assert.Equal("Wykup dostępu", page.TextOf("h1"));
         Assert.Empty(page.All("form"));
     }
 
@@ -158,7 +156,7 @@ public class BookingFormTests
     // ---- paying
 
     [Fact]
-    public async Task Pay_sends_one_request_with_a_key_a_utc_start_and_the_trimmed_brief_then_redirects_to_the_checkout_of_the_booking()
+    public async Task Pay_sends_one_request_with_a_key_no_start_and_the_trimmed_brief_then_redirects_to_the_checkout_of_the_booking()
     {
         await using var f = await Open();
         var page = await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", $"  {Brief}  "));
@@ -170,8 +168,7 @@ public class BookingFormTests
         Assert.StartsWith("Bearer eyJ", request.Authorization);
         using var body = JsonDocument.Parse(request.Body!);
         Assert.Equal(OfferingId.ToString(), body.RootElement.GetProperty("offeringId").GetString());
-        Assert.Equal("2026-12-08T11:00:00+00:00", body.RootElement.GetProperty("startUtc").GetDateTimeOffset().ToString("yyyy-MM-ddTHH:mm:sszzz"));
-        Assert.EndsWith("Z", body.RootElement.GetProperty("startUtc").GetString()); // the service insists on a UTC instant
+        Assert.False(body.RootElement.TryGetProperty("startUtc", out _)); // C-02: a package has no start
         Assert.Equal(Brief, body.RootElement.GetProperty("brief").GetProperty("text").GetString());
         Assert.False(body.RootElement.GetProperty("brief").GetProperty("aiAssisted").GetBoolean());
         Assert.Null(body.RootElement.GetProperty("brief").GetProperty("problemSlug").GetString());
@@ -210,15 +207,15 @@ public class BookingFormTests
     }
 
     [Theory]
-    [InlineData(409, "slot_taken", "Ten termin został już zajęty albo nie jest dostępny. Wybierz inny termin.", true)]
-    [InlineData(422, "slot_unavailable", "Ten termin został już zajęty albo nie jest dostępny. Wybierz inny termin.", true)]
-    [InlineData(422, "offering_inactive", "Ta konsultacja nie jest już dostępna.", true)]
-    [InlineData(422, "own_offering", "Nie możesz zarezerwować własnej konsultacji.", true)]
-    [InlineData(422, "practitioner_not_bookable", "Ten programista nie przyjmuje teraz rezerwacji.", true)]
-    [InlineData(422, "practitioner_payments_not_ready", "Ten programista nie może jeszcze przyjmować płatności, więc nie można zarezerwować tej konsultacji. Spróbuj z innym programistą albo wróć za jakiś czas.", true)]
+    [InlineData(409, "slot_taken", "Nie udało się zarezerwować pakietu. Spróbuj ponownie.", true)]
+    [InlineData(422, "slot_unavailable", "Nie udało się zarezerwować pakietu. Spróbuj ponownie.", true)]
+    [InlineData(422, "offering_inactive", "Ten pakiet nie jest już dostępny.", true)]
+    [InlineData(422, "own_offering", "Nie możesz wykupić własnego pakietu.", true)]
+    [InlineData(422, "practitioner_not_bookable", "Ten agent nie sprzedaje teraz pakietów.", true)]
+    [InlineData(422, "practitioner_payments_not_ready", "Dostawca tego agenta nie może jeszcze przyjmować płatności, więc nie można wykupić tego pakietu. Spróbuj z innym agentem albo wróć za jakiś czas.", true)]
     [InlineData(429, "rate_limited", "Zbyt wiele prób. Odczekaj chwilę i spróbuj ponownie.", false)]
     [InlineData(503, "dependency_unavailable", "Nie udało się połączyć z usługą. Spróbuj ponownie: nie zostaniesz obciążony dwa razy.", false)]
-    [InlineData(400, "validation_failed", "Nie udało się utworzyć rezerwacji. Sprawdź dane i spróbuj ponownie.", false)]
+    [InlineData(400, "validation_failed", "Nie udało się wykupić dostępu. Sprawdź dane i spróbuj ponownie.", false)]
     public async Task A_refusal_of_the_service_is_an_alert_in_our_words_with_the_way_back_to_the_profile_when_it_helps(int status, string code, string text, bool profile)
     {
         await using var f = await Open(booking: _ => FakeBackend.Problem((HttpStatusCode)status, code));
@@ -287,7 +284,7 @@ public class BookingFormTests
     {
         await using var f = await Open(assistant: _ => FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "assistant_unavailable"));
         var page = await f.Post(BookingUrl, "booking", Intent("assist"), ("Model.Brief", Brief + " [[unavailable]]"));
-        Assert.Equal("Asystent jest chwilowo niedostępny. Opisz problem samodzielnie i zarezerwuj termin.", page.TextOf(".assist .callout"));
+        Assert.Equal("Asystent jest chwilowo niedostępny. Opisz zastosowanie samodzielnie i wykup dostęp.", page.TextOf(".assist .callout"));
         Assert.Empty(page.All("[data-testid=proposal]"));
         Assert.DoesNotContain("Sugerowana kategoria", page.Text);
         Assert.DoesNotContain("Dodaj propozycję do opisu", page.Text);
@@ -296,8 +293,8 @@ public class BookingFormTests
     }
 
     [Theory]
-    [InlineData(429, "rate_limited", "Zbyt wiele próśb do asystenta. Spróbuj za chwilę albo opisz problem samodzielnie.")]
-    [InlineData(500, "http_500", "Asystent nie mógł przygotować propozycji. Opisz problem samodzielnie.")]
+    [InlineData(429, "rate_limited", "Zbyt wiele próśb do asystenta. Spróbuj za chwilę albo opisz zastosowanie samodzielnie.")]
+    [InlineData(500, "http_500", "Asystent nie mógł przygotować propozycji. Opisz zastosowanie samodzielnie.")]
     public async Task Other_assistant_failures_have_their_own_note(int status, string code, string text)
     {
         await using var f = await Open(assistant: _ => FakeBackend.Problem((HttpStatusCode)status, code));
@@ -310,7 +307,7 @@ public class BookingFormTests
     {
         await using var f = await Open(assistant: _ => Suggestion());
         var page = await f.Post(BookingUrl, "booking", Intent("assist"), ("Model.Brief", "krótko"));
-        Assert.Equal("Najpierw opisz problem w co najmniej 20 znakach, wtedy asystent będzie mógł pomóc.", page.TextOf(".assist .callout"));
+        Assert.Equal("Najpierw opisz zastosowanie w co najmniej 20 znakach, wtedy asystent będzie mógł pomóc.", page.TextOf(".assist .callout"));
         Assert.Empty(f.Web.Assistant.Requests);
     }
 

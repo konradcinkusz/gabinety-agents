@@ -49,7 +49,7 @@ public sealed record ClientRefDto(string DisplayName);
 
 /// <summary>The part of <c>BookingView</c> (CONTRACTS 4.4) the list shows. <c>Status</c> is the wire name (<c>PendingPayment</c>, <c>Confirmed</c>, ...).</summary>
 public sealed record BookingViewDto(Guid Id, string Status, DateTimeOffset StartUtc, DateTimeOffset EndUtc, int DurationMinutes, string OfferingTitle,
-    MoneyDto Price, PractitionerRefDto Practitioner, ClientRefDto? Client);
+    MoneyDto Price, PractitionerRefDto Practitioner, ClientRefDto? Client, string Kind = "Tasks", long UnitsTotal = 0, long UnitsUsed = 0);
 
 public sealed record ReplyDto(string Text, DateTimeOffset RepliedAt);
 
@@ -62,7 +62,8 @@ public sealed record AssistantStatusDto(string State, IReadOnlyList<string> Feat
 
 public sealed record BriefDto(string Text, string? ProblemSlug, bool AiAssisted);
 
-public sealed record CreateBookingRequestDto(Guid OfferingId, [property: System.Text.Json.Serialization.JsonConverter(typeof(UtcInstantWriter))] DateTimeOffset StartUtc, BriefDto Brief);
+/// <summary>A package has no time slot (docs/agentic/PLAN.md A-02): the request carries no <c>startUtc</c>.</summary>
+public sealed record CreateBookingRequestDto(Guid OfferingId, BriefDto Brief);
 
 /// <summary>The service insists on a UTC instant written with <c>Z</c> (CONTRACTS 0): <c>2026-12-08T11:00:00Z</c>, never <c>+00:00</c> or a local offset.</summary>
 public sealed class UtcInstantWriter : System.Text.Json.Serialization.JsonConverter<DateTimeOffset>
@@ -83,7 +84,7 @@ public sealed record PaymentViewDto(string Status, MoneyDto Refunded);
 /// </summary>
 public sealed record BookingDetailDto(Guid Id, string Status, string? StatusReason, DateTimeOffset StartUtc, DateTimeOffset EndUtc, int DurationMinutes, string OfferingTitle, MoneyDto Price,
     PractitionerRefDto Practitioner, ClientRefDto? Client, BriefDto? Brief, string? MeetingUrl, DateTimeOffset? HoldExpiresAt, PaymentViewDto Payment, MoneyDto? Fee, MoneyDto? Payout,
-    bool CanCancel, bool CanDispute, bool CanReportNoShow, bool CanReview, CancelOutcomeDto? CancelOutcome = null);
+    bool CanCancel, bool CanDispute, bool CanReportNoShow, bool CanReview, CancelOutcomeDto? CancelOutcome = null, string Kind = "Tasks", long UnitsTotal = 0, long UnitsUsed = 0);
 
 /// <summary><c>cancelOutcome</c> (CONTRACTS 4.4, 9.2): what cancelling would do for the viewer right now, computed by the service on its clock. Present only when <c>canCancel</c>. <c>Outcome</c> is <c>full_refund</c>, <c>partial</c> or <c>no_refund</c>; <c>Refund</c> is what the client gets back.</summary>
 public sealed record CancelOutcomeDto(string Outcome, MoneyDto Refund);

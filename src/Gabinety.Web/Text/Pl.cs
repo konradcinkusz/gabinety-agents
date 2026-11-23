@@ -182,6 +182,7 @@ public static class Pl
         public const string ErrorNetwork = "Brak połączenia z usługą dostępów. Spróbuj ponownie za chwilę.", ErrorUnavailable = "Dostępy są chwilowo niedostępne. Spróbuj ponownie za chwilę.";
         public const string ErrorRateLimited = "Zbyt wiele zapytań. Spróbuj ponownie za chwilę.", ErrorForbidden = "Nie masz dostępu do tych dostępów.", ErrorGeneric = "Nie udało się wczytać dostępów.";
         public const string UnknownStatus = "Status nieznany";
+        public const string TokensThousands = "{0} tys. tokenów", TasksCount = "{0} {1}", UsedOf = "wykorzystano {0} z {1}", UsedOfTokens = "wykorzystano {0} z {1} tys. tokenów", ValidUntil = "ważny do {0}";
 
         /// <summary>The Polish label of a booking status (CONTRACTS 8.1); an unknown value is shown as such, never as the raw wire value.</summary>
         public static readonly IReadOnlyDictionary<string, string> Statuses = new Dictionary<string, string>

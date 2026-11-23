@@ -67,11 +67,10 @@ public class BookingFlowModelTests
     public void The_key_is_kept_for_the_same_body_and_replaced_when_the_body_differs()
     {
         var offering = Guid.NewGuid();
-        var start = new DateTimeOffset(2026, 12, 1, 9, 0, 0, TimeSpan.Zero);
-        var first = BookingAttempt.Fingerprint(offering, start, "Opis problemu z integracją", null, false);
+        var first = BookingAttempt.Fingerprint(offering, "Opis problemu z integracją", null, false);
         var key = Guid.NewGuid();
         Assert.Equal(key, BookingAttempt.KeyFor(key.ToString(), first, first, () => throw new InvalidOperationException("must reuse")));
-        var edited = BookingAttempt.Fingerprint(offering, start, "Inny opis problemu z integracją", null, false);
+        var edited = BookingAttempt.Fingerprint(offering, "Inny opis problemu z integracją", null, false);
         Assert.NotEqual(first, edited);
         var fresh = Guid.NewGuid();
         Assert.Equal(fresh, BookingAttempt.KeyFor(key.ToString(), first, edited, () => fresh)); // same key with another body would be a 409
@@ -84,13 +83,11 @@ public class BookingFlowModelTests
     public void The_fingerprint_ignores_surrounding_blanks_and_covers_every_part_of_the_request()
     {
         var o = Guid.NewGuid();
-        var t = new DateTimeOffset(2026, 12, 1, 9, 0, 0, TimeSpan.Zero);
-        var baseline = BookingAttempt.Fingerprint(o, t, "tekst", "audyt", true);
-        Assert.Equal(baseline, BookingAttempt.Fingerprint(o, t, "  tekst ", "audyt", true));
-        Assert.NotEqual(baseline, BookingAttempt.Fingerprint(Guid.NewGuid(), t, "tekst", "audyt", true));
-        Assert.NotEqual(baseline, BookingAttempt.Fingerprint(o, t.AddMinutes(30), "tekst", "audyt", true));
-        Assert.NotEqual(baseline, BookingAttempt.Fingerprint(o, t, "tekst", "inny", true));
-        Assert.NotEqual(baseline, BookingAttempt.Fingerprint(o, t, "tekst", "audyt", false));
+        var baseline = BookingAttempt.Fingerprint(o, "tekst", "audyt", true);
+        Assert.Equal(baseline, BookingAttempt.Fingerprint(o, "  tekst ", "audyt", true));
+        Assert.NotEqual(baseline, BookingAttempt.Fingerprint(Guid.NewGuid(), "tekst", "audyt", true));
+        Assert.NotEqual(baseline, BookingAttempt.Fingerprint(o, "tekst", "inny", true));
+        Assert.NotEqual(baseline, BookingAttempt.Fingerprint(o, "tekst", "audyt", false));
         Assert.DoesNotContain("tekst", baseline); // a hash: the brief itself never goes back to the browser in a field
     }
 
