@@ -39,7 +39,7 @@ public class AutoCompleteTests : IDisposable
         var b = await Life.Row(h, id);
         Assert.Equal(BookingStatus.Completed, b.Status);
         Assert.Equal(b.EndUtc, b.EndedAt);
-        Assert.Equal(b.StartUtc + TimeSpan.FromHours(72), b.PayoutDueAt); // max(end + 48 h, start + 72 h): the claim window has closed first (ADR proposal 0011)
+        Assert.Equal(b.EndUtc + TimeSpan.FromHours(72), b.PayoutDueAt); // end + 72 h: the dispute window of a package has closed (owner decision, A-03)
         Assert.Equal(1500, b.FeeMinor);    // 15 % of 10000, first consultation of the pair
         Assert.Equal(8500, b.PayoutMinor);
         var fee = Assert.Single(await Life.Ledger(h, id), l => l.Kind == LedgerKind.PlatformFee);
@@ -69,7 +69,7 @@ public class AutoCompleteTests : IDisposable
         Assert.Equal(BookingStatus.Confirmed, await Hold.StatusOf(h, noUnits));
         var row = await Life.Row(h, used);
         Assert.Equal(h.Clock.GetUtcNow(), row.EndedAt);                       // it ended now, not at the end of its validity
-        Assert.Equal(row.StartUtc + TimeSpan.FromHours(72), row.PayoutDueAt); // the money rule is unchanged: max(end + 48 h, start + 72 h)
+        Assert.Equal(row.EndUtc + TimeSpan.FromHours(72), row.PayoutDueAt); // end + 72 h of the validity, also when the units ran out earlier
     }
 
     [Fact]

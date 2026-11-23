@@ -25,14 +25,11 @@ public class AutoCompleteJob(IServiceScopeFactory scopes, TimeProvider time, ICo
     public const string WindowKey = "Booking:CompleteAfterHours";
     public const int DefaultWindowHours = 48, DefaultBatch = 50, DefaultMaxPerRun = 500;
 
-    /// <summary>CONTRACTS 8.1 fixes the payout date of a completed booking at <c>end_utc + 48 h</c>, whatever the completion window is configured to.</summary>
-    public static readonly TimeSpan PayoutDelay = TimeSpan.FromHours(48);
-    /// <summary>The practitioner no-show claim runs until start + 72 h (CONTRACTS 4.2): money never moves before it has closed (ADR proposal 0011).</summary>
-    public static readonly TimeSpan ClaimWindowAfterStart = TimeSpan.FromHours(72);
+    /// <summary>A package pays out at <c>end_utc + 72 h</c>: the claim window of a package closes then (the dispute window of CONTRACTS 4.2, measured from the end), and money never moves before it has closed (owner decision, A-03).</summary>
+    public static readonly TimeSpan PayoutDelay = TimeSpan.FromHours(72);
 
-    /// <summary><c>payout_due_at</c> of a completed booking: <c>max(end + 48 h, start + 72 h)</c>.</summary>
-    public static DateTimeOffset PayoutDueAt(DateTimeOffset startUtc, DateTimeOffset endUtc) =>
-        DateTimeOffset.Compare(endUtc + PayoutDelay, startUtc + ClaimWindowAfterStart) >= 0 ? endUtc + PayoutDelay : startUtc + ClaimWindowAfterStart;
+    /// <summary><c>payout_due_at</c> of a completed package: <c>end + 72 h</c>. <paramref name="startUtc"/> stays in the signature for the callers; it no longer matters.</summary>
+    public static DateTimeOffset PayoutDueAt(DateTimeOffset startUtc, DateTimeOffset endUtc) => endUtc + PayoutDelay;
 
     public override string Name => JobName;
 

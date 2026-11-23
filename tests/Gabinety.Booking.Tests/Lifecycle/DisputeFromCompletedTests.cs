@@ -23,7 +23,7 @@ public class DisputeFromCompletedTests : IDisposable
         Assert.Equal(1, await Auto.Job(h).CompleteDueAsync(h.Clock.GetUtcNow(), default));
         var b = await Life.Row(h, id);
         Assert.Equal((BookingStatus.Completed, 1500L, 8500L), (b.Status, b.FeeMinor, b.PayoutMinor));
-        Assert.Equal(b.StartUtc + TimeSpan.FromHours(72), b.PayoutDueAt);
+        Assert.Equal(b.EndUtc + TimeSpan.FromHours(72), b.PayoutDueAt); // the dispute window of a package closes at end + 72 h, and so does the payout date
         Assert.Single(await Life.Ledger(h, id), l => l.Kind == LedgerKind.PlatformFee);
         return id;
     }

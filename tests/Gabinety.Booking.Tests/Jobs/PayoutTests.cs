@@ -333,7 +333,7 @@ public class PayoutTests : IDisposable
     [Fact]
     public async Task A_completed_booking_is_not_paid_before_the_claim_window_has_closed()
     {
-        // payout_due_at = max(end + 48 h, start + 72 h): at end + 48 h and one hour after start + 72 h the money has not moved yet (ADR proposal 0011)
+        // payout_due_at = end + 72 h: the dispute window of a package closes then, and the money has not moved before it
         var id = await Life.Seed(h, BookingStatus.Completed, TimeSpan.FromHours(-1)); // starts one hour ago, ends now
         await h.Seed(db =>
         {
@@ -342,22 +342,23 @@ public class PayoutTests : IDisposable
             b.PayoutDueAt = AutoCompleteJob.PayoutDueAt(b.StartUtc, b.EndUtc);
         });
         var b0 = await Life.Row(h, id);
-        Assert.Equal(b0.StartUtc + TimeSpan.FromHours(72), b0.PayoutDueAt);
-        h.Clock.Advance(TimeSpan.FromHours(48)); // end + 48 h: the completion moment, still before start + 72 h
+        Assert.Equal(b0.EndUtc + TimeSpan.FromHours(72), b0.PayoutDueAt);
+        h.Clock.Advance(TimeSpan.FromHours(48)); // end + 48 h: the old payout moment, the window is still open
         Assert.Equal(0, await PayJob.Job(h, provider).PayDueAsync(h.Clock.GetUtcNow(), default));
-        h.Clock.Advance(TimeSpan.FromHours(22) + TimeSpan.FromMinutes(59)); // one minute before start + 72 h (the session started an hour ago, so that is 71 h from now)
+        h.Clock.Advance(TimeSpan.FromHours(23) + TimeSpan.FromMinutes(59)); // one minute before end + 72 h
         Assert.Equal(0, await PayJob.Job(h, provider).PayDueAsync(h.Clock.GetUtcNow(), default));
         h.Clock.Advance(TimeSpan.FromMinutes(1));
         Assert.Equal(1, await PayJob.Job(h, provider).PayDueAsync(h.Clock.GetUtcNow(), default));
     }
 
     [Theory]
-    [InlineData(1, 0, 72)]     // a one hour session: start + 72 h
-    [InlineData(0.5, 0, 72)]
-    [InlineData(30, 0, 78)]   // longer than a day: end + 48 h is the later moment
-    public void The_payout_is_due_at_the_later_of_end_plus_48_h_and_start_plus_72_h(double hours, double _, double expectedHoursAfterStart)
+    [InlineData(1)]
+    [InlineData(0.5)]
+    [InlineData(30 * 24)] // a 30 day package
+    public void The_payout_is_due_72_hours_after_the_end_of_the_package(double hours)
     {
         var start = new DateTimeOffset(2026, 11, 20, 10, 0, 0, TimeSpan.Zero);
-        Assert.Equal(start + TimeSpan.FromHours(expectedHoursAfterStart), AutoCompleteJob.PayoutDueAt(start, start + TimeSpan.FromHours(hours)));
+        var end = start + TimeSpan.FromHours(hours);
+        Assert.Equal(end + TimeSpan.FromHours(72), AutoCompleteJob.PayoutDueAt(start, end));
     }
 }
