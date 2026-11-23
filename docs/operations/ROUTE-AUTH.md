@@ -164,6 +164,7 @@ The middleware is UX, the services are the boundary: a signed-in page still call
 | Web | PAGE | `/admin/podejrzane` | Admin | all | suspicious client-practitioner pairs (T-10.03) |
 | Web | PAGE | `/moje/rezerwacje` | Authenticated | all | my bookings (client and practitioner tabs), static server rendering |
 | Web | PAGE | `/moje/rezerwacje/{BookingId}` | Authenticated | all | booking detail with cancel, dispute and no-show (form posts, antiforgery) |
+| Web | PAGE | `/moje/klucze` | Authenticated | all | my API keys: create (the plain key is shown once, in the response of the form post), list (prefix only) and revoke; static server rendering, antiforgery |
 | Web | PAGE | `/moje/opinie` | Authenticated | all | the practitioner's own reviews and replies |
 | Web | PAGE | `/moje/opinie/{BookingId}` | Authenticated | all | write a review (form post, antiforgery) |
 | Web | PAGE | `/rezerwacja/{OfferingId}` | Authenticated | all | booking form: brief, assistant suggestion, pay (form posts, antiforgery) |

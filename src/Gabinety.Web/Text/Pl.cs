@@ -19,7 +19,7 @@ public static class Pl
     public static class Nav
     {
         public const string Label = "Menu główne", Search = "Agenci", SignIn = "Zaloguj się", Register = "Załóż konto", MyBookings = "Moje dostępy", SignOut = "Wyloguj się";
-        public const string Account = "Konto", PractitionerArea = "Panel dostawcy", Admin = "Administracja", Menu = "Menu", AccountMenu = "Twoje konto";
+        public const string Account = "Konto", ApiKeys = "Klucze API", PractitionerArea = "Panel dostawcy", Admin = "Administracja", Menu = "Menu", AccountMenu = "Twoje konto";
         // UX-010: the public links of the header and footer, and the account menu's entry for a signed-in user without a practitioner profile (D-2).
         public const string HowItWorks = "Jak to działa", Pricing = "Cennik", RankingRules = "Zasady rankingu", BecomePractitioner = "Zostań dostawcą";
     }

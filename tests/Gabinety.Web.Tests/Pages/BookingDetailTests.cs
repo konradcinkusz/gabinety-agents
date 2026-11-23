@@ -28,18 +28,18 @@ public class BookingDetailTests
         await using var f = await Open(Detail(meeting: "https://meet.example/sala"));
         var page = await f.Browser.GetAsync(Client);
         Assert.Equal(HttpStatusCode.OK, page.Status);
-        Assert.Equal(["Szczegóły rezerwacji"], page.All("h1").Select(h => h.TextContent));
+        Assert.Equal(["Szczegóły dostępu"], page.All("h1").Select(h => h.TextContent));
         Assert.Equal("Audyt kodu demo", page.One("h2")!.TextContent); // the harness waits for the first h2
-        Assert.Equal(["Programista", "Termin", "Czas trwania", "Status", "Cena", "Płatność"], page.All(".dl dt").Select(d => d.TextContent));
+        Assert.Equal(["Agent", "Pakiet", "Wykorzystanie", "Ważny do", "Status", "Cena", "Płatność"], page.All(".dl dt").Select(d => d.TextContent));
         var dd = page.All(".dl dd").Select(d => Page.Squash(d.TextContent)).ToList();
-        Assert.Equal(["Anna Demowska", "wtorek, 8 grudnia, 12:00–13:00Godziny w czasie polskim (Europe/Warsaw).", "60 min", "Aktywny", "250,00 zł", "Opłacona"], dd);
+        Assert.Equal(["Anna DemowskaAgent AI", "10 zadań", "wykorzystano 0 z 10 0%", "8 grudnia 2026", "Aktywny", "250,00 zł", "Opłacona"], dd);
         Assert.All(page.All(".dl dd"), d => Assert.Equal("dd", d.TagName.ToLowerInvariant())); // role "definition"
-        Assert.Equal(["badge badge--info"], page.All(".dl dd:nth-of-type(4) .badge").Select(b => b.ClassName));
-        Assert.Equal("badge badge--success", page.One(".dl dd:nth-of-type(6) .badge")!.ClassName);
+        Assert.Equal(["badge badge--info"], page.All(".dl dd:nth-of-type(5) .badge:not([data-testid=ai-badge])").Select(b => b.ClassName));
+        Assert.Equal("badge badge--success", page.One(".dl dd:nth-of-type(7) .badge")!.ClassName);
         Assert.DoesNotContain(page.All("*"), e => e.TextContent.Contains("Zwrócono:") && e.ChildElementCount == 0); // J5: no refund line without a refund
-        Assert.Equal("https://meet.example/sala", page.One("a[target=_blank]")!.GetAttribute("href"));
+        Assert.Empty(page.All("a[target=_blank]")); // C-03: no meeting link
         Assert.Contains("Opis problemu demo, syntetyczny.", page.TextOf("p.brief"));
-        Assert.Equal("Twój opis problemu", page.All("h2").Last().TextContent);
+        Assert.Equal("Twoje zastosowanie", page.One("#brief-title")!.TextContent);
     }
 
     [Fact]
@@ -47,18 +47,18 @@ public class BookingDetailTests
     {
         await using var f = await Open();
         var page = await f.Browser.GetAsync(Detail_ + "?role=practitioner");
-        Assert.Equal(["Klient", "Termin", "Czas trwania", "Status", "Cena", "Płatność"], page.All(".dl dt").Select(d => d.TextContent));
+        Assert.Equal(["Klient", "Pakiet", "Wykorzystanie", "Ważny do", "Status", "Cena", "Płatność"], page.All(".dl dt").Select(d => d.TextContent));
         Assert.Equal("demo-client", page.One(".dl dd")!.TextContent);
-        Assert.Equal("Opis problemu (klient)", page.All("h2").Last().TextContent); // J3: the practitioner reads it
+        Assert.Equal("Zastosowanie (klient)", page.One("#brief-title")!.TextContent); // J3: the practitioner reads it
         Assert.Single(page.All("*"), e => e.ChildElementCount == 0 && e.TextContent == "Opłacona"); // J3: getByText("Opłacona") must be one element
     }
 
     [Fact]
-    public async Task A_missing_name_leaves_the_row_out_F03_instead_of_printing_Programista_Programista()
+    public async Task A_missing_name_leaves_the_row_out_F03_instead_of_printing_a_placeholder()
     {
         await using var f = await Open(Detail(practitioner: "  "));
         var page = await f.Browser.GetAsync(Client);
-        Assert.DoesNotContain("Programista", page.All(".dl dt").Select(d => d.TextContent));
+        Assert.DoesNotContain("Agent", page.All(".dl dt").Select(d => d.TextContent));
         await using var g = await Open(Detail(client: ""));
         Assert.DoesNotContain("Klient", (await g.Browser.GetAsync(Detail_ + "?role=practitioner")).All(".dl dt").Select(d => d.TextContent));
     }
@@ -93,7 +93,7 @@ public class BookingDetailTests
     {
         await using var f = await Open(Detail("Completed", fee: new MoneyDto(3750, "PLN"), payout: new MoneyDto(21250, "PLN")));
         var page = await f.Browser.GetAsync(Detail_ + "?role=practitioner");
-        Assert.Equal(["Prowizja", "Wypłata dla programisty"], page.All(".dl dt").Select(d => d.TextContent).TakeLast(2));
+        Assert.Equal(["Prowizja", "Wypłata dla dostawcy"], page.All(".dl dt").Select(d => d.TextContent).TakeLast(2));
         Assert.Equal(["37,50 zł", "212,50 zł"], page.All(".dl dd").Select(d => d.TextContent).TakeLast(2));
     }
 
@@ -133,7 +133,7 @@ public class BookingDetailTests
     }
 
     [Theory]
-    [InlineData(HttpStatusCode.ServiceUnavailable, "dependency_unavailable", "Usługa rezerwacji jest chwilowo niedostępna. Spróbuj ponownie za chwilę.")]
+    [InlineData(HttpStatusCode.ServiceUnavailable, "dependency_unavailable", "Usługa dostępów jest chwilowo niedostępna. Spróbuj ponownie za chwilę.")]
     [InlineData(HttpStatusCode.TooManyRequests, "rate_limited", "Zbyt wiele prób. Odczekaj chwilę i spróbuj ponownie.")]
     public async Task A_service_that_cannot_answer_is_an_alert_with_a_reload_and_the_title_stays(HttpStatusCode status, string code, string text)
     {
@@ -144,17 +144,17 @@ public class BookingDetailTests
         Assert.Equal("alert", alert.GetAttribute("role"));
         Assert.Equal(text, alert.QuerySelector("p")!.TextContent);
         Assert.Equal(Client, alert.QuerySelector("a")!.GetAttribute("href"));
-        Assert.Equal("Szczegóły rezerwacji", page.TextOf("h1"));
+        Assert.Equal("Szczegóły dostępu", page.TextOf("h1"));
     }
 
     // ---- actions are driven by the server's flags only
 
     [Theory]
     [InlineData(false, false, false, new string[0])]
-    [InlineData(true, false, false, new[] { "Anuluj rezerwację" })]
-    [InlineData(false, true, false, new[] { "Zgłoś spór" })]
-    [InlineData(false, false, true, new[] { "Zgłoś nieobecność klienta" })]
-    [InlineData(true, true, true, new[] { "Zgłoś spór", "Zgłoś nieobecność klienta", "Anuluj rezerwację" })] // the destructive one is last
+    [InlineData(true, false, false, new[] { "Zrezygnuj" })]
+    [InlineData(false, true, false, new[] { "Zgłoś reklamację" })]
+    [InlineData(false, false, true, new string[0])] // C-03: the no-show flag opens nothing any more
+    [InlineData(true, true, true, new[] { "Zgłoś reklamację", "Zrezygnuj" })] // the destructive one is last
     public async Task Exactly_the_actions_the_service_allows_are_buttons(bool cancel, bool dispute, bool noShow, string[] names)
     {
         await using var f = await Open(Detail(cancel: cancel, dispute: dispute, noShow: noShow));
@@ -167,7 +167,7 @@ public class BookingDetailTests
     public async Task A_state_with_no_flags_offers_no_action_even_if_the_url_asks_for_one()
     {
         await using var f = await Open(Detail("Completed"));
-        foreach (var action in new[] { "cancel", "dispute", "noshow" })
+        foreach (var action in new[] { "cancel", "dispute", "noshow" }) // "noshow" is not an action any more
         {
             var page = await f.Browser.GetAsync(Client + "&action=" + action);
             Assert.Empty(page.All("dialog"));
@@ -195,14 +195,14 @@ public class BookingDetailTests
         var dialog = page.One("dialog")!;
         Assert.Equal("alertdialog", dialog.GetAttribute("role"));
         Assert.True(dialog.HasAttribute("open"));
-        Assert.Equal("Czy na pewno anulować rezerwację?", page.TextOf("#" + dialog.GetAttribute("aria-labelledby")));
-        Assert.Contains("co najmniej 24 godziny, zwrot wynosi 100% ceny", dialog.TextContent); // J5, until the service sends the outcome of this booking
-        Assert.Contains("mniej niż 24 godziny, brak zwrotu", dialog.TextContent);
-        Assert.Equal(["Tak, anuluj rezerwację"], dialog.QuerySelectorAll("button").Select(b => b.TextContent));
+        Assert.Equal("Czy na pewno zrezygnować z pakietu?", page.TextOf("#" + dialog.GetAttribute("aria-labelledby")));
+        Assert.Contains("Do pierwszego użycia rezygnacja oznacza pełny zwrot ceny.", dialog.TextContent); // J5, until the service sends the outcome of this booking
+
+        Assert.Equal(["Tak, zrezygnuj"], dialog.QuerySelectorAll("button").Select(b => b.TextContent));
         Assert.Equal("btn btn--danger", dialog.QuerySelector("button")!.ClassName); // the danger button lives only in the confirmation
-        Assert.Equal("Nie anuluj", dialog.QuerySelector("a")!.TextContent);
+        Assert.Equal("Nie rezygnuj", dialog.QuerySelector("a")!.TextContent);
         Assert.Equal(Client, dialog.QuerySelector("a")!.GetAttribute("href"));
-        Assert.Empty(page.All("main form[method=get]")); // the trigger is gone while the dialog is open: getByRole("button", "Anuluj rezerwację") is not ambiguous
+        Assert.Empty(page.All("main form[method=get]")); // the trigger is gone while the dialog is open: getByRole("button", "Zrezygnuj") is not ambiguous
         Assert.Equal("Powód (opcjonalnie)", page.One("label[for=reason]")!.TextContent.Trim());
     }
 
@@ -212,11 +212,11 @@ public class BookingDetailTests
         await using var full = await Open(Detail(cancel: true, outcome: new CancelOutcomeDto("full_refund", new MoneyDto(25000, "PLN"))));
         var dialog = (await full.Browser.GetAsync(Client + "&action=cancel")).One("dialog")!;
         Assert.Contains("Otrzymasz zwrot 250,00 zł.", dialog.TextContent);
-        Assert.DoesNotContain("co najmniej 24 godziny", dialog.TextContent); // UX-031: the consequence once, not the rule again
+        Assert.DoesNotContain("Do pierwszego użycia rezygnacja", dialog.TextContent); // UX-031: the consequence once, not the rule again
 
         await using var none = await Open(Detail(cancel: true, outcome: new CancelOutcomeDto("no_refund", new MoneyDto(0, "PLN"))));
         var late = (await none.Browser.GetAsync(Client + "&action=cancel")).One("dialog")!;
-        Assert.Contains("nie otrzymasz zwrotu", late.TextContent);
+        Assert.Contains("Nie otrzymasz zwrotu", late.TextContent);
         Assert.DoesNotContain("Otrzymasz zwrot 250", late.TextContent);
     }
 
@@ -225,7 +225,7 @@ public class BookingDetailTests
     {
         await using var f = await Open(Detail(cancel: true, outcome: null));
         var dialog = (await f.Browser.GetAsync(Client + "&action=cancel")).One("dialog")!;
-        Assert.Contains("Zwrot zależy od terminu", dialog.TextContent);
+        Assert.Contains("Do pierwszego użycia rezygnacja oznacza pełny zwrot ceny.", dialog.TextContent);
         Assert.DoesNotContain(dialog.QuerySelectorAll("strong"), s => s.TextContent.StartsWith("Otrzymasz"));
     }
 
@@ -234,7 +234,7 @@ public class BookingDetailTests
     {
         await using var f = await Open(Detail(cancel: true));
         var dialog = (await f.Browser.GetAsync(Detail_ + "?role=practitioner&action=cancel")).One("dialog")!;
-        Assert.Contains("Jako programista anulujesz zawsze z pełnym zwrotem", dialog.TextContent);
+        Assert.Contains("Jako dostawca wycofujesz dostęp zawsze z pełnym zwrotem", dialog.TextContent);
     }
 
     // ---- cancel
@@ -262,16 +262,16 @@ public class BookingDetailTests
     }
 
     [Theory]
-    [InlineData("cancelled", "Rezerwacja została anulowana.")]
-    [InlineData("disputed", "Spór został zgłoszony. Wypłata dla programisty jest wstrzymana do rozstrzygnięcia.")]
-    [InlineData("noshow", "Nieobecność klienta została zgłoszona.")]
+    [InlineData("cancelled", "Zrezygnowano z pakietu.")]
+    [InlineData("disputed", "Reklamacja została zgłoszona. Wypłata dla dostawcy jest wstrzymana do rozstrzygnięcia.")]
+    [InlineData("task", "Zadanie zostało zlecone. Wynik pojawi się poniżej.")]
     public async Task The_result_of_an_action_is_a_status_message_chosen_by_a_fixed_key_J5_J6(string key, string text)
     {
         await using var f = await Open(Detail("CancelledByClient"));
         var page = await f.Browser.GetAsync(Client + "&done=" + key);
         Assert.Equal(text, page.One("[data-testid=done]")!.TextContent);
         Assert.Equal("status", page.One("[data-testid=done]")!.GetAttribute("role"));
-        Assert.Single(page.All("*"), e => e.ChildElementCount == 0 && e.TextContent.Contains("Rezerwacja została anulowana.") == (key == "cancelled") && e.TextContent == text); // exactly one element says it
+        Assert.Single(page.All("*"), e => e.ChildElementCount == 0 && e.TextContent.Contains("Zrezygnowano z pakietu.") == (key == "cancelled") && e.TextContent == text); // exactly one element says it
     }
 
     [Theory]
@@ -301,7 +301,7 @@ public class BookingDetailTests
         var page = await f.Post(Client + "&action=cancel", "cancel", ("Model.Reason", ""));
         var alert = page.One("[data-testid=action-error]")!;
         Assert.Equal("alert", alert.GetAttribute("role"));
-        Assert.Equal("To nie jest już możliwe: stan rezerwacji się zmienił. Odśwież stronę.", alert.QuerySelector("p")!.TextContent);
+        Assert.Equal("To nie jest już możliwe: stan dostępu się zmienił. Odśwież stronę.", alert.QuerySelector("p")!.TextContent);
         Assert.Equal(("Odśwież", Client), (alert.QuerySelector("a")!.TextContent, alert.QuerySelector("a")!.GetAttribute("href")!));
         Assert.NotNull(page.One("dialog")); // the dialog stays so the user sees why
     }
@@ -322,11 +322,11 @@ public class BookingDetailTests
     {
         await using var f = await Open(Detail(dispute: true));
         var page = await f.Browser.GetAsync(Client + "&action=dispute");
-        Assert.Equal("Rodzaj sporu", page.One("label[for=kind]")!.TextContent);
-        Assert.Equal(["Konsultacja różniła się od opisu", "Programista się nie stawił", "Inny powód"], page.All("#kind option").Select(o => o.TextContent));
-        Assert.Equal("Opis sporu", page.One("label[for=text]")!.TextContent);
+        Assert.Equal("Rodzaj reklamacji", page.One("label[for=kind]")!.TextContent);
+        Assert.Equal(["Agent działał inaczej, niż opisano", "Inny powód"], page.All("#kind option").Select(o => o.TextContent));
+        Assert.Equal("Opis reklamacji", page.One("label[for=text]")!.TextContent);
         Assert.Equal(["Wyślij zgłoszenie"], page.All("dialog form button").Select(b => b.TextContent));
-        Assert.Single(page.All("label"), l => l.TextContent.Contains("opis sporu", StringComparison.OrdinalIgnoreCase)); // getByLabel is a substring match: one control
+        Assert.Single(page.All("label"), l => l.TextContent.Contains("opis reklamacji", StringComparison.OrdinalIgnoreCase)); // getByLabel is a substring match: one control
         Assert.Equal("0 / 1000", page.TextOf(".field__counter"));
     }
 
@@ -334,13 +334,13 @@ public class BookingDetailTests
     public async Task A_valid_dispute_sends_the_kind_and_the_text_and_redirects_with_a_fixed_key()
     {
         await using var f = await Open(Detail(dispute: true), post: _ => FakeBackend.Json(Detail("Disputed", payment: "Succeeded")));
-        var page = await f.Post(Client + "&action=dispute", "dispute", ("Model.Kind", "practitioner_no_show"), ("Model.Text", "Programista się nie połączył, dane syntetyczne testu."));
+        var page = await f.Post(Client + "&action=dispute", "dispute", ("Model.Kind", "not_as_described"), ("Model.Text", "Agent zrobił coś innego, dane syntetyczne testu."));
         Assert.Equal($"/moje/rezerwacje/{BookingId}?role=client&done=disputed", page.Location);
         var call = f.Web.Booking.Requests.Single(r => r.Method == HttpMethod.Post);
         Assert.Equal($"/api/v1/bookings/{BookingId}/dispute", call.PathAndQuery);
         var body = JsonDocument.Parse(call.Body!).RootElement;
-        Assert.Equal("practitioner_no_show", body.GetProperty("kind").GetString());
-        Assert.Equal("Programista się nie połączył, dane syntetyczne testu.", body.GetProperty("text").GetString());
+        Assert.Equal("not_as_described", body.GetProperty("kind").GetString());
+        Assert.Equal("Agent zrobił coś innego, dane syntetyczne testu.", body.GetProperty("text").GetString());
     }
 
     [Theory]
@@ -363,7 +363,7 @@ public class BookingDetailTests
     {
         await using var f = await Open(Detail(dispute: true));
         var page = await f.Post(Client + "&action=dispute", "dispute", ("Model.Kind", "fraud"), ("Model.Text", "Wystarczająco długi opis sporu."));
-        Assert.Equal("Wybierz rodzaj sporu.", page.TextOf(".form-summary a"));
+        Assert.Equal("Wybierz rodzaj reklamacji.", page.TextOf(".form-summary a"));
         Assert.DoesNotContain(f.Web.Booking.Requests, r => r.Method == HttpMethod.Post);
     }
 
@@ -387,21 +387,6 @@ public class BookingDetailTests
         Assert.DoesNotContain(f.Logs.Lines, l => l.Contains("Znacznik sporu", StringComparison.Ordinal));
         Assert.DoesNotContain(f.Web.Booking.Requests, r => r.PathAndQuery.Contains("Znacznik"));
         Assert.Null(page.Location);
-    }
-
-    // ---- no-show (practitioner)
-
-    [Fact]
-    public async Task A_practitioner_can_report_a_no_show_after_a_confirmation_and_it_posts_to_the_endpoint()
-    {
-        await using var f = await Open(Detail(noShow: true), post: _ => FakeBackend.Json(Detail("ClientNoShow")));
-        var dialog = (await f.Browser.GetAsync(Detail_ + "?role=practitioner&action=noshow")).One("dialog")!;
-        Assert.Equal("alertdialog", dialog.GetAttribute("role"));
-        Assert.Contains("Tego nie można cofnąć.", dialog.TextContent);
-        Assert.Equal(["Tak, zgłoś nieobecność"], dialog.QuerySelectorAll("button").Select(b => b.TextContent));
-        var page = await f.Post(Detail_ + "?role=practitioner&action=noshow", "noshow");
-        Assert.Equal($"/moje/rezerwacje/{BookingId}?role=practitioner&done=noshow", page.Location);
-        Assert.Equal($"/api/v1/bookings/{BookingId}/report-client-no-show", f.Web.Booking.Requests.Single(r => r.Method == HttpMethod.Post).PathAndQuery);
     }
 
     [Fact]

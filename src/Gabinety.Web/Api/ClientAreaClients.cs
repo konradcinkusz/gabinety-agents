@@ -33,6 +33,43 @@ public sealed partial class BookingClient
         await PostAsync<Unit>("/api/v1/payments/simulate", new { bookingId, outcome }, await tokens.AccessTokenAsync(ct), ct);
 }
 
+
+/// <summary>
+/// The client's own API keys and the tasks of a package (docs/agentic/PLAN.md B-01, B-05). The text of a task and the name of a key are bodies only: never a URL, a header or a log line.
+/// </summary>
+public sealed partial class BookingClient
+{
+    public async Task<ApiResult<IReadOnlyList<ApiKeyDto>>> ApiKeysAsync(CancellationToken ct = default) =>
+        await GetAsync<IReadOnlyList<ApiKeyDto>>("/api/v1/me/api-keys", await tokens.AccessTokenAsync(ct), ct);
+
+    public async Task<ApiResult<ApiKeyCreatedDto>> CreateApiKeyAsync(string name, CancellationToken ct = default) =>
+        await PostAsync<ApiKeyCreatedDto>("/api/v1/me/api-keys", new { name = name.Trim() }, await tokens.AccessTokenAsync(ct), ct);
+
+    public async Task<ApiResult<Unit>> RevokeApiKeyAsync(Guid id, CancellationToken ct = default) =>
+        await WriteAsync<Unit>(HttpMethod.Delete, $"/api/v1/me/api-keys/{Id(id)}", await tokens.AccessTokenAsync(ct), null, ct);
+
+    /// <summary>The tasks of one package, newest first as the service sends them. The service answers a plain array; an object with <c>items</c> is read too (the contract is B-05 of the other session).</summary>
+    public async Task<ApiResult<IReadOnlyList<AgentTaskDto>>> TasksAsync(Guid bookingId, CancellationToken ct = default)
+    {
+        var result = await GetAsync<System.Text.Json.JsonElement>($"/api/v1/me/bookings/{Id(bookingId)}/tasks", await tokens.AccessTokenAsync(ct), ct);
+        if (!result.IsOk) return ApiResult<IReadOnlyList<AgentTaskDto>>.Fail(result.Failure!);
+        try
+        {
+            var root = result.Value;
+            if (root.ValueKind == System.Text.Json.JsonValueKind.Object && root.TryGetProperty("items", out var items)) root = items;
+            var list = root.ValueKind == System.Text.Json.JsonValueKind.Array ? System.Text.Json.JsonSerializer.Deserialize<List<AgentTaskDto>>(root.GetRawText(), Json) : null;
+            return list is null ? ApiResult<IReadOnlyList<AgentTaskDto>>.Fail(502, ApiFailure.InvalidResponse) : ApiResult<IReadOnlyList<AgentTaskDto>>.Ok(list);
+        }
+        catch (System.Text.Json.JsonException) { return ApiResult<IReadOnlyList<AgentTaskDto>>.Fail(502, ApiFailure.InvalidResponse); }
+    }
+
+    public async Task<ApiResult<AgentTaskDto>> TaskAsync(Guid id, CancellationToken ct = default) =>
+        await GetAsync<AgentTaskDto>($"/api/v1/me/tasks/{Id(id)}", await tokens.AccessTokenAsync(ct), ct);
+
+    public async Task<ApiResult<TaskCreatedDto>> CreateTaskAsync(Guid bookingId, string input, CancellationToken ct = default) =>
+        await PostAsync<TaskCreatedDto>($"/api/v1/bookings/{Id(bookingId)}/tasks", new { input = input.Trim() }, await tokens.AccessTokenAsync(ct), ct);
+}
+
 /// <summary>The optional help with the brief (CONTRACTS 6). 35 s (SPEC 5.1): a language model answers; it is signed in and rate limited per user.</summary>
 public sealed class BriefAssistantClient(HttpClient http, VisitorAddressAccessor visitor, IAccessTokenSource tokens) : ApiClient(http, visitor)
 {

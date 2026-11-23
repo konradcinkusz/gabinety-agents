@@ -62,9 +62,9 @@ public class MyBookingsScheduleTests
     }
 
     [Fact]
-    public void A_booking_starting_exactly_now_is_past_and_nothing_is_lost_in_the_split()
+    public void A_package_whose_validity_ends_exactly_now_is_past_and_nothing_is_lost_in_the_split()
     {
-        var items = new[] { At(Now, title: "Teraz"), At(Now.AddMinutes(1), title: "Za minutę") };
+        var items = new[] { At(Now.AddHours(-1), title: "Teraz"), At(Now.AddMinutes(-59), title: "Za minutę") };
         var (upcoming, past) = MyBookingsSchedule.Split(items, Now);
         Assert.Equal(["Za minutę"], upcoming.Select(b => b.OfferingTitle));
         Assert.Equal(["Teraz"], past.Select(b => b.OfferingTitle));

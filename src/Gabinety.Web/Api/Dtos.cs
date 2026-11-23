@@ -92,6 +92,17 @@ public sealed record CancelOutcomeDto(string Outcome, MoneyDto Refund);
 /// <summary><c>POST /api/v1/assistant/brief</c> (CONTRACTS 6). Only a suggestion: it is shown, never applied by itself.</summary>
 public sealed record BriefSuggestionDto(string ProblemSlug, IReadOnlyList<string> TechSlugs, string Summary, IReadOnlyList<string> ClarifyingQuestions, int SuggestedDurationMinutes, string Confidence);
 
+// ---- API keys and tasks (docs/agentic/PLAN.md B-01, B-05). The plain key is in <c>ApiKeyCreatedDto.Key</c> once, at creation; the list never carries it.
+
+public sealed record ApiKeyDto(Guid Id, string Name, string Prefix, DateTimeOffset CreatedAt, DateTimeOffset? LastUsedAt);
+
+public sealed record ApiKeyCreatedDto(Guid Id, string Name, string Prefix, string Key, DateTimeOffset CreatedAt);
+
+/// <summary>A task of a package (B-05). <c>Status</c> is <c>queued | running | succeeded | failed</c>; <c>Output</c> is text of the agent, shown as plain text and never as markup.</summary>
+public sealed record AgentTaskDto(Guid Id, string Status, string? Output, DateTimeOffset CreatedAt, DateTimeOffset? CompletedAt);
+
+public sealed record TaskCreatedDto(Guid Id, string Status);
+
 public sealed record CreateReviewResponseDto(Guid ReviewId, string Status);
 
 public sealed record MeDto(string UserId, Guid? PractitionerId, string? PractitionerStatus, bool IsAdmin, bool IsModerator);

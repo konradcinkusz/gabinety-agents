@@ -187,15 +187,15 @@ public class BookingFlowModelTests
     public void A_practitioner_is_told_the_client_is_refunded_and_that_they_are_not_paid()
     {
         var o = CancelOutcome.From(Outcome("full_refund", 18000), Price);
-        Assert.Equal("Klient dostanie zwrot 180,00\u00a0zł, a Ty nie otrzymasz wypłaty za tę konsultację.", CancelOutcome.Sentence(o, "practitioner"));
+        Assert.Equal("Klient dostanie zwrot 180,00\u00a0zł, a Ty nie otrzymasz wypłaty za ten pakiet.", CancelOutcome.Sentence(o, "practitioner"));
     }
 
     // ---- failures of the client area
 
     [Theory]
-    [InlineData(0, "unavailable", "Nie udało się połączyć z usługą. Spróbuj ponownie.")] [InlineData(409, "invalid_transition", "To nie jest już możliwe: stan rezerwacji się zmienił. Odśwież stronę.")]
-    [InlineData(503, "dependency_unavailable", "Usługa rezerwacji jest chwilowo niedostępna. Spróbuj ponownie za chwilę.")] [InlineData(404, "not_found", "Nie znaleziono takiej rezerwacji.")]
-    [InlineData(422, "validation_failed", "Sprawdź wypełnione pola i spróbuj ponownie.")] [InlineData(403, "forbidden", "Nie masz dostępu do tej rezerwacji.")]
+    [InlineData(0, "unavailable", "Nie udało się połączyć z usługą. Spróbuj ponownie.")] [InlineData(409, "invalid_transition", "To nie jest już możliwe: stan dostępu się zmienił. Odśwież stronę.")]
+    [InlineData(503, "dependency_unavailable", "Usługa dostępów jest chwilowo niedostępna. Spróbuj ponownie za chwilę.")] [InlineData(404, "not_found", "Nie znaleziono takiego dostępu.")]
+    [InlineData(422, "validation_failed", "Sprawdź wypełnione pola i spróbuj ponownie.")] [InlineData(403, "forbidden", "Nie masz dostępu do tego zasobu.")]
     [InlineData(429, "rate_limited", "Zbyt wiele prób. Odczekaj chwilę i spróbuj ponownie.")] [InlineData(500, "http_500", "Coś poszło nie tak. Spróbuj ponownie.")]
     public void A_failed_action_is_told_from_its_code(int status, string code, string text) => Assert.Equal(text, ActionFailure.Text(new ApiFailure(status, code)));
 

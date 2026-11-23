@@ -141,7 +141,7 @@ public class LayoutTests : BunitContext
         auth.SetAuthorized("demo-client@demo.example");
         var member = Render<MainLayout>(p => p.Add(l => l.Body, Body()));
         Assert.Equal(["/programisci", "/jak-to-dziala", "/cennik"], member.FindAll("header .site-nav a").Select(a => a.GetAttribute("href")));
-        Assert.Equal(["/moje/rezerwacje", "/konto", "/gabinet-programisty", "/wyloguj"], member.FindAll("header .account-menu a").Select(a => a.GetAttribute("href")));
+        Assert.Equal(["/moje/rezerwacje", "/moje/klucze", "/konto", "/gabinet-programisty", "/wyloguj"], member.FindAll("header .account-menu a").Select(a => a.GetAttribute("href")));
     }
 
     [Fact]
@@ -206,9 +206,9 @@ public class MyBookingsTests : BunitContext
     {
         var cut = Open();
         Assert.Equal("Moje dostępy", cut.Find("h1").TextContent);
-        Assert.Equal(["Pierwsza", "Druga"], cut.FindAll("[data-testid=booking-row] .booking-row__title").Select(h => h.TextContent)); // the soonest first: it is the lead card
-        Assert.Equal(["Aktywny", "Oczekuje na płatność"], cut.FindAll("[data-testid=booking-row] .badge").Select(b => b.TextContent));
-        Assert.Equal(["badge badge--info", "badge badge--warning"], cut.FindAll("[data-testid=booking-row] .badge").Select(b => b.ClassName)); // G-8: the kind follows the state
+        Assert.Equal(["Pierwsza", "Druga"], cut.FindAll("[data-testid=booking-row] .booking-row__title").Select(h => h.TextContent)); // the one that expires first
+        Assert.Equal(["Aktywny", "Oczekuje na płatność"], cut.FindAll("[data-testid=booking-row] .badge:not([data-testid=ai-badge])").Select(b => b.TextContent));
+        Assert.Equal(["badge badge--info", "badge badge--warning"], cut.FindAll("[data-testid=booking-row] .badge:not([data-testid=ai-badge])").Select(b => b.ClassName)); // G-8: the kind follows the state
         Assert.Equal("/api/v1/me/bookings?role=client", _booking.Requests.Single().PathAndQuery);
         Assert.Empty(cut.FindAll("[role=alert]"));
         Assert.Empty(cut.FindAll("a[rel=next]"));
@@ -219,7 +219,7 @@ public class MyBookingsTests : BunitContext
     {
         var cut = Open();
         var nav = cut.Find("nav.tabs");
-        Assert.Equal("Rezerwacje jako", nav.GetAttribute("aria-label"));
+        Assert.Equal("Dostępy jako", nav.GetAttribute("aria-label"));
         var links = nav.QuerySelectorAll("a.tabs__link").ToList();
         Assert.Equal(["Klient", "Dostawca"], links.Select(a => a.TextContent));
         Assert.Equal(["page", null], links.Select(a => a.GetAttribute("aria-current")));
@@ -228,15 +228,25 @@ public class MyBookingsTests : BunitContext
     }
 
     [Fact]
-    public void A_row_names_the_other_party_in_the_view_of_the_role_and_has_no_stray_separator_F03()
+    public void A_row_names_the_agent_with_the_badge_for_a_client_and_the_client_for_a_provider_F03()
     {
         _booking.Respond = _ => FakeBackend.Json(new PageDto<BookingViewDto>([Sample.Booking("Z imieniem"), Sample.Booking("Bez imienia", practitioner: "")], null));
         var cut = Open();
-        var lines = cut.FindAll("[data-testid=booking-row] p.muted").Select(p => p.TextContent).ToList();
-        Assert.StartsWith("Anna Demowska · ", lines[0]);
-        Assert.StartsWith("wtorek, 1 grudnia, 13:00–14:00", lines[1]); // no name: the line starts with the date, never with " · "
-        Assert.All(lines, l => { Assert.DoesNotContain("Agent", l); Assert.False(l.StartsWith(" ·") || l.EndsWith("· ")); });
-        Assert.StartsWith("demo-client · ", Open("practitioner").Find("[data-testid=booking-row] p.muted").TextContent); // the other party, for a practitioner, is the client
+        var lines = cut.FindAll("[data-testid=booking-party]").Select(p => Page.Squash(p.TextContent)).ToList();
+        Assert.Equal("Anna DemowskaAgent AI", lines[0]);
+        Assert.Equal("Agent AI", lines[1]); // no name: just the badge, never a stray separator
+        Assert.Equal("demo-client", Page.Squash(Open("practitioner").Find("[data-testid=booking-party]").TextContent)); // the other party, for a provider, is the client
+    }
+
+    [Fact]
+    public void A_row_shows_the_usage_and_the_validity_of_the_package_C03()
+    {
+        _booking.Respond = _ => FakeBackend.Json(new PageDto<BookingViewDto>([Sample.Booking("Pakiet") with { UnitsTotal = 10, UnitsUsed = 3 }, Sample.Booking("Czat", "Confirmed") with { Kind = "Chat", UnitsTotal = 500000, UnitsUsed = 120000 }], null));
+        var rows = Open().FindAll("[data-testid=booking-row]");
+        Assert.Equal("wykorzystano 3 z 10", rows[0].QuerySelector(".usage__text")!.TextContent);
+        Assert.Equal("wykorzystano 120 z 500 tys. tokenów", rows[1].QuerySelector(".usage__text")!.TextContent);
+        Assert.Equal("3", rows[0].QuerySelector("progress")!.GetAttribute("value"));
+        Assert.Equal("ważny do 1 grudnia 2026", rows[0].QuerySelector("[data-testid=booking-valid-until]")!.TextContent);
     }
 
     [Fact]
@@ -301,7 +311,7 @@ public class MyBookingsTests : BunitContext
         Assert.Equal(["Wszystkie", "Zakończony"], chips.Select(a => a.TextContent));
         Assert.Equal(["/moje/rezerwacje?role=practitioner", "/moje/rezerwacje?role=practitioner&status=Completed"], chips.Select(a => a.GetAttribute("href")));
         Assert.Equal([null, "true"], chips.Select(a => a.GetAttribute("aria-current")));
-        Assert.Equal("Brak rezerwacji o tym statusie.", cut.Find("[data-testid=bookings-empty] p").TextContent);
+        Assert.Equal("Brak dostępów o tym statusie.", cut.Find("[data-testid=bookings-empty] p").TextContent);
     }
 
     [Fact]
@@ -323,8 +333,8 @@ public class MyBookingsTests : BunitContext
     {
         _booking.Respond = _ => FakeBackend.Json(new PageDto<BookingViewDto>([], null));
         var empty = Open().Find("[data-testid=bookings-empty]");
-        Assert.Equal("Brak rezerwacji", empty.QuerySelector("h2")!.TextContent);
-        Assert.Equal("Znajdź programistę", empty.QuerySelector("a")!.TextContent);
+        Assert.Equal("Brak dostępów", empty.QuerySelector("h2")!.TextContent);
+        Assert.Equal("Znajdź agenta", empty.QuerySelector("a")!.TextContent);
         Assert.Equal("/programisci", empty.QuerySelector("a")!.GetAttribute("href"));
         Assert.Empty(Open().FindAll("[role=alert]"));
         Assert.Empty(Open().FindAll("ul.bookings")); // never an empty list
@@ -335,7 +345,7 @@ public class MyBookingsTests : BunitContext
     {
         _booking.Respond = _ => FakeBackend.Json(new PageDto<BookingViewDto>([], null));
         var empty = Open("client", "Disputed").Find("[data-testid=bookings-empty]");
-        Assert.Equal("Brak rezerwacji o tym statusie.", empty.QuerySelector("p")!.TextContent);
+        Assert.Equal("Brak dostępów o tym statusie.", empty.QuerySelector("p")!.TextContent);
         Assert.Equal("/moje/rezerwacje?role=client", empty.QuerySelector("a")!.GetAttribute("href"));
     }
 
@@ -375,7 +385,7 @@ public class MyBookingsTests : BunitContext
         Sample.Booking(title, status) with { StartUtc = start, EndUtc = start.AddHours(1) };
 
     [Fact]
-    public void The_list_is_two_sections_split_by_the_start_time_from_the_clock_upcoming_soonest_first_and_past_newest_first()
+    public void The_list_is_two_sections_split_by_the_end_of_validity_from_the_clock_active_soonest_to_expire_first_and_past_newest_first()
     {
         _booking.Respond = _ => FakeBackend.Json(new PageDto<BookingViewDto>(
         [
@@ -384,7 +394,7 @@ public class MyBookingsTests : BunitContext
             Dated("Anulowana", "CancelledByClient", Utc(12, 2, 12)), // in the future, but cancelled: it is not upcoming
             Dated("Niedawna", "Completed", Utc(11, 10, 12)),
             Dated("Przyszła", "Confirmed", Utc(11, 30, 12)),
-            Dated("Teraz", "Confirmed", Utc(11, 22, 10)), // starts at the clock: already begun, so past
+            Dated("Teraz", "Confirmed", Utc(11, 22, 9)), // its validity ended at the clock: past
         ], null));
         var cut = Open();
         Assert.Equal(["Aktywne", "Zakończone"], cut.FindAll("section h2").Select(h => h.TextContent));
@@ -400,23 +410,6 @@ public class MyBookingsTests : BunitContext
         var cut = Open();
         Assert.Equal(["Zakończone"], cut.FindAll("section h2").Select(h => h.TextContent));
         Assert.Empty(cut.FindAll("[data-testid=bookings-upcoming]"));
-        Assert.Empty(cut.FindAll(".booking-row--lead")); // no upcoming consultation, so no lead card
-    }
-
-    [Fact]
-    public void The_soonest_upcoming_consultation_is_a_lead_card_with_its_start_in_words()
-    {
-        _booking.Respond = _ => FakeBackend.Json(new PageDto<BookingViewDto>(
-            [Dated("Dalsza", "Confirmed", Utc(11, 25, 8)), Dated("Najbliższa", "PendingPayment", Utc(11, 23, 8, 30))], null));
-        var cut = Open();
-        var lead = cut.Find("[data-testid=bookings-upcoming] .booking-row--lead");
-        Assert.Equal("Najbliższa", lead.QuerySelector(".booking-row__title")!.TextContent);
-        Assert.Equal("jutro, 09:30", lead.QuerySelector(".booking-lead__when")!.TextContent); // 08:30 UTC is 09:30 in Warsaw in November
-        Assert.Contains("poniedziałek, 23 listopada, 09:30–10:30", lead.TextContent);
-        Assert.Equal("Szczegóły", lead.QuerySelector("a.booking-row__link")!.TextContent);
-        Assert.Single(cut.FindAll(".booking-lead__when")); // only the lead card says it in words
-        Assert.Equal(["Najbliższa", "Dalsza"], cut.FindAll("[data-testid=bookings-upcoming] .booking-row__title").Select(h => h.TextContent));
-        Assert.Empty(cut.FindAll("[data-testid=bookings-upcoming] .booking-row--lead ~ .booking-row--lead")); // one lead
     }
 
     [Fact]
