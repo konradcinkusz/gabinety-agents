@@ -12,7 +12,7 @@ Columns: **Policy** = what the code declares (checked by the test): `Anonymous`,
 **Profile** = `all` (every deployment) or `fake` (mapped only when `GABINETY_FAKE=1` or `Environment:Kind=Development`; absent in a deployed profile, checked by the test).
 **Note** is for people and is not checked (callers of an internal route are SPEC 5.1; each caller has its own key on the callee, F-03).
 
-**Public edge (F-03, `Gabinety.ServiceDefaults.Edge`, not a policy so not checked by this table):** a request that arrived through the Fly public edge, or that carries `X-Edge-Key`, never reaches an `/internal/*` row below: it is 404 before authentication, whatever key it carries (default on, off in the fake profile). Booking, the one public app, also answers 404 from the edge to everything except `POST /webhooks/payments/{provider}`, `/alive` and `/api/v1/*` other than `/api/v1/admin/*` (`src/Gabinety.Booking/PublicEdge.cs`). No route was added or changed by T-10.10.
+**Public edge (F-03, `Gabinety.ServiceDefaults.Edge`, not a policy so not checked by this table):** a request that arrived through the Fly public edge, or that carries `X-Edge-Key`, never reaches an `/internal/*` row below: it is 404 before authentication, whatever key it carries (default on, off in the fake profile). Booking, the one public app, also answers 404 from the edge to everything except `POST /webhooks/payments/{provider}`, `/alive` and `/api/v1/*` other than `/api/v1/admin/*`, and `/v1/*` (the agent API, API key) (`src/Gabinety.Booking/PublicEdge.cs`). No route was added or changed by T-10.10.
 
 ## Directory
 
@@ -75,9 +75,16 @@ Columns: **Policy** = what the code declares (checked by the test): `Anonymous`,
 | Booking | POST | `/api/v1/me/api-keys` | Authenticated | all | B-01: creates a key, the plain key is in this answer only; at most 5 active |
 | Booking | GET | `/api/v1/me/api-keys` | Authenticated | all | B-01: own active keys, never the key itself |
 | Booking | DELETE | `/api/v1/me/api-keys/{id}` | Authenticated | all | B-01: revokes an own key, 404 for another user's |
+| Booking | GET | `/v1/models` | ApiKey | all | B-04: agents with a usable Chat package of the key's client; 401 in the OpenAI error shape |
+| Booking | POST | `/v1/chat/completions` | ApiKey | all | B-04: OpenAI-compatible chat, streamed or not; tokens settled after the fact |
+| Booking | POST | `/v1/tasks` | ApiKey | all | B-05: orders a task, takes one unit at once, 202 queued |
+| Booking | GET | `/v1/tasks/{id}` | ApiKey | all | B-05: own task only, 404 for another user's |
 | Booking | POST | `/api/v1/bookings` | Authenticated | all | |
 | Booking | GET | `/api/v1/bookings/{id}` | Authenticated | all | |
 | Booking | GET | `/api/v1/me/bookings` | Authenticated | all | |
+| Booking | POST | `/api/v1/bookings/{id}/tasks` | Authenticated | all | B-05: orders a task of an own Tasks package from the browser |
+| Booking | GET | `/api/v1/me/tasks/{id}` | Authenticated | all | B-05: own task, 404 for another user's |
+| Booking | GET | `/api/v1/me/bookings/{bookingId}/tasks` | Authenticated | all | B-05: the tasks of an own package, newest first |
 | Booking | POST | `/api/v1/bookings/{id}/cancel` | Authenticated | all | |
 | Booking | POST | `/api/v1/bookings/{id}/dispute` | Authenticated | all | |
 | Booking | POST | `/api/v1/bookings/{id}/report-client-no-show` | Authenticated | all | |

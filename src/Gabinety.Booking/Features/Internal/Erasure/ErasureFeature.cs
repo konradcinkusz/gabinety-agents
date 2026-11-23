@@ -94,6 +94,16 @@ public sealed class ErasureFeature : IServiceFeature
             records += batch.Count;
         }
 
+        // Tasks carry the client's text and the plain user id: the texts are cleared and the id becomes the token, like the bookings'. The task rows stay (they are the history of a unit taken).
+        while (true)
+        {
+            var batch = await db.AgentTasks.Where(t => t.ClientUserId == userId).OrderBy(t => t.Id).Take(BatchSize).ToListAsync(ct);
+            if (batch.Count == 0) break;
+            foreach (var t in batch) { t.InputText = ErasedBrief; t.OutputText = null; t.ClientUserId = token; }
+            await db.SaveChangesAsync(ct);
+            db.ChangeTracker.Clear();
+        }
+
         // API keys carry the plain user id and nothing the accounting needs: they are deleted, not anonymised.
         db.ApiKeys.RemoveRange(await db.ApiKeys.Where(k => k.ClientUserId == userId).ToListAsync(ct));
         await db.SaveChangesAsync(ct);
