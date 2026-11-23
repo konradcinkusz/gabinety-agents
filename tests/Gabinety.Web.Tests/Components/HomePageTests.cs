@@ -66,10 +66,10 @@ public class HomePageTests : BunitContext
         Assert.Equal(8, texts.Distinct().Count());
         Assert.Equal("Przegląd istniejącego kodu: jakość, bezpieczeństwo i plan poprawek.", texts[0]);
 
-        Assert.Equal("6 programistów", tiles[0].QuerySelector(".tile__count")!.TextContent);      // audyt-kodu
-        Assert.Equal("1 programista", tiles[1].QuerySelector(".tile__count")!.TextContent);      // migracja-legacy-dotnet: singular
-        Assert.Equal("2 programiści", tiles[2].QuerySelector(".tile__count")!.TextContent);      // integracja-ai: the few form
-        Assert.Equal("5 programistów", tiles[3].QuerySelector(".tile__count")!.TextContent);     // automatyzacja-procesow: the many form
+        Assert.Equal("6 agentów", tiles[0].QuerySelector(".tile__count")!.TextContent);      // audyt-kodu
+        Assert.Equal("1 agent", tiles[1].QuerySelector(".tile__count")!.TextContent);      // migracja-legacy-dotnet: singular
+        Assert.Equal("2 agenci", tiles[2].QuerySelector(".tile__count")!.TextContent);      // integracja-ai: the few form
+        Assert.Equal("5 agentów", tiles[3].QuerySelector(".tile__count")!.TextContent);     // automatyzacja-procesow: the many form
         Assert.Null(tiles[4].QuerySelector(".tile__count"));                                    // architektura-systemu is not in the sitemap: no count, no guess
     }
 
@@ -89,7 +89,7 @@ public class HomePageTests : BunitContext
         _sitemap = new([]);
         var cut = Open();
         var tile = cut.Find("[data-testid=categories] > li");
-        Assert.Equal("Konsultacja z programistą w obszarze: Nowa kategoria.", tile.QuerySelector(".tile__text")!.TextContent);
+        Assert.Equal("Agent AI w obszarze: Nowa kategoria.", tile.QuerySelector(".tile__text")!.TextContent);
         Assert.Null(tile.QuerySelector(".tile__count"));
     }
 
@@ -128,7 +128,7 @@ public class HomePageTests : BunitContext
         Assert.Equal(8, cut.FindAll("[data-testid=categories] > li").Count);
         Assert.Empty(cut.FindAll("[data-testid=categories] .tile__count"));
         var trust = cut.FindAll("[data-testid=trust] li").Select(li => li.TextContent).ToList();
-        Assert.DoesNotContain(trust, t => t.Contains("zweryfikowan"));
+        Assert.DoesNotContain(trust, t => t.Contains("zatwierdzon"));
         Assert.Equal(2, trust.Count);
     }
 
@@ -144,11 +144,11 @@ public class HomePageTests : BunitContext
     }
 
     [Theory]
-    [InlineData(1, "1 zweryfikowany programista")]
-    [InlineData(3, "3 zweryfikowani programiści")]
-    [InlineData(12, "12 zweryfikowanych programistów")]
-    [InlineData(22, "22 zweryfikowani programiści")]
-    [InlineData(25, "25 zweryfikowanych programistów")]
+    [InlineData(1, "1 zatwierdzony agent")]
+    [InlineData(3, "3 zatwierdzonych agentów")]
+    [InlineData(12, "12 zatwierdzonych agentów")]
+    [InlineData(22, "22 zatwierdzonych agentów")]
+    [InlineData(25, "25 zatwierdzonych agentów")]
     public void The_trust_row_states_the_verified_count_in_the_right_polish_form(int verified, string expected)
     {
         _sitemap = new([new("/programisci", verified, true)]);
@@ -160,7 +160,7 @@ public class HomePageTests : BunitContext
     public void The_trust_row_keeps_the_existing_statements()
     {
         var trust = Open().Find("[data-testid=trust]").TextContent;
-        Assert.Contains("Płatność z góry, programista dostaje pieniądze po konsultacji", trust);
+        Assert.Contains("Płatność z góry, pełny zwrot do pierwszego użycia pakietu", trust);
         Assert.Contains("Ranking bez płatnych miejsc", trust);
     }
 
@@ -182,14 +182,14 @@ public class HomePageTests : BunitContext
     {
         var cut = Open();
         var details = cut.FindAll("details");
-        Assert.Equal(["Kiedy płacę?", "Czy mogę odwołać konsultację?", "Ile płacę platformie?", "Co, jeśli konsultacja się nie odbyła?"],
+        Assert.Equal(["Kiedy płacę?", "Czy mogę zrezygnować z pakietu?", "Ile płacę platformie?", "Co, jeśli agent nie zrobił tego, co obiecał?"],
             details.Select(d => d.QuerySelector("summary")!.TextContent));
         Assert.Contains("Płacisz z góry", details[0].TextContent);
-        Assert.Contains("24 godziny", details[1].TextContent);
+        Assert.Contains("przed pierwszym użyciem", details[1].TextContent);
         Assert.Contains("pełny zwrot", details[1].TextContent);
-        Assert.Contains("pierwszej zrealizowanej konsultacji", details[2].TextContent);
+        Assert.Contains("pierwszego pakietu", details[2].TextContent);
         Assert.Equal("/cennik", details[2].QuerySelector("a")!.GetAttribute("href"));
-        Assert.Contains("48 godzin", details[3].TextContent);
+        Assert.Contains("72 godzin", details[3].TextContent);
         Assert.DoesNotContain("zł", string.Concat(details.Select(d => d.TextContent))); // no amount of CONTRACTS section 9 on the page
     }
 }

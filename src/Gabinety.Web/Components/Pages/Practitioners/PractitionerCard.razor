@@ -7,6 +7,7 @@
         <p class="practitioner-card__headline">@Practitioner.Headline</p>
         <p class="cluster practitioner-card__meta">
             @* One verification badge: the four checks are the same on every card and so carry no information; the full list is on the profile (P-LIST-2). *@
+            <AiBadge />
             @if (Practitioner.Badges.Contains("approved"))
             {
                 <span class="badge badge--success">@PlPages.ListExtra.Verified</span>

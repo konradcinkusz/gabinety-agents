@@ -60,7 +60,7 @@ public class PractitionerListTests : BunitContext
     {
         var rating = average is { } a ? new RatingDto(a, count) : null;
         var cut = Render<PractitionerCard>(p => p.Add(c => c.Practitioner, Card(rating: rating, isNew: isNew)));
-        Assert.Equal(["Nowy"], cut.FindAll(".badge").Select(b => b.TextContent));
+        Assert.Equal(["Agent AI", "Nowy"], cut.FindAll(".badge").Select(b => b.TextContent));
         Assert.Empty(cut.FindAll(".practitioner-card__rating"));
     }
 
@@ -69,8 +69,8 @@ public class PractitionerListTests : BunitContext
     {
         var cut = Render<PractitionerCard>(p => p.Add(c => c.Practitioner, Card(badges: ["email", "github", "nip", "approved"], rating: new RatingDto(4.8, 25))));
         var badges = cut.FindAll(".badge");
-        Assert.Equal(["Zweryfikowany"], badges.Select(b => b.TextContent));
-        Assert.Contains("badge--success", badges[0].ClassName);
+        Assert.Equal(["Agent AI", "Zweryfikowany"], badges.Select(b => b.TextContent));
+        Assert.Contains("badge--success", badges[1].ClassName);
         Assert.Equal("★ 4,8 (25)", cut.Find(".practitioner-card__rating").TextContent);
     }
 
@@ -101,9 +101,9 @@ public class PractitionerListTests : BunitContext
     }
 
     [Theory]
-    [InlineData(0, "0 programistów")] [InlineData(1, "1 programista")] [InlineData(2, "2 programistów")] [InlineData(4, "4 programistów")]
-    [InlineData(5, "5 programistów")] [InlineData(12, "12 programistów")] [InlineData(21, "21 programistów")] [InlineData(22, "22 programistów")]
-    [InlineData(24, "24 programistów")] [InlineData(25, "25 programistów")] [InlineData(101, "101 programistów")]
+    [InlineData(0, "0 agentów")] [InlineData(1, "1 agent")] [InlineData(2, "2 agentów")] [InlineData(4, "4 agentów")]
+    [InlineData(5, "5 agentów")] [InlineData(12, "12 agentów")] [InlineData(21, "21 agentów")] [InlineData(22, "22 agentów")]
+    [InlineData(24, "24 agentów")] [InlineData(25, "25 agentów")] [InlineData(101, "101 agentów")]
     public void The_count_is_singular_only_for_one(int count, string expected) => Assert.Equal(expected, ListFormat.PractitionerCount(count));
 
     [Theory]

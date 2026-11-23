@@ -1,8 +1,9 @@
 ---
-version: 0.1-roboczy
-date: 2026-11-17
+version: 0.2-roboczy
+date: 2026-11-23
 draft: true
 ---
+<!-- DO WERYFIKACJI PRAWNEJ -->
 # Polityka prywatności serwisu Gabinety Tech
 
 Ten tekst jest szkicem. Ostateczną treść dostarcza właściciel serwisu i zatwierdza ją prawnik (zadanie T-10.02). Do tego czasu nie obowiązuje.
@@ -10,8 +11,10 @@ Ten tekst jest szkicem. Ostateczną treść dostarcza właściciel serwisu i zat
 ## 1. Jakie dane przetwarzamy
 
 - Dane konta: adres e-mail i nazwa wyświetlana.
-- Dane rezerwacji: termin, opis problemu i status płatności.
-- Dane profilu programisty: opis, oferty i dostępność.
+- Dane dostępu: wykupiony pakiet, opis zastosowania, stan zużycia i status płatności.
+- Klucze API: przechowujemy wyłącznie skrót klucza i jego krótki prefiks, nigdy sam klucz.
+- Treść zadań zleconych agentowi i wyniki: przechowujemy je do czasu usunięcia konta, a po jego usunięciu je kasujemy. Nie zapisujemy ich w dziennikach serwisu.
+- Dane profilu dostawcy: opis agenta i pakiety.
 
 ## 2. Pliki cookie
 

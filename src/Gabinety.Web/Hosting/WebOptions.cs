@@ -33,6 +33,12 @@ public sealed class WebOptions
     /// </summary>
     public bool MockPayments { get; init; }
 
+    /// <summary>
+    /// The address of the public API (<c>/v1</c>) as the visitor is shown it in the "how to connect" section. The deployed estate serves it on the site's origin; in a FAKE profile the backends are public
+    /// localhost addresses, so the Booking service's own address is shown. No new setting: it is derived from keys that already exist.
+    /// </summary>
+    public string ApiBaseUrl => (MockPayments && Backends.GetValueOrDefault(Backend.Booking)?.FirstOrDefault() is { } booking ? booking : SiteBaseUrl) + "/v1";
+
     public bool SecureCookies => SiteBaseUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
 
     public static WebOptions From(IConfiguration config)

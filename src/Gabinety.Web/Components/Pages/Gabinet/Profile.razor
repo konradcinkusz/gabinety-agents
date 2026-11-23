@@ -2,12 +2,10 @@
 @attribute [AllowAnonymous]
 @attribute [Microsoft.AspNetCore.OutputCaching.OutputCache(PolicyName = Gabinety.Web.Hosting.PublicPageCachePolicy.Name)]
 @inject DirectoryClient Directory
-@inject BookingClient Booking
 @inject ReputationClient Reputation
-@inject TimeProvider Time
 @inject NavigationManager Navigation
 @inject Gabinety.Web.Hosting.WebOptions Site
-@* Static server rendering: everything, the offers' free times and the reviews included, is in the first response (J1 asserts the JSON-LD; a crawler gets the content without scripts). *@
+@* Static server rendering: everything, the packages and the reviews included, is in the first response (J1 asserts the JSON-LD; a crawler gets the content without scripts). *@
 
 @if (_profile is { } p)
 {
@@ -21,6 +19,7 @@
             <Avatar Name="@p.DisplayName" Size="Avatar.AvatarSize.Large" />
             <div class="identity__text">
                 <h1>@p.DisplayName</h1>
+                <p><AiBadge /></p>
                 <p class="lead">@p.Headline</p>
             </div>
         </div>
@@ -85,15 +84,25 @@
                             {
                                 <ul class="cluster tags" aria-label="@PlPages.Profile.TechLabel">@foreach (var t in techs) {<li><span class="badge badge--neutral">@t</span></li>}</ul>
                             }
-                            <p class="cluster"><span>@string.Format(PlPages.Profile.Duration, o.DurationMinutes)</span><span class="num price">@Money.Pln(o.Price.AmountMinor)</span></p>
+                            <p class="cluster"><span data-testid="offering-units">@UnitsLine(o)</span><span class="num price">@Money.Pln(o.Price.AmountMinor)</span></p>
+                            <p class="muted" data-testid="offering-validity">@string.Format(PlPages.Profile.ValidityLine, PlPages.Profile.ValidityDays)</p>
                             <a class="btn btn--primary" href="@BookHref(p.Slug, o)" aria-label="@string.Format(PlPages.Profile.BookOffering, o.Title)">@PlPages.Profile.Book</a>
-                            <SlotPicker Slug="@p.Slug" Offering="o" Slots="_slots.GetValueOrDefault(o.Id) ?? OfferSlots.Failed" Windows="_windows" Today="_today"
-                                        SelectedDay="@(Oferta == o.Id ? _day : null)" />
                         </div>
                     </li>
                 }
             </ul>
         }
+    </section>
+
+    <section class="section" id="polacz" aria-labelledby="connect-title" data-testid="connect">
+        <h2 id="connect-title">@PlPages.Profile.ConnectTitle</h2>
+        <p>@PlPages.Profile.ConnectIntro</p>
+        <dl class="connect">
+            <dt>@PlPages.Profile.ConnectBaseUrl</dt><dd><code data-testid="connect-base-url">@Site.ApiBaseUrl</code></dd>
+            <dt>@PlPages.Profile.ConnectModel</dt><dd><code data-testid="connect-model">@p.Slug</code></dd>
+        </dl>
+        <p class="muted">@PlPages.Profile.ConnectExample</p>
+        <pre class="connect__code" data-testid="connect-curl"><code>@CurlExample(p.Slug)</code></pre>
     </section>
 
     <section class="section" id="opinie" aria-labelledby="reviews-title">
@@ -138,7 +147,6 @@
     {
         <aside class="card summary" aria-label="@PlPages.Profile.SummaryTitle" data-testid="profile-summary">
             <p class="summary__price"><span class="muted">@PlPages.Profile.PriceFromLabel</span> <span class="num price">@Gabinety.Web.Components.Pages.Practitioners.ListFormat.Price(p.Offerings.Min(o => o.Price.AmountMinor))</span></p>
-            <p class="muted">@DurationRange(p.Offerings)</p>
             <a class="btn btn--primary" href="@($"#oferta-{p.Offerings[0].Id}")">@PlPages.Profile.SeeTimes</a>
             <p class="muted">@PlPages.Profile.PaymentNote</p>
         </aside>
@@ -161,34 +169,31 @@ else
 @code {
     [CascadingParameter] HttpContext? Http { get; set; }
     [Parameter] public string Slug { get; set; } = "";
-    [SupplyParameterFromQuery(Name = "okna")] public string? OknaParam { get; set; }
-    [SupplyParameterFromQuery(Name = "oferta")] public Guid? Oferta { get; set; }
-    [SupplyParameterFromQuery(Name = "dzien")] public string? DzienParam { get; set; }
     [SupplyParameterFromQuery(Name = "opinie")] public string? ReviewCursor { get; set; }
 
     PractitionerProfileDto? _profile;
     bool _gone;
-    int _windows = 1;
-    DateOnly _today;
-    DateOnly? _day;
-    Dictionary<Guid, OfferSlots> _slots = [];
     PageDto<ReviewDto>? _reviews;
     IReadOnlyList<CategoryDto> _suggestions = [];
     Dictionary<string, string> _techs = [];
 
     List<string> TechNames(OfferingDto o) => [.. o.TechSlugs.Select(t => _techs.GetValueOrDefault(t) ?? t)];
 
-    /// <summary>The offer's own picker, or straight to its first free time (the booking page needs <c>start</c>: a link without it is a dead end).</summary>
-    string BookHref(string slug, OfferingDto o) =>
-        _slots.GetValueOrDefault(o.Id) is { Available: true, Days: [{ Slots: [var first, ..] }, ..] }
-            ? SlotPickerModel.BookingHref(o.Id, first.StartUtc, slug)
-            : $"#oferta-{o.Id}";
+    /// <summary>The purchase page of the package; it looks the package up in this profile, so the slug travels in the query (no endpoint resolves an offering id on its own).</summary>
+    static string BookHref(string slug, OfferingDto o) => $"/rezerwacja/{o.Id}?gabinet={Uri.EscapeDataString(slug)}";
 
-    static string DurationRange(IReadOnlyList<OfferingDto> offers)
-    {
-        var (min, max) = (offers.Min(o => o.DurationMinutes), offers.Max(o => o.DurationMinutes));
-        return min == max ? string.Format(PlPages.Profile.Duration, min) : string.Format(PlPages.Profile.DurationRange, min, max);
-    }
+    /// <summary>"10 zadań, typowy czas ok. 30 min" for a task package, "500 tys. tokenów, API zgodne z OpenAI" for a chat package (<c>Units</c> are thousands of tokens).</summary>
+    public static string UnitsLine(OfferingDto o) => o.Kind == "Chat"
+        ? string.Format(PlPages.Profile.ChatLine, o.Units)
+        : string.Format(PlPages.Profile.TasksLine, o.Units, TaskWord(o.Units), o.DurationMinutes);
+
+    /// <summary>Polish plural of "zadanie": 1 zadanie, 2-4 zadania (not 12-14), the rest zadań.</summary>
+    public static string TaskWord(int n) => n == 1 ? PlPages.Profile.TaskOne
+        : n % 10 is >= 2 and <= 4 && n % 100 is < 12 or > 14 ? PlPages.Profile.TaskFew : PlPages.Profile.TaskMany;
+
+    /// <summary>The example of the "how to connect" section: a placeholder key, never a real one.</summary>
+    string CurlExample(string slug) =>
+        $"curl -s {Site.ApiBaseUrl}/chat/completions \\\n  -H \"Authorization: Bearer {PlPages.Profile.ConnectKeyPlaceholder}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{{\"model\":\"{slug}\",\"messages\":[{{\"role\":\"user\",\"content\":\"{PlPages.Profile.ConnectMessage}\"}}]}}'";
 
     /// <summary>Polish plural of "opinia": 1 opinia, 2-4 opinie (not 12-14), the rest opinii.</summary>
     public static string OpinionWord(int n) => n == 1 ? PlPages.Profile.OpinionOne
@@ -199,7 +204,7 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
-        (_profile, _gone, _slots, _reviews) = (null, false, [], null);
+        (_profile, _gone, _reviews) = (null, false, null);
         var result = await Directory.ProfileAsync(Slug);
         if (result.Failure is { Status: 404 }) { Navigation.NotFound(); return; } // the not-found page names the missing programmer (NotFound.razor)
         if (result.Failure is { Status: 410 })
@@ -211,28 +216,14 @@ else
         }
         if (!result.IsOk) { Status(StatusCodes.Status503ServiceUnavailable); return; } // an error page must not be indexed as a 200
         var p = result.Value!;
-        _windows = SlotPickerModel.ClampWindows(OknaParam);
-        var now = Time.GetUtcNow();
-        _today = PlFormat.TodayWarsaw(now);
-        _day = DateOnly.TryParseExact(DzienParam, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var d) ? d : null;
 
-        // Independent reads: the slots of every offer (one request per 14-day window) and the reviews. Each is a region: a failure of one never takes the page down.
-        var slotTasks = p.Offerings.ToDictionary(o => o.Id, o => ReadSlotsAsync(p.Id, o.Id, now));
+        // Independent reads: the reviews and the taxonomy. Each is a region: a failure of one never takes the page down.
         var reviewsTask = Reputation.ReviewsAsync(p.Id, ReviewCursor);
         var techTask = Directory.TaxonomyAsync(); // cached by the client; soft: without it the tags show the slug
-        await Task.WhenAll([.. slotTasks.Values, reviewsTask, techTask]);
+        await Task.WhenAll(reviewsTask, techTask);
         _techs = (techTask.Result.Value?.Techs ?? []).GroupBy(t => t.Slug).ToDictionary(g => g.Key, g => g.First().NamePl);
-        _slots = slotTasks.ToDictionary(t => t.Key, t => t.Value.Result);
         _reviews = reviewsTask.Result.Value;
         _profile = p;
-    }
-
-    async Task<OfferSlots> ReadSlotsAsync(Guid practitionerId, Guid offeringId, DateTimeOffset now)
-    {
-        var windows = Enumerable.Range(0, _windows).Select(i => SlotPickerModel.Window(_today, i)).OfType<SlotWindow>().ToList();
-        var results = await Task.WhenAll(windows.Select(w => Booking.SlotsAsync(practitionerId, offeringId, w.From.ToString("yyyy-MM-dd"), w.To.ToString("yyyy-MM-dd"))));
-        if (results.Any(r => !r.IsOk)) return OfferSlots.Failed;
-        return new OfferSlots(true, SlotPickerModel.GroupByDay(SlotPickerModel.WithinHorizon(results.SelectMany(r => r.Value!.Slots), now)));
     }
 
     void Status(int code)

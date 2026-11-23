@@ -175,7 +175,7 @@ public class BookingComponentsTests : BunitContext
     public void A_badge_is_a_real_text_node_with_the_class_of_its_kind()
     {
         var cut = Render<BookingBadge>(p => p.Add(c => c.Badge, Badge.ForBooking("Disputed")));
-        Assert.Equal("Spór w toku", cut.Find("span").TextContent);
+        Assert.Equal("Reklamacja w toku", cut.Find("span").TextContent);
         Assert.Equal("badge badge--warning", cut.Find("span").ClassName);
         Assert.Empty(cut.Find("span").Children); // text, not CSS content: the journeys read it with getByText
     }

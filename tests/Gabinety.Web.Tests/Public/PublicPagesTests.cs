@@ -17,16 +17,16 @@ public class ProfilePageTests
         var page = await Get(web);
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Equal("Anna Ąćęł Demowska", page.TextOf("h1")); Assert.Single(page.All("h1"));
-        Assert.Equal(["O mnie", "Oferta", "Opinie"], page.All("h2").Select(h => h.TextContent));
-        Assert.Equal(["Audyt kodu .NET", "Krótka konsultacja"], page.All("li h3").Select(h => h.TextContent)); // getByRole("heading", {level: 3}) inside the offer's listitem
+        Assert.Equal(["O mnie", "Pakiety", "Jak się połączyć", "Opinie"], page.All("h2").Select(h => h.TextContent));
+        Assert.Equal(["Audyt kodu .NET", "Krótka konsultacja"], page.All("ul.offerings li h3").Select(h => h.TextContent)); // getByRole("heading", {level: 3}) inside the offer's listitem
         var offer = page.All("ul.offerings > li")[0];
-        // UX-014 (V-5): the link carries the first free time; the old start-less URL was a dead end.
-        Assert.Equal($"/rezerwacja/{PublicSupport.OfferA}?start=2026-11-24T09%3A00%3A00Z&gabinet=demo-anna-demowska", offer.QuerySelector("a[aria-label='Zarezerwuj: Audyt kodu .NET']")!.GetAttribute("href"));
+        // C-01: a package has no slot; the link goes to the purchase page of the package, which finds the package in this profile by the slug.
+        Assert.Equal($"/rezerwacja/{PublicSupport.OfferA}?gabinet=demo-anna-demowska", offer.QuerySelector("a[aria-label='Wykup dostęp: Audyt kodu .NET']")!.GetAttribute("href"));
         var ld = page.All("script[type='application/ld+json']"); // exactly one, with the display name (journey J1)
         Assert.Single(ld);
         Assert.Contains("Anna Ąćęł Demowska", ld[0].TextContent);
         Assert.Equal("ProfessionalService", JsonDocument.Parse(ld[0].TextContent).RootElement.GetProperty("@type").GetString());
-        Assert.Equal("Anna Ąćęł Demowska: konsultacje online | Gabinety Tech", page.Dom.Title);
+        Assert.Equal("Anna Ąćęł Demowska: agent AI | Gabinety Tech", page.Dom.Title);
         Assert.Equal("http://localhost/gabinet/demo-anna-demowska", page.One("link[rel=canonical]")!.GetAttribute("href"));
         Assert.Equal("index,follow", page.One("meta[name=robots]")!.GetAttribute("content"));
         Assert.Contains("Audyty kodu .NET", page.One("meta[name=description]")!.GetAttribute("content"));
@@ -35,21 +35,48 @@ public class ProfilePageTests
     }
 
     [Fact]
-    public async Task Book_link_goes_to_the_first_free_slot_or_else_to_the_offers_picker()
+    public async Task The_book_button_is_Wykup_dostep_and_never_waits_for_a_slot_C01()
     {
-        await using var with = PublicSupport.Host();
-        var book = (await Get(with)).All("ul.offerings > li")[1].QuerySelector("a.btn--primary")!;
-        Assert.Equal("Zarezerwuj", book.TextContent); Assert.Equal("Zarezerwuj: Krótka konsultacja", book.GetAttribute("aria-label"));
-        Assert.Equal($"/rezerwacja/{PublicSupport.OfferB}?start=2026-11-24T09%3A00%3A00Z&gabinet=demo-anna-demowska", book.GetAttribute("href"));
+        await using var web = PublicSupport.Host(booking: FakeBackend.Throw(new HttpRequestException("down")));
+        var page = await Get(web);
+        var book = page.All("ul.offerings > li")[1].QuerySelector("a.btn--primary")!;
+        Assert.Equal("Wykup dostęp", book.TextContent); Assert.Equal("Wykup dostęp: Krótka konsultacja", book.GetAttribute("aria-label"));
+        Assert.Equal($"/rezerwacja/{PublicSupport.OfferB}?gabinet=demo-anna-demowska", book.GetAttribute("href"));
+        Assert.Empty(web.Booking.Requests); // no slot is read: the Booking service is not asked at all
+        Assert.Null(page.One(".slot-days")); Assert.Null(page.One("a.slot"));
+    }
 
-        foreach (var booking in new Func<HttpRequestMessage, HttpResponseMessage>[] { _ => FakeBackend.Json(new SlotsDto([])), FakeBackend.Throw(new HttpRequestException("down")) })
-        {
-            await using var without = PublicSupport.Host(booking: booking);
-            var page = await Get(without);
-            Assert.Equal($"#oferta-{PublicSupport.OfferA}", page.All("ul.offerings > li")[0].QuerySelector("a.btn--primary")!.GetAttribute("href"));
-            Assert.NotNull(page.One($"li#oferta-{PublicSupport.OfferA}"));
-            Assert.DoesNotContain(page.All("a"), a => a.GetAttribute("href") is { } h && h.StartsWith("/rezerwacja/") && !h.Contains("start="));
-        }
+    [Fact]
+    public async Task Each_package_shows_its_units_and_validity_and_a_chat_package_the_openai_line_C01()
+    {
+        await using var web = PublicSupport.Host(PublicSupport.DefaultDirectory(PublicSupport.Profile(offerings:
+        [
+            new(PublicSupport.OfferA, "Plan migracji", "Plan", 30, new MoneyDto(18000, "PLN"), "audyt-kodu", ["dotnet"], "Tasks", 10),
+            new(PublicSupport.OfferB, "Dostęp do API czatu", "Czat", 30, new MoneyDto(9900, "PLN"), "audyt-kodu", [], "Chat", 500),
+        ])));
+        var offers = (await Get(web)).All("ul.offerings > li");
+        Assert.Equal("10 zadań, typowy czas ok. 30 min", offers[0].QuerySelector("[data-testid=offering-units]")!.TextContent);
+        Assert.Equal("500 tys. tokenów, API zgodne z OpenAI", offers[1].QuerySelector("[data-testid=offering-units]")!.TextContent);
+        Assert.All(offers, o => Assert.Equal("Ważność: 30 dni", o.QuerySelector("[data-testid=offering-validity]")!.TextContent));
+    }
+
+    [Theory]
+    [InlineData(1, "zadanie")] [InlineData(2, "zadania")] [InlineData(4, "zadania")] [InlineData(5, "zadań")] [InlineData(12, "zadań")] [InlineData(22, "zadania")] [InlineData(25, "zadań")]
+    public void Task_word_follows_polish_plural_rules(int n, string word) => Assert.Equal(word, Gabinety.Web.Components.Pages.Gabinet.Profile.TaskWord(n));
+
+    [Fact]
+    public async Task The_profile_carries_the_AI_badge_and_the_how_to_connect_section_with_the_slug_and_an_example_C01()
+    {
+        await using var web = PublicSupport.Host();
+        var page = await Get(web);
+        Assert.Equal("Agent AI", page.One("header.page-header [data-testid=ai-badge]")!.TextContent);
+        var connect = page.One("section[data-testid=connect]")!;
+        Assert.Equal("Jak się połączyć", connect.QuerySelector("h2")!.TextContent);
+        Assert.Equal("demo-anna-demowska", connect.QuerySelector("[data-testid=connect-model]")!.TextContent);
+        Assert.EndsWith("/v1", connect.QuerySelector("[data-testid=connect-base-url]")!.TextContent);
+        var curl = connect.QuerySelector("[data-testid=connect-curl]")!.TextContent;
+        Assert.Contains("/v1/chat/completions", curl); Assert.Contains("\"model\":\"demo-anna-demowska\"", curl); Assert.Contains("TWÓJ_KLUCZ_API", curl);
+        Assert.DoesNotContain("gab_", curl); // a placeholder, never a key
     }
 
     [Fact]
@@ -88,15 +115,14 @@ public class ProfilePageTests
     }
 
     [Fact]
-    public async Task The_summary_panel_shows_price_durations_the_link_to_the_first_offer_and_the_payment_line()
+    public async Task The_summary_panel_shows_price_the_link_to_the_first_offer_and_the_payment_line()
     {
         await using var web = PublicSupport.Host();
         var aside = (await Get(web)).One("aside.summary")!;
         Assert.Contains("od", aside.TextContent); Assert.Contains("110", aside.TextContent);
-        Assert.Contains("30–60 min", aside.TextContent);
         Assert.Equal($"#oferta-{PublicSupport.OfferA}", aside.QuerySelector("a")!.GetAttribute("href"));
-        Assert.Equal("Zobacz terminy", aside.QuerySelector("a")!.TextContent);
-        Assert.Contains("Płatność z góry, programista dostaje pieniądze po konsultacji", aside.TextContent);
+        Assert.Equal("Zobacz pakiety", aside.QuerySelector("a")!.TextContent);
+        Assert.Contains("Płatność z góry, pełny zwrot do pierwszego użycia pakietu", aside.TextContent);
 
         await using var none = PublicSupport.Host(PublicSupport.DefaultDirectory(PublicSupport.Profile(offerings: [])));
         Assert.Null((await Get(none)).One("aside.summary"));
@@ -118,71 +144,12 @@ public class ProfilePageTests
     }
 
     [Fact]
-    public async Task Slot_times_are_links_named_by_the_time_inside_the_offer_and_lead_to_the_booking_flow()
-    {
-        await using var web = PublicSupport.Host();
-        var page = await Get(web);
-        var offer = page.All("ul.offerings > li")[0];
-        var times = offer.QuerySelectorAll("a.slot");
-        Assert.All(times, t => Assert.Matches(@"^\d{2}:\d{2}$", t.TextContent)); // the harness regex
-        Assert.Equal(["10:00", "11:00"], times.Select(t => t.TextContent)); // 09:00 and 10:00 UTC on 24 Nov are Warsaw winter time
-        Assert.Equal($"/rezerwacja/{PublicSupport.OfferA}?start=2026-11-24T09%3A00%3A00Z&gabinet=demo-anna-demowska", times[0].GetAttribute("href"));
-        Assert.Equal("wtorek, 24 listopada", offer.QuerySelector(".slot-days a[aria-current=true]")!.GetAttribute("aria-label")); // F-08: the chip shows "wt." / "24 lis", the name stays the full date
-        Assert.Contains("środa, 25 listopada", offer.QuerySelectorAll(".slot-days a").Select(a => a.GetAttribute("aria-label")));
-        Assert.Contains("Europe/Warsaw", offer.TextContent);
-    }
-
-    [Fact]
-    public async Task A_chosen_day_shows_its_times_and_more_days_asks_for_the_next_window()
-    {
-        await using var web = PublicSupport.Host();
-        var page = await Get(web, $"/gabinet/demo-anna-demowska?oferta={PublicSupport.OfferA}&dzien=2026-11-25");
-        Assert.Equal(["14:00"], page.All("ul.offerings > li")[0].QuerySelectorAll("a.slot").Select(t => t.TextContent));
-        var more = page.All("ul.offerings > li")[0].QuerySelectorAll("a.btn").First(a => a.TextContent == "Pokaż kolejne dni");
-        Assert.Equal($"/gabinet/demo-anna-demowska?okna=2&oferta={PublicSupport.OfferA}&dzien=2026-11-25#oferta-{PublicSupport.OfferA}", more.GetAttribute("href"));
-        var paged = PublicSupport.Host(); var page2 = await Get(paged, "/gabinet/demo-anna-demowska?okna=3");
-        Assert.Equal(6, paged.Booking.Requests.Count(r => r.PathAndQuery.Contains("/slots?"))); // 2 offers x 3 windows of 14 days
-        Assert.Contains(paged.Booking.Requests, r => r.PathAndQuery.EndsWith($"&from=2026-12-21&to=2027-01-03") || r.PathAndQuery.Contains("from=2026-12-21&to=2027-01-03"));
-        await paged.DisposeAsync(); _ = page2;
-    }
-
-    [Fact]
-    public async Task The_slot_reads_are_public_and_carry_no_bearer()
-    {
-        await using var web = PublicSupport.Host();
-        await Get(web);
-        // The page reads every offer's slots concurrently, so the ORDER of the recorded requests is not defined: assert each one is a bearer-less slot read, and that offer A's is among them.
-        var requests = web.Booking.Requests.ToList();
-        Assert.NotEmpty(requests);
-        Assert.All(requests, r =>
-        {
-            Assert.Null(r.Authorization);
-            Assert.StartsWith($"/api/v1/practitioners/{PublicSupport.PractitionerId}/slots?offeringId=", r.PathAndQuery);
-        });
-        Assert.Contains(requests, r => r.PathAndQuery.StartsWith($"/api/v1/practitioners/{PublicSupport.PractitionerId}/slots?offeringId={PublicSupport.OfferA}&from=", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public async Task F16_no_offers_no_times_and_times_unavailable_are_three_different_sentences()
+    public async Task F16_a_profile_with_no_packages_says_so_and_the_booking_service_is_not_asked()
     {
         await using var none = PublicSupport.Host(PublicSupport.DefaultDirectory(PublicSupport.Profile(offerings: [])));
         var noOffers = await Get(none);
-        Assert.Equal("Ten programista nie ma teraz aktywnych ofert.", noOffers.TextOf("[data-testid=no-offerings]"));
-        Assert.Null(noOffers.One("[data-testid=slots-empty]")); Assert.Null(noOffers.One("[data-testid=slots-unavailable]"));
-
-        await using var empty = PublicSupport.Host(booking: _ => FakeBackend.Json(new SlotsDto([])));
-        var noTimes = await Get(empty);
-        Assert.Contains("Brak wolnych terminów w najbliższych 14 dniach", noTimes.TextOf("[data-testid=slots-empty]"));
-        Assert.Null(noTimes.One("[data-testid=no-offerings]"));
-
-        await using var down = PublicSupport.Host(booking: FakeBackend.Throw(new HttpRequestException("down")));
-        var failed = await Get(down);
-        Assert.Equal(HttpStatusCode.OK, failed.Status); // the rest of the page stays
-        Assert.Contains("Nie możemy teraz pokazać terminów", failed.TextOf("[data-testid=slots-unavailable]"));
-        Assert.Equal("status", failed.One("[data-testid=slots-unavailable]")!.GetAttribute("role")); // a warning is announced politely
-        Assert.Equal("Spróbuj ponownie", failed.All("ul.offerings > li")[0].QuerySelector("[data-testid=slots-unavailable] + a")!.TextContent);
-        Assert.Equal("Anna Ąćęł Demowska", failed.TextOf("h1"));
-        Assert.Null(failed.One("[data-testid=no-offerings]"));
+        Assert.Equal("Ten agent nie ma teraz aktywnych pakietów.", noOffers.TextOf("[data-testid=no-offerings]"));
+        Assert.Empty(none.Booking.Requests);
     }
 
     [Fact]
@@ -190,7 +157,7 @@ public class ProfilePageTests
     {
         await using var web = PublicSupport.Host();
         var page = await Get(web);
-        Assert.Equal(["Zrealizowane konsultacje: 4", "Na platformie od listopada 2026"], page.All("ul.facts li").Select(l => l.TextContent));
+        Assert.Equal(["Zrealizowane pakiety: 4", "Na platformie od listopada 2026"], page.All("ul.facts li").Select(l => l.TextContent));
         Assert.DoesNotContain("Listopada", page.Text); // no capitalised month anywhere
     }
 
@@ -211,7 +178,7 @@ public class ProfilePageTests
         await using var none = PublicSupport.Host();
         var empty = await Get(none);
         Assert.Single(empty.All("section#opinie p")); // P-PROF-1: one sentence, not two
-        Assert.Equal("Nowy na platformie: ten programista nie ma jeszcze opinii.", empty.TextOf("section#opinie p"));
+        Assert.Equal("Nowy na platformie: ten agent nie ma jeszcze opinii.", empty.TextOf("section#opinie p"));
     }
 
     [Fact]
@@ -221,7 +188,7 @@ public class ProfilePageTests
         var page = await Get(web);
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Contains("Opinie są chwilowo niedostępne", page.TextOf("[data-testid=reviews-unavailable]"));
-        Assert.NotEmpty(page.All("a.slot"));
+        Assert.NotNull(page.One("ul.offerings"));
     }
 
     [Fact]
@@ -243,7 +210,7 @@ public class ProfilePageTests
         await using var web = PublicSupport.Host();
         var page = await Get(web, "/gabinet/nie-ma-takiego");
         Assert.Equal(HttpStatusCode.NotFound, page.Status);
-        Assert.Equal("Nie znaleziono programisty", page.TextOf("h1")); Assert.Single(page.All("h1"));
+        Assert.Equal("Nie znaleziono agenta", page.TextOf("h1")); Assert.Single(page.All("h1"));
         Assert.Equal("/programisci", page.One("[data-testid=profile-not-found] a.btn")!.GetAttribute("href"));
         Assert.Equal(["Audyt kodu", "Migracja"], page.All("[data-testid=profile-not-found] .chip").Select(c => c.TextContent));
         Assert.Equal("noindex,follow", page.One("meta[name=robots]")!.GetAttribute("content"));
@@ -256,7 +223,7 @@ public class ProfilePageTests
         await using var web = PublicSupport.Host(r => r.RequestUri!.AbsolutePath.StartsWith("/api/v1/practitioners/") ? FakeBackend.Problem(HttpStatusCode.Gone, "gone") : PublicSupport.DefaultDirectory()(r));
         var page = await Get(web);
         Assert.Equal(HttpStatusCode.Gone, page.Status);
-        Assert.Equal("Nie znaleziono programisty", page.TextOf("h1"));
+        Assert.Equal("Nie znaleziono agenta", page.TextOf("h1"));
     }
 
     [Fact]
@@ -339,7 +306,7 @@ public class StaticPagesTests
         await using var web = PublicSupport.Host();
         var page = await web.NewBrowser().GetAsync("/regulamin");
         Assert.Contains("Wersja robocza", page.TextOf("[data-testid=draft-notice]"));
-        Assert.Equal(["1. Postanowienia ogólne", "2. Rezerwacja i płatność", "3. Spory", "4. Prowizja"], page.All("nav.contents a").Select(a => a.TextContent));
+        Assert.Equal(["1. Postanowienia ogólne", "2. Wykup dostępu i płatność", "3. Klucze API", "4. Reklamacje", "5. Prowizja"], page.All("nav.contents a").Select(a => a.TextContent));
         Assert.Equal("s-1-postanowienia-ogolne", page.One("nav.contents a")!.GetAttribute("href")![1..]);
         Assert.NotNull(page.One("h3#s-1-postanowienia-ogolne"));
         Assert.Empty(page.All("script:not([src])")); // the only script is the framework's own file
@@ -352,8 +319,8 @@ public class StaticPagesTests
         var page = await web.NewBrowser().GetAsync("/");
         Assert.Equal(["Audyt kodu", "Migracja"], page.All("[data-testid=categories] a").Select(a => a.TextContent));
         Assert.Equal(2, page.All("[data-testid=categories] li.card").Count);
-        Assert.Contains("6 zweryfikowanych programistów", page.TextOf("[data-testid=trust]"));
-        Assert.Contains("Płatność z góry, programista dostaje pieniądze po konsultacji", page.TextOf("[data-testid=trust]"));
+        Assert.Contains("6 zatwierdzonych agentów", page.TextOf("[data-testid=trust]"));
+        Assert.Contains("Płatność z góry, pełny zwrot do pierwszego użycia pakietu", page.TextOf("[data-testid=trust]"));
         Assert.Equal(3, page.All("ol.steps > li").Count);
         Assert.Equal("Szukaj", page.One("form[role=search] button")!.TextContent); // the field and the button in one form row (G-7)
     }
@@ -373,7 +340,7 @@ public class ListPageFixesTests
         await using var web = Host(0, false);
         var page = await web.NewBrowser().GetAsync("/programisci?q=zzzzzz");
         Assert.Equal("Wyniki: 0", page.TextOf("[data-testid=count]"));
-        Assert.Contains("Nie ma programistów dla tych filtrów", page.TextOf("[data-testid=empty]"));
+        Assert.Contains("Nie ma agentów dla tych filtrów", page.TextOf("[data-testid=empty]"));
         Assert.Equal("/programisci", page.One(".empty-state a.btn--ghost")!.GetAttribute("href")); // Wyczyść filtry, shown because a filter is active
         Assert.Empty(page.All("[data-testid=practitioner-list]"));
     }
@@ -397,7 +364,7 @@ public class ListPageFixesTests
         Assert.Equal("Filtry (3)", page.TextOf("details.filters > summary")); // problem, technology and duration are active
         Assert.NotNull(page.One("details.filters[open] nav[aria-label=Filtry]")); // the navigation keeps its name (hook)
         Assert.Equal(2, page.All("nav[aria-label=Filtry] ul.segmented").Count);
-        Assert.Equal(["Programiści", "Audyt kodu", ".NET"], page.All("nav.breadcrumb li").Select(l => l.TextContent.Trim()));
+        Assert.Equal(["Agenci", "Audyt kodu", ".NET"], page.All("nav.breadcrumb li").Select(l => l.TextContent.Trim()));
         Assert.Equal("page", page.One("nav.breadcrumb [aria-current]")!.GetAttribute("aria-current"));
     }
 
@@ -407,7 +374,7 @@ public class ListPageFixesTests
         await using var web = PublicSupport.Host(r => r.RequestUri!.AbsolutePath == "/api/v1/practitioners"
             ? FakeBackend.Json(new PageDto<PractitionerCardDto>([Sample.Card(rating: new RatingDto(4.8, 25), isNew: false)], null)) : PublicSupport.DefaultDirectory()(r));
         var card = (await web.NewBrowser().GetAsync("/programisci")).One("[data-testid=practitioner-card]")!;
-        Assert.Equal(["Zweryfikowany"], card.QuerySelectorAll(".badge").Select(b => b.TextContent));
+        Assert.Equal(["Agent AI", "Zweryfikowany"], card.QuerySelectorAll(".badge").Select(b => b.TextContent));
         Assert.Equal("★ 4,8 (25)", card.QuerySelector(".practitioner-card__rating")!.TextContent);
     }
 }

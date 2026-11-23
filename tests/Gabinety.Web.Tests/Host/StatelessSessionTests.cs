@@ -59,7 +59,7 @@ public sealed class StatelessSessionTests : IDisposable
         await using var after = Process(identity); // empty memory, same key ring
         var page = await WithCookie(after, cookie).GetAsync("/moje/rezerwacje");
         Assert.Equal(HttpStatusCode.OK, page.Status);
-        Assert.Equal("Moje rezerwacje", page.TextOf("h1"));
+        Assert.Equal("Moje dostępy", page.TextOf("h1"));
         Assert.Equal(["refresh-1"], identity.SpentRefreshTokens); // exactly the refresh token the sign-in put in the cookie, once
         Assert.StartsWith("Bearer eyJ", after.Booking.Requests.Last().Authorization);
         Assert.Equal(1, identity.RefreshCalls);

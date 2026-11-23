@@ -55,9 +55,9 @@ public class ListViewTests
     public void The_plain_list_has_the_all_title_and_the_count_of_the_sitemap()
     {
         var v = View();
-        Assert.Equal("Programiści", v.Heading);
+        Assert.Equal("Agenci", v.Heading);
         Assert.Equal("Wyniki: 6", v.CountText(2, false));
-        Assert.Equal("Programiści do konsultacji online | Gabinety Tech", v.MetaTitle);
+        Assert.Equal("Agenci AI do wykupienia | Gabinety Tech", v.MetaTitle);
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public class ListViewTests
     {
         var c = View(new ListState("audyt-kodu"), path: "/programisci/audyt-kodu");
         Assert.Equal("Audyt kodu", c.Heading);
-        Assert.Equal("Audyt kodu: konsultacje z programistą | Gabinety Tech", c.MetaTitle);
+        Assert.Equal("Audyt kodu: agenci AI | Gabinety Tech", c.MetaTitle);
         var t = View(new ListState("audyt-kodu", "dotnet"), path: "/programisci/audyt-kodu/dotnet");
         Assert.Equal("Audyt kodu: .NET", t.Heading);
         Assert.Contains("Audyt kodu i .NET", t.MetaTitle);
@@ -86,11 +86,11 @@ public class ListViewTests
     public void Filters_mark_the_current_choice_and_offer_technologies_only_inside_a_problem()
     {
         var plain = View().Filters();
-        Assert.Equal(["Problem", "Czas trwania", "Cena do"], plain.Select(g => g.Title));
+        Assert.Equal(["Problem", "Typowy czas wykonania", "Cena do"], plain.Select(g => g.Title));
         Assert.True(plain[0].Items[0].Current); // "Wszystkie"
 
         var inside = View(new ListState("audyt-kodu", Duration: 60)).Filters();
-        Assert.Equal(["Problem", "Technologia", "Czas trwania", "Cena do"], inside.Select(g => g.Title));
+        Assert.Equal(["Problem", "Technologia", "Typowy czas wykonania", "Cena do"], inside.Select(g => g.Title));
         Assert.Contains(inside[0].Items, i => i is { Label: "Audyt kodu", Current: true });
         Assert.Contains(inside[2].Items, i => i is { Label: "60 min", Current: true, Href: "/programisci/audyt-kodu?duration=60" });
         Assert.Contains(inside[3].Items, i => i.Label == "do 150,00 zł" && i.Href == "/programisci/audyt-kodu?duration=60&maxPriceMinor=15000");

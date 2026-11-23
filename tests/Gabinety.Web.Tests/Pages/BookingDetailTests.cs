@@ -32,7 +32,7 @@ public class BookingDetailTests
         Assert.Equal("Audyt kodu demo", page.One("h2")!.TextContent); // the harness waits for the first h2
         Assert.Equal(["Programista", "Termin", "Czas trwania", "Status", "Cena", "Płatność"], page.All(".dl dt").Select(d => d.TextContent));
         var dd = page.All(".dl dd").Select(d => Page.Squash(d.TextContent)).ToList();
-        Assert.Equal(["Anna Demowska", "wtorek, 8 grudnia, 12:00–13:00Godziny w czasie polskim (Europe/Warsaw).", "60 min", "Potwierdzona", "250,00 zł", "Opłacona"], dd);
+        Assert.Equal(["Anna Demowska", "wtorek, 8 grudnia, 12:00–13:00Godziny w czasie polskim (Europe/Warsaw).", "60 min", "Aktywny", "250,00 zł", "Opłacona"], dd);
         Assert.All(page.All(".dl dd"), d => Assert.Equal("dd", d.TagName.ToLowerInvariant())); // role "definition"
         Assert.Equal(["badge badge--info"], page.All(".dl dd:nth-of-type(4) .badge").Select(b => b.ClassName));
         Assert.Equal("badge badge--success", page.One(".dl dd:nth-of-type(6) .badge")!.ClassName);
@@ -75,7 +75,7 @@ public class BookingDetailTests
         Assert.Equal(css, dd.QuerySelector(".badge")!.ClassName);
         Assert.Matches(@"Zwrócono: \d+,\d\d zł", dd.TextContent);
         Assert.Contains(refunded == 25000 ? "250,00" : "90,00", dd.TextContent);
-        Assert.Equal("badge badge--neutral", page.All(".dl dd .badge").First(b => b.TextContent == "Anulowana przez klienta").ClassName);
+        Assert.Equal("badge badge--neutral", page.All(".dl dd .badge").First(b => b.TextContent == "Zrezygnowano").ClassName);
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public class BookingDetailTests
     {
         await using var f = await Open(Detail("LateCancelledByClient"));
         var page = await f.Browser.GetAsync(Client);
-        Assert.Equal("Anulowana przez klienta (bez zwrotu)", page.All(".dl dd").First(d => d.TextContent.Contains("Anulowana")).TextContent);
+        Assert.Equal("Zrezygnowano (bez zwrotu)", page.All(".dl dd").First(d => d.TextContent.Contains("Zrezygnowano")).TextContent);
         Assert.Contains("Opłacona", Values(page));
         Assert.DoesNotContain("Zwrócono:", page.Text);
     }

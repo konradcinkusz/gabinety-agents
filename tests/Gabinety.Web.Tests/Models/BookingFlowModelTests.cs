@@ -138,10 +138,10 @@ public class BookingFlowModelTests
     // ---- badges (G-8)
 
     [Theory]
-    [InlineData("PendingPayment", "Oczekuje na płatność", BadgeKind.Warning)] [InlineData("Confirmed", "Potwierdzona", BadgeKind.Info)] [InlineData("Completed", "Zakończona", BadgeKind.Success)]
-    [InlineData("CancelledByClient", "Anulowana przez klienta", BadgeKind.Neutral)] [InlineData("LateCancelledByClient", "Anulowana przez klienta (bez zwrotu)", BadgeKind.Warning)]
-    [InlineData("CancelledByPractitioner", "Anulowana przez programistę", BadgeKind.Danger)] [InlineData("Expired", "Wygasła", BadgeKind.Neutral)] [InlineData("ClientNoShow", "Klient nie stawił się", BadgeKind.Danger)]
-    [InlineData("Disputed", "Spór w toku", BadgeKind.Warning)] [InlineData("Resolved", "Spór rozstrzygnięty", BadgeKind.Neutral)] [InlineData("Whatever", "Status nieznany", BadgeKind.Neutral)]
+    [InlineData("PendingPayment", "Oczekuje na płatność", BadgeKind.Warning)] [InlineData("Confirmed", "Aktywny", BadgeKind.Info)] [InlineData("Completed", "Zakończony", BadgeKind.Success)]
+    [InlineData("CancelledByClient", "Zrezygnowano", BadgeKind.Neutral)] [InlineData("LateCancelledByClient", "Zrezygnowano (bez zwrotu)", BadgeKind.Warning)]
+    [InlineData("CancelledByPractitioner", "Wycofany przez dostawcę", BadgeKind.Danger)] [InlineData("Expired", "Wygasł", BadgeKind.Neutral)] [InlineData("ClientNoShow", "Klient nie skorzystał", BadgeKind.Danger)]
+    [InlineData("Disputed", "Reklamacja w toku", BadgeKind.Warning)] [InlineData("Resolved", "Reklamacja rozstrzygnięta", BadgeKind.Neutral)] [InlineData("Whatever", "Status nieznany", BadgeKind.Neutral)]
     public void A_booking_state_has_a_label_and_a_kind(string status, string label, BadgeKind kind) => Assert.Equal((label, kind), (Badge.ForBooking(status).Label, Badge.ForBooking(status).Kind));
 
     [Theory]

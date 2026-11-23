@@ -140,15 +140,15 @@ public class BookingFormatTests
         Assert.Equal("Anna Demowska", BookingFormat.OtherParty(b, "client"));
         Assert.Equal("demo-client", BookingFormat.OtherParty(b, "practitioner"));
         Assert.Equal("Klient", BookingFormat.OtherParty(b with { Client = null }, "practitioner"));
-        Assert.Equal("Programista", BookingFormat.OtherParty(b with { Practitioner = b.Practitioner with { DisplayName = " " } }, "client"));
+        Assert.Equal("Agent", BookingFormat.OtherParty(b with { Practitioner = b.Practitioner with { DisplayName = " " } }, "client"));
     }
 
     [Theory]
-    [InlineData(0, "unavailable", "Brak połączenia z usługą rezerwacji. Spróbuj ponownie za chwilę.")]
-    [InlineData(503, "dependency_unavailable", "Rezerwacje są chwilowo niedostępne. Spróbuj ponownie za chwilę.")]
+    [InlineData(0, "unavailable", "Brak połączenia z usługą dostępów. Spróbuj ponownie za chwilę.")]
+    [InlineData(503, "dependency_unavailable", "Dostępy są chwilowo niedostępne. Spróbuj ponownie za chwilę.")]
     [InlineData(429, "rate_limited", "Zbyt wiele zapytań. Spróbuj ponownie za chwilę.")]
-    [InlineData(403, "forbidden", "Nie masz dostępu do tych rezerwacji.")]
-    [InlineData(500, "http_500", "Nie udało się wczytać rezerwacji.")]
+    [InlineData(403, "forbidden", "Nie masz dostępu do tych dostępów.")]
+    [InlineData(500, "http_500", "Nie udało się wczytać dostępów.")]
     public void A_failure_is_told_from_its_code_never_from_the_servers_text(int status, string code, string text) => Assert.Equal(text, BookingFormat.FailureText(new ApiFailure(status, code)));
 
     [Theory] [InlineData("practitioner", "practitioner")] [InlineData("client", "client")] [InlineData("admin", "client")] [InlineData(null, "client")]

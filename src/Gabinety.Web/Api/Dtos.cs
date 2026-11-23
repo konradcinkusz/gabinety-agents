@@ -26,7 +26,8 @@ public sealed record SitemapPractitionerDto(string Slug, DateTimeOffset LastModi
 /// <summary><c>Practitioners</c> is optional so a caller that only needs the categories (the list pages) is unaffected by it.</summary>
 public sealed record SitemapDto(IReadOnlyList<SitemapCategoryDto> Categories, IReadOnlyList<SitemapPractitionerDto>? Practitioners = null);
 
-public sealed record OfferingDto(Guid Id, string Title, string Description, int DurationMinutes, MoneyDto Price, string ProblemSlug, IReadOnlyList<string> TechSlugs);
+/// <summary><c>Kind</c> is <c>Tasks</c> or <c>Chat</c> (a string stands for the enum); <c>Units</c> is the number of tasks, or thousands of tokens for <c>Chat</c> (docs/agentic/PLAN.md 2.1).</summary>
+public sealed record OfferingDto(Guid Id, string Title, string Description, int DurationMinutes, MoneyDto Price, string ProblemSlug, IReadOnlyList<string> TechSlugs, string Kind = "Tasks", int Units = 1);
 
 /// <summary>The public profile (CONTRACTS 3.2): the card's fields and the extras side by side (flat on the wire).</summary>
 public sealed record PractitionerProfileDto(Guid Id, string Slug, string DisplayName, string Headline, string? GithubLogin, IReadOnlyList<string> Badges, RatingDto? Rating, bool IsNew,
@@ -108,7 +109,7 @@ public sealed record UpdatePractitionerBody(string DisplayName, string Headline,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] string? MeetingUrlDefault,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] string? Nip);
 
-public sealed record OfferingPrivateDto(Guid Id, string Title, string Description, int DurationMinutes, MoneyDto Price, string ProblemSlug, IReadOnlyList<string> TechSlugs, bool IsActive, string? MeetingUrl);
+public sealed record OfferingPrivateDto(Guid Id, string Title, string Description, int DurationMinutes, MoneyDto Price, string ProblemSlug, IReadOnlyList<string> TechSlugs, bool IsActive, string? MeetingUrl, string Kind = "Tasks", int Units = 1);
 
 public sealed record OfferingsDto(IReadOnlyList<OfferingPrivateDto> Items);
 

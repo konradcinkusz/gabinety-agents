@@ -82,6 +82,14 @@ public class ContractCopiesTests
         RoundTrip<W.SitemapDto>(new Gabinety.Contracts.Directory.SitemapDto([new SitemapPractitioner("s", At)], [new SitemapCategory("/programisci", 6, true)]), check: c => Assert.True(c.Categories[0].Indexable));
 
     [Theory]
+    [InlineData(OfferingKind.Tasks, 10)] [InlineData(OfferingKind.Chat, 500)]
+    public void An_offering_carries_its_kind_as_the_wire_name_and_its_units(OfferingKind kind, int units)
+    {
+        var real = new Offering(Id, "Pakiet", "Opis", 30, new MoneyDto(9900), "audyt-kodu", ["dotnet"], kind, units);
+        RoundTrip<W.OfferingDto>(real, Plain, c => Assert.Equal((kind.ToString(), units), (c.Kind, c.Units)));
+    }
+
+    [Theory]
     [InlineData(BookingStatus.PendingPayment)] [InlineData(BookingStatus.Confirmed)] [InlineData(BookingStatus.LateCancelledByClient)] [InlineData(BookingStatus.Resolved)]
     public void A_booking_view_with_its_status_as_the_wire_name(BookingStatus status)
     {
