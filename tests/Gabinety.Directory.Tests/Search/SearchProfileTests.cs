@@ -38,7 +38,7 @@ public class SearchProfileTests(SearchFactory f)
             root.EnumerateObject().Select(o => o.Name).ToArray());
         Assert.Equal(p.Slug, root.GetProperty("slug").GetString());
         Assert.False(root.TryGetProperty("card", out _));
-        Assert.Equal(["id", "title", "description", "durationMinutes", "price", "problemSlug", "techSlugs"],
+        Assert.Equal(["id", "title", "description", "durationMinutes", "price", "problemSlug", "techSlugs", "kind", "units"],
             root.GetProperty("offerings")[0].EnumerateObject().Select(o => o.Name).ToArray());
         Assert.DoesNotContain("meetingUrl", root.GetRawText(), StringComparison.OrdinalIgnoreCase);
     }

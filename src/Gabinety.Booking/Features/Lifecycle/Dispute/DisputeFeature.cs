@@ -17,12 +17,13 @@ public sealed record DisputeRequest(string? Kind, string? Text);
 /// <summary>
 /// POST /api/v1/bookings/{id}/dispute (CONTRACTS 4.2, 8.1). Only the client of the booking; anyone else gets 404 (before the body is looked at).
 /// The text is user free text: it is stored in <c>dispute_text</c> and appears in no log, metric, exception or response (the BookingView does not carry it).
-/// The window is the precondition passed to <see cref="BookingTransitions"/>: end to end + 48 h, or for <c>practitioner_no_show</c> start to start + 72 h.
+/// The window is the precondition passed to <see cref="BookingTransitions"/>: <see cref="InWindow"/>.
 /// </summary>
 public sealed class DisputeFeature : IServiceFeature
 {
     public const int MinTextLength = 10, MaxTextLength = 1000;
-    public static readonly TimeSpan Window = TimeSpan.FromHours(48), NoShowWindow = TimeSpan.FromHours(72);
+    /// <summary>A package may be disputed from the purchase until 72 h after its validity ended (A-03).</summary>
+    public static readonly TimeSpan WindowAfterEnd = TimeSpan.FromHours(72);
     public static readonly string[] Kinds = ["not_as_described", "practitioner_no_show", "other"];
 
     public void Add(IHostApplicationBuilder builder) { }
@@ -30,15 +31,12 @@ public sealed class DisputeFeature : IServiceFeature
     public void Map(IEndpointRouteBuilder endpoints) =>
         endpoints.MapPost("/api/v1/bookings/{id:guid}/dispute", DisputeAsync).RequireAuthorization("Authenticated");
 
-    /// <summary>The lower edge is inclusive and the upper exclusive: at end + 48 h the booking auto-completes (T-04.08), so the two never both hold.</summary>
-    public static bool InWindow(BookingEntity b, string kind, DateTimeOffset now)
-    {
-        // A completed booking can still be disputed until start + 72 h (CONTRACTS 4.2): its payout is not due before max(end + 48 h, start + 72 h), so no money has moved (ADR proposal 0011).
-        if (b.Status == Gabinety.Billing.BookingStatus.Completed) return now < b.StartUtc + NoShowWindow;
-        var end = b.EndedAt ?? b.EndUtc;
-        if (now >= end && now < end + Window) return true;
-        return kind == "practitioner_no_show" && now >= b.StartUtc && now < b.StartUtc + NoShowWindow;
-    }
+    /// <summary>
+    /// A Confirmed or Completed package, for every kind of dispute, until <c>end_utc + 72 h</c> (exclusive). <paramref name="kind"/> no longer changes the window; the parameter stays
+    /// so the callers and the kinds of the contract stay as they are. The state table decides which statuses may dispute at all.
+    /// </summary>
+    public static bool InWindow(BookingEntity b, string kind, DateTimeOffset now) =>
+        b.Status is Gabinety.Billing.BookingStatus.Confirmed or Gabinety.Billing.BookingStatus.Completed && now < b.EndUtc + WindowAfterEnd;
 
     /// <summary>
     /// A disputed booking was money-complete: completion had set <c>fee_minor</c>, <c>payout_minor</c>, <c>payout_due_at</c> and claimed the pair's <c>PlatformFee</c> row. Nothing was paid out

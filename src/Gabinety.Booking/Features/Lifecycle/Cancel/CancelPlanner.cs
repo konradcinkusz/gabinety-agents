@@ -19,8 +19,8 @@ public readonly record struct CancelPlan(long Refund, RefundReason Reason, Cance
 /// </summary>
 public static class CancelPlanner
 {
-    /// <summary>The practitioner may cancel any time before the end; the state table cannot see that (BookingStateMachine). The client has no time limit.</summary>
-    public static bool TimeRuleAllows(BookingEntity b, bool byClient, DateTimeOffset now) => byClient || now < b.EndUtc;
+    /// <summary>The practitioner (the admin's withdrawal of an agent) may cancel any time before the end; the client only while no unit of the package was used (A-03). The state table cannot see either.</summary>
+    public static bool TimeRuleAllows(BookingEntity b, bool byClient, DateTimeOffset now) => byClient ? b.UnitsUsed == 0 : now < b.EndUtc;
 
     public static BookingTrigger TriggerFor(bool byClient) => byClient ? BookingTrigger.ClientCancels : BookingTrigger.PractitionerCancels;
 
@@ -28,8 +28,7 @@ public static class CancelPlanner
     public static CancelPlan? Plan(BookingEntity b, bool byClient, DateTimeOffset now)
     {
         if (!BookingStateMachine.Next(b.Status, TriggerFor(byClient), b.StartUtc, now).Allowed || !TimeRuleAllows(b, byClient, now)) return null;
-        var money = byClient ? RefundPolicy.ForClientCancellation(b.StartUtc, now) : MoneyEvent.PractitionerCancelled;
-        if (money == MoneyEvent.ClientCancelledLate) return new(0, RefundReason.ClientCancelledEarly, CancelOutcomeKind.NoRefund);
+        var money = byClient ? MoneyEvent.ClientCancelledEarly : MoneyEvent.PractitionerCancelled; // the client's cancel is always a full refund (A-03)
         var refund = RefundPolicy.Settle(money, Money.Pln(b.PriceMinor), rateBps: 0, pairAlreadyCharged: true).Refund.Minor;
         var kind = refund <= 0 ? CancelOutcomeKind.NoRefund : refund >= b.PriceMinor ? CancelOutcomeKind.FullRefund : CancelOutcomeKind.Partial;
         return new(refund, byClient ? RefundReason.ClientCancelledEarly : RefundReason.PractitionerCancelled, kind);

@@ -11,7 +11,8 @@ public sealed record DirectoryPractitioner(Guid PractitionerId, PractitionerStat
 
 /// <summary>GET /internal/v1/offerings/{id} (CONTRACTS 3.6).</summary>
 public sealed record DirectoryOffering(Guid OfferingId, Guid PractitionerId, string PractitionerUserId, PractitionerStatus PractitionerStatus,
-    string Title, int DurationMinutes, MoneyDto Price, string? MeetingUrl, bool IsActive);
+    string Title, int DurationMinutes, MoneyDto Price, string? MeetingUrl, bool IsActive,
+    OfferingKind Kind = OfferingKind.Tasks, int Units = 1, string PractitionerSlug = "");
 
 /// <summary>GET /internal/v1/practitioners/{id}: display name and slug for the booking views (ADR-0012 section 6).</summary>
 public sealed record DirectoryPractitionerName(Guid PractitionerId, string DisplayName, string Slug);

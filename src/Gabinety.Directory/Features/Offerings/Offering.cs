@@ -1,3 +1,4 @@
+using Gabinety.Contracts.Directory;
 using Gabinety.Directory.Features.Profiles;
 using Gabinety.Directory.Features.Taxonomy;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +19,8 @@ public sealed class Offering
     public string ProblemSlug { get; set; } = "";
     public string[] TechSlugs { get; set; } = [];
     public string? MeetingUrl { get; set; }
+    public OfferingKind Kind { get; set; } = OfferingKind.Tasks;
+    public int Units { get; set; } = 1;
     public bool IsActive { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 }
@@ -38,6 +41,8 @@ public sealed class OfferingConfiguration : IEntityTypeConfiguration<Offering>
         b.Property(x => x.ProblemSlug).HasColumnName("problem_slug").HasMaxLength(60).IsRequired();
         b.Property(x => x.TechSlugs).HasColumnName("tech_slugs").HasColumnType("text[]"); // a list on InMemory, text[] on PostgreSQL
         b.Property(x => x.MeetingUrl).HasColumnName("meeting_url").HasMaxLength(300);
+        b.Property(x => x.Kind).HasColumnName("kind").HasConversion<string>().HasMaxLength(10).HasDefaultValue(OfferingKind.Tasks).IsRequired();
+        b.Property(x => x.Units).HasColumnName("units").HasDefaultValue(1);
         b.Property(x => x.IsActive).HasColumnName("is_active");
         b.Property(x => x.CreatedAt).HasColumnName("created_at");
         b.HasOne<Practitioner>().WithMany().HasForeignKey(x => x.PractitionerId).OnDelete(DeleteBehavior.Restrict);

@@ -129,10 +129,11 @@ public class CancelOutcomeTests
     static readonly TimeSpan H24 = TimeSpan.FromHours(24), S = TimeSpan.FromSeconds(1);
 
     [Theory]
-    [InlineData(24 * 3600, "full_refund", 10000, "Refunded")]       // exactly 24 h: the full refund
-    [InlineData(24 * 3600 - 1, "no_refund", 0, "Succeeded")]        // 1 s inside: no refund
+    // A-03: the client's cancel of an unused package is a full refund whatever the time
+    [InlineData(24 * 3600, "full_refund", 10000, "Refunded")]
+    [InlineData(24 * 3600 - 1, "full_refund", 10000, "Refunded")]   // used to be "no refund" inside 24 h
     [InlineData(30 * 24 * 3600, "full_refund", 10000, "Refunded")]
-    [InlineData(60, "no_refund", 0, "Succeeded")]
+    [InlineData(60, "full_refund", 10000, "Refunded")]
     public async Task The_outcome_shown_before_the_client_cancels_is_the_outcome_of_the_cancel(int startInSeconds, string outcome, long refund, string paymentStatus)
     {
         await using var h = Life.Host(new RecordingProvider());
@@ -170,9 +171,14 @@ public class CancelOutcomeTests
         var start = new DateTimeOffset(2026, 12, 1, 10, 0, 0, TimeSpan.Zero);
         var b = new BookingEntity { Status = BookingStatus.Confirmed, StartUtc = start, EndUtc = start.AddHours(1), PriceMinor = 18000 };
         Assert.Equal((CancelOutcomeKind.FullRefund, 18000L), Tuple(CancelPlanner.Plan(b, byClient: true, start - H24)));
-        Assert.Equal((CancelOutcomeKind.NoRefund, 0L), Tuple(CancelPlanner.Plan(b, byClient: true, start - H24 + S)));
+        Assert.Equal((CancelOutcomeKind.FullRefund, 18000L), Tuple(CancelPlanner.Plan(b, byClient: true, start - H24 + S)));
+        Assert.Equal((CancelOutcomeKind.FullRefund, 18000L), Tuple(CancelPlanner.Plan(b, byClient: true, start + 10 * H24)));
         Assert.Equal((CancelOutcomeKind.FullRefund, 18000L), Tuple(CancelPlanner.Plan(b, byClient: false, start + S)));
         Assert.Null(CancelPlanner.Plan(b, byClient: false, b.EndUtc));               // the practitioner's time rule
+        b.UnitsUsed = 1;
+        Assert.Null(CancelPlanner.Plan(b, byClient: true, start - H24));             // a used package is not cancelled by the client (A-03)
+        Assert.Equal((CancelOutcomeKind.FullRefund, 18000L), Tuple(CancelPlanner.Plan(b, byClient: false, start + S))); // the practitioner's withdrawal is not blocked by use
+        b.UnitsUsed = 0;
         b.Status = BookingStatus.Completed;
         Assert.Null(CancelPlanner.Plan(b, byClient: true, start - H24));             // the state table
     }
@@ -180,7 +186,7 @@ public class CancelOutcomeTests
     static (CancelOutcomeKind, long) Tuple(CancelPlan? p) => (p!.Value.Outcome, p.Value.Refund);
 }
 
-/// <summary>F-13: a Completed booking is disputable by the client exactly until start + 72 h, whether the start lies ahead (the seeded state) or behind.</summary>
+/// <summary>A-03: a Confirmed or Completed package is disputable by the client from the purchase until end + 72 h.</summary>
 public class DisputeWindowTests
 {
     static readonly DateTimeOffset Start = new(2026, 12, 1, 10, 0, 0, TimeSpan.Zero);
@@ -188,14 +194,14 @@ public class DisputeWindowTests
     static readonly TimeSpan H = TimeSpan.FromHours(1), S = TimeSpan.FromSeconds(1);
 
     [Theory]
-    [InlineData(-48 * 3600, true)]      // the seeded state: the clock was moved forward to complete it, then back; the start lies ahead
+    [InlineData(-48 * 3600, true)]      // the start lies ahead
     [InlineData(-1, true)]
     [InlineData(0, true)]
     [InlineData(48 * 3600, true)]
-    [InlineData(72 * 3600 - 1, true)]   // the last second
-    [InlineData(72 * 3600, false)]      // start + 72 h exactly: over
-    [InlineData(72 * 3600 + 1, false)]
-    public void canDispute_is_true_for_a_Completed_booking_exactly_inside_the_window(int offsetSeconds, bool expected)
+    [InlineData(73 * 3600 - 1, true)]   // the last second: the end (start + 1 h) + 72 h
+    [InlineData(73 * 3600, false)]      // end + 72 h exactly: over
+    [InlineData(73 * 3600 + 1, false)]
+    public void canDispute_is_true_for_a_Completed_booking_until_end_plus_72h(int offsetSeconds, bool expected)
     {
         var b = new BookingEntity { ClientUserId = "demo-client", PractitionerUserId = "demo-practitioner", Status = BookingStatus.Completed, StartUtc = Start, EndUtc = Start + H, EndedAt = Start + H };
         var now = Start + TimeSpan.FromSeconds(offsetSeconds);

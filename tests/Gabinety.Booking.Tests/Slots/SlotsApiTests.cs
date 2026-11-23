@@ -39,65 +39,20 @@ public class SlotsApiTests : IDisposable
         Assert.Equal(TueNineLocal.AddHours(1), slots[0].GetProperty("endUtc").GetDateTimeOffset());
     }
 
-    [Fact]
-    public async Task A_booked_slot_disappears_and_so_does_a_slot_inside_its_buffer_but_the_one_after_the_buffer_stays()
-    {
-        await f.WorkWeek();
-        // Booked 10:00-11:00 UTC (the 60 minute slot, buffer to 11:15). A 60 minute slot carries its own buffer, so it conflicts from 09:00 to 11:00.
-        await f.Book(BookingStatus.Confirmed, TueNineLocal.AddHours(2));
-        var starts = await Starts();
-        Assert.Contains(TueNineLocal.AddMinutes(30), starts);                   // 08:30-09:30 (+15) ends before 10:00
-        foreach (var blocked in new[] { 60, 120, 150, 180 })                    // 09:00, 10:00 (booked), 10:30, 11:00 (inside the buffer)
-            Assert.DoesNotContain(TueNineLocal.AddMinutes(blocked), starts);
-        Assert.Contains(TueNineLocal.AddMinutes(210), starts);                  // 11:30 is the first start after the buffer
-    }
-
-    [Fact]
-    public async Task An_expired_hold_frees_the_slot_and_a_live_hold_blocks_it()
-    {
-        await f.WorkWeek();
-        var now = f.Clock.GetUtcNow();
-        await f.Book(BookingStatus.PendingPayment, TueNineLocal.AddHours(2), hold: now.AddMinutes(-1));
-        await f.Book(BookingStatus.PendingPayment, TueNineLocal.AddHours(5), hold: now.AddMinutes(10));
-        var starts = await Starts();
-        Assert.Contains(TueNineLocal.AddHours(2), starts);
-        Assert.DoesNotContain(TueNineLocal.AddHours(5), starts);
-    }
-
-    [Fact]
-    public async Task A_hold_that_expires_as_the_clock_moves_frees_the_slot()
-    {
-        await f.WorkWeek();
-        await f.Book(BookingStatus.PendingPayment, TueNineLocal.AddHours(2), hold: f.Clock.GetUtcNow().AddMinutes(10));
-        Assert.DoesNotContain(TueNineLocal.AddHours(2), await Starts());
-        f.Clock.Advance(TimeSpan.FromMinutes(11));
-        Assert.Contains(TueNineLocal.AddHours(2), await Starts());
-    }
-
+    // A booking is a purchased package since A-02: valid from the purchase for a month, it says nothing about the practitioner's time.
     [Theory]
-    [InlineData(BookingStatus.Confirmed, true)]
-    [InlineData(BookingStatus.Disputed, true)]
-    [InlineData(BookingStatus.CancelledByClient, false)]
-    [InlineData(BookingStatus.LateCancelledByClient, false)]
-    [InlineData(BookingStatus.CancelledByPractitioner, false)]
-    [InlineData(BookingStatus.Expired, false)]
-    [InlineData(BookingStatus.Completed, false)]
-    [InlineData(BookingStatus.ClientNoShow, false)]
-    [InlineData(BookingStatus.Resolved, false)]
-    public async Task Only_active_statuses_block(BookingStatus status, bool blocks)
+    [InlineData(BookingStatus.PendingPayment)]
+    [InlineData(BookingStatus.Confirmed)]
+    [InlineData(BookingStatus.Disputed)]
+    [InlineData(BookingStatus.Completed)]
+    public async Task No_booking_blocks_a_slot(BookingStatus status)
     {
         await f.WorkWeek();
-        await f.Book(status, TueNineLocal.AddHours(2));
-        Assert.Equal(!blocks, (await Starts()).Contains(TueNineLocal.AddHours(2)));
-    }
-
-    [Fact]
-    public async Task A_booking_the_evening_before_blocks_through_its_buffer_across_the_window_start()
-    {
-        await f.WorkWeek();
-        // Booked 06:10-08:10 UTC: the buffer runs to 08:25, so the 08:00 UTC slot is blocked.
-        await f.Book(BookingStatus.Confirmed, TueNineLocal.AddMinutes(-110), 120);
-        Assert.DoesNotContain(TueNineLocal, await Starts());
+        var before = await Starts();
+        await f.Book(status, TueNineLocal.AddHours(2), hold: f.Clock.GetUtcNow().AddMinutes(10));
+        await f.Book(status, f.Clock.GetUtcNow(), 60 * 24 * 30, hold: f.Clock.GetUtcNow().AddMinutes(10)); // a package: its whole validity
+        Assert.Equal(before, await Starts());
+        Assert.Contains(TueNineLocal.AddHours(2), before);
     }
 
     [Fact]

@@ -18,13 +18,14 @@ sealed class ScopedAutoCompleteJob(IServiceScopeFactory scopes, TimeProvider tim
 
 static class Auto
 {
+    /// <summary>The old completion window (48 h): it no longer applies (A-03); tests use it to show that it does not.</summary>
     public static readonly TimeSpan Window = TimeSpan.FromHours(48);
 
     public static CreateHost Host(params (string Key, string Value)[] settings) => Hold.Host(null, settings);
 
-    /// <summary>A booking in <paramref name="status"/> whose session ended <paramref name="endedAgo"/> before the host clock.</summary>
-    public static Task<Guid> Seed(CreateHost h, TimeSpan endedAgo, BookingStatus status = BookingStatus.Confirmed) =>
-        Life.Seed(h, status, startIn: -endedAgo - TimeSpan.FromHours(1), duration: TimeSpan.FromHours(1));
+    /// <summary>A booking in <paramref name="status"/> whose validity (one hour) ended <paramref name="endedAgo"/> before the host clock; a negative value is an end in the future. Units: 5, none used.</summary>
+    public static Task<Guid> Seed(CreateHost h, TimeSpan endedAgo, BookingStatus status = BookingStatus.Confirmed, long unitsUsed = 0, long unitsTotal = 5) =>
+        Life.Seed(h, status, startIn: -endedAgo - TimeSpan.FromHours(1), duration: TimeSpan.FromHours(1), unitsUsed: unitsUsed, unitsTotal: unitsTotal);
 
     public static ScopedAutoCompleteJob Job(CreateHost h) =>
         new(h.Services.GetRequiredService<IServiceScopeFactory>(), h.Clock, h.Services.GetRequiredService<IConfiguration>(),

@@ -252,6 +252,14 @@ namespace Gabinety.Booking.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("idempotency_key");
 
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("Tasks")
+                        .HasColumnName("kind");
+
                     b.Property<string>("MeetingUrlSnapshot")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)")
@@ -278,6 +286,14 @@ namespace Gabinety.Booking.Persistence.Migrations
                     b.Property<Guid>("PractitionerId")
                         .HasColumnType("uuid")
                         .HasColumnName("practitioner_id");
+
+                    b.Property<string>("PractitionerSlug")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasDefaultValue("")
+                        .HasColumnName("practitioner_slug");
 
                     b.Property<string>("PractitionerUserId")
                         .IsRequired()
@@ -307,6 +323,16 @@ namespace Gabinety.Booking.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
                         .HasColumnName("status_reason");
+
+                    b.Property<long>("UnitsTotal")
+                        .HasColumnType("bigint")
+                        .HasColumnName("units_total");
+
+                    b.Property<long>("UnitsUsed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("units_used");
 
                     b.HasKey("Id");
 

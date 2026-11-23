@@ -20,7 +20,7 @@ public class BookingStateMachineTests
         (S.PendingPayment, T.HoldExpired, Early, S.Expired),
         (S.PendingPayment, T.PaymentFailed, Early, S.Expired),
         (S.Confirmed, T.ClientCancels, Early, S.CancelledByClient),
-        (S.Confirmed, T.ClientCancels, Late, S.LateCancelledByClient),
+        (S.Confirmed, T.ClientCancels, Late, S.CancelledByClient), // A-03: no late cancellation any more
         (S.Confirmed, T.PractitionerCancels, Early, S.CancelledByPractitioner),
         (S.Confirmed, T.CompletionWindowElapsed, Early, S.Completed),
         (S.Confirmed, T.ClientNoShowReported, Early, S.ClientNoShow),
@@ -73,9 +73,9 @@ public class BookingStateMachineTests
     }
 
     [Fact]
-    public void Client_cancel_boundary_matches_refund_policy()
+    public void Client_cancel_is_always_CancelledByClient_whatever_the_time()
     {
-        Assert.Equal(S.CancelledByClient, BookingStateMachine.Next(S.Confirmed, T.ClientCancels, Start, Start.AddHours(-24)).Next);
-        Assert.Equal(S.LateCancelledByClient, BookingStateMachine.Next(S.Confirmed, T.ClientCancels, Start, Start.AddHours(-24).AddSeconds(1)).Next);
+        foreach (var now in new[] { Start.AddDays(-30), Start.AddHours(-24), Start.AddHours(-24).AddSeconds(1), Start, Start.AddDays(5) })
+            Assert.Equal(S.CancelledByClient, BookingStateMachine.Next(S.Confirmed, T.ClientCancels, Start, now).Next);
     }
 }

@@ -10,6 +10,9 @@ public enum PractitionerStatus { Draft, Submitted, Approved, Rejected, Suspended
 [JsonConverter(typeof(Gabinety.Contracts.Common.SnakeCaseLowerEnumConverter))]
 public enum Badge { Email, Github, Nip, Approved }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum OfferingKind { Tasks, Chat }
+
 public sealed record CategoryDto(string Slug, string NamePl);
 public sealed record TaxonomyDto(string Version, IReadOnlyList<CategoryDto> Problems, IReadOnlyList<CategoryDto> Techs);
 
@@ -20,10 +23,10 @@ public sealed record PractitionerCard(Guid Id, string Slug, string DisplayName, 
     IReadOnlyList<string> ProblemSlugs, IReadOnlyList<int> Durations);
 
 public sealed record Offering(Guid Id, string Title, string Description, int DurationMinutes, MoneyDto Price,
-    string ProblemSlug, IReadOnlyList<string> TechSlugs);
+    string ProblemSlug, IReadOnlyList<string> TechSlugs, OfferingKind Kind = OfferingKind.Tasks, int Units = 1);
 
 public sealed record OfferingPrivate(Guid Id, string Title, string Description, int DurationMinutes, MoneyDto Price,
-    string ProblemSlug, IReadOnlyList<string> TechSlugs, bool IsActive, string? MeetingUrl);
+    string ProblemSlug, IReadOnlyList<string> TechSlugs, bool IsActive, string? MeetingUrl, OfferingKind Kind = OfferingKind.Tasks, int Units = 1);
 
 public sealed record PractitionerProfile(PractitionerCard Card, string Bio, string? PortfolioUrl,
     IReadOnlyList<Offering> Offerings, int CompletedCount, [property: System.Text.Json.Serialization.JsonConverter(typeof(Gabinety.Contracts.Common.UtcInstantConverter))] DateTimeOffset MemberSince);
@@ -50,6 +53,6 @@ public sealed record PractitionerPrivate(Guid Id, string Slug, PractitionerStatu
     bool EmailVerified, bool GithubLinked, bool NipValid, string? GithubLogin);
 
 public sealed record OfferingRequest([property: Required, StringLength(120)] string Title, [property: StringLength(1000)] string Description,
-    int DurationMinutes, long PriceMinor, [property: Required] string ProblemSlug, IReadOnlyList<string> TechSlugs, string? MeetingUrl = null);
+    int DurationMinutes, long PriceMinor, [property: Required] string ProblemSlug, IReadOnlyList<string> TechSlugs, string? MeetingUrl = null, OfferingKind Kind = OfferingKind.Tasks, int Units = 1);
 
 public sealed record SubmitIncomplete(IReadOnlyList<string> UnmetItems);

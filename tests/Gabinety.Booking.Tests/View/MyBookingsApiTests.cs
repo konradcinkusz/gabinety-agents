@@ -223,7 +223,7 @@ public class MyBookingsApiTests
         await using var h = Host();
         var w = Who.New();
         var id = await Seed(h, w, TimeSpan.FromMinutes(20), fee: 1500, payout: 8500); // starts in 20 min
-        h.Clock.Advance(TimeSpan.FromMinutes(40));                                    // 20 min after the start: the no-show claim is open
+        h.Clock.Advance(TimeSpan.FromMinutes(40));                                    // 20 min after the start
 
         foreach (var (user, role) in new[] { (w.Client, "client"), (w.Practitioner, "practitioner") })
         {
@@ -239,7 +239,7 @@ public class MyBookingsApiTests
         var p = await (await h.ClientFor(w.Practitioner).GetAsync($"/api/v1/bookings/{id}")).Body();
         Assert.True(p.GetProperty("canCancel").GetBoolean());
         Assert.False(p.GetProperty("canDispute").GetBoolean());
-        Assert.True(p.GetProperty("canReportNoShow").GetBoolean());
+        Assert.False(p.GetProperty("canReportNoShow").GetBoolean()); // never offered any more (A-03)
     }
 
     [Fact]

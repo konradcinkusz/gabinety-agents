@@ -24,7 +24,7 @@ public class ReviewabilityApiTests
         return await h.CreateClient().SendAsync(req);
     }
 
-    static async Task<Guid> Seed(CreateHost h, BookingStatus status, string? resolution = null, DateTimeOffset? endedAt = null, DateTimeOffset? endUtc = null)
+    static async Task<Guid> Seed(CreateHost h, BookingStatus status, string? resolution = null, DateTimeOffset? endedAt = null, DateTimeOffset? endUtc = null, long unitsUsed = 1)
     {
         var id = Guid.NewGuid();
         var end = endUtc ?? h.Clock.GetUtcNow().AddDays(-1);
@@ -33,7 +33,7 @@ public class ReviewabilityApiTests
             Id = id, ClientUserId = "demo-client-rev", PractitionerId = h.Practitioner, PractitionerUserId = "demo-practitioner-user",
             OfferingId = h.Offering, OfferingTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 12345,
             StartUtc = end.AddHours(-1), EndUtc = end, Status = status, BriefText = "demo-brief-SECRET-TEXT",
-            IdempotencyKey = Guid.NewGuid(), CreatedAt = end.AddDays(-2), EndedAt = endedAt, DisputeResolution = resolution,
+            IdempotencyKey = Guid.NewGuid(), CreatedAt = end.AddDays(-2), EndedAt = endedAt, DisputeResolution = resolution, UnitsTotal = 10, UnitsUsed = unitsUsed,
         }));
         return id;
     }
@@ -52,7 +52,7 @@ public class ReviewabilityApiTests
     [InlineData(BookingStatus.ClientNoShow, null, false)]
     [InlineData(BookingStatus.Expired, null, false)]
     [InlineData(BookingStatus.PendingPayment, null, false)]
-    [InlineData(BookingStatus.Confirmed, null, false)]
+    [InlineData(BookingStatus.Confirmed, null, true)]  // A-03: a used package may be reviewed before it ends
     [InlineData(BookingStatus.Disputed, null, false)]
     public async Task Reviewable_depends_on_status_and_resolution(BookingStatus status, string? resolution, bool expected)
     {
@@ -68,19 +68,28 @@ public class ReviewabilityApiTests
         Assert.Equal(ended, body.GetProperty("completedAt").GetDateTimeOffset());
     }
 
+    [Fact]
+    public async Task A_package_with_no_unit_used_is_never_reviewable()
+    {
+        using var h = NewHost();
+        foreach (var status in new[] { BookingStatus.Confirmed, BookingStatus.Completed })
+            Assert.False((await Json(await Get(h, await Seed(h, status, unitsUsed: 0)))).GetProperty("reviewable").GetBoolean(), status.ToString());
+        Assert.False((await Json(await Get(h, await Seed(h, BookingStatus.Resolved, "release", unitsUsed: 0)))).GetProperty("reviewable").GetBoolean());
+    }
+
     [Theory]
     [InlineData(-1, true)]  // 1 s inside the 14 days
     [InlineData(0, true)]   // exactly 14 days: still within
     [InlineData(1, false)]  // 1 s outside
-    public async Task Window_edge_is_fourteen_days_after_ended_at(int secondsPastWindow, bool expected)
+    public async Task Window_edge_is_fourteen_days_after_end_utc(int secondsPastWindow, bool expected)
     {
         using var h = NewHost();
-        var id = await Seed(h, BookingStatus.Completed, endedAt: h.Clock.GetUtcNow() - Window - TimeSpan.FromSeconds(secondsPastWindow));
+        var id = await Seed(h, BookingStatus.Completed, endUtc: h.Clock.GetUtcNow() - Window - TimeSpan.FromSeconds(secondsPastWindow));
         Assert.Equal(expected, (await Json(await Get(h, id))).GetProperty("reviewable").GetBoolean());
     }
 
     [Fact]
-    public async Task Without_ended_at_the_window_runs_from_end_utc()
+    public async Task The_window_runs_from_end_utc_and_ended_at_only_reaches_the_answer()
     {
         using var h = NewHost();
         var now = h.Clock.GetUtcNow();
@@ -90,22 +99,17 @@ public class ReviewabilityApiTests
         Assert.True(a.GetProperty("reviewable").GetBoolean());
         Assert.Equal(now - Window + TimeSpan.FromSeconds(1), a.GetProperty("completedAt").GetDateTimeOffset());
         Assert.False((await Json(await Get(h, outside))).GetProperty("reviewable").GetBoolean());
-    }
 
-    [Fact]
-    public async Task Ended_at_wins_over_end_utc()
-    {
-        using var h = NewHost();
-        var now = h.Clock.GetUtcNow();
-        var id = await Seed(h, BookingStatus.Completed, endedAt: now.AddDays(-1), endUtc: now.AddDays(-30));
-        Assert.True((await Json(await Get(h, id))).GetProperty("reviewable").GetBoolean());
+        // A recent ended_at does not reopen the window of a package whose validity ended long ago.
+        var stale = await Seed(h, BookingStatus.Completed, endedAt: now.AddDays(-1), endUtc: now.AddDays(-30));
+        Assert.False((await Json(await Get(h, stale))).GetProperty("reviewable").GetBoolean());
     }
 
     [Fact]
     public async Task Window_follows_the_clock()
     {
         using var h = NewHost();
-        var id = await Seed(h, BookingStatus.Completed, endedAt: h.Clock.GetUtcNow().AddDays(-13));
+        var id = await Seed(h, BookingStatus.Completed, endUtc: h.Clock.GetUtcNow().AddDays(-13));
         Assert.True((await Json(await Get(h, id))).GetProperty("reviewable").GetBoolean());
         h.Clock.Advance(TimeSpan.FromDays(2));
         Assert.False((await Json(await Get(h, id))).GetProperty("reviewable").GetBoolean());

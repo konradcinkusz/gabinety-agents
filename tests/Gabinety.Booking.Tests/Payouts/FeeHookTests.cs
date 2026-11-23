@@ -105,15 +105,15 @@ public class FeeHookTests
     }
 
     [Fact]
-    public async Task A_late_client_cancel_through_the_endpoint_takes_the_fee_and_refunds_nothing()
+    public async Task A_client_cancel_through_the_endpoint_is_never_late_so_it_takes_no_fee()
     {
         await using var h = Host();
-        var id = await Life.Seed(h, BookingStatus.Confirmed, TimeSpan.FromHours(23));
+        var id = await Life.Seed(h, BookingStatus.Confirmed, TimeSpan.FromHours(23)); // used to be a late cancel: fee taken, nothing refunded
         var r = await Life.Cancel(h, id, Life.Client);
         Assert.Equal(System.Net.HttpStatusCode.OK, r.StatusCode);
         var row = await Life.Row(h, id);
-        Assert.Equal((BookingStatus.LateCancelledByClient, 1500L, 8500L), (row.Status, row.FeeMinor, row.PayoutMinor));
-        Assert.Single(await Fee.FeeRows(h, Life.Client, h.Practitioner));
+        Assert.Equal((BookingStatus.CancelledByClient, (long?)null, (long?)null), (row.Status, row.FeeMinor, row.PayoutMinor));
+        Assert.Empty(await Fee.FeeRows(h, Life.Client, h.Practitioner));
     }
 
     [Fact]

@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Globalization;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -7,7 +6,6 @@ using System.Text.Json;
 using Gabinety.Billing;
 using Gabinety.Booking.Clients;
 using Gabinety.Booking.Features.Payments;
-using Gabinety.Booking.Features.Slots;
 using Gabinety.Booking.Notifications;
 using Gabinety.Booking.Payments.Abstractions;
 using Gabinety.Booking.Persistence;
@@ -23,7 +21,7 @@ using ContractsStatus = Gabinety.Contracts.Booking.BookingStatus;
 namespace Gabinety.Booking.Features.Bookings.Create;
 
 /// <summary>
-/// POST /api/v1/bookings (CONTRACTS 4.2, idempotency CONTRACTS 0). The brief is user free text: it is stored in the booking row only and
+/// POST /api/v1/bookings (CONTRACTS 4.2, idempotency CONTRACTS 0): buys a package (A-02), no slot. The brief is user free text: it is stored in the booking row only and
 /// never reaches a log, an exception message, a metric, the idempotency record or any response.
 /// Not part of this task: the per-user rate limit of CONTRACTS 10.2 (429 rate_limited).
 /// </summary>
@@ -49,11 +47,11 @@ public sealed class CreateBookingFeature : IServiceFeature
         // 1. header and body
         if (!Guid.TryParse(http.Request.Headers[IdempotencyHeader].ToString(), out var key))
             return Problem(ErrorCodes.ValidationFailed, "Validation failed", 400, new() { [IdempotencyHeader] = ["Idempotency-Key is required and must be a uuid"] });
-        var (req, startUtc, errors) = await ReadBodyAsync(http.Request, ct);
+        var (req, errors) = await ReadBodyAsync(http.Request, ct);
         if (req is null) return Problem(ErrorCodes.ValidationFailed, "Validation failed", 400, errors);
         if (errors.Count > 0) return Problem(ErrorCodes.ValidationFailed, "Validation failed", 422, errors);
         var text = req.Brief.Text.Trim();
-        var hash = Hash(req, startUtc, text);
+        var hash = Hash(req, text);
 
         // 2. idempotency
         var now = time.GetUtcNow();
@@ -76,36 +74,25 @@ public sealed class CreateBookingFeature : IServiceFeature
             && !await db.PaymentAccounts.AsNoTracking().AnyAsync(a => a.PractitionerId == offering.PractitionerId && a.Provider == payments.Name && a.Ready, ct))
             return Problem(ErrorCodes.PractitionerPaymentsNotReady, "Practitioner payments not ready", 422);
 
-        // The provider call (a network call with a real vendor, SPEC 5.1: 10 s) happens BEFORE the lock and the transaction, with a
-        // pre-allocated booking id, so no database lock is held across it. A request that then fails (slot gone) leaves an unused
+        // The provider call (a network call with a real vendor, SPEC 5.1: 10 s) happens BEFORE the transaction, with a
+        // pre-allocated booking id, so no database lock is held across it. A request that then fails (a replay won the race) leaves an unused
         // checkout at the provider: a real adapter must make checkouts expire by themselves (the hold is 10 minutes).
         var bookingId = Guid.CreateVersion7();
         var checkout = await payments.CreateCheckoutAsync(new CheckoutRequest(bookingId, offering.Price.AmountMinor, offering.Price.Currency,
             offering.Title, $"{SiteUrl.From(config)}/bookings/{bookingId}"), ct);
 
         var holdUntil = now.AddMinutes(config.GetValue("Booking:HoldMinutes", 10));
-        var duration = TimeSpan.FromMinutes(offering.DurationMinutes);
-        var calculator = new SlotCalculator(db, config, time);
+        // A package is valid from the purchase for Access:ValidityDays (CONTRACTS section 9 constant, the owner's). Chat counts tokens: the offering holds thousands.
+        var validUntil = now.AddDays(config.GetValue("Access:ValidityDays", 30));
+        var unitsTotal = offering.Kind == OfferingKind.Chat ? offering.Units * 1000L : offering.Units;
 
         try
         {
-            return await InLockedTransaction(db, offering.PractitionerId, async () =>
+            return await InTransaction(db, key, async () =>
             {
                 // A concurrent request with the same key may have committed while this one waited for the lock: answer with ITS stored response.
                 if (await db.IdempotencyRecords.AsNoTracking().SingleOrDefaultAsync(x => x.ClientUserId == sub && x.IdempotencyKey == key, ct) is { } won)
                     return Replay(won, hash, now);
-
-                await BookingSlotGuard.ExpireStaleHoldsAsync(db, offering.PractitionerId, now, ct);
-                await db.SaveChangesAsync(ct);
-
-                var day = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(startUtc, SlotCalculator.Warsaw).DateTime);
-                var offered = await calculator.ComputeAsync(offering.PractitionerId, duration, day, day.AddDays(1), ct);
-                if (!offered.Contains(startUtc))
-                {
-                    // Not offered at all is 422; offered by the grid but taken by a live hold or a confirmed booking is 409.
-                    var grid = await calculator.ComputeAsync(offering.PractitionerId, duration, day, day.AddDays(1), ct, withBusy: false);
-                    return grid.Contains(startUtc) ? Problem(ErrorCodes.SlotTaken, "Slot taken", 409) : Problem(ErrorCodes.SlotUnavailable, "Slot unavailable", 422);
-                }
 
                 var response = new CreateBookingResponse(bookingId, Enum.Parse<ContractsStatus>(BookingStateMachine.Create().ToString()), holdUntil, checkout.CheckoutUrl);
                 var body = JsonSerializer.Serialize(response, Json);
@@ -114,7 +101,8 @@ public sealed class CreateBookingFeature : IServiceFeature
                     Id = bookingId, ClientUserId = sub, ClientEmail = UserEmail.From(user), ClientDisplayName = clientName,
                     PractitionerId = offering.PractitionerId, PractitionerUserId = offering.PractitionerUserId,
                     OfferingId = offering.OfferingId, OfferingTitle = offering.Title, DurationMinutes = (short)offering.DurationMinutes,
-                    PriceMinor = offering.Price.AmountMinor, StartUtc = startUtc, EndUtc = startUtc + duration, Status = BookingStateMachine.Create(),
+                    PriceMinor = offering.Price.AmountMinor, StartUtc = now, EndUtc = validUntil, Kind = offering.Kind, UnitsTotal = unitsTotal, UnitsUsed = 0,
+                    PractitionerSlug = offering.PractitionerSlug, Status = BookingStateMachine.Create(),
                     BriefText = text, BriefProblemSlug = req.Brief.ProblemSlug, BriefAiAssisted = req.Brief.AiAssisted,
                     HoldExpiresAt = holdUntil, IdempotencyKey = key, CreatedAt = now,
                 });
@@ -125,36 +113,34 @@ public sealed class CreateBookingFeature : IServiceFeature
                 });
                 db.IdempotencyRecords.Add(new IdempotencyRecord
                     { ClientUserId = sub, IdempotencyKey = key, RequestHash = hash, ResponseStatus = 201, ResponseBody = body, CreatedAt = now });
-                await BookingSlotGuard.SaveAsync(db, ct); // SlotTakenException when the exclusion constraint refuses (the safety net behind the lock)
+                await db.SaveChangesAsync(ct);
 
                 log.LogInformation("Booking {BookingId} created for practitioner {PractitionerId}", bookingId, offering.PractitionerId);
                 http.Response.Headers.Location = $"/api/v1/bookings/{bookingId}";
                 return Results.Text(body, "application/json", Encoding.UTF8, 201);
             }, ct);
         }
-        catch (SlotTakenException) { return Problem(ErrorCodes.SlotTaken, "Slot taken", 409); }
         catch (DbUpdateException e) when (IsUnique(e))
         {
-            // Same key from another practitioner's lock domain, or a record older than 24 h: the unique key decides.
+            // The same key committed by a concurrent request, or a record older than 24 h: the unique key decides.
             db.ChangeTracker.Clear();
             var stored = await db.IdempotencyRecords.AsNoTracking().SingleOrDefaultAsync(x => x.ClientUserId == sub && x.IdempotencyKey == key, ct);
             return stored is null ? Problem(ErrorCodes.IdempotencyConflict, "Idempotency conflict", 409) : Replay(stored, hash, now);
         }
     }
 
-    /// <summary>One transaction under the practitioner lock: advisory lock on PostgreSQL (inside the retrying execution strategy), a process lock elsewhere.</summary>
-    static async Task<IResult> InLockedTransaction(BookingDbContext db, Guid practitionerId, Func<Task<IResult>> body, CancellationToken ct)
+    /// <summary>One transaction inside the retrying execution strategy. InMemory has no transactions or unique indexes, so a process lock per idempotency key gives the same one-after-the-other effect there; PostgreSQL relies on the unique key.</summary>
+    static async Task<IResult> InTransaction(BookingDbContext db, Guid idempotencyKey, Func<Task<IResult>> body, CancellationToken ct)
     {
         if (!db.Database.IsRelational())
         {
-            using var held = await PractitionerLocks.AcquireAsync(practitionerId, ct);
+            using var held = await KeyLocks.AcquireAsync(idempotencyKey, ct);
             return await body();
         }
         return await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
             db.ChangeTracker.Clear(); // a retry starts from the database, not from a half-applied attempt
             await using var tx = await db.Database.BeginTransactionAsync(ct);
-            await BookingSlotGuard.LockPractitionerAsync(db, practitionerId, ct);
             var result = await body();
             await tx.CommitAsync(ct);
             return result;
@@ -176,25 +162,16 @@ public sealed class CreateBookingFeature : IServiceFeature
         return false;
     }
 
-    /// <summary>The body is read raw so the offset of startUtc can be checked (the converter would normalise it away).</summary>
-    static async Task<(CreateBookingRequest? Request, DateTimeOffset StartUtc, Dictionary<string, string[]> Errors)> ReadBodyAsync(HttpRequest request, CancellationToken ct)
+    /// <summary>startUtc, when present, is ignored (A-02), so the body is deserialized directly.</summary>
+    static async Task<(CreateBookingRequest? Request, Dictionary<string, string[]> Errors)> ReadBodyAsync(HttpRequest request, CancellationToken ct)
     {
         var errors = new Dictionary<string, string[]>();
         CreateBookingRequest? req;
-        string? rawStart;
-        try
-        {
-            using var doc = await JsonDocument.ParseAsync(request.Body, cancellationToken: ct);
-            rawStart = doc.RootElement.TryGetProperty("startUtc", out var s) && s.ValueKind == JsonValueKind.String ? s.GetString() : null;
-            req = doc.RootElement.Deserialize<CreateBookingRequest>(Json);
-        }
-        catch (JsonException) { return (null, default, new() { ["body"] = ["The body must be a valid JSON object"] }); }
-        if (req is null) return (null, default, new() { ["body"] = ["The body must be a valid JSON object"] });
+        try { req = await JsonSerializer.DeserializeAsync<CreateBookingRequest>(request.Body, Json, ct); }
+        catch (Exception e) when (e is JsonException or FormatException) { return (null, new() { ["body"] = ["The body must be a valid JSON object"] }); }
+        if (req is null) return (null, new() { ["body"] = ["The body must be a valid JSON object"] });
 
         if (req.OfferingId == Guid.Empty) errors["offeringId"] = ["offeringId is required"];
-        var start = default(DateTimeOffset);
-        if (rawStart is null || !DateTimeOffset.TryParse(rawStart, CultureInfo.InvariantCulture, DateTimeStyles.None, out start) || start.Offset != TimeSpan.Zero)
-            errors["startUtc"] = ["startUtc is required and must be a UTC instant (offset Z)"];
         if (req.Brief is null) errors["brief"] = ["brief is required"];
         else
         {
@@ -202,29 +179,28 @@ public sealed class CreateBookingFeature : IServiceFeature
             if (length is < 20 or > 2000) errors["brief.text"] = ["brief.text must be 20 to 2000 characters"];
             if (req.Brief.ProblemSlug is { Length: > 60 }) errors["brief.problemSlug"] = ["brief.problemSlug must be at most 60 characters"];
         }
-        return (req, start.ToUniversalTime(), errors);
+        return (req, errors);
     }
 
-    /// <summary>SHA-256 hex of the canonical body: offeringId, startUtc (UTC ISO, Z), brief.text trimmed, problemSlug, aiAssisted.</summary>
-    static string Hash(CreateBookingRequest r, DateTimeOffset startUtc, string trimmedText) =>
+    /// <summary>SHA-256 hex of the canonical body: offeringId, brief.text trimmed, problemSlug, aiAssisted (startUtc is ignored).</summary>
+    static string Hash(CreateBookingRequest r, string trimmedText) =>
         Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new object?[]
         {
-            r.OfferingId.ToString("D"), startUtc.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.FFFFFFF'Z'", CultureInfo.InvariantCulture),
-            trimmedText, r.Brief.ProblemSlug, r.Brief.AiAssisted,
+            r.OfferingId.ToString("D"), trimmedText, r.Brief.ProblemSlug, r.Brief.AiAssisted,
         }))).ToLowerInvariant();
 
     static IResult Problem(string code, string title, int status, Dictionary<string, string[]>? errors = null, string? detail = null) =>
         Results.Json(ApiProblem.Of(code, title, status, detail, errors), statusCode: status, contentType: "application/problem+json");
 }
 
-/// <summary>Per-practitioner mutual exclusion for providers without advisory locks (InMemory): same effect as pg_advisory_xact_lock inside one process.</summary>
-static class PractitionerLocks
+/// <summary>Per-idempotency-key mutual exclusion for providers without unique indexes (InMemory).</summary>
+static class KeyLocks
 {
     static readonly ConcurrentDictionary<Guid, SemaphoreSlim> Locks = new();
 
-    public static async Task<IDisposable> AcquireAsync(Guid practitionerId, CancellationToken ct)
+    public static async Task<IDisposable> AcquireAsync(Guid key, CancellationToken ct)
     {
-        var gate = Locks.GetOrAdd(practitionerId, _ => new SemaphoreSlim(1, 1));
+        var gate = Locks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(ct);
         return new Releaser(gate);
     }

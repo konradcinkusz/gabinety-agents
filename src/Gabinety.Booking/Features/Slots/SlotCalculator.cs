@@ -25,13 +25,9 @@ public sealed class SlotCalculator(BookingDbContext db, IConfiguration config, T
         var days = (await db.Exceptions.AsNoTracking().Where(e => e.PractitionerId == practitionerId).ToListAsync(ct))
             .Select(e => new SchedulingException(e.DateLocal)).ToList();
 
-        // An EXPIRED hold does not block here (the database constraint still counts it until it is moved to Expired: see BookingSlotGuard).
-        var busy = !withBusy ? [] : (await db.Bookings.AsNoTracking()
-                .Where(b => b.PractitionerId == practitionerId && b.StartUtc < windowEnd && b.EndUtc > windowStart
-                    && (b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Disputed
-                        || (b.Status == BookingStatus.PendingPayment && b.HoldExpiresAt > now)))
-                .Select(b => new { b.StartUtc, b.EndUtc }).ToListAsync(ct))
-            .Select(b => new BusyInterval(b.StartUtc, b.EndUtc)).ToList();
+        // A booking is a purchased package since A-02: it spans its whole validity and says nothing about the practitioner's time, so no booking blocks a slot.
+        // `withBusy` stays for the callers that pass it; the slot endpoint itself goes away with the availability steps of the plan (D-01).
+        IReadOnlyList<BusyInterval> busy = [];
 
         var options = new SlotOptions(
             MinLeadHours: config.GetValue("Booking:MinLeadHours", 12),

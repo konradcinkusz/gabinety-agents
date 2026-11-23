@@ -64,6 +64,8 @@ sealed class CreateHost : WebApplicationFactory<Program>
     public string Title = "demo-offering";
     public int Minutes = 60;
     public long PriceMinor = 10000;
+    public string Kind = "Tasks";
+    public int Units = 1;
     public string Status = "Approved";
     public bool Active = true;
     public string? MeetingUrl;
@@ -94,7 +96,7 @@ sealed class CreateHost : WebApplicationFactory<Program>
             {
                 offeringId = Offering, practitionerId = Practitioner, practitionerUserId = OwnerUserId, practitionerStatus = Status,
                 title = Title, durationMinutes = Minutes, price = new { amountMinor = PriceMinor, currency = "PLN" },
-                meetingUrl = MeetingUrl, isActive = Active,
+                meetingUrl = MeetingUrl, isActive = Active, kind = Kind, units = Units, practitionerSlug = PractitionerSlug,
             })
             : r.RequestUri!.AbsolutePath == $"/internal/v1/practitioners/{Practitioner}"
                 ? (DirectoryDown ? new HttpResponseMessage(System.Net.HttpStatusCode.ServiceUnavailable)
@@ -181,7 +183,8 @@ sealed class CreateHost : WebApplicationFactory<Program>
         return await c.SendAsync(req);
     }
 
-    public object Req(string start = Tuesday10, string? text = null, Guid? offering = null) => new
+    /// <summary>The body of a purchase; <c>start</c> is only sent when a test asks for it (the server ignores it).</summary>
+    public object Req(string? start = null, string? text = null, Guid? offering = null) => new
     {
         offeringId = offering ?? Offering, startUtc = start,
         brief = new { text = text ?? "demo-brief: I need help with a first review of my plan", problemSlug = (string?)null, aiAssisted = false },

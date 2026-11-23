@@ -16,9 +16,9 @@ public class AutoCompleteTests : IDisposable
     public void Dispose() => h.Dispose();
 
     [Fact]
-    public async Task A_confirmed_booking_completes_exactly_at_end_plus_48_hours_and_not_one_second_before()
+    public async Task A_confirmed_package_completes_exactly_at_its_end_and_not_one_second_before()
     {
-        var id = await Auto.Seed(h, Auto.Window - TimeSpan.FromSeconds(1));
+        var id = await Auto.Seed(h, -TimeSpan.FromSeconds(1)); // ends in one second
         var job = Auto.Job(h);
 
         Assert.Equal(0, await job.CompleteDueAsync(h.Clock.GetUtcNow(), default));
@@ -32,14 +32,14 @@ public class AutoCompleteTests : IDisposable
     [Fact]
     public async Task Completion_sets_ended_at_and_payout_due_at_and_the_fee_hook_computes_the_amounts_in_the_same_transaction()
     {
-        var id = await Auto.Seed(h, Auto.Window);
+        var id = await Auto.Seed(h, TimeSpan.Zero); // ends exactly now
 
         Assert.Equal(1, await Auto.Job(h).CompleteDueAsync(h.Clock.GetUtcNow(), default));
 
         var b = await Life.Row(h, id);
         Assert.Equal(BookingStatus.Completed, b.Status);
         Assert.Equal(b.EndUtc, b.EndedAt);
-        Assert.Equal(b.StartUtc + TimeSpan.FromHours(72), b.PayoutDueAt); // max(end + 48 h, start + 72 h): the claim window has closed first (ADR proposal 0011)
+        Assert.Equal(b.EndUtc + TimeSpan.FromHours(72), b.PayoutDueAt); // end + 72 h: the dispute window of a package has closed (owner decision, A-03)
         Assert.Equal(1500, b.FeeMinor);    // 15 % of 10000, first consultation of the pair
         Assert.Equal(8500, b.PayoutMinor);
         var fee = Assert.Single(await Life.Ledger(h, id), l => l.Kind == LedgerKind.PlatformFee);
@@ -47,12 +47,29 @@ public class AutoCompleteTests : IDisposable
     }
 
     [Fact]
-    public async Task The_window_comes_from_Booking_CompleteAfterHours()
+    public async Task The_old_48_hour_window_and_its_setting_no_longer_apply()
     {
-        using var h24 = Auto.Host(("Booking:CompleteAfterHours", "24"));
-        var id = await Auto.Seed(h24, TimeSpan.FromHours(24));
-        Assert.Equal(1, await Auto.Job(h24).CompleteDueAsync(h24.Clock.GetUtcNow(), default));
-        Assert.Equal(BookingStatus.Completed, await Hold.StatusOf(h24, id));
+        using var h48 = Auto.Host(("Booking:CompleteAfterHours", "48"));
+        var id = await Auto.Seed(h48, TimeSpan.FromHours(1)); // ended an hour ago: used to wait for end + 48 h
+        Assert.Equal(1, await Auto.Job(h48).CompleteDueAsync(h48.Clock.GetUtcNow(), default));
+        Assert.Equal(BookingStatus.Completed, await Hold.StatusOf(h48, id));
+    }
+
+    [Fact]
+    public async Task A_package_whose_units_are_used_up_completes_before_its_end()
+    {
+        var used = await Auto.Seed(h, -TimeSpan.FromDays(20), unitsUsed: 5, unitsTotal: 5);
+        var partly = await Auto.Seed(h, -TimeSpan.FromDays(20), unitsUsed: 4, unitsTotal: 5);
+        var noUnits = await Auto.Seed(h, -TimeSpan.FromDays(20), unitsUsed: 0, unitsTotal: 0); // a row that predates the units: 0 of 0 is not "used up"
+
+        Assert.Equal(1, await Auto.Job(h).CompleteDueAsync(h.Clock.GetUtcNow(), default));
+
+        Assert.Equal(BookingStatus.Completed, await Hold.StatusOf(h, used));
+        Assert.Equal(BookingStatus.Confirmed, await Hold.StatusOf(h, partly));
+        Assert.Equal(BookingStatus.Confirmed, await Hold.StatusOf(h, noUnits));
+        var row = await Life.Row(h, used);
+        Assert.Equal(h.Clock.GetUtcNow(), row.EndedAt);                       // it ended now, not at the end of its validity
+        Assert.Equal(row.EndUtc + TimeSpan.FromHours(72), row.PayoutDueAt); // end + 72 h of the validity, also when the units ran out earlier
     }
 
     [Fact]
@@ -70,7 +87,7 @@ public class AutoCompleteTests : IDisposable
     [Fact]
     public async Task A_stale_id_that_is_not_due_and_an_unknown_id_are_no_ops()
     {
-        var early = await Auto.Seed(h, TimeSpan.FromHours(10));
+        var early = await Auto.Seed(h, -TimeSpan.FromHours(10)); // not due: it ends in ten hours
         Assert.Equal(0, await Auto.Job(h).CompleteAsync([early, Guid.NewGuid()], h.Clock.GetUtcNow(), default));
         Assert.Equal(BookingStatus.Confirmed, await Hold.StatusOf(h, early));
     }
@@ -90,7 +107,7 @@ public class AutoCompleteTests : IDisposable
     public async Task Running_twice_changes_nothing()
     {
         await Auto.Seed(h, Auto.Window + TimeSpan.FromHours(1));
-        await Auto.Seed(h, TimeSpan.FromHours(3));
+        await Auto.Seed(h, -TimeSpan.FromHours(3)); // not due
         var job = Auto.Job(h);
 
         Assert.Equal(1, await job.CompleteDueAsync(h.Clock.GetUtcNow(), default));

@@ -86,7 +86,7 @@ public sealed class SearchFeature : IServiceFeature
         if (p is null) return PublicJson.NotFound(ctx);
         var active = await db.Offerings.AsNoTracking().Where(o => o.PractitionerId == p.Id && o.IsActive).OrderBy(o => o.CreatedAt).ThenBy(o => o.Id).ToListAsync(ct);
         var offerings = active.Select(o => new Gabinety.Contracts.Directory.Offering(o.Id, o.Title, o.Description, o.DurationMinutes, new MoneyDto(o.PriceMinor, o.Currency),
-            o.ProblemSlug, o.TechSlugs.ToList())).ToList();
+            o.ProblemSlug, o.TechSlugs.ToList(), o.Kind, o.Units)).ToList();
         var body = ProfileWire.Of(new PractitionerProfile(Card(p, active, null), p.Bio, p.PortfolioUrl, offerings, p.CompletedCount, p.ApprovedAt ?? p.CreatedAt));
         return PublicJson.Respond(ctx, body, "public, max-age=300, stale-while-revalidate=3600", etag: true);
     }

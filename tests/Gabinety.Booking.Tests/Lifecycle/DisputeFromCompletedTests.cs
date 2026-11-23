@@ -6,7 +6,7 @@ using BookingStatus = Gabinety.Billing.BookingStatus;
 
 namespace Gabinety.Booking.Tests;
 
-/// <summary>Supervisor decision on PR 127: the dispute right lasts to start + 72 h (CONTRACTS 4.2), also after auto-completion at end + 48 h (ADR proposal 0011).</summary>
+/// <summary>A-03: the dispute right lasts until end + 72 h, also after the package completed.</summary>
 public class DisputeFromCompletedTests : IDisposable
 {
     readonly CreateHost h;
@@ -16,14 +16,14 @@ public class DisputeFromCompletedTests : IDisposable
 
     static readonly object Body = new { kind = "not_as_described", text = "demo-dispute-text: it was not what the offer said" };
 
-    /// <summary>A one-hour session that auto-completed at end + 48 h (start + 49 h); the clock is left there.</summary>
+    /// <summary>A one-hour package that auto-completed 48 h after its end (start + 49 h); the clock is left there.</summary>
     async Task<Guid> Completed()
     {
         var id = await Auto.Seed(h, TimeSpan.FromHours(48));
         Assert.Equal(1, await Auto.Job(h).CompleteDueAsync(h.Clock.GetUtcNow(), default));
         var b = await Life.Row(h, id);
         Assert.Equal((BookingStatus.Completed, 1500L, 8500L), (b.Status, b.FeeMinor, b.PayoutMinor));
-        Assert.Equal(b.StartUtc + TimeSpan.FromHours(72), b.PayoutDueAt);
+        Assert.Equal(b.EndUtc + TimeSpan.FromHours(72), b.PayoutDueAt); // the dispute window of a package closes at end + 72 h, and so does the payout date
         Assert.Single(await Life.Ledger(h, id), l => l.Kind == LedgerKind.PlatformFee);
         return id;
     }
@@ -43,10 +43,10 @@ public class DisputeFromCompletedTests : IDisposable
     }
 
     [Theory]
-    [InlineData(71, 59, true)]
-    [InlineData(72, 0, false)]
+    [InlineData(72, 59, true)]   // hours since the start; the package ends at start + 1 h, so the right ends at start + 73 h
     [InlineData(73, 0, false)]
-    public async Task The_right_ends_at_start_plus_72_h_and_not_a_moment_later(int hours, int minutes, bool ok)
+    [InlineData(74, 0, false)]
+    public async Task The_right_ends_at_end_plus_72_h_and_not_a_moment_later(int hours, int minutes, bool ok)
     {
         var id = await Completed();
         h.Clock.Advance(TimeSpan.FromHours(hours - 49) + TimeSpan.FromMinutes(minutes));

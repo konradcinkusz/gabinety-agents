@@ -31,7 +31,8 @@ public sealed record AvailabilityExceptionDto(DateOnly DateLocal);
 public sealed record AvailabilityDto(IReadOnlyList<AvailabilityRuleDto> Rules, IReadOnlyList<AvailabilityExceptionDto> Exceptions);
 
 public sealed record BriefDto([property: Required, StringLength(2000, MinimumLength = 20)] string Text, string? ProblemSlug, bool AiAssisted);
-public sealed record CreateBookingRequest(Guid OfferingId, [property: System.Text.Json.Serialization.JsonConverter(typeof(Gabinety.Contracts.Common.UtcInstantConverter))] DateTimeOffset StartUtc, BriefDto Brief);
+/// <summary><c>StartUtc</c> is accepted for older clients and ignored: a package is valid from the moment of purchase. Last, because an optional parameter cannot precede a required one.</summary>
+public sealed record CreateBookingRequest(Guid OfferingId, BriefDto Brief, [property: System.Text.Json.Serialization.JsonConverter(typeof(Gabinety.Contracts.Common.UtcInstantNullableConverter))] DateTimeOffset? StartUtc = null);
 public sealed record CreateBookingResponse(Guid BookingId, BookingStatus Status, [property: System.Text.Json.Serialization.JsonConverter(typeof(Gabinety.Contracts.Common.UtcInstantConverter))] DateTimeOffset HoldExpiresAt, string CheckoutUrl);
 
 public sealed record CancelRequest([property: StringLength(500)] string? Reason = null);
@@ -53,7 +54,8 @@ public sealed record PaymentView(PaymentStatus Status, MoneyDto Refunded);
 public sealed record BookingView(Guid Id, BookingStatus Status, string? StatusReason, [property: System.Text.Json.Serialization.JsonConverter(typeof(Gabinety.Contracts.Common.UtcInstantConverter))] DateTimeOffset StartUtc, [property: System.Text.Json.Serialization.JsonConverter(typeof(Gabinety.Contracts.Common.UtcInstantConverter))] DateTimeOffset EndUtc,
     int DurationMinutes, string OfferingTitle, MoneyDto Price, PractitionerRef Practitioner, ClientRef? Client, BriefDto? Brief,
     string? MeetingUrl, [property: System.Text.Json.Serialization.JsonConverter(typeof(Gabinety.Contracts.Common.UtcInstantNullableConverter))] DateTimeOffset? HoldExpiresAt, PaymentView Payment, MoneyDto? Fee, MoneyDto? Payout,
-    bool CanCancel, bool CanDispute, bool CanReportNoShow, bool CanReview, CancelOutcomeDto? CancelOutcome = null);
+    bool CanCancel, bool CanDispute, bool CanReportNoShow, bool CanReview, CancelOutcomeDto? CancelOutcome = null,
+    string Kind = "Tasks", long UnitsTotal = 0, long UnitsUsed = 0);
 
 public sealed record ReviewabilityDto(bool Reviewable, string ClientUserId, Guid PractitionerId, [property: System.Text.Json.Serialization.JsonConverter(typeof(Gabinety.Contracts.Common.UtcInstantNullableConverter))] DateTimeOffset? CompletedAt);
 

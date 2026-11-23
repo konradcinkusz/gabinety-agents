@@ -40,7 +40,7 @@ public sealed class OfferingsFeature : IServiceFeature
     static string? UserId(ClaimsPrincipal u) => u.FindFirst("sub")?.Value ?? u.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
     static OfferingPrivate View(Offering o) => new(o.Id, o.Title, o.Description, (int)o.DurationMinutes, new MoneyDto(o.PriceMinor, o.Currency),
-        o.ProblemSlug, o.TechSlugs, o.IsActive, o.MeetingUrl);
+        o.ProblemSlug, o.TechSlugs, o.IsActive, o.MeetingUrl, o.Kind, o.Units);
 
     /// <summary>
     /// Runs <paramref name="body"/> on the caller's practitioner row, or answers 404 when there is none. On PostgreSQL the row is read
@@ -130,6 +130,8 @@ public sealed class OfferingsFeature : IServiceFeature
         o.DurationMinutes = (short)r.DurationMinutes; // validated to 30 or 60
         o.PriceMinor = r.PriceMinor;
         o.ProblemSlug = r.ProblemSlug;
+        o.Kind = r.Kind;
+        o.Units = r.Units;
         o.TechSlugs = (r.TechSlugs ?? []).ToArray();
         o.MeetingUrl = string.IsNullOrWhiteSpace(r.MeetingUrl) ? null : r.MeetingUrl.Trim();
     }
@@ -155,6 +157,9 @@ public sealed class OfferingsFeature : IServiceFeature
         if (title.Length is < 5 or > 80 || title.Any(char.IsControl)) errors["title"] = ["5 to 80 characters, no control characters"];
         if (description.Length > 600) errors["description"] = ["at most 600 characters"];
         if (r.DurationMinutes is not (30 or 60)) errors["durationMinutes"] = ["30 or 60"];
+        var (minUnits, maxUnits) = r.Kind == OfferingKind.Chat ? (100, 100000) : (1, 1000);
+        if (!Enum.IsDefined(r.Kind)) errors["kind"] = ["Tasks or Chat"];
+        else if (r.Units < minUnits || r.Units > maxUnits) errors["units"] = [$"{minUnits} to {maxUnits}"];
         var min = config.GetValue<long?>("Directory:Price:MinMinor") ?? DefaultMinPrice;
         var max = config.GetValue<long?>("Directory:Price:MaxMinor") ?? DefaultMaxPrice;
         if (r.PriceMinor < min || r.PriceMinor > max) errors["priceMinor"] = [$"{min} to {max} grosz"];

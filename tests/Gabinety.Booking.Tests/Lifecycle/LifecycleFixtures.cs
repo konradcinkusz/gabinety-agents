@@ -25,7 +25,7 @@ static class Life
     }
 
     /// <summary>A booking row in <paramref name="status"/> starting <paramref name="startIn"/> after the host clock, with its payment (and the charge when paid).</summary>
-    public static async Task<Guid> Seed(CreateHost h, BookingStatus status, TimeSpan startIn, TimeSpan? duration = null, string provider = "Mock")
+    public static async Task<Guid> Seed(CreateHost h, BookingStatus status, TimeSpan startIn, TimeSpan? duration = null, string provider = "Mock", long unitsUsed = 0, long unitsTotal = 5)
     {
         var id = Guid.NewGuid();
         var start = h.Clock.GetUtcNow() + startIn;
@@ -36,7 +36,7 @@ static class Life
             {
                 Id = id, ClientUserId = Client, PractitionerId = h.Practitioner, PractitionerUserId = h.OwnerUserId, OfferingId = h.Offering,
                 OfferingTitle = h.Title, DurationMinutes = 60, PriceMinor = h.PriceMinor, StartUtc = start, EndUtc = start + (duration ?? TimeSpan.FromHours(1)),
-                Status = status, BriefText = "demo-brief: a first review of my plan", IdempotencyKey = Guid.NewGuid(), CreatedAt = h.Clock.GetUtcNow(),
+                Status = status, UnitsTotal = unitsTotal, UnitsUsed = unitsUsed, BriefText = "demo-brief: a first review of my plan", IdempotencyKey = Guid.NewGuid(), CreatedAt = h.Clock.GetUtcNow(),
                 MeetingUrlSnapshot = status == BookingStatus.Confirmed ? "https://meet.demo.invalid/room-1" : null,
             });
             db.Payments.Add(new Payment

@@ -1,4 +1,5 @@
 using Gabinety.Billing;
+using Gabinety.Contracts.Directory;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -22,8 +23,16 @@ public sealed class Booking
     public string OfferingTitle { get; set; } = "";
     public short DurationMinutes { get; set; }
     public long PriceMinor { get; set; }
+    /// <summary>Start and end of the package's validity (A-02): purchase time and purchase time plus Access:ValidityDays.</summary>
     public DateTimeOffset StartUtc { get; set; }
     public DateTimeOffset EndUtc { get; set; }
+    /// <summary>The kind of the purchased package (Tasks or Chat), copied from the offering.</summary>
+    public OfferingKind Kind { get; set; } = OfferingKind.Tasks;
+    /// <summary>Tasks: number of tasks. Chat: tokens (the offering counts thousands).</summary>
+    public long UnitsTotal { get; set; }
+    public long UnitsUsed { get; set; }
+    /// <summary>The agent's slug, copied from the offering when the package was bought.</summary>
+    public string PractitionerSlug { get; set; } = "";
     public BookingStatus Status { get; set; }
     public string? StatusReason { get; set; }
     public string BriefText { get; set; } = "";
@@ -66,6 +75,10 @@ sealed class BookingConfiguration : IEntityTypeConfiguration<Booking>
         b.Property(x => x.PriceMinor).HasColumnName("price_minor");
         b.Property(x => x.StartUtc).HasColumnName("start_utc");
         b.Property(x => x.EndUtc).HasColumnName("end_utc");
+        b.Property(x => x.Kind).HasColumnName("kind").HasConversion<string>().HasMaxLength(10).HasDefaultValue(OfferingKind.Tasks);
+        b.Property(x => x.UnitsTotal).HasColumnName("units_total");
+        b.Property(x => x.UnitsUsed).HasColumnName("units_used").HasDefaultValue(0L);
+        b.Property(x => x.PractitionerSlug).HasColumnName("practitioner_slug").HasMaxLength(60).IsRequired().HasDefaultValue("");
         b.Property(x => x.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(30);
         b.Property(x => x.StatusReason).HasColumnName("status_reason").HasMaxLength(500);
         b.Property(x => x.BriefText).HasColumnName("brief_text").HasMaxLength(2000);

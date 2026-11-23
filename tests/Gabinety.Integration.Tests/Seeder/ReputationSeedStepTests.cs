@@ -51,7 +51,7 @@ public class ReputationSeedStepTests(ReputationSeedFixture fx) : IClassFixture<R
     public async Task Exactly_one_review_exists_per_Completed_demo_booking_by_that_bookings_client_for_that_bookings_practitioner()
     {
         var completed = await CompletedBookingsByKey();
-        Assert.Equal(3, completed.Count); // the premise: Booking made three Completed bookings (otherwise the failure is Booking's, and the log says why)
+        Assert.Equal(5, completed.Count); // the premise: Booking made five Completed bookings, the three planned and two completed on the way (A-02); otherwise the failure is Booking's
         var reviews = await _w.Reputation.Reviews();
 
         Assert.Equal(3, reviews.Count);

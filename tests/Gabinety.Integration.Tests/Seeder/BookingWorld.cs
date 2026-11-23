@@ -63,8 +63,8 @@ public sealed class BookingHost : WebApplicationFactory<BookingApp::Program>
 }
 
 /// <summary>
-/// Stand-in for the auto-complete job of T-04.08a (not on main yet): every few milliseconds, a Confirmed booking whose end + 48 h has passed on the
-/// Booking clock becomes Completed with <c>ended_at</c> = its end. It is only here so the seeder's wait-for-Completed path can be tested; delete it when the real job exists.
+/// Stand-in for the auto-complete job (and, since A-03, for a customer using the packages): every few milliseconds, a Confirmed booking whose end + 48 h has passed on the
+/// Booking clock becomes Completed with <c>ended_at</c> = its end, and every package that got completed gets one unit used. It is only here so the seeder's wait-for-Completed path can be tested; D-01 replaces it.
 /// </summary>
 public sealed class CompletionJobStandIn : IAsyncDisposable
 {
@@ -85,6 +85,10 @@ public sealed class CompletionJobStandIn : IAsyncDisposable
                     var now = booking.Now;
                     var due = await db.Bookings.Where(b => b.Status == BookingStatus.Confirmed).ToListAsync();
                     foreach (var b in due.Where(b => now >= b.EndUtc.AddHours(48))) { b.Status = BookingStatus.Completed; b.EndedAt = b.EndUtc; }
+                    // A-03: a package can be reviewed only after something was used from it. The demo seeder cannot use one yet (the task API comes in B-05, D-01 will make the seeder
+                    // call it), so this stand-in also plays the agent's customer: one unit used on every package that got completed (a package still Confirmed stays unused, so the seeder can still cancel it).
+                    foreach (var b in await db.Bookings.Where(b => b.UnitsUsed == 0 && (b.Status == BookingStatus.Completed || b.Status == BookingStatus.Resolved)).ToListAsync())
+                        b.UnitsUsed = 1;
                     await db.SaveChangesAsync();
                     return 0;
                 });
