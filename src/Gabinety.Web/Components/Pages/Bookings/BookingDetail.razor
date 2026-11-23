@@ -272,7 +272,7 @@ else if (_booking is { } b)
         _taskProblems = _taskError is null ? [] : [new FormProblem("task-input", _taskError)];
         if (_taskError is not null) return;
         var result = await Bookings.CreateTaskAsync(BookingId, TaskModel.Input!);
-        if (result.IsOk) { Navigation.NavigateTo(DetailHref(done: "task") + "#zadania", forceLoad: true); return; } // a redirect with a fixed key: a reload never orders the task twice. A full load, so the page's own refresh (a meta tag in the head) is live: an enhanced navigation does not run it
+        if (result.IsOk) { Navigation.NavigateTo(DetailHref(done: "task") + "#zadania"); return; } // a redirect with a fixed key: a reload never orders the task twice
         if (result.Failure!.IsUnauthenticated) { SignIn(); return; }
         _taskFailure = result.Failure;
     }
