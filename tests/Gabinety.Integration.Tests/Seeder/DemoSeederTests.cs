@@ -55,10 +55,10 @@ public class DemoSeederTests(SeederFixture fx) : IClassFixture<SeederFixture>
     }
 
     [Fact]
-    public async Task At_least_three_practitioners_have_two_active_offerings_priced_in_grosz()
+    public async Task At_least_three_agents_have_task_packages_and_a_Chat_package_priced_in_grosz()
     {
         var perPractitioner = await fx.Db(db => db.Offerings.AsNoTracking().Where(o => o.IsActive).GroupBy(o => o.PractitionerId).Select(g => new { g.Key, N = g.Count(), Min = g.Min(o => o.PriceMinor), Max = g.Max(o => o.PriceMinor) }).ToListAsync());
-        Assert.True(perPractitioner.Count(p => p.N == 2) >= 3);
+        Assert.True(perPractitioner.Count(p => p.N >= 3) >= 3);
         Assert.All(perPractitioner, p => Assert.InRange(p.Min, 5000, 150000));
         Assert.All(perPractitioner, p => Assert.InRange(p.Max, 5000, 150000));
     }

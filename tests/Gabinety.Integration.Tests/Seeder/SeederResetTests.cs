@@ -47,7 +47,7 @@ public class SeederResetTests
     {
         await using var w = new ReputationWorld();
         _ = w.Booking.Booking.Services;
-        await using var job = new CompletionJobStandIn(w.Booking.Booking);
+        await using var job = new BookingJobDriver(w.Booking.Booking);
         await w.SeedDirectoryAndBookingAsync();
         await ReputationWorld.Step().RunAsync(w.Context, CancellationToken.None);
         await NonDemoRows(w);
@@ -59,7 +59,9 @@ public class SeederResetTests
             return 0;
         });
         Assert.Equal(3, (await w.Reputation.Reviews()).Count(r => r.ClientUserId.StartsWith("demo-")));
-        Assert.Equal(12, (await w.Booking.Booking.Bookings()).Count(b => b.ClientUserId.StartsWith("demo-")));
+        Assert.Equal(11, (await w.Booking.Booking.Bookings()).Count(b => b.ClientUserId.StartsWith("demo-")));
+        await new ApiKeySeedStep().RunAsync(w.Context, CancellationToken.None);
+        Assert.Equal(1, await w.Booking.Booking.Db(db => db.ApiKeys.CountAsync(k => k.ClientUserId.StartsWith("demo-")))); // the key of demo-client
         Assert.Equal(10, await DirectoryPractitioners(w.Booking.Directory));
 
         var code = await SeederApp.RunAsync(w.WithReputation, w.Http, w.Log, TimeProvider.System, CancellationToken.None, mode: SeedMode.ResetOnly);
@@ -67,6 +69,8 @@ public class SeederResetTests
         Assert.Equal(0, code);
         Assert.Equal([realReview], (await w.Reputation.Reviews()).Select(r => r.Id));
         Assert.Equal(["real-client"], (await w.Booking.Booking.Bookings()).Select(b => b.ClientUserId));
+        Assert.Equal(0, await w.Booking.Booking.Db(db => db.ApiKeys.CountAsync())); // the reset removes the keys, the tasks and the usage of demo- users with their bookings
+        Assert.Equal(0, await w.Booking.Booking.Db(db => db.AgentTasks.CountAsync()));
         Assert.Equal(0, await DirectoryPractitioners(w.Booking.Directory));
         var log = w.Log.Text;
         Assert.True(log.IndexOf("reset reputation", StringComparison.Ordinal) is var r && r >= 0
@@ -79,7 +83,8 @@ public class SeederResetTests
 
         Assert.True(code == 0, w.Log.Text);
         Assert.Equal(10, await DirectoryPractitioners(w.Booking.Directory));
-        Assert.Equal(12, (await w.Booking.Booking.Bookings()).Count(x => x.ClientUserId.StartsWith("demo-")));
+        Assert.Equal(11, (await w.Booking.Booking.Bookings()).Count(x => x.ClientUserId.StartsWith("demo-")));
+        Assert.Equal(1, await w.Booking.Booking.Db(db => db.ApiKeys.CountAsync(k => k.ClientUserId.StartsWith("demo-"))));
         Assert.Equal(1, (await w.Booking.Booking.Bookings()).Count(x => x.ClientUserId == "real-client"));
         Assert.Equal(3, (await w.Reputation.Reviews()).Count(x => x.ClientUserId.StartsWith("demo-")));
         Assert.Contains(realReview, (await w.Reputation.Reviews()).Select(x => x.Id));

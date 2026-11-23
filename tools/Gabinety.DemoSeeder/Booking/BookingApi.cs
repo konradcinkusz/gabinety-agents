@@ -5,11 +5,14 @@ using System.Text.Json;
 
 namespace Gabinety.DemoSeeder;
 
-/// <summary>A booking as the seeder reads it through <c>GET /api/v1/bookings/{id}</c> or the client's own list.</summary>
-public sealed record BookingInfo(Guid Id, string Status, DateTimeOffset Start, DateTimeOffset End, string? BriefText);
+/// <summary>A purchased package as the seeder reads it through <c>GET /api/v1/bookings/{id}</c> or the client's own list. <c>UnitsUsed</c> counts tasks (<c>Tasks</c>) or tokens (<c>Chat</c>).</summary>
+public sealed record BookingInfo(Guid Id, string Status, DateTimeOffset Start, DateTimeOffset End, string? BriefText, string Kind = "Tasks", long UnitsTotal = 0, long UnitsUsed = 0);
 
-/// <summary>Why a create did not produce a booking: the slot is gone (try the next one) or something else (a failure).</summary>
-public sealed record CreateOutcome(BookingInfo? Created, bool SlotTaken);
+/// <summary>One task of a package as the client reads it; <c>Status</c> is <c>queued</c>, <c>running</c>, <c>succeeded</c> or <c>failed</c>.</summary>
+public sealed record TaskInfo(Guid Id, string Status);
+
+/// <summary>An API key as the list shows it: never the key itself, only the name and the 8-character prefix.</summary>
+public sealed record ApiKeyInfo(Guid Id, string Name, string Prefix);
 
 /// <summary>
 /// The Booking API as the seeder uses it: user calls with a bearer token, the admin resolve, and the internal clock and reset with X-Internal-Key.
@@ -60,7 +63,10 @@ public sealed class BookingApi(HttpClient http, SeedOptions options, TimeProvide
         ok.Contains(r.Status) && r.Json is { } j ? j : throw Fail(what, r);
 
     static BookingInfo ToInfo(JsonElement v) => new(v.GetProperty("id").GetGuid(), v.GetProperty("status").GetString()!, v.GetProperty("startUtc").GetDateTimeOffset(),
-        v.GetProperty("endUtc").GetDateTimeOffset(), v.TryGetProperty("brief", out var b) && b.ValueKind == JsonValueKind.Object ? b.GetProperty("text").GetString() : null);
+        v.GetProperty("endUtc").GetDateTimeOffset(), v.TryGetProperty("brief", out var b) && b.ValueKind == JsonValueKind.Object ? b.GetProperty("text").GetString() : null,
+        v.TryGetProperty("kind", out var k) && k.ValueKind == JsonValueKind.String ? k.GetString()! : "Tasks",
+        v.TryGetProperty("unitsTotal", out var t) && t.ValueKind == JsonValueKind.Number ? t.GetInt64() : 0,
+        v.TryGetProperty("unitsUsed", out var u) && u.ValueKind == JsonValueKind.Number ? u.GetInt64() : 0);
 
     // ---- the test clock (internal): POST sets an offset and answers the effective now; GET (T-08.02, fake profile) reads the same pair.
 
@@ -84,35 +90,14 @@ public sealed class BookingApi(HttpClient http, SeedOptions options, TimeProvide
         return Need(r, "demo reset", HttpStatusCode.OK).GetProperty("bookings").GetInt32();
     }
 
-    // ---- availability and slots
-
-    public async Task<List<(int Day, string Start, string End)>> GetAvailabilityAsync(DemoUser user, CancellationToken ct)
-    {
-        var j = Need(await SendAsync(HttpMethod.Get, "/api/v1/me/availability", user.AccessToken, false, null, ct), "get availability", HttpStatusCode.OK);
-        return j.GetProperty("rules").EnumerateArray().Select(r => (r.GetProperty("isoWeekday").GetInt32(), r.GetProperty("startLocal").GetString()!, r.GetProperty("endLocal").GetString()!)).ToList();
-    }
-
-    public async Task PutAvailabilityAsync(DemoUser user, IEnumerable<(int Day, string Start, string End)> rules, CancellationToken ct)
-    {
-        var body = new { rules = rules.Select(r => new { isoWeekday = r.Day, startLocal = r.Start, endLocal = r.End }), exceptions = Array.Empty<object>() };
-        Need(await SendAsync(HttpMethod.Put, "/api/v1/me/availability", user.AccessToken, false, body, ct), "put availability", HttpStatusCode.OK);
-    }
-
-    public async Task<List<DateTimeOffset>> SlotsAsync(Guid practitionerId, Guid offeringId, DateOnly from, DateOnly to, CancellationToken ct)
-    {
-        var path = $"/api/v1/practitioners/{practitionerId}/slots?offeringId={offeringId}&from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}";
-        var j = Need(await SendAsync(HttpMethod.Get, path, null, false, null, ct), "slots", HttpStatusCode.OK);
-        return j.GetProperty("slots").EnumerateArray().Select(s => s.GetProperty("startUtc").GetDateTimeOffset()).OrderBy(s => s).ToList();
-    }
-
     // ---- bookings
 
-    public async Task<CreateOutcome> CreateAsync(DemoUser client, Guid idempotencyKey, Guid offeringId, DateTimeOffset start, string briefText, CancellationToken ct)
+    /// <summary>Buys a package: no date (a package is valid for 30 days from the purchase, PLAN A-02). The booking is PendingPayment until the simulated payment.</summary>
+    public async Task<BookingInfo> CreateAsync(DemoUser client, Guid idempotencyKey, Guid offeringId, string briefText, CancellationToken ct)
     {
-        var body = new { offeringId, startUtc = start.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'"), brief = new { text = briefText, problemSlug = (string?)null, aiAssisted = false } };
+        var body = new { offeringId, brief = new { text = briefText, problemSlug = (string?)null, aiAssisted = false } };
         var r = await SendAsync(HttpMethod.Post, "/api/v1/bookings", client.AccessToken, false, body, ct, idempotencyKey);
-        if (r.Status == HttpStatusCode.Created && r.Json is { } j) return new CreateOutcome(new BookingInfo(j.GetProperty("bookingId").GetGuid(), j.GetProperty("status").GetString()!, start, default, briefText), false);
-        if (r.Status == HttpStatusCode.Conflict && Code(r) == "slot_taken") return new CreateOutcome(null, true);
+        if (r.Status == HttpStatusCode.Created && r.Json is { } j) return new BookingInfo(j.GetProperty("bookingId").GetGuid(), j.GetProperty("status").GetString()!, default, default, briefText);
         throw Fail("create booking", r);
     }
 
@@ -143,9 +128,31 @@ public sealed class BookingApi(HttpClient http, SeedOptions options, TimeProvide
     public async Task DisputeAsync(DemoUser client, Guid id, string kind, string text, CancellationToken ct) =>
         Need(await SendAsync(HttpMethod.Post, $"/api/v1/bookings/{id}/dispute", client.AccessToken, false, new { kind, text }, ct), "dispute", HttpStatusCode.OK);
 
-    public async Task ReportClientNoShowAsync(DemoUser practitioner, Guid id, CancellationToken ct) =>
-        Need(await SendAsync(HttpMethod.Post, $"/api/v1/bookings/{id}/report-client-no-show", practitioner.AccessToken, false, null, ct), "report client no-show", HttpStatusCode.OK);
-
     public async Task ResolveAsync(DemoUser admin, Guid id, string resolution, string note, CancellationToken ct) =>
         Need(await SendAsync(HttpMethod.Post, $"/api/v1/admin/bookings/{id}/resolve", admin.AccessToken, false, new { resolution, note }, ct), "admin resolve", HttpStatusCode.OK);
+
+    // ---- tasks (PLAN B-05) and API keys (PLAN B-01)
+
+    /// <summary>Orders one task of a <c>Tasks</c> package as the signed-in client (the browser route). It takes a unit at once; the agent answers later. Never logs the text.</summary>
+    public async Task<Guid> CreateTaskAsync(DemoUser client, Guid bookingId, string input, CancellationToken ct) =>
+        Need(await SendAsync(HttpMethod.Post, $"/api/v1/bookings/{bookingId}/tasks", client.AccessToken, false, new { input }, ct), "create task", HttpStatusCode.Accepted).GetProperty("id").GetGuid();
+
+    public async Task<List<TaskInfo>> TasksAsync(DemoUser client, Guid bookingId, CancellationToken ct)
+    {
+        var j = Need(await SendAsync(HttpMethod.Get, $"/api/v1/me/bookings/{bookingId}/tasks", client.AccessToken, false, null, ct), "list tasks", HttpStatusCode.OK);
+        return j.EnumerateArray().Select(t => new TaskInfo(t.GetProperty("id").GetGuid(), t.GetProperty("status").GetString()!)).ToList();
+    }
+
+    public async Task<List<ApiKeyInfo>> ApiKeysAsync(DemoUser client, CancellationToken ct)
+    {
+        var j = Need(await SendAsync(HttpMethod.Get, "/api/v1/me/api-keys", client.AccessToken, false, null, ct), "list api keys", HttpStatusCode.OK);
+        return j.EnumerateArray().Select(k => new ApiKeyInfo(k.GetProperty("id").GetGuid(), k.GetProperty("name").GetString()!, k.GetProperty("prefix").GetString()!)).ToList();
+    }
+
+    /// <summary>Creates a key and returns only its prefix. The key itself is in the answer once; the seeder reads the prefix and lets the rest go (it is never stored or logged).</summary>
+    public async Task<ApiKeyInfo> CreateApiKeyAsync(DemoUser client, string name, CancellationToken ct)
+    {
+        var j = Need(await SendAsync(HttpMethod.Post, "/api/v1/me/api-keys", client.AccessToken, false, new { name }, ct), "create api key", HttpStatusCode.Created);
+        return new ApiKeyInfo(j.GetProperty("id").GetGuid(), j.GetProperty("name").GetString()!, j.GetProperty("prefix").GetString()!);
+    }
 }

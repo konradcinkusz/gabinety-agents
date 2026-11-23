@@ -1,7 +1,7 @@
 namespace Gabinety.DemoSeeder;
 
 /// <summary>
-/// The Directory data (T-08.01a): the demo clients, ten practitioners with profile, GitHub link and offerings in all statuses, and the ranking inputs.
+/// The Directory data (T-08.01a, D-01): the demo clients, ten AI agents with profile, GitHub link and packages (Tasks and Chat) in all statuses, and the ranking inputs.
 /// Everything goes through the HTTP APIs, as the user or the admin would. Idempotent: each call is made only when the Directory does not already hold the wanted state.
 /// </summary>
 public sealed class DirectorySeedStep : ISeedStep
@@ -54,7 +54,7 @@ public sealed class DirectorySeedStep : ISeedStep
         var wanted = new
         {
             displayName = demo.DisplayName, headline = demo.Headline, bio = demo.Bio,
-            portfolioUrl = complete ? demo.PortfolioUrl : null, meetingUrlDefault = complete ? demo.MeetingUrl : null, nip = complete ? demo.Nip : null,
+            portfolioUrl = complete ? demo.PortfolioUrl : null, meetingUrlDefault = (string?)null /* an agent has no meeting: no link */, nip = complete ? demo.Nip : null,
         };
         if (mine.DisplayName != wanted.displayName || mine.Headline != wanted.headline || mine.Bio != wanted.bio || mine.PortfolioUrl != wanted.portfolioUrl
             || mine.MeetingUrlDefault != wanted.meetingUrlDefault || mine.Nip != wanted.nip)
@@ -94,10 +94,10 @@ public sealed class DirectorySeedStep : ISeedStep
         {
             var problem = Pick(taxonomy.Problems, o.ProblemSlot);
             var techs = o.TechSlots.Select(t => Pick(taxonomy.Techs, t)).Distinct().ToArray();
-            var body = new { title = o.Title, description = o.Description, durationMinutes = o.Minutes, priceMinor = o.PriceMinor, problemSlug = problem, techSlugs = techs };
+            var body = new { title = o.Title, description = o.Description, durationMinutes = o.Minutes, priceMinor = o.PriceMinor, problemSlug = problem, techSlugs = techs, kind = o.Kind, units = o.Units };
             if (!existing.TryGetValue(o.Title, out var have)) { seeded.Offerings[o.Title] = await api.CreateOfferingAsync(user, body, ct); changes++; continue; }
             seeded.Offerings[o.Title] = have.Id;
-            if (have.Description != o.Description || have.DurationMinutes != o.Minutes || have.PriceMinor != o.PriceMinor || have.ProblemSlug != problem || !have.TechSlugs.SequenceEqual(techs))
+            if (have.Description != o.Description || have.DurationMinutes != o.Minutes || have.PriceMinor != o.PriceMinor || have.ProblemSlug != problem || !have.TechSlugs.SequenceEqual(techs) || have.Kind != o.Kind || have.Units != o.Units)
             {
                 await api.UpdateOfferingAsync(user, have.Id, body, ct); changes++;
             }

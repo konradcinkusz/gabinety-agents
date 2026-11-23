@@ -17,12 +17,12 @@ namespace Gabinety.Integration.Tests.Seeder;
 public sealed class BookingSeedFixture : IAsyncLifetime
 {
     public BookingWorld World { get; } = new();
-    CompletionJobStandIn _job = null!;
+    BookingJobDriver _job = null!;
 
     public async Task InitializeAsync()
     {
         await World.SeedDirectoryAsync();
-        _job = new CompletionJobStandIn(World.Booking);
+        _job = new BookingJobDriver(World.Booking);
         await BookingWorld.Step().RunAsync(World.Context, CancellationToken.None);
     }
 
@@ -31,12 +31,26 @@ public sealed class BookingSeedFixture : IAsyncLifetime
 
 public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<BookingSeedFixture>
 {
-    // A-02/A-03: a booking is a package valid for 30 days from the purchase, so the plan's slot-based dates no longer apply: the clock moves a month to complete one
-    // booking and completes the others on the way, every cancel by the client is a full one (CancelledByClient), and a no-show cannot be reported any more.
-    // Pinned to that outcome until D-01 rewrites the seeder.
+    // D-01: eleven purchases of packages, no date and no clock. Written here, not read from the plan.
     static readonly Dictionary<string, int> ExpectedPerStatus = new()
     {
-        ["PendingPayment"] = 1, ["Expired"] = 1, ["CancelledByClient"] = 2, ["Completed"] = 5, ["ClientNoShow"] = 1, ["Disputed"] = 1, ["Resolved"] = 1,
+        ["Confirmed"] = 3, ["PendingPayment"] = 1, ["Expired"] = 1, ["CancelledByClient"] = 1, ["Completed"] = 3, ["Disputed"] = 1, ["Resolved"] = 1,
+    };
+
+    // key -> (kind, units total, units used) as the client's own list shows them. Chat counts tokens (500 thousand), Tasks count tasks.
+    static readonly Dictionary<string, (string Kind, long Total, long Used)> ExpectedPackages = new()
+    {
+        ["demo-booking-confirmed-1"] = ("Tasks", 5, 0),
+        ["demo-booking-confirmed-2"] = ("Tasks", 5, 1),
+        ["demo-booking-chat-1"] = ("Chat", 500_000, 0),
+        ["demo-booking-cancelled-1"] = ("Tasks", 1, 0),
+        ["demo-booking-expired-1"] = ("Tasks", 1, 0),
+        ["demo-booking-completed-1"] = ("Tasks", 1, 1),
+        ["demo-booking-completed-2"] = ("Tasks", 1, 1),
+        ["demo-booking-completed-3"] = ("Tasks", 1, 1),
+        ["demo-booking-disputed-1"] = ("Tasks", 5, 1),
+        ["demo-booking-resolved-1"] = ("Tasks", 5, 1),
+        ["demo-booking-pending-1"] = ("Tasks", 1, 0),
     };
 
     BookingWorld _w => fx.World;
@@ -50,22 +64,53 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
     }
 
     [Fact]
-    public async Task Every_approved_practitioner_has_weekday_availability_on_half_hours_and_the_others_have_none()
+    public void The_step_asks_for_no_availability_no_slot_and_no_clock_move()
     {
-        foreach (var (key, p) in _w.Context.Practitioners)
+        Assert.DoesNotContain(_w.Calls.Requests, r => r.Path.Contains("/availability") || r.Path.Contains("/slots") || r.Path == "/internal/v1/test/clock");
+        Assert.Equal(0, _w.Booking.ClockOffsetMinutes);
+    }
+
+    [Fact]
+    public async Task Every_package_is_of_the_kind_and_size_of_its_offering_and_its_units_used_are_real()
+    {
+        var all = await _w.AllClientBookings();
+        var byKey = all.ToDictionary(b => Regex(b.GetProperty("brief").GetProperty("text").GetString()!));
+        Assert.Equal(ExpectedPackages.Keys.Order(), byKey.Keys.Order());
+        foreach (var (key, (kind, total, used)) in ExpectedPackages)
         {
-            using var http = _w.Booking.CreateClient();
-            http.DefaultRequestHeaders.Authorization = new("Bearer", await _w.TokenAsync(key));
-            var rules = (await http.GetFromJsonAsync<JsonElement>("/api/v1/me/availability")).GetProperty("rules").EnumerateArray().ToList();
-            if (p.Status != "Approved") { Assert.Empty(rules); continue; }
-            Assert.NotEmpty(rules);
-            Assert.All(rules, r =>
-            {
-                Assert.InRange(r.GetProperty("isoWeekday").GetInt32(), 1, 5);
-                Assert.Matches(@"^\d\d:(00|30)$", r.GetProperty("startLocal").GetString()!);
-                Assert.Matches(@"^\d\d:(00|30)$", r.GetProperty("endLocal").GetString()!);
-            });
+            var b = byKey[key];
+            Assert.Equal((kind, total, used), (b.GetProperty("kind").GetString(), b.GetProperty("unitsTotal").GetInt64(), b.GetProperty("unitsUsed").GetInt64()));
         }
+    }
+
+    [Fact]
+    public async Task Used_task_packages_have_exactly_that_many_tasks_the_fake_platform_answered_and_a_usage_record_each()
+    {
+        var rows = await _w.Booking.Bookings();
+        await _w.Booking.Db(async db =>
+        {
+            var tasks = await db.AgentTasks.AsNoTracking().ToListAsync();
+            var usage = await db.UsageRecords.AsNoTracking().ToListAsync();
+            foreach (var b in rows.Where(b => b.UnitsUsed > 0))
+            {
+                Assert.Equal(b.UnitsUsed, tasks.Count(t => t.BookingId == b.Id));
+                Assert.All(tasks.Where(t => t.BookingId == b.Id), t => { Assert.Equal("Succeeded", t.Status.ToString()); Assert.False(string.IsNullOrEmpty(t.OutputText)); });
+                Assert.Equal(b.UnitsUsed, usage.Count(u => u.BookingId == b.Id));
+            }
+            Assert.Equal(rows.Sum(b => b.UnitsUsed), tasks.Count);
+            return 0;
+        });
+    }
+
+    [Fact]
+    public async Task Demo_client_has_an_unused_pack_a_used_pack_and_a_Chat_package_and_the_cancelled_one_was_refunded_in_full()
+    {
+        var mine = await _w.BookingsOf("demo-client");
+        Assert.Contains(mine, b => b.GetProperty("kind").GetString() == "Chat" && b.GetProperty("status").GetString() == "Confirmed");
+        Assert.Contains(mine, b => b.GetProperty("kind").GetString() == "Tasks" && b.GetProperty("unitsUsed").GetInt64() == 0 && b.GetProperty("canCancel").GetBoolean());
+        Assert.Contains(mine, b => b.GetProperty("kind").GetString() == "Tasks" && b.GetProperty("unitsUsed").GetInt64() == 1 && b.GetProperty("canReview").GetBoolean() && !b.GetProperty("canCancel").GetBoolean());
+        var cancelled = Assert.Single(mine, b => b.GetProperty("status").GetString() == "CancelledByClient");
+        Assert.Equal(cancelled.GetProperty("price").GetProperty("amountMinor").GetInt64(), cancelled.GetProperty("payment").GetProperty("refunded").GetProperty("amountMinor").GetInt64());
     }
 
     [Fact]
@@ -93,7 +138,7 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
         http.DefaultRequestHeaders.Add("X-Internal-Key", BookingHost.Key);
         var rows = await _w.Booking.Bookings();
         var completed = rows.Where(b => b.Status == BookingStatus.Completed).ToList();
-        Assert.Equal(5, completed.Count); // 3 planned, plus 2 that a month-long package completes on the way (A-02, see ExpectedPerStatus)
+        Assert.Equal(3, completed.Count); // the last unit of a single-task package was used, and the real auto-complete job completed it
         foreach (var b in completed)
         {
             var r = await http.GetFromJsonAsync<JsonElement>($"/internal/v1/bookings/{b.Id}/reviewability");
@@ -101,7 +146,7 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
         }
         // three different practitioners, so Reputation can seed reviews for more than one of them
         Assert.True(completed.Select(b => b.PractitionerId).Distinct().Count() >= 3);
-        var notDone = rows.First(b => b.Status == BookingStatus.PendingPayment); // no Confirmed one is left after A-02 (see ExpectedPerStatus)
+        var notDone = rows.First(b => b.Status == BookingStatus.PendingPayment);
         Assert.False((await http.GetFromJsonAsync<JsonElement>($"/internal/v1/bookings/{notDone.Id}/reviewability")).GetProperty("reviewable").GetBoolean());
     }
 
@@ -112,13 +157,7 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
         var disputable = mine.Where(b => b.GetProperty("status").GetString() == "Completed" && b.GetProperty("canDispute").GetBoolean()).ToList();
         Assert.NotEmpty(disputable);
         foreach (var b in disputable) // "inside the window" is measured against the service clock, not this machine's
-            Assert.True(_w.Booking.Now < b.GetProperty("startUtc").GetDateTimeOffset() + TimeSpan.FromHours(72));
-    }
-
-    [Fact]
-    public void The_clock_is_back_at_its_baseline()
-    {
-        Assert.Equal(0, _w.Booking.ClockOffsetMinutes);
+            Assert.True(_w.Booking.Now < b.GetProperty("endUtc").GetDateTimeOffset() + TimeSpan.FromHours(72)); // A-03: a claim is open until the end of the package + 72 h
     }
 
     [Fact]
@@ -151,7 +190,7 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
     }
 
     [Fact]
-    public async Task A_second_run_changes_nothing_and_writes_nothing_but_the_clock_baseline()
+    public async Task A_second_run_changes_nothing_and_writes_nothing()
     {
         var before = await Snapshot();
         _w.Calls.Requests.Clear();
@@ -159,9 +198,8 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
         await new DirectorySeedStep().RunAsync(fresh, CancellationToken.None);
         await BookingWorld.Step().RunAsync(fresh, CancellationToken.None);
         Assert.Equal(before, await Snapshot());
-        var writes = _w.Calls.Requests.Where(r => r.Method != HttpMethod.Get && r.Path != "/internal/v1/test/clock").ToList();
+        var writes = _w.Calls.Requests.Where(r => r.Method != HttpMethod.Get).ToList();
         Assert.True(writes.Count == 0, "a second run wrote: " + string.Join(", ", writes.Select(w => $"{w.Method} {w.Path}")));
-        Assert.Equal(0, _w.Booking.ClockOffsetMinutes);
     }
 
     async Task<string> Snapshot() => await _w.Booking.Db(async db => JsonSerializer.Serialize(new
@@ -169,7 +207,8 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
         B = await db.Bookings.AsNoTracking().OrderBy(b => b.Id).ToListAsync(),
         P = await db.Payments.AsNoTracking().OrderBy(p => p.Id).ToListAsync(),
         L = await db.LedgerEntries.AsNoTracking().OrderBy(l => l.Id).ToListAsync(),
-        R = await db.Rules.AsNoTracking().OrderBy(r => r.Id).ToListAsync(),
+        T = await db.AgentTasks.AsNoTracking().OrderBy(t => t.Id).ToListAsync(),
+        U = await db.UsageRecords.AsNoTracking().OrderBy(u => u.Id).ToListAsync(),
         I = await db.IdempotencyRecords.AsNoTracking().CountAsync(),
     }));
 
@@ -186,54 +225,30 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
 public class BookingSeedStepFailureTests
 {
     [Fact]
-    public async Task The_clock_is_restored_when_a_step_fails_midway()
+    public async Task A_run_that_failed_midway_leaves_what_it_did_and_the_next_run_finishes_without_duplicates()
     {
         await using var w = new BookingWorld();
         await w.SeedDirectoryAsync();
-        w.Calls.FailWhen = r => r.RequestUri!.AbsolutePath.EndsWith("/dispute"); // after the clock has been moved forward for the late actions
-        await using var job = new CompletionJobStandIn(w.Booking);
+        await using var job = new BookingJobDriver(w.Booking);
+        w.Calls.FailWhen = r => r.RequestUri!.AbsolutePath.EndsWith("/dispute");
 
         await Assert.ThrowsAnyAsync<Exception>(() => BookingWorld.Step().RunAsync(w.Context, CancellationToken.None));
+        Assert.DoesNotContain(BookingWorld.StatusCounts(await w.AllClientBookings()).Keys, k => k is "Disputed" or "Resolved");
 
-        Assert.Equal(0, w.Booking.ClockOffsetMinutes);
-        Assert.Contains(w.Calls.Requests, r => r.Path == "/internal/v1/test/clock"); // it did move it
+        w.Calls.FailWhen = null;
+        await BookingWorld.Step().RunAsync(w.Context, CancellationToken.None);
+
+        var counts = BookingWorld.StatusCounts(await w.AllClientBookings());
+        Assert.Equal(11, counts.Values.Sum());
+        Assert.Equal(1, counts["Disputed"]);
+        Assert.Equal(1, counts["Resolved"]);
+        Assert.Equal(6, await w.Booking.Db(db => db.AgentTasks.CountAsync())); // one task per used package (confirmed-2, three completed, disputed, resolved), none ordered twice
     }
 
     [Fact]
-    public async Task A_baseline_other_than_zero_is_restored_exactly()
+    public async Task Without_the_jobs_the_run_still_finishes_the_other_states_and_says_so()
     {
-        await using var w = new BookingWorld();
-        await w.SeedDirectoryAsync();
-        await using var job = new CompletionJobStandIn(w.Booking);
-        var step = BookingWorld.Step();
-        step.BaselineOffsetMinutes = 90;
-
-        await step.RunAsync(w.Context, CancellationToken.None);
-
-        Assert.Equal(90, w.Booking.ClockOffsetMinutes);
-        Assert.Equal(12, (await w.Booking.Bookings()).Count);
-    }
-
-    [Fact]
-    public async Task Unless_told_otherwise_the_baseline_is_what_the_clock_reads_at_the_start_and_it_is_restored_exactly()
-    {
-        await using var w = new BookingWorld();
-        await w.SeedDirectoryAsync();
-        await using var job = new CompletionJobStandIn(w.Booking);
-        w.Booking.SetClockOffset(180); // a running system whose clock was moved before the seeder started
-        var step = BookingWorld.Step(); // BaselineOffsetMinutes not set
-
-        await step.RunAsync(w.Context, CancellationToken.None);
-
-        Assert.Equal(180, w.Booking.ClockOffsetMinutes);
-        Assert.Contains(w.Calls.Requests, r => r.Method == HttpMethod.Get && r.Path == "/internal/v1/test/clock");
-        Assert.Equal(12, (await w.Booking.Bookings()).Count);
-    }
-
-    [Fact]
-    public async Task Without_the_completion_job_the_run_still_finishes_the_other_states_says_so_and_restores_the_clock()
-    {
-        await using var w = new BookingWorld(); // no CompletionJobStandIn: main has no auto-complete job yet
+        await using var w = new BookingWorld(); // no BookingJobDriver: the tasks stay queued and the used-up packages stay Confirmed
         await w.SeedDirectoryAsync();
 
         await BookingWorld.Step(TimeSpan.Zero).RunAsync(w.Context, CancellationToken.None);
@@ -241,10 +256,10 @@ public class BookingSeedStepFailureTests
         var counts = BookingWorld.StatusCounts(await w.AllClientBookings());
         Assert.False(counts.ContainsKey("Completed"));
         Assert.Equal(1, counts["Resolved"]);
-        Assert.Equal(1, counts["ClientNoShow"]);
-        Assert.Contains("completed", w.Log.Text);
+        Assert.Equal(1, counts["Disputed"]);
+        Assert.Equal(6, counts["Confirmed"]); // the three planned ones, and the three used-up packages that would be Completed
         Assert.Contains("auto-complete", w.Log.Text);
-        Assert.Equal(0, w.Booking.ClockOffsetMinutes);
+        Assert.Contains("waiting for the agent platform", w.Log.Text);
     }
 
     [Fact]
