@@ -45,6 +45,10 @@ booking       Payments:Stripe:SecretKey                required    secret
 booking       Payments:Stripe:WebhookSecret            required    secret
 booking       Payments:Stripe:ApiBase                  optional    tests only
 booking       Payments:WebhookSecret                   fake-only   the Mock provider's
+booking       Agents:Provider                          optional    Fake (fake profile only) or Http; B-03. Becomes required with the agent API (D-03)
+booking       Agents:Upstream:BaseUrl                  optional    the agent platform's address, read when Agents:Provider is Http
+booking       Agents:Upstream:ApiKey                   optional    secret; read when Agents:Provider is Http
+booking       Agents:Upstream:TimeoutSeconds           optional    default 600
 booking       Notifications:Provider                   optional    Log by default; Smtp only when the host and the sender are configured (deploy/secrets.map, EMAIL.md)
 booking       Notifications:Smtp:Host                  optional    absent: the log sender, a startup warning and email: Degraded
 booking       Notifications:Smtp:FromAddress           optional
