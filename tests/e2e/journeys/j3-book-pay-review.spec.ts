@@ -42,7 +42,8 @@ test.describe("J3 book, pay, complete, review", () => {
     await reseedIfRequested();
   });
 
-  test("a client books and pays, the booking completes after 48 h, three reviews turn \"Nowy\" into an average", async ({ page, context, browser, signInAs, clock }) => {
+  // D-02: reviewing now needs a used package (A-03: UnitsUsed > 0), and a client can use one only through the task API (B-05); the journey is rewritten there.
+  test.fixme("a client books and pays, the booking completes after 48 h, three reviews turn \"Nowy\" into an average", async ({ page, context, browser, signInAs, clock }) => {
     test.setTimeout(420_000); // two turns of Booking's 60 s auto-complete job plus the UI steps
     await signInAs("demo-client");
     const client = context.request;
@@ -84,7 +85,8 @@ test.describe("J3 book, pay, complete, review", () => {
     expect(view.status).toBe("Confirmed");
     expect(view.payment.status).toBe("Succeeded");
     expect(view.price.amountMinor).toBe(price);
-    expect(new Date(view.startUtc).toISOString()).toBe(new Date(startUtc).toISOString());
+    // A-02: a purchase has no chosen slot; the package runs from the purchase for 30 days (full rewrite of the journey: D-02)
+    expect(new Date(view.endUtc).getTime() - new Date(view.startUtc).getTime()).toBe(30 * 24 * 3_600_000);
 
     // ---- 2. the practitioner sees the booking (their own session, a second browser context) ----
     const pctx = await browser.newContext({ baseURL: urls.web, locale: "pl-PL", timezoneId: "Europe/Warsaw" });

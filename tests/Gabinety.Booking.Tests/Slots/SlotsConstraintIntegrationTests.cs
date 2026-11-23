@@ -70,7 +70,7 @@ public class SlotsConstraintIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task The_slots_endpoint_runs_against_real_PostgreSQL_and_a_booked_slot_disappears()
+    public async Task The_slots_endpoint_runs_against_real_PostgreSQL_and_a_package_purchase_does_not_hide_a_slot()
     {
         var practitioner = Guid.NewGuid();
         var offering = Guid.NewGuid();
@@ -96,7 +96,7 @@ public class SlotsConstraintIntegrationTests : IAsyncLifetime
             await Insert(db, practitioner, new(2026, 11, 17, 10, 0, 0, TimeSpan.Zero));
         }
         var json = await client.GetStringAsync($"/api/v1/practitioners/{practitioner}/slots?offeringId={offering}&from=2026-11-17&to=2026-11-17");
-        Assert.DoesNotContain("2026-11-17T10:00:00Z", json);
+        Assert.Contains("2026-11-17T10:00:00Z", json); // A-02: a package spans days and no longer occupies a slot
         Assert.Contains("2026-11-17T08:00:00Z", json);
         Assert.Contains("2026-11-17T11:30:00Z", json);
     }

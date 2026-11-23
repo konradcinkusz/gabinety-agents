@@ -51,10 +51,11 @@ test.describe("J4 the Assistant is down", () => {
     const booking = await getBooking(context.request, bookingId);
     expect(booking.status).toBe("Confirmed");
     expect(booking.payment.status).toBe("Succeeded");
-    expect(new Date(booking.startUtc).toISOString()).toBe(new Date(startUtc).toISOString());
+    // A-02: a purchase has no chosen slot; the package runs from the purchase for 30 days (full rewrite of the journey: D-02)
+    expect(new Date(booking.endUtc).getTime() - new Date(booking.startUtc).getTime()).toBe(30 * 24 * 3_600_000);
     expect(booking.brief?.aiAssisted, "no suggestion was applied").toBe(false);
     expect(booking.brief?.problemSlug ?? null).toBeNull();
     expect(booking.brief?.text).toBe(BRIEF);
-    expect((await freeSlots(context.request, target.id, offering.id)).map((s) => Date.parse(s.startUtc))).not.toContain(Date.parse(startUtc)); // the slot is taken
+    // A-02: a package occupies no slot, so there is no "the slot is taken" check any more (rewrite of the journey: D-02)
   });
 });

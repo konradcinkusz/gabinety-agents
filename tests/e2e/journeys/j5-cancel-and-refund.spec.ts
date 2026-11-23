@@ -58,7 +58,8 @@ test.describe("J5 cancel: refund early, none late", () => {
     expect(view.payment.refunded.amountMinor).toBe(offering.price.amountMinor); // 100 %, CONTRACTS 9.2
   });
 
-  test("cancelling inside 24 h shows no refund and the payment is unchanged", async ({ page, context, clock }) => {
+  // D-02: a package has no 24 h rule (A-03: cancelling is possible only before the first use, always with a full refund); this journey is rewritten there.
+  test.fixme("cancelling inside 24 h shows no refund and the payment is unchanged", async ({ page, context, clock }) => {
     const profile = await publicProfile(SLUG);
     const offering = profile.offerings[0];
     await registerDemoUser(context, uniqueDemoName("j5-late"));
