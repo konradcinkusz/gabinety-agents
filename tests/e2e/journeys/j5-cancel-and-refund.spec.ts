@@ -38,7 +38,7 @@ test.describe("J5 cancel: refund early, none late", () => {
 
     const detail = new BookingDetailPage(page);
     await detail.goto(b.id);
-    await expect(detail.value("Potwierdzona")).toBeVisible();
+    await expect(detail.value("Aktywny")).toBeVisible();
     await expect(detail.value("Opłacona")).toBeVisible();
     await expectNoSeriousA11yViolations(page);
 
@@ -46,7 +46,7 @@ test.describe("J5 cancel: refund early, none late", () => {
     // UX-031 (audit P-BKS-2, F-11): the dialog states the outcome for THIS booking, not the general rule; the outcome below is what proves it
     await expect(detail.cancelDialog()).toContainText("Otrzymasz zwrot");
     await detail.confirmCancelAndWait();
-    await expect(detail.value(/^Anulowana przez klienta$/)).toBeVisible();
+    await expect(detail.value(/^Zrezygnowano$/)).toBeVisible();
     await expect(detail.value("Zwrócona w całości")).toBeVisible();
     const m = offering.price.amountMinor; // below 1000 zł: no thousands separator
     await expect(detail.value(/Zwrócono:/)).toContainText(`${Math.floor(m / 100)},${String(m % 100).padStart(2, "0")}`);

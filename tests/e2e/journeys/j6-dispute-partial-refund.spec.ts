@@ -56,10 +56,10 @@ test.describe("J6 dispute and partial refund", () => {
     // the client opens the dispute in the UI
     const detail = new BookingDetailPage(page);
     await detail.goto(b.id);
-    await expect(detail.value("Potwierdzona")).toBeVisible();
-    await detail.openDispute("Konsultacja różniła się od opisu, dane syntetyczne testu.");
-    await expect(page.getByText("Spór został zgłoszony.")).toBeVisible();
-    await expect(detail.value("Spór w toku")).toBeVisible();
+    await expect(detail.value("Aktywny")).toBeVisible();
+    await detail.openDispute("Agent działał inaczej, niż opisano, dane syntetyczne testu.");
+    await expect(page.getByText("Reklamacja została zgłoszona.")).toBeVisible();
+    await expect(detail.value("Reklamacja w toku")).toBeVisible();
     await expectNoSeriousA11yViolations(page);
     expect((await getBooking(context, b.id)).status).toBe("Disputed");
 

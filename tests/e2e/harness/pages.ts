@@ -15,7 +15,7 @@ export class PractitionerListPage {
   }
   heading(): Locator { return this.page.getByRole("heading", { level: 1 }); }
   /** One entry per practitioner card (the cards hold lists of their own, so only the direct children of the results list). */
-  results(): Locator { return this.page.getByRole("region", { name: "Lista programistów" }).getByRole("list").first().locator(":scope > li"); }
+  results(): Locator { return this.page.getByRole("region", { name: "Lista agentów" }).getByRole("list").first().locator(":scope > li"); }
   /** The link of one practitioner card, by the displayed name. */
   profileLink(displayName: string): Locator { return this.page.getByRole("link", { name: displayName, exact: true }); }
   async open(displayName: string) {
