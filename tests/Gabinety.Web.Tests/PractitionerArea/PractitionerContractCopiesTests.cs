@@ -49,29 +49,18 @@ public class PractitionerContractCopiesTests
     {
         var create = Send<CreatePractitionerRequest>(new W.CreatePractitionerBody("Demo Jedyny"));
         Assert.Equal("Demo Jedyny", create.DisplayName);
-        var update = Send<UpdatePractitionerRequest>(new W.UpdatePractitionerBody("Demo", "Nagłówek", "Opis", "https://x.example.com/", null, "5260250274"));
-        Assert.Equal(("Demo", "Nagłówek", "Opis", "https://x.example.com/", null, "5260250274"), (update.DisplayName, update.Headline, update.Bio, update.PortfolioUrl, update.MeetingUrlDefault, update.Nip));
-        var offer = Send<OfferingRequest>(new W.OfferingBody("Tytuł oferty", "Opis", 60, 18050, "code-review", ["dotnet", "react"], null));
-        Assert.Equal(("Tytuł oferty", "Opis", 60, 18050L, "code-review", null), (offer.Title, offer.Description, offer.DurationMinutes, offer.PriceMinor, offer.ProblemSlug, offer.MeetingUrl));
+        var update = Send<UpdatePractitionerRequest>(new W.UpdatePractitionerBody("Demo", "Nagłówek", "Opis", "https://x.example.com/", "5260250274"));
+        Assert.Equal(("Demo", "Nagłówek", "Opis", "https://x.example.com/", null, "5260250274"), (update.DisplayName, update.Headline, update.Bio, update.PortfolioUrl, update.MeetingUrlDefault, update.Nip)); // no meeting link is sent
+        var offer = Send<OfferingRequest>(new W.OfferingBody("Tytuł oferty", "Opis", 60, 18050, "code-review", ["dotnet", "react"], "Chat", 500));
+        Assert.Equal(("Tytuł oferty", "Opis", 60, 18050L, "code-review", null, OfferingKind.Chat, 500), (offer.Title, offer.Description, offer.DurationMinutes, offer.PriceMinor, offer.ProblemSlug, offer.MeetingUrl, offer.Kind, offer.Units)); // the kind and the units reach the service
         Assert.Equal(["dotnet", "react"], offer.TechSlugs);
     }
 
     [Fact]
     public void An_empty_optional_field_is_omitted_from_the_json_not_sent_as_null()
     {
-        var json = JsonSerializer.Serialize(new W.UpdatePractitionerBody("Demo", "H", "B", null, null, null), W.ApiClient.Json);
+        var json = JsonSerializer.Serialize(new W.UpdatePractitionerBody("Demo", "H", "B", null, null), W.ApiClient.Json);
         Assert.DoesNotContain("portfolioUrl", json);
         Assert.DoesNotContain("null", json);
-    }
-
-    [Fact]
-    public void Availability_both_ways_with_the_blocked_day_as_a_date_string()
-    {
-        var real = new AvailabilityDto([new AvailabilityRuleDto(3, "09:00", "10:30")], [new AvailabilityExceptionDto(new DateOnly(2027, 1, 6))]);
-        var copy = Read<W.AvailabilityDto>(real);
-        Assert.Equal((3, "09:00", "10:30", "2027-01-06"), (copy.Rules[0].IsoWeekday, copy.Rules[0].StartLocal, copy.Rules[0].EndLocal, copy.Exceptions[0].DateLocal));
-        var sent = Send<AvailabilityDto>(copy);
-        Assert.Equal(real.Rules, sent.Rules);
-        Assert.Equal(real.Exceptions, sent.Exceptions);
     }
 }

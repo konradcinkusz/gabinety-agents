@@ -61,7 +61,7 @@ test.describe("J2 practitioner onboards, administrator approves, profile becomes
       await area.addOffering({ title: offeringTitle, description: "Omawiamy Twoje scenariusze testowe i stabilność oczekiwań.", price: "180" });
       await expectNoSeriousA11yViolations(page);
       await area.linkGithub(githubLogin);
-      for (const item of ["Nagłówek profilu", "Opis (co najmniej 200 znaków)", "Co najmniej jedna aktywna oferta", "Połączone konto GitHub", "Poprawny numer NIP", "Link do portfolio", "Potwierdzony adres e-mail"]) {
+      for (const item of ["Nagłówek profilu", "Opis (co najmniej 200 znaków)", "Co najmniej jeden aktywny pakiet", "Połączone konto GitHub", "Poprawny numer NIP", "Link do portfolio", "Potwierdzony adres e-mail"]) {
         await expect(area.checklistItem(item)).toContainText("Gotowe");
       }
     });

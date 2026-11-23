@@ -72,11 +72,11 @@ public class SignInTests
 
         var page = await browser.GetAsync("/moje/rezerwacje");
         Assert.Equal(HttpStatusCode.OK, page.Status);
-        Assert.Equal("Moje rezerwacje", page.TextOf("h1"));
+        Assert.Equal("Moje dostępy", page.TextOf("h1"));
         Assert.Equal(["Konsultacja demo", "Druga konsultacja"], page.All("[data-testid=booking-row] .booking-row__title").Select(h => h.TextContent));
-        Assert.Contains("wtorek, 1 grudnia, 13:00–14:00", page.TextOf("[data-testid=booking-row]"));
+        Assert.Contains("ważny do 1 grudnia 2026", page.TextOf("[data-testid=booking-row]"));
         Assert.Contains("250,00 zł", page.TextOf("[data-testid=booking-row]"));
-        Assert.Equal("Potwierdzona", page.One("[data-testid=booking-row] .badge")!.TextContent);
+        Assert.Equal("Aktywny", page.One("[data-testid=booking-row] .badge:not([data-testid=ai-badge])")!.TextContent);
 
         var seen = web.Booking.Requests.Last();
         Assert.Equal("/api/v1/me/bookings?role=client", seen.PathAndQuery);
@@ -84,7 +84,7 @@ public class SignInTests
         Assert.DoesNotContain("eyJ", page.Html); // and no token anywhere in the page, prerendered state included
         Assert.DoesNotContain(web.Identity.Backend.Requests[0].Body ?? "", page.Html);
         Assert.Equal(["/programisci", "/jak-to-dziala", "/cennik"], page.All("header .site-nav a").Select(a => a.GetAttribute("href")));
-        Assert.Equal(["/moje/rezerwacje", "/konto", "/gabinet-programisty", "/wyloguj"], page.All("header .account-menu a").Select(a => a.GetAttribute("href")));
+        Assert.Equal(["/moje/rezerwacje", "/moje/klucze", "/konto", "/gabinet-programisty", "/wyloguj"], page.All("header .account-menu a").Select(a => a.GetAttribute("href")));
     }
 
     [Fact]
@@ -232,9 +232,9 @@ public class SignInTests
         web.Booking.Respond = FakeBackend.Throw(new HttpRequestException("down"));
         var page = await browser.GetAsync("/moje/rezerwacje");
         Assert.Equal(HttpStatusCode.OK, page.Status);
-        Assert.Equal("Brak połączenia z usługą rezerwacji. Spróbuj ponownie za chwilę.", page.TextOf("[data-testid=unavailable] p"));
+        Assert.Equal("Brak połączenia z usługą dostępów. Spróbuj ponownie za chwilę.", page.TextOf("[data-testid=unavailable] p"));
         Assert.Equal("alert", page.One("[data-testid=unavailable]")!.GetAttribute("role"));
-        Assert.Equal("Moje rezerwacje", page.TextOf("h1"));
+        Assert.Equal("Moje dostępy", page.TextOf("h1"));
         Assert.NotNull(page.One("a[href='/wyloguj']"));
     }
 }

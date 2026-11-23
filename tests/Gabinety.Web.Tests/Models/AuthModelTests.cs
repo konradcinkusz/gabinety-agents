@@ -92,12 +92,12 @@ public class SiteNavigationTests
     static ClaimsPrincipal User(params string[] roles) =>
         new(new ClaimsIdentity([new Claim("sub", "u1"), new Claim("email", "demo-client@demo.example"), .. roles.Select(r => new Claim(ClaimTypes.Role, r))], "Cookies", ClaimTypes.Name, ClaimTypes.Role));
 
-    /// <summary>The primary order is a product decision (DESIGN-CONTRACT 5.1, UX-010): Programiści, Jak to działa, Cennik. Zasady rankingu is in the footer, not here.</summary>
+    /// <summary>The primary order is a product decision (DESIGN-CONTRACT 5.1, UX-010): Agenci, Jak to działa, Cennik. Zasady rankingu is in the footer, not here.</summary>
     [Fact]
     public void The_primary_links_are_in_order_for_everybody_and_the_ranking_rules_are_in_the_footer()
     {
         Assert.Equal(["/programisci", "/jak-to-dziala", "/cennik"], SiteNavigation.For(null, "/").Links.Select(i => i.Href));
-        Assert.Equal(["Programiści", "Jak to działa", "Cennik"], SiteNavigation.For(null, "/").Links.Select(i => i.Label));
+        Assert.Equal(["Agenci", "Jak to działa", "Cennik"], SiteNavigation.For(null, "/").Links.Select(i => i.Label));
         Assert.Equal(["/programisci", "/jak-to-dziala", "/cennik"], SiteNavigation.For(User("User"), "/", practitioner: true).Links.Select(i => i.Href));
         Assert.DoesNotContain(SiteNavigation.For(null, "/").Flat, i => i.Href == "/zasady-rankingu");
         Assert.Equal(["/programisci", "/jak-to-dziala", "/cennik", "/zasady-rankingu"], SiteNavigation.Product.Select(i => i.Href));
@@ -107,23 +107,23 @@ public class SiteNavigationTests
     public void The_practitioner_panel_is_for_practitioners_and_everybody_else_signed_in_is_offered_the_way_in()
     {
         var practitioner = SiteNavigation.For(User("User"), "/", practitioner: true);
-        Assert.Contains(practitioner.AccountMenu, i => i.Label == "Panel programisty" && i.Href == "/gabinet-programisty");
-        Assert.DoesNotContain(practitioner.AccountMenu, i => i.Label == "Zostań programistą");
+        Assert.Contains(practitioner.AccountMenu, i => i.Label == "Panel dostawcy" && i.Href == "/gabinet-programisty");
+        Assert.DoesNotContain(practitioner.AccountMenu, i => i.Label == "Zostań dostawcą");
 
         var client = SiteNavigation.For(User("User"), "/");
-        Assert.Contains(client.AccountMenu, i => i.Label == "Zostań programistą" && i.Href == "/gabinet-programisty");
-        Assert.DoesNotContain(client.AccountMenu, i => i.Label == "Panel programisty");
-        Assert.DoesNotContain(client.Flat, i => i.Label == "Panel programisty");
+        Assert.Contains(client.AccountMenu, i => i.Label == "Zostań dostawcą" && i.Href == "/gabinet-programisty");
+        Assert.DoesNotContain(client.AccountMenu, i => i.Label == "Panel dostawcy");
+        Assert.DoesNotContain(client.Flat, i => i.Label == "Panel dostawcy");
     }
 
     [Fact]
     public void The_footer_offers_the_way_in_to_a_visitor_and_to_a_client_and_the_panel_to_a_practitioner()
     {
         var visitor = SiteNavigation.Footer(null, practitioner: false);
-        Assert.Equal(("/rejestracja", "Zostań programistą"), (visitor.Practitioner.Href, visitor.Practitioner.Label));
-        Assert.Equal(("/gabinet-programisty", "Zostań programistą"), (SiteNavigation.Footer(User("User"), false).Practitioner.Href, SiteNavigation.Footer(User("User"), false).Practitioner.Label));
+        Assert.Equal(("/rejestracja", "Zostań dostawcą"), (visitor.Practitioner.Href, visitor.Practitioner.Label));
+        Assert.Equal(("/gabinet-programisty", "Zostań dostawcą"), (SiteNavigation.Footer(User("User"), false).Practitioner.Href, SiteNavigation.Footer(User("User"), false).Practitioner.Label));
         var member = SiteNavigation.Footer(User("User"), practitioner: true).Practitioner;
-        Assert.Equal(("/gabinet-programisty", "Panel programisty"), (member.Href, member.Label));
+        Assert.Equal(("/gabinet-programisty", "Panel dostawcy"), (member.Href, member.Label));
         Assert.Equal(["/regulamin", "/polityka-prywatnosci"], visitor.Legal.Select(i => i.Href));
     }
 
@@ -155,7 +155,7 @@ public class SiteNavigationTests
         var m = SiteNavigation.For(User("User"), "/");
         Assert.True(m.SignedIn);
         Assert.Equal(["/programisci", "/jak-to-dziala", "/cennik"], m.Links.Select(i => i.Href));
-        Assert.Equal(["/moje/rezerwacje", "/konto", "/gabinet-programisty", "/wyloguj"], m.AccountMenu.Select(i => i.Href));
+        Assert.Equal(["/moje/rezerwacje", "/moje/klucze", "/konto", "/gabinet-programisty", "/wyloguj"], m.AccountMenu.Select(i => i.Href));
         Assert.Equal("demo-client@demo.example", m.Email);
         Assert.Equal("DC", m.Initials);
         Assert.DoesNotContain(m.Flat, i => i.Href.StartsWith("/admin"));

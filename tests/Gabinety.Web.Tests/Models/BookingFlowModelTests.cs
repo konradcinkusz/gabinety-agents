@@ -67,11 +67,10 @@ public class BookingFlowModelTests
     public void The_key_is_kept_for_the_same_body_and_replaced_when_the_body_differs()
     {
         var offering = Guid.NewGuid();
-        var start = new DateTimeOffset(2026, 12, 1, 9, 0, 0, TimeSpan.Zero);
-        var first = BookingAttempt.Fingerprint(offering, start, "Opis problemu z integracją", null, false);
+        var first = BookingAttempt.Fingerprint(offering, "Opis problemu z integracją", null, false);
         var key = Guid.NewGuid();
         Assert.Equal(key, BookingAttempt.KeyFor(key.ToString(), first, first, () => throw new InvalidOperationException("must reuse")));
-        var edited = BookingAttempt.Fingerprint(offering, start, "Inny opis problemu z integracją", null, false);
+        var edited = BookingAttempt.Fingerprint(offering, "Inny opis problemu z integracją", null, false);
         Assert.NotEqual(first, edited);
         var fresh = Guid.NewGuid();
         Assert.Equal(fresh, BookingAttempt.KeyFor(key.ToString(), first, edited, () => fresh)); // same key with another body would be a 409
@@ -84,13 +83,11 @@ public class BookingFlowModelTests
     public void The_fingerprint_ignores_surrounding_blanks_and_covers_every_part_of_the_request()
     {
         var o = Guid.NewGuid();
-        var t = new DateTimeOffset(2026, 12, 1, 9, 0, 0, TimeSpan.Zero);
-        var baseline = BookingAttempt.Fingerprint(o, t, "tekst", "audyt", true);
-        Assert.Equal(baseline, BookingAttempt.Fingerprint(o, t, "  tekst ", "audyt", true));
-        Assert.NotEqual(baseline, BookingAttempt.Fingerprint(Guid.NewGuid(), t, "tekst", "audyt", true));
-        Assert.NotEqual(baseline, BookingAttempt.Fingerprint(o, t.AddMinutes(30), "tekst", "audyt", true));
-        Assert.NotEqual(baseline, BookingAttempt.Fingerprint(o, t, "tekst", "inny", true));
-        Assert.NotEqual(baseline, BookingAttempt.Fingerprint(o, t, "tekst", "audyt", false));
+        var baseline = BookingAttempt.Fingerprint(o, "tekst", "audyt", true);
+        Assert.Equal(baseline, BookingAttempt.Fingerprint(o, "  tekst ", "audyt", true));
+        Assert.NotEqual(baseline, BookingAttempt.Fingerprint(Guid.NewGuid(), "tekst", "audyt", true));
+        Assert.NotEqual(baseline, BookingAttempt.Fingerprint(o, "tekst", "inny", true));
+        Assert.NotEqual(baseline, BookingAttempt.Fingerprint(o, "tekst", "audyt", false));
         Assert.DoesNotContain("tekst", baseline); // a hash: the brief itself never goes back to the browser in a field
     }
 
@@ -138,10 +135,10 @@ public class BookingFlowModelTests
     // ---- badges (G-8)
 
     [Theory]
-    [InlineData("PendingPayment", "Oczekuje na płatność", BadgeKind.Warning)] [InlineData("Confirmed", "Potwierdzona", BadgeKind.Info)] [InlineData("Completed", "Zakończona", BadgeKind.Success)]
-    [InlineData("CancelledByClient", "Anulowana przez klienta", BadgeKind.Neutral)] [InlineData("LateCancelledByClient", "Anulowana przez klienta (bez zwrotu)", BadgeKind.Warning)]
-    [InlineData("CancelledByPractitioner", "Anulowana przez programistę", BadgeKind.Danger)] [InlineData("Expired", "Wygasła", BadgeKind.Neutral)] [InlineData("ClientNoShow", "Klient nie stawił się", BadgeKind.Danger)]
-    [InlineData("Disputed", "Spór w toku", BadgeKind.Warning)] [InlineData("Resolved", "Spór rozstrzygnięty", BadgeKind.Neutral)] [InlineData("Whatever", "Status nieznany", BadgeKind.Neutral)]
+    [InlineData("PendingPayment", "Oczekuje na płatność", BadgeKind.Warning)] [InlineData("Confirmed", "Aktywny", BadgeKind.Info)] [InlineData("Completed", "Zakończony", BadgeKind.Success)]
+    [InlineData("CancelledByClient", "Zrezygnowano", BadgeKind.Neutral)] [InlineData("LateCancelledByClient", "Zrezygnowano (bez zwrotu)", BadgeKind.Warning)]
+    [InlineData("CancelledByPractitioner", "Wycofany przez dostawcę", BadgeKind.Danger)] [InlineData("Expired", "Wygasł", BadgeKind.Neutral)] [InlineData("ClientNoShow", "Klient nie skorzystał", BadgeKind.Danger)]
+    [InlineData("Disputed", "Reklamacja w toku", BadgeKind.Warning)] [InlineData("Resolved", "Reklamacja rozstrzygnięta", BadgeKind.Neutral)] [InlineData("Whatever", "Status nieznany", BadgeKind.Neutral)]
     public void A_booking_state_has_a_label_and_a_kind(string status, string label, BadgeKind kind) => Assert.Equal((label, kind), (Badge.ForBooking(status).Label, Badge.ForBooking(status).Kind));
 
     [Theory]
@@ -190,15 +187,15 @@ public class BookingFlowModelTests
     public void A_practitioner_is_told_the_client_is_refunded_and_that_they_are_not_paid()
     {
         var o = CancelOutcome.From(Outcome("full_refund", 18000), Price);
-        Assert.Equal("Klient dostanie zwrot 180,00\u00a0zł, a Ty nie otrzymasz wypłaty za tę konsultację.", CancelOutcome.Sentence(o, "practitioner"));
+        Assert.Equal("Klient dostanie zwrot 180,00\u00a0zł, a Ty nie otrzymasz wypłaty za ten pakiet.", CancelOutcome.Sentence(o, "practitioner"));
     }
 
     // ---- failures of the client area
 
     [Theory]
-    [InlineData(0, "unavailable", "Nie udało się połączyć z usługą. Spróbuj ponownie.")] [InlineData(409, "invalid_transition", "To nie jest już możliwe: stan rezerwacji się zmienił. Odśwież stronę.")]
-    [InlineData(503, "dependency_unavailable", "Usługa rezerwacji jest chwilowo niedostępna. Spróbuj ponownie za chwilę.")] [InlineData(404, "not_found", "Nie znaleziono takiej rezerwacji.")]
-    [InlineData(422, "validation_failed", "Sprawdź wypełnione pola i spróbuj ponownie.")] [InlineData(403, "forbidden", "Nie masz dostępu do tej rezerwacji.")]
+    [InlineData(0, "unavailable", "Nie udało się połączyć z usługą. Spróbuj ponownie.")] [InlineData(409, "invalid_transition", "To nie jest już możliwe: stan dostępu się zmienił. Odśwież stronę.")]
+    [InlineData(503, "dependency_unavailable", "Usługa dostępów jest chwilowo niedostępna. Spróbuj ponownie za chwilę.")] [InlineData(404, "not_found", "Nie znaleziono takiego dostępu.")]
+    [InlineData(422, "validation_failed", "Sprawdź wypełnione pola i spróbuj ponownie.")] [InlineData(403, "forbidden", "Nie masz dostępu do tego zasobu.")]
     [InlineData(429, "rate_limited", "Zbyt wiele prób. Odczekaj chwilę i spróbuj ponownie.")] [InlineData(500, "http_500", "Coś poszło nie tak. Spróbuj ponownie.")]
     public void A_failed_action_is_told_from_its_code(int status, string code, string text) => Assert.Equal(text, ActionFailure.Text(new ApiFailure(status, code)));
 

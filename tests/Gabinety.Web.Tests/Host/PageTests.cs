@@ -25,7 +25,7 @@ public class PageTests
         await using var web = Backends();
         var page = await web.NewBrowser().GetAsync("/");
         Assert.Equal(HttpStatusCode.OK, page.Status);
-        Assert.Equal("Umów płatną konsultację ze zweryfikowanym programistą", page.TextOf("h1"));
+        Assert.Equal("Wykup dostęp do agenta AI", page.TextOf("h1"));
         Assert.Single(page.All("h1")); // one h1 (SPEC 5 rule 14)
         Assert.Equal(["Audyt kodu", "Migracja"], page.All("[data-testid=categories] a").Select(a => a.TextContent));
         Assert.Equal("/programisci/audyt-kodu", page.One("[data-testid=categories] a")!.GetAttribute("href"));
@@ -33,8 +33,8 @@ public class PageTests
         Assert.Equal(("get", "/programisci"), (search.GetAttribute("method"), search.GetAttribute("action")));
         Assert.Equal("q", search.QuerySelector("input")!.GetAttribute("name"));
         Assert.Equal("home-q", search.QuerySelector("label")!.GetAttribute("for")); // every form control has a label
-        Assert.Equal("Wyszukiwarka programistów", search.GetAttribute("aria-label"));
-        Assert.Equal("Gabinety Tech: płatna konsultacja ze zweryfikowanym programistą", page.Dom.Title);
+        Assert.Equal("Wyszukiwarka agentów", search.GetAttribute("aria-label"));
+        Assert.Equal("Gabinety Tech: płatny dostęp do agentów AI", page.Dom.Title);
         Assert.Equal("http://localhost/", page.One("link[rel=canonical]")!.GetAttribute("href"));
         Assert.Equal("pl", page.Dom.DocumentElement.GetAttribute("lang"));
     }
@@ -46,7 +46,7 @@ public class PageTests
         web.Directory.Respond = FakeBackend.Throw(new HttpRequestException("down"));
         var page = await web.NewBrowser().GetAsync("/");
         Assert.Equal(HttpStatusCode.OK, page.Status);
-        Assert.Equal("Umów płatną konsultację ze zweryfikowanym programistą", page.TextOf("h1"));
+        Assert.Equal("Wykup dostęp do agenta AI", page.TextOf("h1"));
         Assert.Contains("Nie udało się teraz wczytać kategorii", page.TextOf("[data-testid=categories-error]"));
         Assert.Equal("alert", page.One("[data-testid=categories-error]")!.GetAttribute("role"));
         Assert.NotNull(page.One("form[role=search]")); // the search still works without the Directory
@@ -60,10 +60,10 @@ public class PageTests
         var page = await web.NewBrowser().GetAsync("/programisci");
         Assert.Equal(HttpStatusCode.OK, page.Status);
 
-        Assert.Equal("Programiści", page.TextOf("h1"));
+        Assert.Equal("Agenci", page.TextOf("h1"));
         Assert.Equal("Wyniki: 6", Page.Squash(page.TextOf("[data-testid=count]"))); // the page object reads /^Wyniki: \d+$/ (getByText, and visible)
-        Assert.Equal("6 programistów", page.TextOf(".result-summary__total")); // the plural line is its own element
-        var region = page.One("section[aria-label='Lista programistów']")!; // getByRole("region", { name: "Lista programistów" })
+        Assert.Equal("6 agentów", page.TextOf(".result-summary__total")); // the plural line is its own element
+        var region = page.One("section[aria-label='Lista agentów']")!; // getByRole("region", { name: "Lista agentów" })
         var cards = region.QuerySelectorAll("ul[data-testid=practitioner-list] > li"); // the cards hold lists of their own: only the direct children of the results list (the page object does the same)
         Assert.Equal(2, cards.Length);
         var link = region.QuerySelector("h2 > a")!; // getByRole("link", { name: displayName, exact: true })
@@ -143,9 +143,9 @@ public class PageTests
         };
         var page = await web.NewBrowser().GetAsync("/programisci/audyt-kodu?duration=30&q=kod");
         Assert.Equal(HttpStatusCode.OK, page.Status);
-        Assert.Equal("Nie ma programistów dla tych filtrów", page.TextOf("[data-testid=empty] h2"));
+        Assert.Equal("Nie ma agentów dla tych filtrów", page.TextOf("[data-testid=empty] h2"));
         Assert.Equal("Wyniki: 0", Page.Squash(page.TextOf("[data-testid=count]")));
-        Assert.Equal("0 programistów", page.TextOf(".result-summary__total"));
+        Assert.Equal("0 agentów", page.TextOf(".result-summary__total"));
         Assert.Null(page.One("[data-testid=practitioner-list]")); // an empty list is never rendered
         var chips = page.All("[data-testid=empty] [role=group] a.chip").Select(a => (a.TextContent.Replace("(usuń filtr)", "").Trim(), a.GetAttribute("href"))).ToList();
         Assert.Equal([("30 min ×", "/programisci/audyt-kodu?q=kod"), ("Szukaj: „kod” ×", "/programisci/audyt-kodu?duration=30")], chips.Select(c => (Page.Squash(c.Item1), c.Item2))); // the category is the page, not a chip
@@ -163,7 +163,7 @@ public class PageTests
             _ => FakeBackend.Json(Sample.Cards(0)),
         };
         var page = await web.NewBrowser().GetAsync("/programisci/migracja");
-        Assert.Equal("Nie ma programistów dla tych filtrów", page.TextOf("[data-testid=empty] h2"));
+        Assert.Equal("Nie ma agentów dla tych filtrów", page.TextOf("[data-testid=empty] h2"));
         Assert.Empty(page.All("[data-testid=empty] a.chip"));
         Assert.Null(page.One("[data-testid=empty] a.btn--ghost"));
     }
@@ -198,7 +198,7 @@ public class PageTests
         web.Directory.Respond = _ => new HttpResponseMessage(HttpStatusCode.InternalServerError);
         var page = await web.NewBrowser().GetAsync("/programisci");
         Assert.Equal(HttpStatusCode.ServiceUnavailable, page.Status);
-        Assert.Equal("Programiści", page.TextOf("h1"));
+        Assert.Equal("Agenci", page.TextOf("h1"));
         Assert.Contains("Nie udało się teraz wczytać listy", page.TextOf("[role=alert]"));
         Assert.Equal("noindex,follow", page.One("meta[name=robots]")!.GetAttribute("content"));
         Assert.NotNull(page.One("nav a[href='/programisci']")); // the shell still renders

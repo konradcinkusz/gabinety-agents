@@ -15,7 +15,7 @@ public class PaymentsHostTests
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Equal("Płatności", page.TextOf("h1"));
         Assert.Equal(label, page.TextOf("[data-testid=payments-status]"));
-        Assert.Contains("Bez gotowego konta płatności nie możesz przyjmować rezerwacji", page.TextOf("[data-testid=payments-must-be-ready]")); // the clear message
+        Assert.Contains("Bez gotowego konta płatności nie możesz sprzedawać pakietów", page.TextOf("[data-testid=payments-must-be-ready]")); // the clear message
         Assert.Equal(button, page.One("form button[type=submit]")!.TextContent);
         Assert.Null(page.One("[data-testid=payments-link]"));
     }

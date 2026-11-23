@@ -26,25 +26,15 @@ export class PractitionerProfilePage {
   offering(title: string): Locator {
     return this.page.getByRole("listitem").filter({ has: this.page.getByRole("heading", { level: 3, name: title }) });
   }
-  slotLinks(offeringTitle: string): Locator { return this.offering(offeringTitle).getByRole("link", { name: /^\d{2}:\d{2}$/ }); }
-  /**
-   * The first free time of the offering. The picker reads the slots through the BFF after the page has loaded, so a rate limited or slow answer shows
-   * "Nie możemy teraz pokazać terminów" or no times at first: reload until a time is there (bounded); say what the section showed otherwise.
-   */
+  /** C-01: a package has no time slot; "Wykup dostęp" of the offering's card leads straight to the purchase form (the slot picker is gone). */
+  slotLinks(offeringTitle: string): Locator { return this.offering(offeringTitle).getByRole("link", { name: `Wykup dostęp: ${offeringTitle}` }); }
+  /** The purchase link of the offering (kept under its old name for J3/J4, which D-02 rewrites). */
   async firstSlot(offeringTitle: string): Promise<Locator> {
-    const first = this.slotLinks(offeringTitle).first();
-    try {
-      await expect(async () => {
-        if (!(await first.isVisible())) await this.page.reload();
-        await expect(first).toBeVisible({ timeout: 8_000 });
-      }).toPass({ timeout: 90_000, intervals: [2_000, 5_000, 10_000] });
-    } catch (err) {
-      const shown = await this.offering(offeringTitle).locator("p").allTextContents().catch(() => []);
-      throw new Error(`no free time shown for "${offeringTitle}"; the card said: ${shown.map((t) => t.slice(0, 80)).join(" | ")}`, { cause: err });
-    }
-    return first;
+    const link = this.slotLinks(offeringTitle).first();
+    await expect(link).toBeVisible();
+    return link;
   }
-  /** Clicks a free time and waits for the booking form. If the host renders it interactively, nothing typed before its circuit is live would count, so the circuit is awaited. */
+  /** Clicks the purchase link and waits for the booking form. If the host renders it interactively, nothing typed before its circuit is live would count, so the circuit is awaited. */
   async openBookingForm(slot: Locator) {
     const circuit = watchCircuit(this.page);
     const answer = this.page.waitForResponse((r) => ["document", "fetch", "xhr"].includes(r.request().resourceType()) && /\/rezerwacja\/[0-9a-f-]{36}/.test(new URL(r.url()).pathname));
@@ -59,10 +49,10 @@ export class PractitionerProfilePage {
 
 export class BookingFormPage {
   constructor(readonly page: Page) {}
-  brief(): Locator { return this.page.getByLabel("Opisz problem"); }
-  askAssistant(): Locator { return this.page.getByRole("button", { name: "Pomóż mi opisać problem" }); }
+  brief(): Locator { return this.page.getByLabel("Do czego chcesz użyć agenta?"); }
+  askAssistant(): Locator { return this.page.getByRole("button", { name: "Pomóż mi opisać zastosowanie" }); }
   pay(): Locator { return this.page.getByRole("button", { name: "Zapłać" }); }
-  assistantUnavailableNote(): Locator { return this.page.getByText("Asystent jest chwilowo niedostępny. Opisz problem samodzielnie i zarezerwuj termin."); }
+  assistantUnavailableNote(): Locator { return this.page.getByText("Asystent jest chwilowo niedostępny. Opisz zastosowanie samodzielnie i wykup dostęp."); }
   /** Everything the assistant shows when it does have a suggestion. */
   suggestionParts(): Locator[] {
     return [
@@ -95,8 +85,8 @@ export class MockCheckoutPage {
     await this.succeed().click();
     await this.page.waitForURL(/\/rezerwacja\/potwierdzenie\//);
     await expect(async () => {
-      if (!(await this.page.getByText("Rezerwacja potwierdzona. Dziękujemy!").isVisible())) await this.page.reload();
-      await expect(this.page.getByText("Rezerwacja potwierdzona. Dziękujemy!")).toBeVisible({ timeout: 5_000 });
+      if (!(await this.page.getByText("Dostęp aktywny. Dziękujemy!").isVisible())) await this.page.reload();
+      await expect(this.page.getByText("Dostęp aktywny. Dziękujemy!")).toBeVisible({ timeout: 5_000 });
     }).toPass({ timeout: 90_000, intervals: [2_000, 5_000, 10_000] });
   }
 }

@@ -27,8 +27,7 @@ test.describe("J4 the Assistant is down", () => {
     await profile.goto(SLUG, NAME);
     const slot = await profile.firstSlot(offering.title);
     const link = new URL((await slot.getAttribute("href"))!, urls.web);
-    const startUtc = link.searchParams.get("start")!;
-    expect(link.searchParams.get("gabinet")).toBe(SLUG); // the slot link carries the profile slug (#99)
+    expect(link.searchParams.get("gabinet")).toBe(SLUG); // the purchase link carries the profile slug (#99)
     await profile.openBookingForm(slot);
 
     const form = new BookingFormPage(page);

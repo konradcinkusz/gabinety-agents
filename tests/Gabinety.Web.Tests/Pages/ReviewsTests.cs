@@ -106,7 +106,7 @@ public class ReviewsTests
     // ---- success (F-14)
 
     [Theory]
-    [InlineData("Published", "published", "Opinia została opublikowana na profilu programisty.")]
+    [InlineData("Published", "published", "Opinia została opublikowana na profilu agenta.")]
     [InlineData("Held", "held", "Opinia czeka na sprawdzenie.")]
     [InlineData("Whatever", "held", "Opinia czeka na sprawdzenie.")]
     public async Task A_sent_review_redirects_and_the_page_thanks_with_the_heading_the_journey_expects(string status, string key, string text)
@@ -126,7 +126,7 @@ public class ReviewsTests
         Assert.Equal(["Wystaw opinię"], page.All("h1").Select(h => h.TextContent));
         Assert.Equal("Dziękujemy za opinię", page.TextOf("h2")); // J3: getByRole("heading", { name: "Dziękujemy za opinię" })
         Assert.StartsWith(text, page.TextOf("section [role=status]"));
-        Assert.DoesNotContain("Ta konsultacja ma już opinię", page.Text); // F-14
+        Assert.DoesNotContain("Ten dostęp ma już opinię", page.Text); // F-14
         Assert.Empty(page.All("form"));
         Assert.Equal("/moje/rezerwacje", page.One("section a")!.GetAttribute("href"));
         Assert.Equal(published(status), page.One("section [role=status]")!.ClassName?.Contains("callout--success") == true);
@@ -147,8 +147,8 @@ public class ReviewsTests
     // ---- refusals
 
     [Theory]
-    [InlineData("already_reviewed", "Ta konsultacja ma już opinię")]
-    [InlineData("not_reviewable", "Tej konsultacji nie można ocenić")]
+    [InlineData("already_reviewed", "Ten dostęp ma już opinię")]
+    [InlineData("not_reviewable", "Tego dostępu nie można ocenić")]
     public async Task A_booking_that_has_a_review_or_cannot_have_one_gets_a_card_with_the_way_back(string code, string heading)
     {
         await using var f = await Open(_ => FakeBackend.Problem(HttpStatusCode.Conflict, code));
@@ -217,7 +217,7 @@ public class ReviewsTests
         await using var f = await ClientAreaFixture.SignedIn();
         var page = await f.Browser.GetAsync("/moje/opinie");
         var empty = page.One("[data-testid=no-profile]")!;
-        Assert.Equal("Opinie widzą tu programiści", empty.QuerySelector("h2")!.TextContent);
+        Assert.Equal("Opinie widzą tu dostawcy", empty.QuerySelector("h2")!.TextContent);
         Assert.Equal("/gabinet-programisty", empty.QuerySelector("a")!.GetAttribute("href"));
         Assert.Empty(f.Web.Reputation.Requests); // nothing to list
     }

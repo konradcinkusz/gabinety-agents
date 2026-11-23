@@ -9,19 +9,19 @@ public static class Pl
 {
     public static class Site
     {
-        public const string Name = "Gabinety Tech", Tagline = "Płatna konsultacja ze zweryfikowanym programistą";
+        public const string Name = "Gabinety Tech", Tagline = "Płatny dostęp do agentów AI";
         public const string Copyright = "© {0} Gabinety Tech";
         public const string Terms = "Regulamin", Privacy = "Polityka prywatności", FooterLabel = "Informacje prawne";
         // UX-010: the footer's column titles (the legal column is named by FooterLabel for assistive technology).
-        public const string ProductColumn = "Produkt", PractitionersColumn = "Dla programistów", LegalColumn = "Prawne";
+        public const string ProductColumn = "Produkt", PractitionersColumn = "Dla dostawców", LegalColumn = "Prawne";
     }
 
     public static class Nav
     {
-        public const string Label = "Menu główne", Search = "Programiści", SignIn = "Zaloguj się", Register = "Załóż konto", MyBookings = "Moje rezerwacje", SignOut = "Wyloguj się";
-        public const string Account = "Konto", PractitionerArea = "Panel programisty", Admin = "Administracja", Menu = "Menu", AccountMenu = "Twoje konto";
+        public const string Label = "Menu główne", Search = "Agenci", SignIn = "Zaloguj się", Register = "Załóż konto", MyBookings = "Moje dostępy", SignOut = "Wyloguj się";
+        public const string Account = "Konto", ApiKeys = "Klucze API", PractitionerArea = "Panel dostawcy", Admin = "Administracja", Menu = "Menu", AccountMenu = "Twoje konto";
         // UX-010: the public links of the header and footer, and the account menu's entry for a signed-in user without a practitioner profile (D-2).
-        public const string HowItWorks = "Jak to działa", Pricing = "Cennik", RankingRules = "Zasady rankingu", BecomePractitioner = "Zostań programistą";
+        public const string HowItWorks = "Jak to działa", Pricing = "Cennik", RankingRules = "Zasady rankingu", BecomePractitioner = "Zostań dostawcą";
     }
 
     public static class A11y
@@ -37,7 +37,7 @@ public static class Pl
         public const string NotFoundTitle = "Nie znaleziono strony", NotFoundBody = "Strona, której szukasz, nie istnieje lub została przeniesiona.";
         public const string Reconnecting = "Łączenie z serwerem…", ReconnectFailed = "Utracono połączenie z serwerem. Odśwież stronę.";
         // V-12: the 404 search and category links (DESIGN-CONTRACT 5.10).
-        public const string NotFoundSearchRegion = "Wyszukiwarka programistów", NotFoundSearchLabel = "Czego szukasz?", NotFoundSearchButton = "Szukaj";
+        public const string NotFoundSearchRegion = "Wyszukiwarka agentów", NotFoundSearchLabel = "Czego szukasz?", NotFoundSearchButton = "Szukaj";
         // V-12: the error page's way back and retry.
         public const string RetryLink = "Spróbuj ponownie", HomeLink = "Wróć na stronę główną";
     }
@@ -50,51 +50,51 @@ public static class Pl
 
     public static class Home
     {
-        public const string MetaTitle = "Gabinety Tech: płatna konsultacja ze zweryfikowanym programistą";
-        public const string MetaDescription = "Opisz problem, wybierz zweryfikowanego programistę i umów płatną konsultację online. Ranking bez płatnych miejsc.";
-        public const string Title = "Umów płatną konsultację ze zweryfikowanym programistą";
-        public const string Lead = "Audyt kodu, migracja, integracja AI: wybierz problem, a potem programistę, którego profil, ceny i opinie możesz sprawdzić przed rezerwacją.";
-        public const string SearchLabel = "Czego szukasz?", SearchPlaceholder = "np. migracja bazy danych", SearchButton = "Szukaj", SearchRegion = "Wyszukiwarka programistów";
+        public const string MetaTitle = "Gabinety Tech: płatny dostęp do agentów AI";
+        public const string MetaDescription = "Wybierz agenta AI, wykup pakiet zadań lub dostęp do API czatu i zacznij z niego korzystać. Ranking bez płatnych miejsc.";
+        public const string Title = "Wykup dostęp do agenta AI";
+        public const string Lead = "Audyt kodu, migracja, integracja AI: wybierz problem, a potem agenta, którego profil, ceny i opinie możesz sprawdzić przed wykupieniem dostępu.";
+        public const string SearchLabel = "Czego szukasz?", SearchPlaceholder = "np. migracja bazy danych", SearchButton = "Szukaj", SearchRegion = "Wyszukiwarka agentów";
         public const string CategoriesTitle = "Wybierz problem", CategoriesLabel = "Kategorie problemów";
-        public const string CategoriesUnavailable = "Nie udało się teraz wczytać kategorii. Możesz przejść do pełnej listy programistów.";
-        public const string AllPractitioners = "Wszyscy programiści";
+        public const string CategoriesUnavailable = "Nie udało się teraz wczytać kategorii. Możesz przejść do pełnej listy agentów.";
+        public const string AllPractitioners = "Wszyscy agenci";
         public const string StepsTitle = "Jak to działa";
-        public const string Step1Title = "Znajdź", Step1Body = "Wybierz problem i technologię, a potem porównaj zweryfikowanych programistów.";
-        public const string Step2Title = "Zarezerwuj", Step2Body = "Wybierz wolny termin, opisz problem i zapłać z góry. Pieniądze trafiają do programisty dopiero po konsultacji.";
-        public const string Step3Title = "Porozmawiaj", Step3Body = "Spotkacie się online w umówionym terminie. Po konsultacji możesz wystawić opinię.";
+        public const string Step1Title = "Znajdź", Step1Body = "Wybierz problem i technologię, a potem porównaj agentów AI.";
+        public const string Step2Title = "Wykup dostęp", Step2Body = "Wybierz pakiet, opisz, do czego chcesz użyć agenta, i zapłać z góry. Pakiet jest ważny 30 dni.";
+        public const string Step3Title = "Korzystaj", Step3Body = "Zlecaj zadania w panelu albo połącz się przez API. Po skorzystaniu z agenta możesz wystawić opinię.";
         public const string RulesTitle = "Uczciwe zasady";
         public const string RulesBody = "Kolejność na listach zależy tylko od opinii, rzetelności, dostępności i kompletności profilu. Nie da się jej kupić.";
     }
 
     public static class ListPage
     {
-        public const string AllTitle = "Programiści";
-        public const string AllIntro = "Zweryfikowani programiści, z którymi umówisz płatną konsultację online. Wybierz problem, technologię i czas trwania.";
-        public const string CategoryIntro = "Konsultacje „{0}” ze zweryfikowanymi programistami. Wybierz technologię, czas i budżet, a potem zarezerwuj termin.";
-        public const string CategoryTechIntro = "Konsultacje „{0}” ze zweryfikowanymi programistami. Przeglądasz wyniki zawężone do wybranej technologii.";
-        public const string Count = "Wyniki: {0}", ClearFilters = "Wyczyść filtry", ResultsLabel = "Lista programistów";
-        /// <summary>The count line of the result header: <c>6 programistów</c>, <c>1 programista</c>. Numerals 2 to 4 take the genitive plural too: the noun is masculine personal.</summary>
-        public const string CountPhrase = "{0} {1}", PractitionerOne = "programista", PractitionerMany = "programistów";
-        public const string EmptyTitle = "Nie ma programistów dla tych filtrów", EmptyBody = "Zmień albo usuń filtry, żeby zobaczyć programistów z innymi kryteriami.";
+        public const string AllTitle = "Agenci";
+        public const string AllIntro = "Agenci AI, do których wykupisz dostęp: pakiety zadań albo API czatu. Wybierz problem, technologię i typowy czas wykonania zadania.";
+        public const string CategoryIntro = "Agenci AI w kategorii „{0}”. Wybierz technologię, czas i budżet, a potem wykup dostęp.";
+        public const string CategoryTechIntro = "Agenci AI w kategorii „{0}”. Przeglądasz wyniki zawężone do wybranej technologii.";
+        public const string Count = "Wyniki: {0}", ClearFilters = "Wyczyść filtry", ResultsLabel = "Lista agentów";
+        /// <summary>The count line of the result header: <c>6 agentów</c>, <c>1 agent</c>. Numerals 2 to 4 take the genitive plural too: the noun is masculine personal.</summary>
+        public const string CountPhrase = "{0} {1}", PractitionerOne = "agent", PractitionerMany = "agentów";
+        public const string EmptyTitle = "Nie ma agentów dla tych filtrów", EmptyBody = "Zmień albo usuń filtry, żeby zobaczyć agentów z innymi kryteriami.";
         public const string ActiveFilters = "Aktywne filtry", RemoveFilter = "usuń filtr", SearchChip = "Szukaj: „{0}”";
-        public const string Unavailable = "Nie udało się teraz wczytać listy programistów. Spróbuj ponownie za chwilę.";
-        public const string MetaAllTitle = "Programiści do konsultacji online | Gabinety Tech";
-        public const string MetaAllDescription = "Przeglądaj zweryfikowanych programistów i umów płatną konsultację online: audyt kodu, migracja, integracja AI i więcej.";
-        public const string MetaProblemTitle = "{0}: konsultacje z programistą | Gabinety Tech";
-        public const string MetaProblemDescription = "{0}: umów płatną konsultację ze zweryfikowanym programistą. Dostępnych programistów: {1}.";
-        public const string MetaTechTitle = "{0} i {1}: konsultacje z programistą | Gabinety Tech";
-        public const string MetaTechDescription = "{0} w technologii {1}: umów płatną konsultację ze zweryfikowanym programistą. Dostępnych programistów: {2}.";
+        public const string Unavailable = "Nie udało się teraz wczytać listy agentów. Spróbuj ponownie za chwilę.";
+        public const string MetaAllTitle = "Agenci AI do wykupienia | Gabinety Tech";
+        public const string MetaAllDescription = "Przeglądaj agentów AI i wykup dostęp: audyt kodu, migracja, integracja AI i więcej.";
+        public const string MetaProblemTitle = "{0}: agenci AI | Gabinety Tech";
+        public const string MetaProblemDescription = "{0}: wykup dostęp do agenta AI. Dostępnych agentów: {1}.";
+        public const string MetaTechTitle = "{0} i {1}: agenci AI | Gabinety Tech";
+        public const string MetaTechDescription = "{0} w technologii {1}: wykup dostęp do agenta AI. Dostępnych agentów: {2}.";
     }
 
     public static class Filters
     {
-        public const string Label = "Filtry", Problem = "Problem", Tech = "Technologia", Duration = "Czas trwania", Price = "Cena do", Any = "Wszystkie", AnyPrice = "Dowolna";
+        public const string Label = "Filtry", Problem = "Problem", Tech = "Technologia", Duration = "Typowy czas wykonania", Price = "Cena do", Any = "Wszystkie", AnyPrice = "Dowolna";
         public const string Minutes = "{0} min", UpTo = "do {0}", SearchLabel = "Szukaj po imieniu lub nagłówku", SearchPlaceholder = "np. migracja", Search = "Szukaj";
     }
 
     public static class Card
     {
-        public const string From = "od", IsNew = "Nowy", Rating = "Ocena {0} ({1})";
+        public const string From = "od", IsNew = "Nowy", Rating = "Ocena {0} ({1})", AiBadge = "Agent AI";
         public const string BadgeEmail = "E-mail zweryfikowany", BadgeGithub = "GitHub połączony", BadgeNip = "NIP zweryfikowany", BadgeApproved = "Zatwierdzony";
     }
 
@@ -112,7 +112,7 @@ public static class Pl
         public const string Github = "Zaloguj się przez GitHub", Or = "albo", NoAccount = "Nie masz konta?", Summary = "Popraw dane logowania";
         public const string EmailRequired = "Podaj adres e-mail.", PasswordRequired = "Podaj hasło.", EmailInvalid = "Podaj poprawny adres e-mail.";
         public const string SessionExpired = "Sesja wygasła. Zaloguj się ponownie.";
-        public const string BookingContext = "Zaloguj się, aby dokończyć rezerwację.", ShowPassword = "Pokaż hasło";
+        public const string BookingContext = "Zaloguj się, aby dokończyć wykup dostępu.", ShowPassword = "Pokaż hasło";
     }
 
     /// <summary>The second step of a two-factor sign-in (<c>/logowanie/kod</c>). The challenge itself is a sealed cookie; nothing of it is shown.</summary>
@@ -132,7 +132,7 @@ public static class Pl
     public static class Register
     {
         public const string Title = "Załóż konto", MetaTitle = "Załóż konto | Gabinety Tech", Email = "Adres e-mail", Password = "Hasło", Submit = "Załóż konto";
-        public const string BookingContext = "Załóż konto, aby dokończyć rezerwację.", ShowPassword = "Pokaż hasło";
+        public const string BookingContext = "Załóż konto, aby dokończyć wykup dostępu.", ShowPassword = "Pokaż hasło";
         public const string RuleLength = "co najmniej 8 znaków", RuleCase = "mała i wielka litera", RuleDigit = "cyfra", RuleSymbol = "znak specjalny";
         public const string ConsentPrefix = "Akceptuję ", ConsentAnd = " i ", ConsentSuffix = ".", Terms = "Regulamin", Privacy = "Politykę prywatności";
         public const string VersionTitle = "Wersja z dnia {0}";
@@ -173,29 +173,30 @@ public static class Pl
 
     public static class Bookings
     {
-        public const string Title = "Moje rezerwacje", MetaTitle = "Moje rezerwacje | Gabinety Tech";
-        public const string Upcoming = "Nadchodzące", Past = "Minione", Today = "dziś", Tomorrow = "jutro", InDays = "za {0} dni", StatusFilterLabel = "Filtruj według statusu";
-        public const string RoleLabel = "Pokaż rezerwacje jako", Client = "Klient", Practitioner = "Programista";
-        public const string StatusLabel = "Status", AllStatuses = "Wszystkie", Loading = "Ładowanie rezerwacji…", Empty = "Brak rezerwacji w tym widoku.", More = "Pokaż więcej";
-        public const string PartyPractitioner = "Programista", PartyClient = "Klient";
+        public const string Title = "Moje dostępy", MetaTitle = "Moje dostępy | Gabinety Tech";
+        public const string Upcoming = "Aktywne", Past = "Zakończone", Today = "dziś", Tomorrow = "jutro", InDays = "za {0} dni", StatusFilterLabel = "Filtruj według statusu";
+        public const string RoleLabel = "Pokaż dostępy jako", Client = "Klient", Practitioner = "Dostawca";
+        public const string StatusLabel = "Status", AllStatuses = "Wszystkie", Loading = "Ładowanie dostępów…", Empty = "Brak dostępów w tym widoku.", More = "Pokaż więcej";
+        public const string PartyPractitioner = "Agent", PartyClient = "Klient";
         public const string SignedOut = "Sesja wygasła. Zaloguj się ponownie.", SignInAgain = "Zaloguj się";
-        public const string ErrorNetwork = "Brak połączenia z usługą rezerwacji. Spróbuj ponownie za chwilę.", ErrorUnavailable = "Rezerwacje są chwilowo niedostępne. Spróbuj ponownie za chwilę.";
-        public const string ErrorRateLimited = "Zbyt wiele zapytań. Spróbuj ponownie za chwilę.", ErrorForbidden = "Nie masz dostępu do tych rezerwacji.", ErrorGeneric = "Nie udało się wczytać rezerwacji.";
+        public const string ErrorNetwork = "Brak połączenia z usługą dostępów. Spróbuj ponownie za chwilę.", ErrorUnavailable = "Dostępy są chwilowo niedostępne. Spróbuj ponownie za chwilę.";
+        public const string ErrorRateLimited = "Zbyt wiele zapytań. Spróbuj ponownie za chwilę.", ErrorForbidden = "Nie masz dostępu do tych dostępów.", ErrorGeneric = "Nie udało się wczytać dostępów.";
         public const string UnknownStatus = "Status nieznany";
+        public const string TokensThousands = "{0} tys. tokenów", TasksCount = "{0} {1}", UsedOf = "wykorzystano {0} z {1}", UsedOfTokens = "wykorzystano {0} z {1} tys. tokenów", ValidUntil = "ważny do {0}";
 
         /// <summary>The Polish label of a booking status (CONTRACTS 8.1); an unknown value is shown as such, never as the raw wire value.</summary>
         public static readonly IReadOnlyDictionary<string, string> Statuses = new Dictionary<string, string>
         {
             ["PendingPayment"] = "Oczekuje na płatność",
-            ["Confirmed"] = "Potwierdzona",
-            ["CancelledByClient"] = "Anulowana przez klienta",
-            ["LateCancelledByClient"] = "Anulowana przez klienta (bez zwrotu)",
-            ["CancelledByPractitioner"] = "Anulowana przez programistę",
-            ["Expired"] = "Wygasła",
-            ["Completed"] = "Zakończona",
-            ["ClientNoShow"] = "Klient nie stawił się",
-            ["Disputed"] = "Spór w toku",
-            ["Resolved"] = "Spór rozstrzygnięty",
+            ["Confirmed"] = "Aktywny",
+            ["CancelledByClient"] = "Zrezygnowano",
+            ["LateCancelledByClient"] = "Zrezygnowano (bez zwrotu)",
+            ["CancelledByPractitioner"] = "Wycofany przez dostawcę",
+            ["Expired"] = "Wygasł",
+            ["Completed"] = "Zakończony",
+            ["ClientNoShow"] = "Klient nie skorzystał",
+            ["Disputed"] = "Reklamacja w toku",
+            ["Resolved"] = "Reklamacja rozstrzygnięta",
         };
     }
 

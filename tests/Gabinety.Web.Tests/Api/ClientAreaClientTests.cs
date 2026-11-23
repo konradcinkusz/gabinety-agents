@@ -22,22 +22,21 @@ public class ClientAreaClientTests
     static readonly Guid Id = Guid.Parse("018f0000-0000-7000-8000-0000000000b1");
 
     [Fact]
-    public async Task Create_posts_the_json_the_service_reads_with_the_key_in_the_header_and_the_instant_with_a_Z()
+    public async Task Create_posts_the_json_the_service_reads_with_the_key_in_the_header_and_no_start()
     {
         var (client, backend) = Bookings();
         backend.Respond = _ => FakeBackend.Json(new CreateBookingResponseDto(Id, "PendingPayment", DateTimeOffset.UtcNow, "/checkout/mock/x"), HttpStatusCode.Created);
         var key = Guid.NewGuid();
         var offering = Guid.NewGuid();
-        var result = await client.CreateAsync(key, new CreateBookingRequestDto(offering, new DateTimeOffset(2026, 12, 8, 12, 0, 0, TimeSpan.FromHours(1)), new BriefDto("Opis problemu demo, syntetyczny.", "audyt-kodu", true)));
+        var result = await client.CreateAsync(key, new CreateBookingRequestDto(offering, new BriefDto("Opis problemu demo, syntetyczny.", "audyt-kodu", true)));
         Assert.True(result.IsOk);
         Assert.Equal("/checkout/mock/x", result.Value!.CheckoutUrl);
         var sent = Assert.Single(backend.Requests);
         Assert.Equal((HttpMethod.Post, "/api/v1/bookings"), (sent.Method, sent.PathAndQuery));
         using var body = JsonDocument.Parse(sent.Body!);
-        Assert.Equal("2026-12-08T11:00:00Z", body.RootElement.GetProperty("startUtc").GetString()); // the offset is normalised to UTC and written with Z
         Assert.Equal(offering.ToString(), body.RootElement.GetProperty("offeringId").GetString());
         Assert.True(body.RootElement.GetProperty("brief").GetProperty("aiAssisted").GetBoolean());
-        Assert.Equal(["offeringId", "startUtc", "brief"], body.RootElement.EnumerateObject().Select(p => p.Name)); // camelCase, nothing extra
+        Assert.Equal(["offeringId", "brief"], body.RootElement.EnumerateObject().Select(p => p.Name)); // camelCase, nothing extra
     }
 
     [Fact]
@@ -47,7 +46,7 @@ public class ClientAreaClientTests
         string? header = null;
         backend.Respond = r => { header = r.Headers.GetValues("Idempotency-Key").Single(); return FakeBackend.Json(new CreateBookingResponseDto(Id, "PendingPayment", DateTimeOffset.UtcNow, "/x"), HttpStatusCode.Created); };
         var key = Guid.NewGuid();
-        await client.CreateAsync(key, new CreateBookingRequestDto(Guid.NewGuid(), DateTimeOffset.UtcNow, new BriefDto("Opis problemu demo, syntetyczny.", null, false)));
+        await client.CreateAsync(key, new CreateBookingRequestDto(Guid.NewGuid(), new BriefDto("Opis problemu demo, syntetyczny.", null, false)));
         Assert.Equal(key.ToString("D"), header);
         Assert.DoesNotContain(key.ToString(), backend.Requests.Single().PathAndQuery + backend.Requests.Single().Body);
     }
@@ -138,7 +137,7 @@ public class ClientAreaClientTests
     {
         var (client, backend) = Bookings();
         backend.Respond = FakeBackend.Throw(new HttpRequestException("down"));
-        var result = await client.CreateAsync(Guid.NewGuid(), new CreateBookingRequestDto(Guid.NewGuid(), DateTimeOffset.UtcNow, new BriefDto("x", null, false)));
+        var result = await client.CreateAsync(Guid.NewGuid(), new CreateBookingRequestDto(Guid.NewGuid(), new BriefDto("x", null, false)));
         Assert.Equal((0, "unavailable"), (result.Failure!.Status, result.Failure.Code));
     }
 
@@ -182,7 +181,7 @@ public class ClientAreaClientTests
         var http = new HttpClient(backend) { BaseAddress = new Uri("http://b.test") };
         var visitor = new VisitorAddressAccessor(new HttpContextAccessor());
         var bookings = new BookingClient(http, visitor, new Token("t"));
-        await bookings.CreateAsync(Guid.NewGuid(), new CreateBookingRequestDto(Guid.NewGuid(), DateTimeOffset.UtcNow, new BriefDto("x", null, false)));
+        await bookings.CreateAsync(Guid.NewGuid(), new CreateBookingRequestDto(Guid.NewGuid(), new BriefDto("x", null, false)));
         await bookings.CancelAsync(Id, null);
         await bookings.GetAsync(Id);
         await new BriefAssistantClient(http, visitor, new Token("t")).SuggestAsync("opis");
@@ -204,7 +203,7 @@ public class ClientAreaClientTests
         var reviews = new ReviewsClient(new HttpClient(handlers.CreateHandler(Backend.Reputation)) { BaseAddress = new Uri(Backend.BaseAddress(Backend.Reputation)) }, visitor, new Token("t"));
 
         // A write with no budget is cut at the 5 s of a read; the one that asked for its budget is not.
-        var withBudget = bookings.CreateAsync(Guid.NewGuid(), new CreateBookingRequestDto(Guid.NewGuid(), DateTimeOffset.UtcNow, new BriefDto("Opis problemu demo, syntetyczny.", null, false)));
+        var withBudget = bookings.CreateAsync(Guid.NewGuid(), new CreateBookingRequestDto(Guid.NewGuid(), new BriefDto("Opis problemu demo, syntetyczny.", null, false)));
         var without = reviews.CreateAsync(Id, 5, "Treść opinii, syntetyczna.");
         var (booked, reviewed) = (await withBudget, await without);
         Assert.True(booked.IsOk, $"the booking write was cut: {booked.Failure}");

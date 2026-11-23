@@ -3,8 +3,9 @@
 @inject BookingClient Bookings
 @inject NavigationManager Navigation
 @inject TimeProvider Time
-@* Success is claimed only for a booking the server reports as Confirmed. A payment that is still being confirmed (the provider's notification has not arrived) says so and reloads itself while the hold lasts:
-   a meta refresh, no script. A 429/503 shows "Odśwież stronę" with the link that does it. *@
+@inject Gabinety.Web.Hosting.WebOptions Site
+@* Success is claimed only for a package the server reports as Confirmed. A payment that is still being confirmed (the provider's notification has not arrived) says so and reloads itself while the hold lasts:
+   a meta refresh, no script. A 429/503 shows "Odśwież stronę" with the link that does it. The next steps depend on the kind: a chat package is connected by API, a task package starts with a task. *@
 
 <PageTitle>@BookFlowText.Confirmation.MetaTitle</PageTitle>
 <HeadContent>
@@ -23,18 +24,14 @@
 else if (_booking is { } b)
 {
     var confirmed = b.Status == "Confirmed";
-    <BookingSteps Current="3" />
+    <BookingSteps Current="2" />
     <div class="stack booking-confirmation">
         @if (confirmed) {<div class="callout callout--success" role="status">@BookFlowText.Confirmation.Confirmed</div>}
         else if (b.Status == "PendingPayment") {<div class="callout callout--info" role="status">@BookFlowText.Confirmation.Pending <a href="@CurrentPath">@BookFlowText.Confirmation.Refresh</a></div>}
         else {<div class="callout callout--warning" role="status">@BookFlowText.Confirmation.Other</div>}
-        <ConsultationSummary Offering="@b.OfferingTitle" Party="@BookingFormat.Name(b.Practitioner.DisplayName)" When="@BookingFormat.When(b.StartUtc, b.EndUtc)"
-                             Minutes="b.DurationMinutes" PriceMinor="b.Price.AmountMinor">
-            @if (_meeting is not null)
-            {
-                <p><a href="@_meeting" rel="noopener noreferrer" target="_blank">@BookFlowText.Summary.Meeting</a></p>
-                <p class="muted">@BookFlowText.Summary.MeetingHint</p>
-            }
+        <ConsultationSummary Offering="@b.OfferingTitle" Party="@BookingFormat.Name(b.Practitioner.DisplayName)" Units="@BookingFormat.UnitsLine(b.Kind, b.UnitsTotal)"
+                             Validity="@string.Format(BookFlowText.Summary.ValidUntil, BookingFormat.ValidUntil(b.EndUtc))" PriceMinor="b.Price.AmountMinor">
+            <p class="muted" data-testid="confirmation-state">@BookFlowText.Confirmation.State: <BookingBadge Badge="Badge.ForBooking(b.Status)" /></p>
         </ConsultationSummary>
         @if (confirmed)
         {
@@ -42,14 +39,25 @@ else if (_booking is { } b)
                 <h2 id="next-steps-title">@BookFlowText.Confirmation.NextTitle</h2>
                 <ul class="booking-confirmation__list">
                     <li>@BookFlowText.Confirmation.NextEmail</li>
-                    <li>@BookFlowText.Confirmation.NextMeeting</li>
                     <li>@BookFlowText.Confirmation.NextCancel <a href="/cennik">@BookFlowText.Confirmation.NextCancelLink</a>.</li>
                 </ul>
+                @if (b.Kind == "Chat")
+                {
+                    <div data-testid="connect">
+                        <h3>@BookFlowText.Confirmation.ConnectTitle</h3>
+                        <dl class="dl">
+                            <dt>@BookFlowText.Confirmation.ConnectBaseUrl</dt><dd><code data-testid="connect-base-url">@Site.ApiBaseUrl</code></dd>
+                            <dt>@BookFlowText.Confirmation.ConnectModel</dt><dd><code data-testid="connect-model">@b.Practitioner.Slug</code></dd>
+                        </dl>
+                        <p class="muted">@BookFlowText.Confirmation.ConnectHint</p>
+                    </div>
+                }
             </section>
         }
         <div class="form-actions">
-            <a class="btn btn--primary" href="@($"/moje/rezerwacje/{b.Id}?role=client")">@BookFlowText.Confirmation.View</a>
-            @if (confirmed) {<a class="btn btn--secondary" href="@($"/moje/rezerwacje/{b.Id}/kalendarz.ics")">@BookFlowText.Confirmation.Calendar</a>}
+            @if (confirmed && b.Kind != "Chat") {<a class="btn btn--primary" href="@($"/moje/rezerwacje/{b.Id}?role=client#zadania")" data-testid="first-task">@BookFlowText.Confirmation.FirstTask</a>}
+            @if (confirmed) {<a class="btn btn--primary" href="/moje/klucze" data-testid="create-key">@BookFlowText.Confirmation.CreateKey</a>}
+            <a class="btn btn--secondary" href="@($"/moje/rezerwacje/{b.Id}?role=client")">@BookFlowText.Confirmation.View</a>
             <a class="btn btn--secondary" href="/programisci">@BookFlowText.Confirmation.ToSearch</a>
         </div>
     </div>
@@ -60,7 +68,6 @@ else if (_booking is { } b)
 
     BookingDetailDto? _booking;
     ApiFailure? _failure;
-    string? _meeting;
     int? _refreshSeconds;
 
     string CurrentPath => "/" + Navigation.ToBaseRelativePath(Navigation.Uri);
@@ -76,7 +83,6 @@ else if (_booking is { } b)
             return;
         }
         _booking = result.Value;
-        _meeting = _booking!.Status == "Confirmed" ? SafeUrl.Http(_booking.MeetingUrl) : null; // a link is shown only for a confirmed booking, and only when it is http(s)
-        if (_booking.Status == "PendingPayment" && (_booking.HoldExpiresAt is not { } hold || hold > Time.GetUtcNow())) _refreshSeconds = 5;
+        if (_booking!.Status == "PendingPayment" && (_booking.HoldExpiresAt is not { } hold || hold > Time.GetUtcNow())) _refreshSeconds = 5;
     }
 }

@@ -69,9 +69,9 @@ public class CheckoutAndConfirmationTests
         Assert.Equal(["Płatność (tryb demonstracyjny)"], page.All("h1").Select(h => h.TextContent));
         Assert.Contains("tryb demonstracyjny", page.One(".callout--info")!.TextContent);
         var summary = page.One(".booking-summary")!;
-        Assert.Equal(["Audyt kodu demo", "Anna Demowska", "wtorek, 8 grudnia, 12:00–13:00", "60 min", "250,00\u00a0zł"], summary.QuerySelectorAll("dd").Select(d => d.TextContent));
+        Assert.Equal(["Audyt kodu demo", "Anna Demowska Agent AI", "10 zadań", "30 dni od zakupu", "250,00\u00a0zł"], summary.QuerySelectorAll("dd").Select(d => d.TextContent));
         var timer = summary.QuerySelector("[role=timer]")!;
-        Assert.Contains("Termin jest wstrzymany jeszcze przez", timer.TextContent);
+        Assert.Contains("Zakup jest wstrzymany jeszcze przez", timer.TextContent);
         Assert.Matches(@"\d:\d\d", timer.TextContent);
         Assert.Contains("callout--warning", timer.ClassName);
         Assert.Equal(["Symuluj udaną płatność", "Symuluj nieudaną płatność"], page.All("form button").Select(b => b.TextContent));
@@ -96,7 +96,7 @@ public class CheckoutAndConfirmationTests
     {
         await using var confirmed = await Fake(Detail("Confirmed"));
         var page = await confirmed.Browser.GetAsync(Checkout);
-        Assert.Equal("Ta rezerwacja nie oczekuje już na płatność.", page.TextOf(".callout p"));
+        Assert.Equal("Ten zakup nie oczekuje już na płatność.", page.TextOf(".callout p"));
         Assert.Equal($"/rezerwacja/potwierdzenie/{BookingId}", page.One(".callout a")!.GetAttribute("href"));
         Assert.Empty(page.All("form"));
 
@@ -110,7 +110,7 @@ public class CheckoutAndConfirmationTests
     {
         await using var f = await Fake(Pending(DateTimeOffset.UtcNow.AddMinutes(-1)));
         var page = await f.Browser.GetAsync(Checkout);
-        Assert.Contains("Czas na płatność minął, termin został zwolniony.", page.Text);
+        Assert.Contains("Czas na płatność minął.", page.Text);
         Assert.All(page.All("form button"), b => Assert.True(b.HasAttribute("disabled"))); // never an opacity trick: really disabled
         Assert.Contains(page.All("a"), a => a.GetAttribute("href") == "/gabinet/demo-anna-demowska");
     }
@@ -162,7 +162,7 @@ public class CheckoutAndConfirmationTests
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Equal("failed", JsonDocument.Parse(f.Web.Booking.Requests.Single(r => r.Method == HttpMethod.Post).Body!).RootElement.GetProperty("outcome").GetString());
         var alert = page.One(".callout--danger[role=alert]")!;
-        Assert.Contains("Płatność nie powiodła się. Rezerwacja nie została potwierdzona.", alert.TextContent);
+        Assert.Contains("Płatność nie powiodła się. Dostęp nie został aktywowany.", alert.TextContent);
         Assert.Equal("/gabinet/demo-anna-demowska", alert.QuerySelector("a")!.GetAttribute("href"));
         Assert.All(page.All("form button"), b => Assert.True(b.HasAttribute("disabled")));
     }
@@ -205,25 +205,36 @@ public class CheckoutAndConfirmationTests
     static Task<ClientAreaFixture> Open(BookingDetailDto booking) => ClientAreaFixture.SignedIn(w => { }).ContinueWith(t => { t.Result.Web.Booking.Respond = _ => FakeBackend.Json(booking); return t.Result; });
 
     [Fact]
-    public async Task A_confirmed_booking_says_so_in_the_exact_words_with_the_summary_the_name_and_two_ways_on()
+    public async Task A_confirmed_booking_says_so_in_the_exact_words_with_the_summary_the_name_the_state_and_the_ways_on()
     {
-        await using var f = await Open(Detail("Confirmed", meeting: "https://meet.example/demo-sala"));
+        await using var f = await Open(Detail("Confirmed", end: Start.AddDays(30)));
         var page = await f.Browser.GetAsync(Confirmation);
         Assert.Equal(HttpStatusCode.OK, page.Status);
-        Assert.Equal("Rezerwacja potwierdzona. Dziękujemy!", page.One(".callout--success")!.TextContent); // J3: getByText must find exactly one
-        Assert.Single(page.All("*"), e => e.ChildElementCount == 0 && e.TextContent == "Rezerwacja potwierdzona. Dziękujemy!");
+        Assert.Equal("Dostęp aktywny. Dziękujemy!", page.One(".callout--success")!.TextContent); // J3: getByText must find exactly one
+        Assert.Single(page.All("*"), e => e.ChildElementCount == 0 && e.TextContent == "Dostęp aktywny. Dziękujemy!");
         var dd = page.QuerySelectorAllText(".booking-summary dd");
-        Assert.Equal(["Audyt kodu demo", "Anna Demowska", "wtorek, 8 grudnia, 12:00–13:00", "60 min", "250,00\u00a0zł"], dd);
+        Assert.Equal(["Audyt kodu demo", "Anna Demowska Agent AI", "10 zadań", "do 7 stycznia 2027", "250,00\u00a0zł"], dd);
+        Assert.Equal("Aktywny", page.One("[data-testid=confirmation-state] .badge")!.TextContent);
         Assert.DoesNotContain(" ·", page.TextOf(".booking-summary")); // no separator glued to nothing (F-03)
-        // UX-021: three ways on (the calendar file is added between the detail and the search)
-        Assert.Equal([$"/moje/rezerwacje/{BookingId}?role=client", $"/moje/rezerwacje/{BookingId}/kalendarz.ics", "/programisci"], page.All(".form-actions a").Select(a => a.GetAttribute("href")));
-        Assert.Equal(["btn btn--primary", "btn btn--secondary", "btn btn--secondary"], page.All(".form-actions a").Select(a => a.ClassName));
-        Assert.Equal(["Zobacz rezerwację", "Dodaj do kalendarza", "Wróć do wyszukiwarki"], page.All(".form-actions a").Select(a => a.TextContent.Trim()));
-        var meeting = page.One("a[target=_blank]")!;
-        Assert.Equal("https://meet.example/demo-sala", meeting.GetAttribute("href"));
-        Assert.Equal("noopener noreferrer", meeting.GetAttribute("rel"));
-        Assert.Contains("Otwórz go w terminie konsultacji.", page.Text); // the link is explained
+        // C-02: a task package leads to the first task and to the keys; there is no calendar file and no meeting link
+        Assert.Equal([$"/moje/rezerwacje/{BookingId}?role=client#zadania", "/moje/klucze", $"/moje/rezerwacje/{BookingId}?role=client", "/programisci"], page.All(".form-actions a").Select(a => a.GetAttribute("href")));
+        Assert.Equal(["Zleć pierwsze zadanie", "Utwórz klucz API", "Zobacz dostęp", "Wróć do wyszukiwarki"], page.All(".form-actions a").Select(a => a.TextContent.Trim()));
+        Assert.Empty(page.All("a[target=_blank]")); Assert.DoesNotContain("kalendarz", page.Html); Assert.DoesNotContain("spotkania", page.Text);
+        Assert.Empty(page.All("[data-testid=connect]")); // a task package has no API connection steps
         Assert.Empty(page.All("meta[http-equiv=refresh]"));
+    }
+
+    [Fact]
+    public async Task A_confirmed_chat_package_shows_the_base_address_and_the_model_and_no_first_task_button()
+    {
+        await using var f = await Open(Detail("Confirmed", kind: "Chat", unitsTotal: 500000));
+        var page = await f.Browser.GetAsync(Confirmation);
+        Assert.Equal("500 tys. tokenów", page.QuerySelectorAllText(".booking-summary dd")[2]);
+        var connect = page.One("[data-testid=connect]")!;
+        Assert.EndsWith("/v1", connect.QuerySelector("[data-testid=connect-base-url]")!.TextContent);
+        Assert.Equal("demo-anna-demowska", connect.QuerySelector("[data-testid=connect-model]")!.TextContent);
+        Assert.Empty(page.All("[data-testid=first-task]"));
+        Assert.NotNull(page.One("[data-testid=create-key]"));
     }
 
     [Fact]
@@ -231,7 +242,7 @@ public class CheckoutAndConfirmationTests
     {
         await using var f = await Open(Detail("Confirmed", practitioner: ""));
         var page = await f.Browser.GetAsync(Confirmation);
-        Assert.Equal(["Konsultacja", "Termin", "Czas trwania", "Do zapłaty"], page.All(".booking-summary dt").Select(d => d.TextContent));
+        Assert.Equal(["Pakiet", "Zawartość", "Ważność", "Do zapłaty"], page.All(".booking-summary dt").Select(d => d.TextContent));
     }
 
     [Theory]
@@ -257,7 +268,7 @@ public class CheckoutAndConfirmationTests
         await using var f = await Open(Detail("PendingPayment", payment: "Created", hold: DateTimeOffset.UtcNow.AddMinutes(5)));
         var page = await f.Browser.GetAsync(Confirmation);
         Assert.Contains("Czekamy na potwierdzenie płatności.", page.One(".callout--info")!.TextContent);
-        Assert.DoesNotContain("Rezerwacja potwierdzona", page.Text);
+        Assert.DoesNotContain("Dostęp aktywny", page.Text);
         Assert.Equal("5", page.One("meta[http-equiv=refresh]")!.GetAttribute("content"));
         Assert.Equal(Confirmation, page.One(".callout--info a")!.GetAttribute("href"));
     }
@@ -274,7 +285,7 @@ public class CheckoutAndConfirmationTests
     {
         await using var f = await Open(Detail("Expired", payment: "Failed"));
         var page = await f.Browser.GetAsync(Confirmation);
-        Assert.Equal("Ta rezerwacja nie jest aktywna.", page.One(".callout--warning")!.TextContent);
+        Assert.Equal("Ten dostęp nie jest aktywny.", page.One(".callout--warning")!.TextContent);
         Assert.DoesNotContain("potwierdzona", page.Text);
     }
 
@@ -318,11 +329,11 @@ public class CheckoutAndConfirmationTests
     public async Task The_confirmed_booking_is_titled_as_confirmed_and_any_other_state_keeps_the_plain_title()
     {
         await using var confirmed = await Open(Detail("Confirmed"));
-        Assert.Equal(["Rezerwacja potwierdzona"], (await confirmed.Browser.GetAsync(Confirmation)).All("h1").Select(h => h.TextContent));
+        Assert.Equal(["Dostęp aktywny"], (await confirmed.Browser.GetAsync(Confirmation)).All("h1").Select(h => h.TextContent));
 
         await using var pending = await Open(Detail("PendingPayment", payment: "Created", hold: DateTimeOffset.UtcNow.AddMinutes(5)));
         var page = await pending.Browser.GetAsync(Confirmation);
-        Assert.Equal(["Rezerwacja"], page.All("h1").Select(h => h.TextContent)); // no page claims success it does not have
+        Assert.Equal(["Dostęp"], page.All("h1").Select(h => h.TextContent)); // no page claims success it does not have
         Assert.Empty(page.All(".booking-confirmation__next")); // "Co dalej" describes a confirmed booking only
     }
 
@@ -333,14 +344,14 @@ public class CheckoutAndConfirmationTests
         var page = await f.Browser.GetAsync(Confirmation);
         var next = page.One(".booking-confirmation__next")!;
         Assert.Equal("Co dalej", next.QuerySelector("h2")!.TextContent);
-        Assert.Equal(3, next.QuerySelectorAll("li").Length);
-        Assert.Contains("Wyślemy e-mail ze szczegółami rezerwacji.", next.TextContent);
-        Assert.Contains("Moje rezerwacje", next.TextContent);
+        Assert.Equal(2, next.QuerySelectorAll("li").Length);
+        Assert.Contains("Wyślemy e-mail ze szczegółami dostępu.", next.TextContent);
+        Assert.Contains("Moje dostępy", next.TextContent);
         Assert.Equal("/cennik", next.QuerySelector("li a")!.GetAttribute("href"));
-        Assert.Matches(@"^\s*Rezerwację możesz anulować.*Zasady zwrotu znajdziesz w cenniku\.\s*$", next.QuerySelectorAll("li")[2].TextContent.Replace(' ', ' '));
+        Assert.Matches(@"^\s*Do pierwszego użycia możesz zrezygnować.*Zasady zwrotu znajdziesz w cenniku\.\s*$", next.QuerySelectorAll("li")[1].TextContent.Replace(' ', ' '));
         Assert.DoesNotMatch(@"\d+\s*(dni|godz|h)\b", next.TextContent); // the window is never stated here
         Assert.True(next.NextElementSibling is null || next.NextElementSibling.ClassList.Contains("form-actions")); // under the summary, above the actions
-        Assert.Equal("Rezerwacja potwierdzona. Dziękujemy!", page.One(".callout--success")!.TextContent); // the exact success text is still the hook
+        Assert.Equal("Dostęp aktywny. Dziękujemy!", page.One(".callout--success")!.TextContent); // the exact success text is still the hook
     }
 
     [Fact]
@@ -353,7 +364,7 @@ public class CheckoutAndConfirmationTests
         await using var f = await Fake();
         var checkout = (await f.Browser.GetAsync(Checkout)).One(".booking-steps")!;
         Assert.Equal("Płatność", checkout.QuerySelector("[aria-current=step] .booking-steps__name")!.FirstChild!.TextContent.Trim());
-        Assert.Equal(2, checkout.QuerySelectorAll(".booking-steps__item--done").Length); // Termin and Opis are finished
+        Assert.Single(checkout.QuerySelectorAll(".booking-steps__item--done")); // Pakiet is finished
     }
 
     [Fact]

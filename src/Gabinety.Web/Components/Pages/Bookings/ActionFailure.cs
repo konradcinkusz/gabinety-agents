@@ -10,6 +10,7 @@ public static class ActionFailure
     {
         { Status: 0 } => BookingsText.Errors.Network,
         { Code: "invalid_transition" } => BookingsText.Errors.InvalidTransition,
+        { Code: "insufficient_quota" } => BookingsText.Errors.QuotaExhausted,
         { Code: "dependency_unavailable" } or { Status: 503 } => BookingsText.Errors.Unavailable,
         { Code: "not_found" } or { Status: 404 } => BookingsText.NotFound,
         { Code: "validation_failed" or "invalid_input" } or { Status: 400 or 422 } => BookingsText.Errors.Validation,
@@ -26,12 +27,12 @@ public static class ActionFailure
 public static class DisputeRules
 {
     public const int TextMin = 10, TextMax = 1000, ReasonMax = 500;
-    public static readonly string[] Kinds = ["not_as_described", "practitioner_no_show", "other"];
+    /// <summary>The kinds a client can pick; <c>practitioner_no_show</c> stays in the contract but the interface no longer offers it (there is no appointment to miss).</summary>
+    public static readonly string[] Kinds = ["not_as_described", "other"];
 
     public static string KindLabel(string kind) => kind switch
     {
         "not_as_described" => BookingsText.Dispute.NotAsDescribed,
-        "practitioner_no_show" => BookingsText.Dispute.PractitionerNoShow,
         _ => BookingsText.Dispute.Other,
     };
 

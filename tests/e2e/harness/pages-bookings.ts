@@ -20,15 +20,15 @@ export class BookingDetailPage {
   }
   /** The value cells (`dd`) carry the status badge and the payment line; they have the role `definition`. */
   value(text: string | RegExp): Locator { return this.page.getByRole("definition").filter({ hasText: text }); }
-  cancelButton(): Locator { return this.page.getByRole("button", { name: "Anuluj rezerwację" }); }
-  cancelDialog(): Locator { return this.page.getByRole("alertdialog", { name: "Czy na pewno anulować rezerwację?" }); }
-  confirmCancel(): Locator { return this.page.getByRole("button", { name: "Tak, anuluj rezerwację" }); }
+  cancelButton(): Locator { return this.page.getByRole("button", { name: "Zrezygnuj" }); }
+  cancelDialog(): Locator { return this.page.getByRole("alertdialog", { name: "Czy na pewno zrezygnować z pakietu?" }); }
+  confirmCancel(): Locator { return this.page.getByRole("button", { name: "Tak, zrezygnuj" }); }
   /**
    * Confirms the cancel and waits for the success line. A danger banner (the services answered 429/503/...) is logged (product copy only) and the confirm
    * is pressed again a few times: the cancel is all-or-nothing on the server, so a repeat after a failure cannot cancel twice.
    */
   async confirmCancelAndWait() {
-    const done = this.page.getByText("Rezerwacja została anulowana.");
+    const done = this.page.getByText("Zrezygnowano z pakietu.");
     for (let attempt = 1; ; attempt++) {
       await this.confirmCancel().click();
       try {
@@ -42,10 +42,10 @@ export class BookingDetailPage {
       }
     }
   }
-  disputeButton(): Locator { return this.page.getByRole("button", { name: "Zgłoś spór" }); }
+  disputeButton(): Locator { return this.page.getByRole("button", { name: "Zgłoś reklamację" }); }
   async openDispute(text: string) {
     await this.disputeButton().click();
-    await this.page.getByLabel("Opis sporu").fill(text);
+    await this.page.getByLabel("Opis reklamacji").fill(text);
     await this.page.getByRole("button", { name: "Wyślij zgłoszenie" }).click();
   }
 }
@@ -54,7 +54,7 @@ export class AdminDisputesPage {
   constructor(readonly page: Page) {}
   async goto() {
     await gotoInteractive(this.page, "/admin/spory");
-    await expect(this.page.getByRole("heading", { level: 1, name: "Spory" })).toBeVisible();
+    await expect(this.page.getByRole("heading", { level: 1, name: "Reklamacje" })).toBeVisible();
   }
   /** One dispute card: the list item that names the booking id. */
   item(bookingId: string): Locator { return this.page.getByRole("listitem").filter({ hasText: bookingId }); }

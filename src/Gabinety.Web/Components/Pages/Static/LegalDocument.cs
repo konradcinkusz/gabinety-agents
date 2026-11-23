@@ -53,6 +53,7 @@ public static partial class LegalMarkdown
         foreach (var raw in body.Split('\n'))
         {
             var line = raw.Trim();
+            if (line.StartsWith("<!--", StringComparison.Ordinal) && line.EndsWith("-->", StringComparison.Ordinal)) continue; // a note to the editors (DO WERYFIKACJI PRAWNEJ): never rendered
             if (HeadingLine().Match(line) is { Success: true } h)
             {
                 FlushPara(); FlushList();

@@ -42,7 +42,7 @@ public class StaticPageStructureTests
         var page = await web.NewBrowser().GetAsync("/cennik");
         Assert.Single(page.All("h1"));
         Assert.Equal(2, page.All("table.table--cards").Count);
-        Assert.Equal("Podział ceny konsultacji 120,00 zł", page.TextOf("section[aria-labelledby=pricing-example-2] caption").Replace(' ', ' '));
+        Assert.Equal("Podział ceny pakietu 120,00 zł", page.TextOf("section[aria-labelledby=pricing-example-2] caption").Replace(' ', ' '));
         Assert.Equal("/programisci", page.One(".prose a[href='/programisci']")!.GetAttribute("href"));
     }
 

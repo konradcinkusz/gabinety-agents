@@ -12,12 +12,10 @@ namespace Gabinety.Web.Tests.PractitionerAreaTests;
 /// </summary>
 public sealed class PractitionerWorld
 {
-    public sealed class Offer { public Guid Id = Guid.NewGuid(); public string Title = "", Description = "", ProblemSlug = "", MeetingUrl = ""; public int Duration; public long Price; public string[] Techs = []; public bool Active = true; }
+    public sealed class Offer { public Guid Id = Guid.NewGuid(); public string Title = "", Description = "", ProblemSlug = "", MeetingUrl = ""; public int Duration; public long Price; public string[] Techs = []; public bool Active = true; public string Kind = "Tasks"; public int Units = 1; }
 
     public PractitionerPrivateDto? Profile { get; set; }
     public List<Offer> Offers { get; } = [];
-    public List<(int Day, string From, string To)> Rules { get; } = [];
-    public List<string> Exceptions { get; } = [];
     public string? PaymentState { get; set; } = "none"; // null: the mock provider (404)
     public bool EmailVerified { get; set; } = true;
     public string? PendingGithubLogin { get; set; }
@@ -64,7 +62,7 @@ public sealed class PractitionerWorld
 
     static bool Contact(string text) => text.Contains('@') || text.Contains("telegram", StringComparison.OrdinalIgnoreCase);
 
-    OfferingPrivateDto View(Offer o) => new(o.Id, o.Title, o.Description, o.Duration, new MoneyDto(o.Price, "PLN"), o.ProblemSlug, o.Techs, o.Active, string.IsNullOrEmpty(o.MeetingUrl) ? null : o.MeetingUrl);
+    OfferingPrivateDto View(Offer o) => new(o.Id, o.Title, o.Description, o.Duration, new MoneyDto(o.Price, "PLN"), o.ProblemSlug, o.Techs, o.Active, string.IsNullOrEmpty(o.MeetingUrl) ? null : o.MeetingUrl, o.Kind, o.Units);
 
     HttpResponseMessage Directory(HttpRequestMessage r)
     {
@@ -182,24 +180,13 @@ public sealed class PractitionerWorld
     static void Apply(Offer o, JsonObject b)
     {
         o.Title = S(b, "title").Trim(); o.Description = S(b, "description").Trim(); o.Duration = b["durationMinutes"]!.GetValue<int>(); o.Price = b["priceMinor"]!.GetValue<long>();
-        o.ProblemSlug = S(b, "problemSlug"); o.MeetingUrl = S(b, "meetingUrl"); o.Techs = [.. (b["techSlugs"] as JsonArray ?? []).Select(x => x!.GetValue<string>())];
+        o.ProblemSlug = S(b, "problemSlug"); o.MeetingUrl = S(b, "meetingUrl"); o.Kind = b["kind"] is { } k ? k.GetValue<string>() : "Tasks"; o.Units = b["units"] is { } u ? u.GetValue<int>() : 1; o.Techs = [.. (b["techSlugs"] as JsonArray ?? []).Select(x => x!.GetValue<string>())];
     }
 
     HttpResponseMessage Booking(HttpRequestMessage r)
     {
         if (BookingDown) throw new HttpRequestException("booking is down");
         var path = r.RequestUri!.AbsolutePath;
-        if (path == "/api/v1/me/availability")
-        {
-            if (Profile is null) return Problem(HttpStatusCode.Forbidden, "forbidden");
-            if (r.Method == HttpMethod.Get) return FakeBackend.Json(Availability());
-            var b = Body(r)!;
-            var rules = (b["rules"] as JsonArray ?? []).Select(x => (Day: x!["isoWeekday"]!.GetValue<int>(), From: x["startLocal"]!.GetValue<string>(), To: x["endLocal"]!.GetValue<string>())).ToList();
-            if (rules.Any(x => string.CompareOrdinal(x.To, x.From) <= 0)) return Problem(HttpStatusCode.UnprocessableEntity, "validation_failed", ["rules[0].endLocal"]);
-            Rules.Clear(); Rules.AddRange(rules);
-            Exceptions.Clear(); Exceptions.AddRange((b["exceptions"] as JsonArray ?? []).Select(x => x!["dateLocal"]!.GetValue<string>()));
-            return FakeBackend.Json(Availability());
-        }
         if (path == "/api/v1/me/bookings" && r.Method == HttpMethod.Get)
         {
             if (BookingsFail) return Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable");
@@ -222,7 +209,6 @@ public sealed class PractitionerWorld
         return new HttpResponseMessage(HttpStatusCode.NotFound);
     }
 
-    AvailabilityDto Availability() => new([.. Rules.Select(x => new AvailabilityRuleDto(x.Day, x.From, x.To))], [.. Exceptions.Select(e => new AvailabilityExceptionDto(e))]);
 }
 
 public static class PractitionerBrowsers

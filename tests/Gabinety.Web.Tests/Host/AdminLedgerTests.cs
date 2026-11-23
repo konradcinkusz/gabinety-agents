@@ -76,8 +76,8 @@ public class AdminLedgerTests
         var download = page.All("main a").Single(a => a.TextContent == "Pobierz CSV");
         Assert.Equal($"/admin/ksiega/csv?from={today:yyyy-MM}-01&to={today:yyyy-MM-dd}", download.GetAttribute("href"));
         Assert.True(download.HasAttribute("download"));
-        Assert.Equal(["Data", "Rodzaj", "Rezerwacja", "Kwota"], page.All("table thead th[scope=col]").Select(t => t.TextContent));
-        Assert.Equal(["Płatność klienta", "Zwrot dla klienta", "Wypłata dla programisty"], page.All("tbody tr").Select(r => r.QuerySelectorAll("td")[1].TextContent));
+        Assert.Equal(["Data", "Rodzaj", "Dostęp", "Kwota"], page.All("table thead th[scope=col]").Select(t => t.TextContent));
+        Assert.Equal(["Płatność klienta", "Zwrot dla klienta", "Wypłata dla dostawcy"], page.All("tbody tr").Select(r => r.QuerySelectorAll("td")[1].TextContent));
         Assert.Equal(["180,00 zł", "100,00 zł", "60,00 zł"], page.All("tbody tr").Select(r => r.QuerySelectorAll("td")[3].TextContent.Replace(' ', ' ')));
         Assert.Equal("Wpisów w okresie: 3.", page.One(".muted")!.TextContent);
         Assert.Equal("region", page.One(".table-wrap")!.GetAttribute("role"));

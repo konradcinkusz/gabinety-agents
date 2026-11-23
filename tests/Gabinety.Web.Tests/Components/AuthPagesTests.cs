@@ -73,7 +73,7 @@ public class AuthPagesTests : BunitContext
     {
         var cut = Page<Login>("http://localhost/logowanie?redirect=%2Frezerwacja%2Fabc%3Fstart%3D2026-12-01T09%3A00Z%26gabinet%3Ddemo-anna");
         var context = cut.Find("[data-testid=booking-context]");
-        Assert.Equal("Zaloguj się, aby dokończyć rezerwację.", context.TextContent);
+        Assert.Equal("Zaloguj się, aby dokończyć wykup dostępu.", context.TextContent);
         Assert.Contains("callout--info", context.ClassName);
         Assert.DoesNotContain("2026-12-01", cut.Find(".card").TextContent); // the target is read, the raw query is never shown
         Assert.Empty(Page<Login>("http://localhost/logowanie?redirect=%2Fmoje%2Frezerwacje").FindAll("[data-testid=booking-context]"));
@@ -83,7 +83,7 @@ public class AuthPagesTests : BunitContext
     public void A_registration_that_continues_a_booking_says_so()
     {
         var cut = Registration("http://localhost/rejestracja?redirect=%2Frezerwacja%2Fabc");
-        Assert.Equal("Załóż konto, aby dokończyć rezerwację.", cut.Find("[data-testid=booking-context]").TextContent);
+        Assert.Equal("Załóż konto, aby dokończyć wykup dostępu.", cut.Find("[data-testid=booking-context]").TextContent);
         Assert.Empty(Registration().FindAll("[data-testid=booking-context]"));
     }
 

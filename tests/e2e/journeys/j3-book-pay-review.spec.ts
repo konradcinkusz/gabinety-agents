@@ -67,7 +67,7 @@ test.describe("J3 book, pay, complete, review", () => {
     expect(link.searchParams.get("gabinet")).toBe(SLUG); // the slot link carries the profile slug (#99)
     await profile.openBookingForm(slot);
     const form = new BookingFormPage(page);
-    await expect(page.getByRole("heading", { level: 1, name: "Rezerwacja konsultacji" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Wykup dostępu" })).toBeVisible();
     await expect(page.getByText(offering.title)).toBeVisible();
     await expectNoSeriousA11yViolations(page);
     const bookingIds: string[] = [await form.submit(BRIEFS[0]!)];
@@ -99,7 +99,7 @@ test.describe("J3 book, pay, complete, review", () => {
       expect(seen.payment.status).toBe("Succeeded");
       expect(seen.brief?.text).toBe(BRIEFS[0]);
       await pp.goto("/moje/rezerwacje?role=practitioner");
-      const row = pp.getByRole("listitem").filter({ hasText: "Potwierdzona" }).filter({ hasText: offering.title });
+      const row = pp.getByRole("listitem").filter({ hasText: "Aktywny" }).filter({ hasText: offering.title });
       await expect(row).toHaveCount(1);
       await expectNoSeriousA11yViolations(pp);
       await row.getByRole("link", { name: "Szczegóły" }).click();
@@ -146,7 +146,7 @@ test.describe("J3 book, pay, complete, review", () => {
     await expectNoSeriousA11yViolations(page);
     await reviewForm.submit(REVIEWS[0]!.rating, REVIEWS[0]!.text);
     await expect(page.getByRole("heading", { name: "Dziękujemy za opinię" })).toBeVisible();
-    await expect(page.getByText("Opinia została opublikowana na profilu programisty.")).toBeVisible();
+    await expect(page.getByText("Opinia została opublikowana na profilu agenta.")).toBeVisible();
     expect(await reviewAttemptStatus(client, bookingIds[0]!, 1, REVIEWS[0]!.text)).toBe(409); // one review per booking (the flag canReview does not know)
 
     // ---- 6. reviews 2 (still "Nowy") and 3 (the average) ----

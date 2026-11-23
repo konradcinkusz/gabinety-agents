@@ -12,7 +12,7 @@ export class CategoryNav {
 export class PublicProfilePage {
   constructor(readonly page: Page) {}
   heading(name: string): Locator { return this.page.getByRole("heading", { level: 1, name }); }
-  bookLink(offeringTitle: string): Locator { return this.page.getByRole("link", { name: `Zarezerwuj: ${offeringTitle}` }); }
+  bookLink(offeringTitle: string): Locator { return this.page.getByRole("link", { name: `Wykup dostęp: ${offeringTitle}` }); }
 }
 
 export class RegisterPage {
@@ -34,7 +34,7 @@ export class PractitionerArea {
     await gotoInteractive(this.page, "/gabinet-programisty");
     await this.page.getByLabel("Nazwa wyświetlana").fill(displayName);
     await this.page.getByRole("button", { name: "Załóż gabinet" }).click();
-    await expect(this.page.getByRole("heading", { level: 1, name: "Panel programisty" })).toBeVisible();
+    await expect(this.page.getByRole("heading", { level: 1, name: "Panel dostawcy" })).toBeVisible();
   }
   checklistItem(name: string): Locator { return this.page.getByRole("listitem").filter({ hasText: name }); }
 
@@ -49,9 +49,9 @@ export class PractitionerArea {
   }
 
   async addOffering(o: { title: string; description: string; price: string }) {
-    await gotoInteractive(this.page, "/gabinet-programisty/oferty?nowa=1"); // the form is closed until "Dodaj ofertę" (UX-042)
-    await this.page.getByLabel("Nazwa oferty").fill(o.title);
-    await this.page.getByLabel("Opis oferty").fill(o.description);
+    await gotoInteractive(this.page, "/gabinet-programisty/oferty?nowa=1"); // the form is closed until "Dodaj pakiet" (UX-042)
+    await this.page.getByLabel("Nazwa pakietu").fill(o.title);
+    await this.page.getByLabel("Opis pakietu").fill(o.description);
     await this.page.getByLabel("Cena (zł)").fill(o.price);
     await this.page.getByLabel("Rodzaj problemu").selectOption({ index: 1 }); // index 0 is "Wybierz…"
     await this.page.getByRole("group", { name: /Technologie/ }).getByRole("checkbox").first().check();
@@ -79,7 +79,7 @@ export class VerificationQueuePage {
   constructor(readonly page: Page) {}
   async goto(status?: "Submitted" | "Approved") {
     await gotoInteractive(this.page, status ? `/admin/weryfikacja?status=${status}` : "/admin/weryfikacja");
-    await expect(this.page.getByRole("heading", { level: 1, name: "Weryfikacja programistów" })).toBeVisible();
+    await expect(this.page.getByRole("heading", { level: 1, name: "Weryfikacja agentów" })).toBeVisible();
   }
   row(displayName: string): Locator {
     return this.page.getByRole("listitem").filter({ has: this.page.getByRole("link", { name: displayName, exact: true }) });

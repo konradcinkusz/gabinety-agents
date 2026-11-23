@@ -29,7 +29,7 @@ public class AdminLedgerViewTests
         host.Web.Booking.Respond = _ => CsvOf(Header + Row("ClientCharge", 18000, 1) + Row("Refund", 10000, 2));
         var page = await host.Browser.GetAsync($"/admin/ksiega?{Period}");
 
-        var refs = page.All("tbody td[data-label=Rezerwacja] span.ledger-ref");
+        var refs = page.All("tbody td[data-label=Dostęp] span.ledger-ref");
         Assert.Equal(["00000001", "00000002"], refs.Select(r => r.TextContent));
         Assert.Equal([Id(1), Id(2)], refs.Select(r => r.GetAttribute("title")));
         Assert.Empty(page.All("table a")); // no admin-readable booking page exists: the reference is not a link
@@ -42,7 +42,7 @@ public class AdminLedgerViewTests
         // the same timestamp prefix (0b9e1d2c) for every row: the old column read the same eight characters on each row
         host.Web.Booking.Respond = _ => CsvOf(Header + Row("ClientCharge", 18000, 1) + Row("ClientCharge", 18000, 9));
         var page = await host.Browser.GetAsync($"/admin/ksiega?{Period}");
-        var texts = page.All("tbody td[data-label=Rezerwacja] span.ledger-ref").Select(r => r.TextContent).ToList();
+        var texts = page.All("tbody td[data-label=Dostęp] span.ledger-ref").Select(r => r.TextContent).ToList();
         Assert.Equal(2, texts.Distinct().Count());
         Assert.DoesNotContain("0b9e1d2c", string.Concat(texts));
     }

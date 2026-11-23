@@ -11,17 +11,17 @@ namespace Gabinety.Web.Components.Pages.Bookings;
 /// </summary>
 public static class MyBookingsSchedule
 {
-    /// <summary>Only a booking that is still to happen is upcoming: awaiting payment or confirmed. Anything else (completed, cancelled, expired, no-show, in dispute) is past whatever its start time says: a completed booking can carry a start in the future of this clock when the seeded data was made with a moved test clock.</summary>
+    /// <summary>Only a package that is still running is active: awaiting payment or confirmed, and its validity (<c>EndUtc</c>) not over. Anything else (completed, cancelled, expired, in a complaint) is past.</summary>
     static readonly string[] Pending = ["PendingPayment", "Confirmed"];
 
-    public static bool IsUpcoming(BookingViewDto booking, DateTimeOffset now) => booking.StartUtc > now && Pending.Contains(booking.Status);
+    public static bool IsUpcoming(BookingViewDto booking, DateTimeOffset now) => booking.EndUtc > now && Pending.Contains(booking.Status);
 
-    /// <summary>Upcoming: the soonest first. Everything else: the newest first.</summary>
+    /// <summary>Active: the one that expires first, first. Everything else: the most recently ended first.</summary>
     public static (List<BookingViewDto> Upcoming, List<BookingViewDto> Past) Split(IEnumerable<BookingViewDto> items, DateTimeOffset now)
     {
         var list = items.ToList();
-        return (list.Where(b => IsUpcoming(b, now)).OrderBy(b => b.StartUtc).ToList(),
-            list.Where(b => !IsUpcoming(b, now)).OrderByDescending(b => b.StartUtc).ToList());
+        return (list.Where(b => IsUpcoming(b, now)).OrderBy(b => b.EndUtc).ToList(),
+            list.Where(b => !IsUpcoming(b, now)).OrderByDescending(b => b.EndUtc).ToList());
     }
 
     /// <summary>

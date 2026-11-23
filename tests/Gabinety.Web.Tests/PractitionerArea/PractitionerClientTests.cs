@@ -91,16 +91,12 @@ public class PractitionerClientTests
     }
 
     [Fact]
-    public async Task The_scheduling_client_reads_and_writes_availability_and_the_payments_account_with_the_users_bearer()
+    public async Task The_scheduling_client_reads_the_payments_account_with_the_users_bearer()
     {
         var (web, scope, world) = Scoped();
         await using var _w = web;
         using var _s = scope;
         var client = scope.ServiceProvider.GetRequiredService<PractitionerSchedulingClient>();
-        var saved = await client.SaveAvailabilityAsync(new AvailabilityDto([new(1, "09:00", "10:00")], [new("2027-01-06")]));
-        Assert.True(saved.IsOk);
-        Assert.Equal([(1, "09:00", "10:00")], world.Rules);
-        Assert.Equal("2027-01-06", (await client.AvailabilityAsync()).Value!.Exceptions[0].DateLocal);
         world.PaymentState = "pending";
         Assert.Equal("pending", (await client.PaymentAccountAsync()).Value!.State);
         Assert.Equal("https://connect.stripe.com/setup/e/acct_test/abc", (await client.StartPaymentOnboardingAsync()).Value!.OnboardingUrl);

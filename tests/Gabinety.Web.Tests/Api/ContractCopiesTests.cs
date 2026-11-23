@@ -82,6 +82,14 @@ public class ContractCopiesTests
         RoundTrip<W.SitemapDto>(new Gabinety.Contracts.Directory.SitemapDto([new SitemapPractitioner("s", At)], [new SitemapCategory("/programisci", 6, true)]), check: c => Assert.True(c.Categories[0].Indexable));
 
     [Theory]
+    [InlineData(OfferingKind.Tasks, 10)] [InlineData(OfferingKind.Chat, 500)]
+    public void An_offering_carries_its_kind_as_the_wire_name_and_its_units(OfferingKind kind, int units)
+    {
+        var real = new Offering(Id, "Pakiet", "Opis", 30, new MoneyDto(9900), "audyt-kodu", ["dotnet"], kind, units);
+        RoundTrip<W.OfferingDto>(real, Plain, c => Assert.Equal((kind.ToString(), units), (c.Kind, c.Units)));
+    }
+
+    [Theory]
     [InlineData(BookingStatus.PendingPayment)] [InlineData(BookingStatus.Confirmed)] [InlineData(BookingStatus.LateCancelledByClient)] [InlineData(BookingStatus.Resolved)]
     public void A_booking_view_with_its_status_as_the_wire_name(BookingStatus status)
     {
@@ -157,13 +165,13 @@ public class ContractCopiesTests
             c => Assert.Equal(("PendingPayment", "https://checkout.stripe.com/c/pay/cs_test_1", At), (c.Status, c.CheckoutUrl, c.HoldExpiresAt)));
 
     [Fact]
-    public void The_create_request_is_what_the_service_binds_the_instant_with_a_Z()
+    public void The_create_request_carries_no_start_and_the_service_binds_it()
     {
-        var copy = new W.CreateBookingRequestDto(Id, new DateTimeOffset(2026, 12, 8, 12, 0, 0, TimeSpan.FromHours(1)), new W.BriefDto("Opis problemu demo, syntetyczny.", "audyt-kodu", true));
+        var copy = new W.CreateBookingRequestDto(Id, new W.BriefDto("Opis problemu demo, syntetyczny.", "audyt-kodu", true));
         var json = JsonSerializer.Serialize(copy, W.ApiClient.Json);
         var real = JsonSerializer.Deserialize<CreateBookingRequest>(json, Plain)!; // the service's own record reads what the web writes
-        Assert.Equal((Id, new DateTimeOffset(2026, 12, 8, 11, 0, 0, TimeSpan.Zero), "audyt-kodu", true), (real.OfferingId, real.StartUtc, real.Brief.ProblemSlug, real.Brief.AiAssisted));
-        Assert.Contains("\"startUtc\":\"2026-12-08T11:00:00Z\"", json);
+        Assert.Equal((Id, (DateTimeOffset?)null, "audyt-kodu", true), (real.OfferingId, real.StartUtc, real.Brief.ProblemSlug, real.Brief.AiAssisted)); // C-02: a package has no start
+        Assert.DoesNotContain("startUtc", json);
     }
 
     [Fact]

@@ -26,7 +26,8 @@ public sealed record SitemapPractitionerDto(string Slug, DateTimeOffset LastModi
 /// <summary><c>Practitioners</c> is optional so a caller that only needs the categories (the list pages) is unaffected by it.</summary>
 public sealed record SitemapDto(IReadOnlyList<SitemapCategoryDto> Categories, IReadOnlyList<SitemapPractitionerDto>? Practitioners = null);
 
-public sealed record OfferingDto(Guid Id, string Title, string Description, int DurationMinutes, MoneyDto Price, string ProblemSlug, IReadOnlyList<string> TechSlugs);
+/// <summary><c>Kind</c> is <c>Tasks</c> or <c>Chat</c> (a string stands for the enum); <c>Units</c> is the number of tasks, or thousands of tokens for <c>Chat</c> (docs/agentic/PLAN.md 2.1).</summary>
+public sealed record OfferingDto(Guid Id, string Title, string Description, int DurationMinutes, MoneyDto Price, string ProblemSlug, IReadOnlyList<string> TechSlugs, string Kind = "Tasks", int Units = 1);
 
 /// <summary>The public profile (CONTRACTS 3.2): the card's fields and the extras side by side (flat on the wire).</summary>
 public sealed record PractitionerProfileDto(Guid Id, string Slug, string DisplayName, string Headline, string? GithubLogin, IReadOnlyList<string> Badges, RatingDto? Rating, bool IsNew,
@@ -48,7 +49,7 @@ public sealed record ClientRefDto(string DisplayName);
 
 /// <summary>The part of <c>BookingView</c> (CONTRACTS 4.4) the list shows. <c>Status</c> is the wire name (<c>PendingPayment</c>, <c>Confirmed</c>, ...).</summary>
 public sealed record BookingViewDto(Guid Id, string Status, DateTimeOffset StartUtc, DateTimeOffset EndUtc, int DurationMinutes, string OfferingTitle,
-    MoneyDto Price, PractitionerRefDto Practitioner, ClientRefDto? Client);
+    MoneyDto Price, PractitionerRefDto Practitioner, ClientRefDto? Client, string Kind = "Tasks", long UnitsTotal = 0, long UnitsUsed = 0);
 
 public sealed record ReplyDto(string Text, DateTimeOffset RepliedAt);
 
@@ -61,7 +62,8 @@ public sealed record AssistantStatusDto(string State, IReadOnlyList<string> Feat
 
 public sealed record BriefDto(string Text, string? ProblemSlug, bool AiAssisted);
 
-public sealed record CreateBookingRequestDto(Guid OfferingId, [property: System.Text.Json.Serialization.JsonConverter(typeof(UtcInstantWriter))] DateTimeOffset StartUtc, BriefDto Brief);
+/// <summary>A package has no time slot (docs/agentic/PLAN.md A-02): the request carries no <c>startUtc</c>.</summary>
+public sealed record CreateBookingRequestDto(Guid OfferingId, BriefDto Brief);
 
 /// <summary>The service insists on a UTC instant written with <c>Z</c> (CONTRACTS 0): <c>2026-12-08T11:00:00Z</c>, never <c>+00:00</c> or a local offset.</summary>
 public sealed class UtcInstantWriter : System.Text.Json.Serialization.JsonConverter<DateTimeOffset>
@@ -82,13 +84,24 @@ public sealed record PaymentViewDto(string Status, MoneyDto Refunded);
 /// </summary>
 public sealed record BookingDetailDto(Guid Id, string Status, string? StatusReason, DateTimeOffset StartUtc, DateTimeOffset EndUtc, int DurationMinutes, string OfferingTitle, MoneyDto Price,
     PractitionerRefDto Practitioner, ClientRefDto? Client, BriefDto? Brief, string? MeetingUrl, DateTimeOffset? HoldExpiresAt, PaymentViewDto Payment, MoneyDto? Fee, MoneyDto? Payout,
-    bool CanCancel, bool CanDispute, bool CanReportNoShow, bool CanReview, CancelOutcomeDto? CancelOutcome = null);
+    bool CanCancel, bool CanDispute, bool CanReportNoShow, bool CanReview, CancelOutcomeDto? CancelOutcome = null, string Kind = "Tasks", long UnitsTotal = 0, long UnitsUsed = 0);
 
 /// <summary><c>cancelOutcome</c> (CONTRACTS 4.4, 9.2): what cancelling would do for the viewer right now, computed by the service on its clock. Present only when <c>canCancel</c>. <c>Outcome</c> is <c>full_refund</c>, <c>partial</c> or <c>no_refund</c>; <c>Refund</c> is what the client gets back.</summary>
 public sealed record CancelOutcomeDto(string Outcome, MoneyDto Refund);
 
 /// <summary><c>POST /api/v1/assistant/brief</c> (CONTRACTS 6). Only a suggestion: it is shown, never applied by itself.</summary>
 public sealed record BriefSuggestionDto(string ProblemSlug, IReadOnlyList<string> TechSlugs, string Summary, IReadOnlyList<string> ClarifyingQuestions, int SuggestedDurationMinutes, string Confidence);
+
+// ---- API keys and tasks (docs/agentic/PLAN.md B-01, B-05). The plain key is in <c>ApiKeyCreatedDto.Key</c> once, at creation; the list never carries it.
+
+public sealed record ApiKeyDto(Guid Id, string Name, string Prefix, DateTimeOffset CreatedAt, DateTimeOffset? LastUsedAt);
+
+public sealed record ApiKeyCreatedDto(Guid Id, string Name, string Prefix, string Key, DateTimeOffset CreatedAt);
+
+/// <summary>A task of a package (B-05). <c>Status</c> is <c>queued | running | succeeded | failed</c>; <c>Output</c> is text of the agent, shown as plain text and never as markup.</summary>
+public sealed record AgentTaskDto(Guid Id, string Status, string? Output, DateTimeOffset CreatedAt, DateTimeOffset? CompletedAt);
+
+public sealed record TaskCreatedDto(Guid Id, string Status);
 
 public sealed record CreateReviewResponseDto(Guid ReviewId, string Status);
 
@@ -105,25 +118,18 @@ public sealed record CreatePractitionerBody(string DisplayName);
 /// <summary>An empty optional field is omitted, not sent as null (CONTRACTS 0): the attribute is on the body, not on the shared options.</summary>
 public sealed record UpdatePractitionerBody(string DisplayName, string Headline, string Bio,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] string? PortfolioUrl,
-    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] string? MeetingUrlDefault,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] string? Nip);
 
-public sealed record OfferingPrivateDto(Guid Id, string Title, string Description, int DurationMinutes, MoneyDto Price, string ProblemSlug, IReadOnlyList<string> TechSlugs, bool IsActive, string? MeetingUrl);
+public sealed record OfferingPrivateDto(Guid Id, string Title, string Description, int DurationMinutes, MoneyDto Price, string ProblemSlug, IReadOnlyList<string> TechSlugs, bool IsActive, string? MeetingUrl, string Kind = "Tasks", int Units = 1);
 
 public sealed record OfferingsDto(IReadOnlyList<OfferingPrivateDto> Items);
 
-public sealed record OfferingBody(string Title, string Description, int DurationMinutes, long PriceMinor, string ProblemSlug, IReadOnlyList<string> TechSlugs,
-    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] string? MeetingUrl);
+/// <summary><c>Kind</c> is <c>Tasks</c> or <c>Chat</c>; <c>Units</c> counts tasks, or thousands of tokens for <c>Chat</c>. The meeting link of the old model is not sent (docs/agentic/PLAN.md C-04).</summary>
+public sealed record OfferingBody(string Title, string Description, int DurationMinutes, long PriceMinor, string ProblemSlug, IReadOnlyList<string> TechSlugs, string Kind = "Tasks", int Units = 1);
 
 public sealed record GithubLinkBody(string GithubLogin);
 
 public sealed record GithubChallengeDto(string Code);
-
-public sealed record AvailabilityRuleDto(int IsoWeekday, string StartLocal, string EndLocal);
-
-public sealed record AvailabilityExceptionDto(string DateLocal);
-
-public sealed record AvailabilityDto(IReadOnlyList<AvailabilityRuleDto> Rules, IReadOnlyList<AvailabilityExceptionDto> Exceptions);
 
 /// <summary><c>GET /api/v1/me/payments/account</c>: <c>State</c> is <c>none | pending | ready</c>. A provider with no connected accounts (the mock) answers 404.</summary>
 public sealed record PaymentAccountDto(string Provider, string State);

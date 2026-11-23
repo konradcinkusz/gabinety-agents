@@ -27,7 +27,7 @@ public class DashboardHostTests
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Equal("Załóż swój gabinet", page.TextOf("h1"));
         Assert.Single(page.All("h1"));
-        Assert.Contains("Każde zalogowane konto może założyć gabinet programisty", page.TextOf("[data-testid=open-to-all]")); // F-10: said on the page
+        Assert.Contains("Każde zalogowane konto może założyć profil agenta jako dostawca", page.TextOf("[data-testid=open-to-all]")); // F-10: said on the page
         Assert.Equal(4, page.All("ol.steps li").Count); // P-DASH-2: the steps
         var form = page.One("form[method=post]")!;
         Assert.Equal("Nazwa wyświetlana", form.QuerySelector("label")!.TextContent.Trim()); // J2: getByLabel("Nazwa wyświetlana")
@@ -50,8 +50,8 @@ public class DashboardHostTests
         Assert.StartsWith("Bearer ", post.Authorization);
         Assert.Equal("""{"displayName":"Demo Jedyny"}""", post.Body);
         var after = await browser.GetAsync(response.Location!);
-        Assert.Equal("Panel programisty", after.TextOf("h1")); // J2: the h1 after creating
-        Assert.Equal("Gabinet został założony. Uzupełnij kroki poniżej.", after.TextOf("[data-testid=flash]"));
+        Assert.Equal("Panel dostawcy", after.TextOf("h1")); // J2: the h1 after creating
+        Assert.Equal("Profil agenta został założony. Uzupełnij kroki poniżej.", after.TextOf("[data-testid=flash]"));
     }
 
     [Theory]
@@ -77,7 +77,7 @@ public class DashboardHostTests
         var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.EmailVerified = false; });
         await using var _ = web;
         var page = await browser.GetAsync("/gabinet-programisty");
-        Assert.Equal("Panel programisty", page.TextOf("h1"));
+        Assert.Equal("Panel dostawcy", page.TextOf("h1"));
         Assert.Equal(["Szkic"], page.All(".badge").Select(b => b.TextContent).Where(t => t == "Szkic")); // J2: getByText("Szkic", exact) is one element
         var items = page.All("[data-item]");
         Assert.Equal(7, items.Count);
@@ -96,7 +96,7 @@ public class DashboardHostTests
         var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
         var page = await browser.GetAsync("/gabinet-programisty");
-        foreach (var name in new[] { "Nagłówek profilu", "Opis (co najmniej 200 znaków)", "Co najmniej jedna aktywna oferta", "Połączone konto GitHub", "Poprawny numer NIP", "Link do portfolio", "Potwierdzony adres e-mail" })
+        foreach (var name in new[] { "Nagłówek profilu", "Opis (co najmniej 200 znaków)", "Co najmniej jeden aktywny pakiet", "Połączone konto GitHub", "Poprawny numer NIP", "Link do portfolio", "Potwierdzony adres e-mail" })
             Assert.Equal(1, page.All("li").Count(li => li.TextContent.Contains(name))); // getByRole("listitem").filter({hasText}) must match one
         Assert.Equal(1, page.ExactText("Szkic"));
     }
@@ -182,7 +182,7 @@ public class DashboardHostTests
     [Fact]
     public async Task An_approved_dashboard_has_one_public_callout_with_the_profile_link_and_a_hidden_copy_button_and_no_cards_or_checklist()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.CompleteProfile(); w.Rules.Add((1, "09:00", "12:00")); w.PaymentState = "pending"; });
+        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.CompleteProfile(); w.PaymentState = "pending"; });
         await using var _ = web;
         var page = await browser.GetAsync("/gabinet-programisty");
         var callout = page.One("[data-testid=public-profile]")!;
@@ -202,48 +202,53 @@ public class DashboardHostTests
     }
 
     [Fact]
-    public async Task An_approved_dashboard_lists_the_next_five_upcoming_consultations_of_the_practitioner_role_soonest_first()
+    public async Task An_approved_dashboard_shows_the_active_packages_and_the_five_latest_purchases_newest_first()
     {
         var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.CompleteProfile(); });
         await using var _ = web;
-        for (var i = 7; i >= 1; i--) world.Bookings.Add(Booking($"Konsultacja {i}", i, i == 1 ? null : $"Demo Klient {i}"));
-        world.Bookings.Add(Booking("Minione", -3, status: "Completed"));
-        world.Bookings.Add(Booking("Odwołane", 2, status: "CancelledByClient"));
+        for (var i = 7; i >= 1; i--) world.Bookings.Add(Booking($"Pakiet {i}", -i, i == 1 ? null : $"Demo Klient {i}") with { UnitsTotal = 10, UnitsUsed = i, EndUtc = DateTimeOffset.UtcNow.AddDays(20) });
+        world.Bookings.Add(Booking("Minione", -3, status: "Completed") with { EndUtc = DateTimeOffset.UtcNow.AddDays(-1) });
+        world.Bookings.Add(Booking("Zrezygnowane", -2, status: "CancelledByClient"));
         var page = await browser.GetAsync("/gabinet-programisty");
-        var rows = page.All("[data-testid=upcoming] [data-booking]");
+        var rows = page.All("[data-testid=recent] [data-booking]");
         Assert.Equal(5, rows.Count);
-        Assert.Equal(["Konsultacja 1", "Konsultacja 2", "Konsultacja 3", "Konsultacja 4", "Konsultacja 5"], rows.Select(r => r.QuerySelector("strong")!.TextContent));
+        Assert.Equal(["Pakiet 1", "Zrezygnowane", "Pakiet 2", "Minione", "Pakiet 3"], rows.Select(r => r.QuerySelector("strong")!.TextContent));
         Assert.DoesNotContain("Demo Klient 1", rows[0].TextContent); // no client name in the DTO, no stray separator
-        Assert.Contains("Demo Klient 2", rows[1].TextContent);
-        var id = rows[1].GetAttribute("data-booking");
-        Assert.Equal($"/moje/rezerwacje/{id}?role=practitioner", rows[1].QuerySelector("a")!.GetAttribute("href"));
-        Assert.Equal("Szczegóły", rows[1].QuerySelector("a")!.TextContent);
+        var second = rows.Single(r => r.QuerySelector("strong")!.TextContent == "Pakiet 2");
+        Assert.Contains("Demo Klient 2", second.TextContent);
+        Assert.Contains("wykorzystano 2 z 10", second.TextContent);
+        Assert.Equal("Aktywne pakiety: 7", page.TextOf("[data-testid=active-packages]")); // seven are confirmed and not over; the completed and the cancelled are not
+        var id = second.GetAttribute("data-booking");
+        Assert.Equal($"/moje/rezerwacje/{id}?role=practitioner", second.QuerySelector("a")!.GetAttribute("href"));
+        Assert.Equal("Szczegóły", second.QuerySelector("a")!.TextContent);
         Assert.Contains(web.Booking.Requests, r => r.PathAndQuery == "/api/v1/me/bookings?role=practitioner");
+        Assert.Null(page.One("[data-testid=upcoming]")); // the next appointments are gone
     }
 
     [Fact]
-    public async Task An_approved_dashboard_with_no_consultations_says_so()
+    public async Task An_approved_dashboard_with_no_purchases_says_so()
     {
         var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.CompleteProfile(); });
         await using var _ = web;
         var page = await browser.GetAsync("/gabinet-programisty");
-        Assert.Equal("Nie masz jeszcze zaplanowanych konsultacji.", page.TextOf("[data-testid=upcoming-empty]"));
+        Assert.Equal("Nikt nie wykupił jeszcze pakietu Twojego agenta.", page.TextOf("[data-testid=recent-empty]"));
+        Assert.Equal("Aktywne pakiety: 0", page.TextOf("[data-testid=active-packages]"));
     }
 
     [Theory]
     [InlineData(true)] [InlineData(false)]
-    public async Task The_consultations_region_fails_soft_with_a_warning_and_a_retry_while_the_rest_of_the_page_stays(bool serviceDown)
+    public async Task The_purchases_region_fails_soft_with_a_warning_and_a_retry_while_the_rest_of_the_page_stays(bool serviceDown)
     {
         var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.CompleteProfile(); w.BookingsFail = !serviceDown; w.BookingDown = serviceDown; });
         await using var _ = web;
         var page = await browser.GetAsync("/gabinet-programisty");
         Assert.Equal(HttpStatusCode.OK, page.Status);
-        var warn = page.One("[data-testid=upcoming-failed]")!;
+        var warn = page.One("[data-testid=recent-failed]")!;
         Assert.Contains("callout--warning", warn.ClassName);
-        Assert.Contains("Nie możemy teraz pokazać konsultacji", warn.TextContent);
+        Assert.Contains("Nie możemy teraz pokazać zakupów", warn.TextContent);
         Assert.Equal("/gabinet-programisty", warn.QuerySelector("a")!.GetAttribute("href"));
-        Assert.Null(page.One("[data-testid=upcoming-empty]"));
-        Assert.Equal("Panel programisty", page.TextOf("h1"));
+        Assert.Null(page.One("[data-testid=recent-empty]"));
+        Assert.Equal("Panel dostawcy", page.TextOf("h1"));
         Assert.NotNull(page.One("[data-testid=public-profile]")); // the rest of the page is there
         Assert.DoesNotContain("SERVER-", page.Html);
     }
@@ -314,7 +319,7 @@ public class DashboardHostTests
         Assert.Equal(banner, page.One("[data-testid=payments-banner]") is not null);
         if (banner)
         {
-            Assert.Contains("Bez gotowego konta płatności nie możesz przyjmować rezerwacji", page.TextOf("[data-testid=payments-banner]"));
+            Assert.Contains("Bez gotowego konta płatności nie możesz sprzedawać pakietów", page.TextOf("[data-testid=payments-banner]"));
             Assert.Equal("/gabinet-programisty/platnosci", page.One("[data-testid=payments-banner] a")!.GetAttribute("href"));
         }
     }
@@ -328,7 +333,7 @@ public class DashboardHostTests
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Null(page.One("[data-testid=payments-banner]"));
         Assert.DoesNotContain(PractitionerPaths.Payments, page.One("[data-testid=next-step]")?.InnerHtml ?? ""); // unreadable payments are never offered as the next step
-        Assert.NotNull(page.One("[data-testid=upcoming-failed]"));
+        Assert.NotNull(page.One("[data-testid=recent-failed]"));
     }
 
     [Fact]
@@ -341,7 +346,7 @@ public class DashboardHostTests
         var alert = page.One("[data-testid=unavailable]")!;
         Assert.Equal("alert", alert.GetAttribute("role"));
         Assert.Equal("/gabinet-programisty", alert.QuerySelector("a")!.GetAttribute("href"));
-        Assert.Equal("Panel programisty", page.TextOf("h1"));
+        Assert.Equal("Panel dostawcy", page.TextOf("h1"));
         Assert.DoesNotContain("SERVER-", page.Html);
     }
 

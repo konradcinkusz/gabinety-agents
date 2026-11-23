@@ -57,7 +57,7 @@ test.describe("J1 visitor browses a category and opens a profile", () => {
         await expect(p.getByText(profile!.headline)).toBeVisible();
         await expect(p.getByRole("heading", { level: 2, name: "O mnie" })).toBeVisible();
         await expect(p.getByText(profile!.bio)).toBeVisible();
-        await expect(p.getByRole("heading", { level: 2, name: "Oferta" })).toBeVisible();
+        await expect(p.getByRole("heading", { level: 2, name: "Pakiety" })).toBeVisible();
         for (const o of profile!.offerings) {
           await expect(p.getByRole("heading", { level: 3, name: o.title })).toBeVisible();
           await expect(p.getByText(o.description)).toBeVisible();

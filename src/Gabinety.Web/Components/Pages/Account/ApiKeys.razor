@@ -1,0 +1,160 @@
+@page "/moje/klucze"
+@attribute [Authorize]
+@using Gabinety.Web.Components.Pages.Bookings
+@using Gabinety.Web.Components.Pages.Shared
+@inject BookingClient Bookings
+@inject NavigationManager Navigation
+@* Static server rendering with plain form posts and antiforgery. A key is created by a POST and shown in THAT response, once: it is not in a URL, not in a redirect and not in the list (which has the prefix only).
+   Revoking opens a confirmation (?revoke=<id>), the same pattern as the other client actions. The name of a key is the user's text: sent as a body, never logged. *@
+
+<PageTitle>@BookingsText.Keys.MetaTitle</PageTitle>
+<HeadContent><meta name="robots" content="noindex,follow" /></HeadContent>
+<h1>@BookingsText.Keys.Title</h1>
+<p class="lead">@BookingsText.Keys.Intro</p>
+
+@if (DoneText is { } done) {<div class="callout callout--success" role="status" data-testid="done">@done</div>}
+
+@if (_created is { } created)
+{
+    <section class="card stack" aria-labelledby="new-key-title" data-testid="new-key">
+        <h2 id="new-key-title">@BookingsText.Keys.NewTitle</h2>
+        <div class="callout callout--warning" role="alert">@BookingsText.Keys.ShownOnce</div>
+        <p class="field__label" id="new-key-label">@BookingsText.Keys.KeyLabel (@created.Name)</p>
+        <p><code class="key" data-testid="new-key-value" aria-labelledby="new-key-label">@created.Key</code></p>
+        <p><button class="btn btn--secondary" type="button" hidden data-enhance="copy" data-copy="@created.Key" data-done="@BookingsText.Keys.Copied">@BookingsText.Keys.Copy</button></p>
+    </section>
+}
+
+@if (_failure is { IsUnauthenticated: true })
+{
+    <div class="callout callout--danger" role="alert" data-testid="keys-signed-out">
+        <p>@BookingsText.Errors.SignedOut <a href="@ReturnTarget.LoginUrl(ReturnTarget.Safe("/moje/klucze"))">@BookingsText.Errors.SignIn</a></p>
+    </div>
+}
+else if (_failure is not null)
+{
+    <div class="callout callout--danger" role="alert" data-testid="unavailable">
+        <p>@BookingsText.Keys.Unavailable</p>
+        <a class="btn btn--secondary" href="/moje/klucze">@BookingsText.Retry</a>
+    </div>
+}
+else
+{
+    <section class="card stack" aria-labelledby="create-key-title">
+        <h2 id="create-key-title">@BookingsText.Keys.CreateTitle</h2>
+        <form method="post" @onsubmit="CreateAsync" @formname="createkey" class="form" novalidate>
+            <AntiforgeryToken />
+            <BookingFormProblems Items="_problems" />
+            <CounterTextArea Id="key-name" Name="Model.Name" Label="@BookingsText.Keys.NameLabel" Hint="@BookingsText.Keys.NameHint" Value="@CreateModel!.Name" Rows="1" CounterFormat="@BookingsText.Keys.Counter" Error="@_nameError" />
+            <ActionError Failure="_actionFailure" Href="/moje/klucze" />
+            <div class="form-actions"><button type="submit" class="btn btn--primary">@BookingsText.Keys.Create</button></div>
+        </form>
+    </section>
+
+    <section class="stack" aria-labelledby="keys-title">
+        <h2 id="keys-title">@BookingsText.Keys.ListTitle</h2>
+        @if (_keys.Count == 0)
+        {
+            <p data-testid="keys-empty">@BookingsText.Keys.Empty</p>
+        }
+        else
+        {
+            <ScrollTable Caption="@BookingsText.Keys.ListLabel" TableClass="table--cards">
+                <thead><tr><th scope="col">@BookingsText.Keys.ColName</th><th scope="col">@BookingsText.Keys.ColPrefix</th><th scope="col">@BookingsText.Keys.ColCreated</th><th scope="col">@BookingsText.Keys.ColLastUsed</th><th scope="col"><span class="visually-hidden">@BookingsText.Keys.Revoke</span></th></tr></thead>
+                <tbody>
+                    @foreach (var k in _keys)
+                    {
+                        <tr data-testid="key-row">
+                            <th scope="row">@k.Name</th>
+                            <td data-label="@BookingsText.Keys.ColPrefix"><code>gab_@k.Prefix</code></td>
+                            <td data-label="@BookingsText.Keys.ColCreated">@PlFormat.DayLong(k.CreatedAt)</td>
+                            <td data-label="@BookingsText.Keys.ColLastUsed">@(k.LastUsedAt is { } used ? PlFormat.DayLong(used) : BookingsText.Keys.NeverUsed)</td>
+                            <td>
+                                @* a GET form: the button opens the confirmation without a script and without a state change *@
+                                <form method="get" action="/moje/klucze"><input type="hidden" name="revoke" value="@k.Id" /><button type="submit" class="btn btn--ghost-danger" aria-label="@($"{BookingsText.Keys.Revoke}: {k.Name}")">@BookingsText.Keys.Revoke</button></form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </ScrollTable>
+        }
+    </section>
+
+    @if (_revoking is { } target)
+    {
+        <dialog open data-enhance="dialog" role="alertdialog" aria-labelledby="revoke-title" class="dialog" data-testid="revoke-dialog">
+            <h2 id="revoke-title" tabindex="-1" autofocus>@BookingsText.Keys.RevokeTitle</h2>
+            <p class="callout callout--danger">@string.Format(BookingsText.Keys.RevokeBody, target.Name)</p>
+            <form method="post" @onsubmit="RevokeAsync" @formname="revokekey" class="form">
+                <AntiforgeryToken />
+                <input type="hidden" name="Model.Id" value="@target.Id" />
+                <div class="form-actions">
+                    <button type="submit" class="btn btn--danger">@BookingsText.Keys.RevokeConfirm</button>
+                    <a class="btn btn--secondary" href="/moje/klucze" data-dialog-dismiss>@BookingsText.Keys.RevokeKeep</a>
+                </div>
+            </form>
+        </dialog>
+    }
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "revoke")] public Guid? RevokeParam { get; set; }
+    [SupplyParameterFromQuery(Name = "done")] public string? DoneParam { get; set; }
+    [SupplyParameterFromForm(FormName = "createkey", Name = "Model")] CreateForm? CreateModel { get; set; }
+    [SupplyParameterFromForm(FormName = "revokekey", Name = "Model")] RevokeForm? RevokeModel { get; set; }
+
+    public sealed class CreateForm { public string? Name { get; set; } }
+    public sealed class RevokeForm { public Guid? Id { get; set; } }
+
+    IReadOnlyList<ApiKeyDto> _keys = [];
+    ApiKeyCreatedDto? _created;
+    ApiKeyDto? _revoking;
+    ApiFailure? _failure, _actionFailure;
+    string? _nameError;
+    List<FormProblem> _problems = [];
+
+    string? DoneText => DoneParam == "revoked" ? BookingsText.Keys.Revoked : null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        CreateModel ??= new();
+        RevokeModel ??= new();
+        await LoadAsync();
+    }
+
+    async Task LoadAsync()
+    {
+        var result = await Bookings.ApiKeysAsync();
+        if (!result.IsOk) { _failure = result.Failure; return; }
+        _keys = [.. result.Value!.OrderBy(k => k.CreatedAt)];
+        _revoking = RevokeParam is { } id ? _keys.FirstOrDefault(k => k.Id == id) : null;
+    }
+
+    async Task CreateAsync()
+    {
+        var name = (CreateModel!.Name ?? "").Trim();
+        _nameError = name.Length is 0 or > 60 ? BookingsText.Keys.NameRequired : null;
+        _problems = _nameError is null ? [] : [new FormProblem("key-name", _nameError)];
+        if (_nameError is not null) return;
+        var result = await Bookings.CreateApiKeyAsync(name);
+        if (result.IsOk)
+        {
+            _created = result.Value; // shown in this response only
+            CreateModel.Name = null;
+            await LoadAsync();
+            return;
+        }
+        if (result.Failure!.IsUnauthenticated) { Navigation.NavigateTo(ReturnTarget.LoginUrl(ReturnTarget.Safe("/moje/klucze"))); return; }
+        if (result.Failure.Names("name")) { _nameError = BookingsText.Keys.LimitReached; _problems = [new FormProblem("key-name", _nameError)]; return; }
+        _actionFailure = result.Failure;
+    }
+
+    async Task RevokeAsync()
+    {
+        if (RevokeModel?.Id is not { } id) return;
+        var result = await Bookings.RevokeApiKeyAsync(id);
+        if (result.IsOk) { Navigation.NavigateTo("/moje/klucze?done=revoked"); return; }
+        if (result.Failure!.IsUnauthenticated) { Navigation.NavigateTo(ReturnTarget.LoginUrl(ReturnTarget.Safe("/moje/klucze"))); return; }
+        _actionFailure = result.Failure;
+    }
+}

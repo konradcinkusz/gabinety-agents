@@ -171,7 +171,7 @@ The middleware is UX, the services are the boundary: a signed-in page still call
 | Web | PAGE | `/admin/podejrzane` | Admin | all | suspicious client-practitioner pairs (T-10.03) |
 | Web | PAGE | `/moje/rezerwacje` | Authenticated | all | my bookings (client and practitioner tabs), static server rendering |
 | Web | PAGE | `/moje/rezerwacje/{BookingId}` | Authenticated | all | booking detail with cancel, dispute and no-show (form posts, antiforgery) |
-| Web | GET | `/moje/rezerwacje/{BookingId}/kalendarz.ics` | Authenticated | all | the booking as an iCalendar attachment (`text/calendar`, no-store), read with the user's own bearer; only for Confirmed or Completed bookings, 404 otherwise and for another user's booking |
+| Web | PAGE | `/moje/klucze` | Authenticated | all | my API keys: create (the plain key is shown once, in the response of the form post), list (prefix only) and revoke; static server rendering, antiforgery |
 | Web | PAGE | `/moje/opinie` | Authenticated | all | the practitioner's own reviews and replies |
 | Web | PAGE | `/moje/opinie/{BookingId}` | Authenticated | all | write a review (form post, antiforgery) |
 | Web | PAGE | `/rezerwacja/{OfferingId}` | Authenticated | all | booking form: brief, assistant suggestion, pay (form posts, antiforgery) |
@@ -183,7 +183,6 @@ The middleware is UX, the services are the boundary: a signed-in page still call
 | Web | PAGE | `/gabinet-programisty` | Authenticated | all | practitioner dashboard and onboarding, static server rendering; any signed-in account may become a practitioner (ADR-0012, "Practitioner area") |
 | Web | PAGE | `/gabinet-programisty/profil` | Authenticated | all | practitioner profile form |
 | Web | PAGE | `/gabinet-programisty/oferty` | Authenticated | all | offers: list, confirmation before disabling, re-enable, form |
-| Web | PAGE | `/gabinet-programisty/dostepnosc` | Authenticated | all | weekly availability and blocked days |
 | Web | PAGE | `/gabinet-programisty/platnosci` | Authenticated | all | payments account status and onboarding link (PAYMENTS-GO-LIVE) |
 | Web | PAGE | `/practitioner/payments` | Authenticated | all | the return and refresh address Booking gives Stripe; forwards to `/gabinet-programisty/platnosci` |
 | Web | PAGE | `/not-found` | Anonymous | all | status code re-execution target |

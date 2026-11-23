@@ -5,7 +5,7 @@
 @inject TimeProvider Clock
 @inject NavigationManager Navigation
 @* Static server rendering: the role is a tab (a link), the status is a row of chips (links) and "more" is a link with the cursor, so the list is complete HTML and a URL reopens the same view (DESIGN-CONTRACT 5.9, G-2).
-   The list is two sections by start time (Nadchodzące, Minione); the soonest consultation is the lead card. Each row is a card whose "Szczegóły" link is the whole card's target (DESIGN-CONTRACT 4.2). *@
+   The list is two sections (Aktywne, Zakończone) by the end of validity. Each row is a card with the agent, the package, a "used X of Y" bar and "ważny do"; its "Szczegóły" link is the whole card's target (DESIGN-CONTRACT 4.2). *@
 
 <PageTitle>@Pl.Bookings.MetaTitle</PageTitle>
 <HeadContent><meta name="robots" content="noindex,follow" /></HeadContent>
@@ -61,18 +61,19 @@ else if (_page is not null)
         <section class="stack" aria-labelledby="@section.Id" data-testid="@section.Id">
             <h2 id="@section.Id">@section.Title</h2>
             <ul class="stack bookings">
-                @foreach (var (b, lead) in section.Rows)
+                @foreach (var (b, _) in section.Rows)
                 {
-                    <li class="card card--link booking-row @(lead ? "booking-row--lead" : "")" data-testid="booking-row">
-                        @if (lead)
-                        {
-                            <p class="booking-lead__when">@MyBookingsSchedule.Relative(_now, b.StartUtc)</p>
-                        }
+                    <li class="card card--link booking-row" data-testid="booking-row">
                         <div class="cluster cluster--between">
                             <p class="booking-row__title" id="@($"booking-{b.Id:N}-title")">@b.OfferingTitle</p>
                             <span class="num booking-row__price">@Money.Pln(b.Price.AmountMinor)</span>
                         </div>
-                        <p class="muted">@BookingFormat.MetaLine(BookingFormat.Name(_role == BookingClient.ClientRole ? b.Practitioner.DisplayName : b.Client?.DisplayName), BookingFormat.When(b))</p>
+                        <p class="muted" data-testid="booking-party">
+                            @BookingFormat.Name(_role == BookingClient.ClientRole ? b.Practitioner.DisplayName : b.Client?.DisplayName)
+                            @if (_role == BookingClient.ClientRole) {<AiBadge />}
+                        </p>
+                        <UsageBar Kind="@b.Kind" Used="b.UnitsUsed" Total="b.UnitsTotal" />
+                        <p class="muted" data-testid="booking-valid-until">@string.Format(Pl.Bookings.ValidUntil, BookingFormat.ValidUntil(b.EndUtc))</p>
                         <div class="cluster cluster--between">
                             <BookingBadge Badge="Badge.ForBooking(b.Status)" />
                             <a class="booking-row__link" href="@($"/moje/rezerwacje/{b.Id}?role={_role}")" aria-describedby="@($"booking-{b.Id:N}-title")">@BookingsText.Details</a>
@@ -123,7 +124,7 @@ else if (_page is not null)
         var (upcoming, past) = MyBookingsSchedule.Split(items, _now);
         _sections = new[]
         {
-            new Section("bookings-upcoming", Pl.Bookings.Upcoming, [.. upcoming.Select((b, i) => (b, i == 0))]),
+            new Section("bookings-upcoming", Pl.Bookings.Upcoming, [.. upcoming.Select(b => (b, false))]),
             new Section("bookings-past", Pl.Bookings.Past, [.. past.Select(b => (b, false))]),
         }.Where(s => s.Rows.Count > 0).ToList();
 

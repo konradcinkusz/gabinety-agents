@@ -43,6 +43,10 @@ public sealed class FakeBackend : HttpMessageHandler
     public static HttpResponseMessage Problem(HttpStatusCode status, string code) =>
         new(status) { Content = new StringContent($"{{\"type\":\"urn:gabinety:error:{code}\",\"title\":\"SERVER-TITLE-MUST-NOT-APPEAR\",\"status\":{(int)status},\"detail\":\"SERVER-DETAIL-MUST-NOT-APPEAR\",\"code\":\"{code}\"}}", Encoding.UTF8, "application/problem+json") };
 
+    /// <summary>A validation problem that names the fields (the <c>errors</c> object of RFC 9457); the messages are text a page must never show.</summary>
+    public static HttpResponseMessage Problem(HttpStatusCode status, string code, string[] fields) =>
+        new(status) { Content = new StringContent($"{{\"type\":\"urn:gabinety:error:{code}\",\"title\":\"SERVER-TITLE-MUST-NOT-APPEAR\",\"status\":{(int)status},\"code\":\"{code}\",\"errors\":{{{string.Join(",", fields.Select(f => $"\"{f}\":[\"SERVER-DETAIL-MUST-NOT-APPEAR\"]"))}}}}}", Encoding.UTF8, "application/problem+json") };
+
     public static Func<HttpRequestMessage, HttpResponseMessage> Throw(Exception e) => _ => throw e;
 }
 
