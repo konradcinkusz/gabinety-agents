@@ -7,7 +7,7 @@ import { PractitionerListPage } from "../harness/pages";
 import { publicProfile } from "./support/directory-api";
 import { PractitionerArea, PublicProfilePage, RegisterPage, VerificationQueuePage } from "./support/pages";
 
-// J2 (SPEC 10): a new practitioner onboards, an administrator approves, the profile becomes public.
+// J2 (SPEC 10, D-02): a new provider creates an agent, adds a task package and a Chat package, an administrator approves, the agent is visible with both packages.
 // Everything this journey creates is in the `demo-` namespace under a unique suffix (the account, the profile slug), so it neither depends on nor
 // disturbs what other journeys create. With E2E_RESEED=1 the Directory reset in afterAll removes it (and, as SPEC 7 defines, reseeds the dataset); by default it is left, as CI's stack is thrown away.
 
@@ -22,11 +22,11 @@ function syntheticNip(seed: number): string {
 }
 
 const BIO =
-  "Od wielu lat pomagam zespołom frontendowym w pisaniu testów end to end, które naprawdę wykrywają błędy zamiast tylko zielenić potok. " +
-  "Na konsultacji przejrzymy Twoje scenariusze, wskażę kruche selektory i niestabilne oczekiwania oraz ustalimy kolejność poprawek. " +
-  "Pracuję spokojnie, bez żargonu, a po spotkaniu dostajesz krótką listę kroków do wdrożenia.";
+  "Jestem agentem AI od testów end to end dla zespołów frontendowych: wykrywam błędy zamiast tylko zielenić potok. " +
+  "Z Twoich scenariuszy wskażę kruche selektory i niestabilne oczekiwania oraz ustalę kolejność poprawek. " +
+  "Odpowiadam spokojnie, bez żargonu, a na końcu dostajesz krótką listę kroków do wdrożenia.";
 
-test.describe("J2 practitioner onboards, administrator approves, profile becomes public", () => {
+test.describe("J2 provider creates an agent, administrator approves, profile becomes public", () => {
   // CI runs on a fresh ephemeral stack, so the (slow, 1 to 6 minutes) reset runs only when asked: E2E_RESEED=1 for a local re-run on a long-lived profile.
   // The journey does not need it: it creates its own `demo-` practitioner under a unique suffix and reads nothing another run left behind.
   test.afterAll(async ({ demoData }) => {
@@ -42,12 +42,13 @@ test.describe("J2 practitioner onboards, administrator approves, profile becomes
     const email = `demo-j2-${uid}@demo.example`;
     const displayName = `Demo Jedyny ${uid}`; // the Directory derives the slug from the name; "demo-" keeps it in the reset's namespace
     const slug = `demo-jedyny-${uid}`;
-    const headline = "Testy end to end dla zespołów frontendowych";
+    const headline = "Agent AI do testów end to end dla zespołów frontendowych";
     const offeringTitle = `Przegląd testów end to end ${uid}`;
+    const chatTitle = `Czat o testach end to end ${uid}`;
     const githubLogin = `demo-j2-${uid}`;
     const area = new PractitionerArea(page);
 
-    await test.step("a visitor registers and creates a gabinet: a draft", async () => {
+    await test.step("a visitor registers and creates an agent's profile: a draft", async () => {
       await new RegisterPage(page).registerAs(email, demoPassword);
       await area.createProfile(displayName);
       await expect(page.getByText("Szkic", { exact: true })).toBeVisible();
@@ -55,10 +56,15 @@ test.describe("J2 practitioner onboards, administrator approves, profile becomes
       await expectNoSeriousA11yViolations(page);
     });
 
-    await test.step("the practitioner completes the profile, an offering and the GitHub link", async () => {
+    await test.step("the provider completes the profile, a task package, a Chat package and the GitHub link", async () => {
       await area.fillProfile({ headline, bio: BIO, portfolioUrl: `https://${slug}.portfolio.example.com/`, nip: syntheticNip(parseInt(uid, 16)) });
       await expectNoSeriousA11yViolations(page);
-      await area.addOffering({ title: offeringTitle, description: "Omawiamy Twoje scenariusze testowe i stabilność oczekiwań.", price: "180" });
+      await area.addOffering({ title: offeringTitle, description: "Oceniam Twoje scenariusze testowe i stabilność oczekiwań.", price: "180", kind: "Tasks", units: "5" });
+      await expectNoSeriousA11yViolations(page);
+      await area.addOffering({ title: chatTitle, description: "Odpowiadam na pytania o testy w czacie zgodnym z OpenAI.", price: "99", kind: "Chat", units: "500" });
+      // the list of the provider's packages says what each one is: tasks or tokens (Offers.razor, the same words as the public card)
+      await expect(area.offer(offeringTitle)).toContainText("5 zadań, typowy czas ok. 30 min");
+      await expect(area.offer(chatTitle)).toContainText("500 tys. tokenów, API zgodne z OpenAI");
       await expectNoSeriousA11yViolations(page);
       await area.linkGithub(githubLogin);
       for (const item of ["Nagłówek profilu", "Opis (co najmniej 200 znaków)", "Co najmniej jeden aktywny pakiet", "Połączone konto GitHub", "Poprawny numer NIP", "Link do portfolio", "Potwierdzony adres e-mail"]) {
@@ -107,7 +113,7 @@ test.describe("J2 practitioner onboards, administrator approves, profile becomes
     await test.step("the profile is public: in the API, on its page and in the search", async () => {
       const profile = await publicProfile(slug);
       expect(profile?.displayName).toBe(displayName);
-      expect(profile?.offerings.map((o) => o.title)).toEqual([offeringTitle]);
+      expect(profile?.offerings.map((o) => [o.title, o.kind, o.units]).sort()).toEqual([[chatTitle, "chat", 500], [offeringTitle, "tasks", 5]].sort());
 
       // The first visit to this profile page is after approval (a 404 would be cached for the page's revalidation window).
       const view = new PublicProfilePage(page);
@@ -121,6 +127,10 @@ test.describe("J2 practitioner onboards, administrator approves, profile becomes
       await expect(page.getByText(headline)).toBeVisible();
       await expect(page.getByText("Zatwierdzony", { exact: true })).toBeVisible();
       await expect(view.bookLink(offeringTitle)).toBeVisible();
+      await expect(view.bookLink(chatTitle)).toBeVisible();
+      await expect(view.aiBadge()).toBeVisible();
+      await expect(view.offering(chatTitle)).toContainText("500 tys. tokenów, API zgodne z OpenAI");
+      await expect(view.offering(offeringTitle)).toContainText("5 zadań, typowy czas ok. 30 min");
       await expectNoSeriousA11yViolations(page);
 
       const list = new PractitionerListPage(page);
@@ -128,7 +138,7 @@ test.describe("J2 practitioner onboards, administrator approves, profile becomes
       await expect(list.profileLink(displayName)).toBeVisible();
 
       await page.goto("/gabinet-programisty");
-      await expect(page.getByText("Zatwierdzony", { exact: true })).toBeVisible(); // the practitioner's own panel agrees
+      await expect(page.getByText("Zatwierdzony", { exact: true })).toBeVisible(); // the provider's own panel agrees
     });
   });
 });

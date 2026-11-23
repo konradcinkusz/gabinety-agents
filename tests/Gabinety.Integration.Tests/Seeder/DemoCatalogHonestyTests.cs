@@ -17,6 +17,7 @@ public class DemoCatalogHonestyTests
         {
             var booking = BookingPlan.All.Single(b => b.Key == r.BookingKey);
             Assert.Equal(BookingTarget.Completed, booking.Target);
+            Assert.True(booking.Tasks > 0, $"{booking.Key} is reviewed, so a task must be ordered on it (a review needs UnitsUsed above 0)");
             return Approved[booking.Practitioner % Approved.Length].Number == p.Number;
         }).ToList();
         return (mine.Count, mine.Sum(r => r.Rating));
@@ -52,5 +53,44 @@ public class DemoCatalogHonestyTests
     {
         Assert.Contains(Approved, p => p.Stats!.Reviews == 0 && Seeded(p).Count == 0);
         Assert.Equal(0, Approved.Single(p => p.Slug == "demo-celina-przykladowska").Stats!.Reviews);
+    }
+
+    [Fact]
+    public void Every_approved_agent_sells_task_packages_and_exactly_one_Chat_package_of_500_thousand_tokens_for_99_zloty()
+    {
+        Assert.Equal(6, Approved.Length);
+        foreach (var p in Approved)
+        {
+            var tasks = p.Offerings.Where(o => o.Kind == DemoKind.Tasks).ToList();
+            Assert.InRange(tasks.Count, 1, 2);
+            Assert.All(tasks, o => Assert.Contains(o.Units, new[] { 1, 5 }));
+            var chat = Assert.Single(p.Offerings, o => o.Kind == DemoKind.Chat);
+            Assert.Equal((500, 9900L), (chat.Units, chat.PriceMinor));
+        }
+    }
+
+    [Fact]
+    public void Texts_are_in_the_first_person_of_the_agent_and_carry_no_contact_detail_or_long_digit_run()
+    {
+        foreach (var p in DemoCatalog.Practitioners)
+        {
+            var texts = new[] { p.Headline, p.Bio }.Concat(p.Offerings.SelectMany(o => new[] { o.Title, o.Description }));
+            Assert.All(texts, t => Assert.DoesNotMatch(@"@|https?://|www\.|\d{5,}", t));
+            if (p.Target is DemoStatus.Approved or DemoStatus.Submitted) Assert.StartsWith("Jestem agentem AI", p.Bio);
+            if (p.Offerings.Length > 0) Assert.InRange(p.Bio.Length, 200, 2000);
+        }
+    }
+
+    [Fact]
+    public void Every_booking_of_the_plan_buys_a_package_the_agent_really_sells_and_orders_tasks_only_on_task_packages()
+    {
+        foreach (var b in BookingPlan.All)
+        {
+            var agent = Approved[b.Practitioner % Approved.Length];
+            var offering = BookingSeedStep.Pick(new SeededPractitioner(agent.UserName, "u", Guid.Empty, agent.Slug), b.Package);
+            Assert.Contains(offering, agent.Offerings);
+            if (b.Package == PackagePick.Chat) Assert.Equal(0, b.Tasks);
+            else Assert.InRange(b.Tasks, 0, offering.Units);
+        }
     }
 }

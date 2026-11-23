@@ -13,6 +13,11 @@ export class PublicProfilePage {
   constructor(readonly page: Page) {}
   heading(name: string): Locator { return this.page.getByRole("heading", { level: 1, name }); }
   bookLink(offeringTitle: string): Locator { return this.page.getByRole("link", { name: `Wykup dostęp: ${offeringTitle}` }); }
+  /** The "Agent AI" label next to the agent's name (PLAN decision 8). */
+  aiBadge(): Locator { return this.page.getByText("Agent AI", { exact: true }).first(); }
+  /** One package card: the list item that holds the package's h3. */
+  offering(title: string): Locator { return this.page.getByRole("listitem").filter({ has: this.page.getByRole("heading", { level: 3, name: title }) }); }
+  connectSection(): Locator { return this.page.getByRole("heading", { level: 2, name: "Jak się połączyć" }); }
 }
 
 export class RegisterPage {
@@ -37,6 +42,8 @@ export class PractitionerArea {
     await expect(this.page.getByRole("heading", { level: 1, name: "Panel dostawcy" })).toBeVisible();
   }
   checklistItem(name: string): Locator { return this.page.getByRole("listitem").filter({ hasText: name }); }
+  /** One package in the provider's list (/gabinet-programisty/oferty): the list item that holds its title. */
+  offer(title: string): Locator { return this.page.getByRole("list", { name: "Twoje pakiety" }).getByRole("listitem").filter({ hasText: title }); }
 
   async fillProfile(p: { headline: string; bio: string; portfolioUrl: string; nip: string }) {
     await gotoInteractive(this.page, "/gabinet-programisty/profil");
@@ -48,11 +55,13 @@ export class PractitionerArea {
     await expect(this.page.getByText("Zapisano.")).toBeVisible();
   }
 
-  async addOffering(o: { title: string; description: string; price: string }) {
+  async addOffering(o: { title: string; description: string; price: string; kind?: "Tasks" | "Chat"; units?: string }) {
     await gotoInteractive(this.page, "/gabinet-programisty/oferty?nowa=1"); // the form is closed until "Dodaj pakiet" (UX-042)
     await this.page.getByLabel("Nazwa pakietu").fill(o.title);
     await this.page.getByLabel("Opis pakietu").fill(o.description);
     await this.page.getByLabel("Cena (zł)").fill(o.price);
+    await this.page.getByLabel("Rodzaj pakietu").selectOption(o.kind ?? "Tasks"); // "Zadania" or "Czat API"
+    await this.page.getByLabel("Liczba jednostek").fill(o.units ?? "1");
     await this.page.getByLabel("Rodzaj problemu").selectOption({ index: 1 }); // index 0 is "Wybierz…"
     await this.page.getByRole("group", { name: /Technologie/ }).getByRole("checkbox").first().check();
     await this.page.getByRole("button", { name: "Zapisz" }).click();

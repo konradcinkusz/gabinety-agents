@@ -13,12 +13,12 @@ namespace Gabinety.Integration.Tests.Seeder;
 public sealed class ReputationSeedFixture : IAsyncLifetime
 {
     public ReputationWorld World { get; } = new();
-    CompletionJobStandIn _job = null!;
+    BookingJobDriver _job = null!;
 
     public async Task InitializeAsync()
     {
         _ = World.Booking.Booking.Services;
-        _job = new CompletionJobStandIn(World.Booking.Booking);
+        _job = new BookingJobDriver(World.Booking.Booking);
         await World.SeedDirectoryAndBookingAsync();
         await ReputationWorld.Step().RunAsync(World.Context, CancellationToken.None);
     }
@@ -30,7 +30,7 @@ public class ReputationSeedStepTests(ReputationSeedFixture fx) : IClassFixture<R
 {
     ReputationWorld _w => fx.World;
 
-    // booking key -> (practitioner key, rating): the three Completed demo bookings and what each reviewer gave
+    // booking key -> (practitioner key, rating): the three Completed demo packages (each with one task used) and what each reviewer gave
     static readonly (string Booking, string Practitioner, int Rating)[] Expected =
     [
         ("demo-booking-completed-1", "demo-practitioner-1", 5),
@@ -48,10 +48,10 @@ public class ReputationSeedStepTests(ReputationSeedFixture fx) : IClassFixture<R
     sealed record Booking(Guid Id, string ClientUserId, Guid PractitionerId);
 
     [Fact]
-    public async Task Exactly_one_review_exists_per_Completed_demo_booking_by_that_bookings_client_for_that_bookings_practitioner()
+    public async Task Exactly_one_review_exists_per_Completed_demo_package_by_that_bookings_client_for_that_bookings_practitioner()
     {
         var completed = await CompletedBookingsByKey();
-        Assert.Equal(5, completed.Count); // the premise: Booking made five Completed bookings, the three planned and two completed on the way (A-02); otherwise the failure is Booking's
+        Assert.Equal(3, completed.Count); // the premise: Booking made three Completed packages (the last unit used, completed by the real job); otherwise the failure is Booking's
         var reviews = await _w.Reputation.Reviews();
 
         Assert.Equal(3, reviews.Count);
@@ -131,7 +131,7 @@ public class ReputationSeedStepTests(ReputationSeedFixture fx) : IClassFixture<R
     public void The_step_runs_after_Booking_and_is_registered_once()
     {
         var names = SeedSteps.All.Select(s => s.Name).ToList();
-        Assert.Equal(["directory", "booking", "reputation", "scale"], names);
+        Assert.Equal(["directory", "booking", "apikey", "reputation", "scale"], names);
         Assert.Equal(300, new ReputationSeedStep().Order);
     }
 
@@ -181,15 +181,29 @@ public class ReputationSeedStepTests(ReputationSeedFixture fx) : IClassFixture<R
     }
 
     [Fact]
-    public async Task Without_Completed_bookings_the_step_says_so_creates_nothing_and_does_not_fail()
+    public async Task Without_the_jobs_the_used_packages_are_still_reviewed_because_a_review_needs_a_used_unit_not_a_Completed_state()
     {
         await using var w = new ReputationWorld();
-        await w.SeedDirectoryAndBookingAsync(withCompletionJob: false); // no completion job: the three stay Confirmed
+        await w.SeedDirectoryAndBookingAsync(withCompletionJob: false); // no jobs: the three used-up packages stay Confirmed, with UnitsUsed 1
 
         await ReputationWorld.Step().RunAsync(w.Context, CancellationToken.None);
 
+        Assert.Equal(3, (await w.Reputation.Reviews()).Count);
+        Assert.Equal(0, (await w.Booking.Booking.Bookings()).Count(b => b.Status == Gabinety.Billing.BookingStatus.Completed));
+    }
+
+    [Fact]
+    public async Task Without_a_used_package_the_step_says_so_creates_nothing_and_does_not_fail()
+    {
+        await using var w = new ReputationWorld();
+        _ = w.Booking.Booking.Services;
+        var context = w.NewContext();
+        await new DirectorySeedStep().RunAsync(context, CancellationToken.None); // the Booking step did not run: no package, so no used one
+
+        await ReputationWorld.Step().RunAsync(context, CancellationToken.None);
+
         Assert.Empty(await w.Reputation.Reviews());
-        Assert.Contains("reputation: no Completed demo booking", w.Log.Text);
+        Assert.Contains("reputation: no used demo package", w.Log.Text);
     }
 
     [Fact]
@@ -231,9 +245,9 @@ public class ReputationSeedStepTests(ReputationSeedFixture fx) : IClassFixture<R
         Assert.Equal("rk", o.ReputationKey);
     }
 
-    static async Task<CompletionJobStandIn> StartedAsync(ReputationWorld w)
+    static async Task<BookingJobDriver> StartedAsync(ReputationWorld w)
     {
         _ = w.Booking.Booking.Services;
-        return new CompletionJobStandIn(w.Booking.Booking);
+        return new BookingJobDriver(w.Booking.Booking);
     }
 }

@@ -4,47 +4,52 @@ import { restoreClock } from "../harness/clock";
 import { urls } from "../harness/env";
 import { expectNoSeriousA11yViolations } from "../harness/a11y";
 import {
-  reseedIfRequested, reviewAttemptStatus, bookingIdFromUrl, createBooking, createReview, earliestOnDistinctDays, freeSlots, getBooking, publicProfile, simulatePayment, waitForStatus, warsawDate,
+  reseedIfRequested, reviewAttemptStatus, bookingIdFromUrl, createBooking, createReview, getBooking, listTasks, orderTask, publicProfile, simulatePayment, waitForStatus, waitForTasksDone,
 } from "../harness/booking-api";
-import { BookingFormPage, MockCheckoutPage, PractitionerProfilePage, ReviewFormPage } from "../harness/pages-booking";
+import { BookingFormPage, ConfirmationPage, MockCheckoutPage, PractitionerProfilePage, ReviewFormPage } from "../harness/pages-booking";
+import { BookingDetailPage } from "../harness/pages-bookings";
 
 /**
- * J3 (SPEC 10): a client books and pays on the mock, the practitioner sees the booking, time advances (CONTRACTS 10.4), the booking completes,
- * the client reviews, the review appears and the rating shows "Nowy" until three.
+ * J3 (SPEC 10, rewritten for packages in D-02): a client buys a `Tasks` package and pays on the mock, orders a task in the panel, sees the agent's result, the package is used up and
+ * completes, the client reviews, the review appears and the rating shows "Nowy" until three.
  *
- * Practitioner: demo-celina-przykladowska (demo-practitioner-3, the seeded profile with no real review: SPEC 7 "new"). Three bookings are made
- * (one through the UI, two through the same BFF calls) so that the rating can be asserted at 2 reviews ("Nowy") and at 3 (the average).
- * Everything is `demo-` data; the seeded bookings and reviews of other practitioners are not touched. Unique data per run: the free slots are
- * read fresh, so no fixed date is assumed, and time is moved relative to the clock's own `now`.
+ * Agent: demo-celina-przykladowska (demo-practitioner-3, the seeded profile with no real review: SPEC 7 "new"); her package is one task. Three packages are bought (the first through the UI,
+ * two through the same calls the UI makes) so that the rating can be asserted at 2 reviews ("Nowy") and at 3 (the average). Everything is `demo-` data; the seeded bookings and reviews
+ * of other agents are not touched. The fake agent platform answers `[demo <slug>] Otrzymano N znaków.` with N the length of the task, so the result is asserted exactly.
  */
 const SLUG = "demo-celina-przykladowska";
 const NAME = "Celina Przykładowska";
 const PRACTITIONER_USER = "demo-practitioner-3";
 const BRIEFS = [
-  "Potrzebuję pomocy z architekturą prostego prototypu z modelem językowym (j3-1).",
+  "Chcę sprawdzić, jak agent poradzi sobie z architekturą prostego prototypu z modelem językowym (j3-1).",
   "Chcę ocenić koszty i ryzyka integracji modelu językowego z aplikacją (j3-2).",
   "Proszę o przegląd sposobu oceny jakości odpowiedzi modelu językowego (j3-3).",
 ];
+const TASKS = [
+  "Zaproponuj architekturę prostego prototypu wyszukiwania w dokumentach firmowych z użyciem modelu językowego (j3-1).",
+  "Oszacuj koszty i ryzyka integracji modelu językowego z istniejącą aplikacją obsługi klienta (j3-2).",
+  "Opisz sposób oceny jakości odpowiedzi modelu językowego na zbiorze pytań z obsługi klienta (j3-3).",
+];
+const answerTo = (task: string) => `[demo ${SLUG}] Otrzymano ${task.length} znaków.`;
 const REVIEWS = [
-  { rating: 5, text: "Konsultacja przebiegła rzetelnie, dostałem konkretny plan prototypu (j3-1)." },
-  { rating: 4, text: "Dobra rozmowa o kosztach i ryzykach, kilka praktycznych wskazówek (j3-2)." },
-  { rating: 3, text: "Pomocne uwagi o ocenie jakości, trochę zabrakło czasu na pytania (j3-3)." },
+  { rating: 5, text: "Agent rzetelnie opisał architekturę, dostałem konkretny plan prototypu (j3-1)." },
+  { rating: 4, text: "Dobry wynik zadania o kosztach i ryzykach, kilka praktycznych wskazówek (j3-2)." },
+  { rating: 3, text: "Pomocne uwagi o ocenie jakości, trochę zabrakło szczegółów w wyniku (j3-3)." },
 ];
 const AVERAGE = (5 + 4 + 3) / 3;
 
-test.describe("J3 book, pay, complete, review", () => {
+test.describe("J3 buy a task package, order a task, see the result, review", () => {
   // No retry: a retry meets the data the failed attempt left (J3 needs a profile with no review).
   test.describe.configure({ mode: "serial", retries: 0 });
-  // The clock is global to the fake profile: whatever happens, leave it at the baseline, then remove the demo rows this journey wrote (SPEC 7).
+  // The clock is global to the fake profile; this journey does not move it, but a failed run must leave it at the baseline anyway. Then remove the demo rows this journey wrote (SPEC 7).
   test.afterAll(async () => {
     test.setTimeout(900_000); // E2E_RESEED=1 only: the reseed takes 1 to 6 minutes, the default hook timeout is 60 s
     await restoreClock();
     await reseedIfRequested();
   });
 
-  // D-02: reviewing now needs a used package (A-03: UnitsUsed > 0), and a client can use one only through the task API (B-05); the journey is rewritten there.
-  test.fixme("a client books and pays, the booking completes after 48 h, three reviews turn \"Nowy\" into an average", async ({ page, context, browser, signInAs, clock }) => {
-    test.setTimeout(420_000); // two turns of Booking's 60 s auto-complete job plus the UI steps
+  test("a client buys a package and pays, orders a task and reads the result, the package completes, three reviews turn \"Nowy\" into an average", async ({ page, context, browser, signInAs }) => {
+    test.setTimeout(420_000); // one turn of Booking's 60 s auto-complete job, the task job (5 s) and the UI steps
     await signInAs("demo-client");
     const client = context.request;
 
@@ -52,23 +57,23 @@ test.describe("J3 book, pay, complete, review", () => {
     const before = await publicProfile(SLUG);
     expect(before.isNew, "start from the seeded profile with no reviews (reset the demo data first)").toBe(true);
     expect(before.rating ?? null).toBeNull();
-    const offering = before.offerings[0]!;
+    const offering = before.offerings.find((o) => o.kind === "tasks")!;
+    expect(offering, "the agent sells a task package").toBeDefined();
     const price = offering.price.amountMinor;
 
     const profile = new PractitionerProfilePage(page);
     await profile.goto(SLUG, NAME);
     await expect(profile.newBadge()).toBeVisible();
+    await expect(profile.aiBadge()).toBeVisible();
+    await expect(profile.offeringFacts(offering.title)).toContainText("1 zadanie, typowy czas ok. 60 min");
     await expectNoSeriousA11yViolations(page);
 
-    // ---- 1. book and pay through the UI ----
-    const slot = await profile.firstSlot(offering.title); // the picker found free slots
-    const link = new URL((await slot.getAttribute("href"))!, urls.web);
-    const startUtc = link.searchParams.get("start")!;
-    expect(link.searchParams.get("gabinet")).toBe(SLUG); // the slot link carries the profile slug (#99)
-    await profile.openBookingForm(slot);
+    // ---- 1. buy and pay through the UI: no date to choose ----
+    await profile.openBookingForm(await profile.purchaseLink(offering.title));
     const form = new BookingFormPage(page);
     await expect(page.getByRole("heading", { level: 1, name: "Wykup dostępu" })).toBeVisible();
     await expect(page.getByText(offering.title)).toBeVisible();
+    await expect(page.getByText(/termin|godzin/i)).toHaveCount(0);
     await expectNoSeriousA11yViolations(page);
     const bookingIds: string[] = [await form.submit(BRIEFS[0]!)];
 
@@ -85,71 +90,88 @@ test.describe("J3 book, pay, complete, review", () => {
     expect(view.status).toBe("Confirmed");
     expect(view.payment.status).toBe("Succeeded");
     expect(view.price.amountMinor).toBe(price);
-    // A-02: a purchase has no chosen slot; the package runs from the purchase for 30 days (full rewrite of the journey: D-02)
+    // a purchase has no chosen slot: the package runs from the purchase for 30 days, with one unit and nothing used yet
     expect(new Date(view.endUtc).getTime() - new Date(view.startUtc).getTime()).toBe(30 * 24 * 3_600_000);
+    expect([view.kind, view.unitsTotal, view.unitsUsed]).toEqual(["Tasks", 1, 0]);
+    expect(view.canCancel).toBe(true); // nothing used yet: a full refund is still possible
 
-    // ---- 2. the practitioner sees the booking (their own session, a second browser context) ----
+    // ---- 2. the provider sees the package (their own session, a second browser context) ----
     const pctx = await browser.newContext({ baseURL: urls.web, locale: "pl-PL", timezoneId: "Europe/Warsaw" });
     try {
       await signInViaBff(pctx, PRACTITIONER_USER);
       const pp = await pctx.newPage();
-      // the API first: the practitioner's own view of the booking (status, payment, the brief that only a Confirmed booking shows them)
+      // the API first: the provider's own view of the package (status, payment, the brief that only a Confirmed package shows them)
       const seen = await getBooking(pctx.request, bookingIds[0]!);
       expect(seen.status).toBe("Confirmed");
       expect(seen.payment.status).toBe("Succeeded");
       expect(seen.brief?.text).toBe(BRIEFS[0]);
       await pp.goto("/moje/rezerwacje?role=practitioner");
-      const row = pp.getByRole("listitem").filter({ hasText: "Aktywny" }).filter({ hasText: offering.title });
-      await expect(row).toHaveCount(1);
+      await expect(pp.getByRole("listitem").filter({ hasText: "Aktywny" }).filter({ hasText: offering.title })).toHaveCount(1);
       await expectNoSeriousA11yViolations(pp);
-      await row.getByRole("link", { name: "Szczegóły" }).click();
-      await pp.waitForURL(new RegExp(bookingIds[0]!));
-      // the detail page reads the booking in the browser: reload while it shows the load error instead of the booking
-      await expect(async () => {
-        if (!(await pp.getByText("Opis problemu (klient)").isVisible())) await pp.reload();
-        await expect(pp.getByText("Opis problemu (klient)")).toBeVisible({ timeout: 5_000 });
-      }).toPass({ timeout: 60_000, intervals: [2_000, 5_000] });
-      await expect(pp.getByText(BRIEFS[0]!)).toBeVisible();
-      await expect(pp.getByText("Opłacona")).toBeVisible();
     } finally {
       await pctx.close();
     }
 
-    // ---- 3. two more consultations, booked and paid through the same calls the UI makes ----
-    const others = earliestOnDistinctDays(await freeSlots(client, before.id, offering.id), 2, [warsawDate(startUtc)]);
-    for (const [i, s] of others.entries()) {
-      const { bookingId } = await createBooking(client, offering.id, s.startUtc, BRIEFS[i + 1]!);
+    // ---- 3. the confirmation leads to the first task: ordered in the panel, answered by the agent ----
+    await page.goto(`/rezerwacja/potwierdzenie/${bookingIds[0]}`);
+    const confirmation = new ConfirmationPage(page);
+    await expect(confirmation.heading()).toBeVisible();
+    await expect(confirmation.createKeyLink()).toBeVisible();
+    await confirmation.firstTaskLink().click();
+    await page.waitForURL(new RegExp(`/moje/rezerwacje/${bookingIds[0]}`));
+
+    const detail = new BookingDetailPage(page);
+    await expect(detail.usage()).toHaveText("wykorzystano 0 z 1");
+    await expect(detail.cancelButton()).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+    await detail.orderTask(TASKS[0]!);
+    // the unit is taken at once: the form is gone, the usage shows it, and a used package can no longer be cancelled
+    await expect(detail.usage()).toHaveText("wykorzystano 1 z 1");
+    await expect(detail.taskSubmit()).toHaveCount(0);
+    await expect(detail.cancelButton()).toHaveCount(0);
+    // the task is listed at once, with the date it was ordered (not an empty one); the fake platform's answer is deterministic
+    await expect(detail.tasks()).toHaveCount(1);
+    await expect(detail.tasks().first()).toContainText(/Zlecone: \d{1,2} \p{L}+ 20\d\d/u);
+    await detail.waitForAnswer(answerTo(TASKS[0]!));
+    await expect(detail.tasks()).toHaveCount(1);
+    await expect(detail.tasks().first()).toContainText(answerTo(TASKS[0]!));
+    await expect(detail.tasks().first()).toContainText("Gotowe");
+    await expectNoSeriousA11yViolations(page);
+    const done = await waitForTasksDone(client, bookingIds[0]!);
+    expect(done.map((t) => [t.status, t.output])).toEqual([["succeeded", answerTo(TASKS[0]!)]]);
+
+    // ---- 4. two more packages, bought and paid through the same calls the UI makes, each with a task answered ----
+    for (const i of [1, 2]) {
+      const { bookingId } = await createBooking(client, offering.id, BRIEFS[i]!);
       await simulatePayment(client, bookingId, "succeeded");
+      await orderTask(client, bookingId, TASKS[i]!);
+      expect((await waitForTasksDone(client, bookingId)).map((t) => t.output)).toEqual([answerTo(TASKS[i]!)]);
       bookingIds.push(bookingId);
     }
-    const confirmed = await Promise.all(bookingIds.map((id) => getBooking(client, id)));
-    for (const b of confirmed) {
-      expect(b.status).toBe("Confirmed");
-      expect(b.payment.status).toBe("Succeeded");
-    }
 
-    // ---- 4. business time passes: past the last end and 48 h (Booking:CompleteAfterHours); then the job completes the bookings ----
-    const lastEnd = Math.max(...confirmed.map((b) => Date.parse(b.endUtc)));
-    const now = Date.parse((await clock.read()).now);
-    await clock.advanceMinutes(Math.ceil((lastEnd + 49 * 3_600_000 - now) / 60_000));
+    // ---- 5. the used-up packages complete (the auto-complete job runs every 60 s, no business time to pass) ----
     for (const id of bookingIds) await waitForStatus(client, id, "Completed");
     for (const id of bookingIds) {
-      const done = await getBooking(client, id);
-      expect(done.status).toBe("Completed");
-      expect(done.payment.status).toBe("Succeeded"); // completing does not touch the payment
-      expect(done.canReview).toBe(true);
+      const completed = await getBooking(client, id);
+      expect(completed.status).toBe("Completed");
+      expect(completed.payment.status).toBe("Succeeded"); // completing does not touch the payment
+      expect([completed.unitsTotal, completed.unitsUsed]).toEqual([1, 1]);
+      expect(completed.canReview).toBe(true);
     }
+    await detail.goto(bookingIds[0]!);
+    await expect(detail.value("Zakończony")).toBeVisible();
+    await expect(detail.reviewLink()).toBeVisible();
 
-    // ---- 5. the first review through the UI: still "Nowy" ----
+    // ---- 6. the first review through the UI: still "Nowy" ----
     const reviewForm = new ReviewFormPage(page);
     await reviewForm.goto(bookingIds[0]!);
     await expectNoSeriousA11yViolations(page);
     await reviewForm.submit(REVIEWS[0]!.rating, REVIEWS[0]!.text);
     await expect(page.getByRole("heading", { name: "Dziękujemy za opinię" })).toBeVisible();
     await expect(page.getByText("Opinia została opublikowana na profilu agenta.")).toBeVisible();
-    expect(await reviewAttemptStatus(client, bookingIds[0]!, 1, REVIEWS[0]!.text)).toBe(409); // one review per booking (the flag canReview does not know)
+    expect(await reviewAttemptStatus(client, bookingIds[0]!, 1, REVIEWS[0]!.text)).toBe(409); // one review per package (the flag canReview does not know)
 
-    // ---- 6. reviews 2 (still "Nowy") and 3 (the average) ----
+    // ---- 7. reviews 2 (still "Nowy") and 3 (the average) ----
     expect((await createReview(client, bookingIds[1]!, REVIEWS[1]!.rating, REVIEWS[1]!.text)).status).toBe("Published");
     const atTwo = await publicProfile(SLUG);
     expect(atTwo.isNew, "two reviews are not enough for a rating").toBe(true);
@@ -164,7 +186,7 @@ test.describe("J3 book, pay, complete, review", () => {
     expect(atThree.isNew).toBe(false);
     expect(atThree.rating!.average).toBeCloseTo(AVERAGE, 1);
 
-    // ---- 7. the reviews are visible on the public page (the list is read live; the rating block of the page is cached 5 min by the web app) ----
+    // ---- 8. the reviews are visible on the public page (the list is read live; the rating block of the page is cached 5 min by the web app) ----
     await page.goto(`/gabinet/${SLUG}`);
     const reviews = profile.reviewsSection();
     for (const r of REVIEWS) {
@@ -172,5 +194,7 @@ test.describe("J3 book, pay, complete, review", () => {
       await expect(reviews.getByText(`Ocena: ${r.rating} z 5`)).toBeVisible();
     }
     await expectNoSeriousA11yViolations(page);
+    // the tasks of the three packages are still there for their owner
+    expect((await listTasks(client, bookingIds[2]!)).length).toBe(1);
   });
 });

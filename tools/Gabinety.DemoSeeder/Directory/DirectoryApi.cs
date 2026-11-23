@@ -7,7 +7,7 @@ namespace Gabinety.DemoSeeder;
 
 public sealed record MyPractitioner(Guid Id, string Slug, string Status, string DisplayName, string Headline, string Bio, string? PortfolioUrl,
     string? MeetingUrlDefault, string? Nip, bool GithubLinked, string? GithubLogin);
-public sealed record MyOffering(Guid Id, string Title, string Description, int DurationMinutes, long PriceMinor, string ProblemSlug, string[] TechSlugs, bool IsActive);
+public sealed record MyOffering(Guid Id, string Title, string Description, int DurationMinutes, long PriceMinor, string ProblemSlug, string[] TechSlugs, bool IsActive, string Kind, int Units);
 public sealed record TaxonomyView(string[] Problems, string[] Techs);
 
 /// <summary>The Directory API as the seeder uses it: user calls with a bearer token, admin calls, and the internal pushes with X-Internal-Key. Errors carry the status and the error code, never a body.</summary>
@@ -97,7 +97,7 @@ public sealed class DirectoryApi(HttpClient http, SeedOptions options, TimeProvi
         if (r.Status != HttpStatusCode.OK || r.Json is not { } j) throw Fail("list offerings", r);
         return j.GetProperty("items").EnumerateArray().Select(i => new MyOffering(i.GetProperty("id").GetGuid(), i.GetProperty("title").GetString()!,
             i.GetProperty("description").GetString()!, i.GetProperty("durationMinutes").GetInt32(), i.GetProperty("price").GetProperty("amountMinor").GetInt64(),
-            i.GetProperty("problemSlug").GetString()!, i.GetProperty("techSlugs").EnumerateArray().Select(t => t.GetString()!).ToArray(), i.GetProperty("isActive").GetBoolean())).ToList();
+            i.GetProperty("problemSlug").GetString()!, i.GetProperty("techSlugs").EnumerateArray().Select(t => t.GetString()!).ToArray(), i.GetProperty("isActive").GetBoolean(), i.GetProperty("kind").GetString()!, i.GetProperty("units").GetInt32())).ToList();
     }
 
     public async Task<Guid> CreateOfferingAsync(DemoUser u, object body, CancellationToken ct)

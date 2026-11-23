@@ -7,6 +7,7 @@ public static class SeedSteps
     {
         new DirectorySeedStep(),
         new BookingSeedStep(),
+        new ApiKeySeedStep(),
         new ReputationSeedStep(),
         new ScaleSeedStep(),
     }.OrderBy(s => s.Order).ToArray();

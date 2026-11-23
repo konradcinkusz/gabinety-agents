@@ -5,6 +5,8 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using BookingApp::Gabinety.Booking.Clients;
 using BookingApp::Gabinety.Booking.Features.Internal.TestClock;
+using BookingApp::Gabinety.Booking.Jobs.AgentTasks;
+using BookingApp::Gabinety.Booking.Jobs.AutoComplete;
 using BookingApp::Gabinety.Booking.Persistence;
 using Gabinety.DemoSeeder;
 using Gabinety.Integration.Tests.AuthContract;
@@ -63,40 +65,33 @@ public sealed class BookingHost : WebApplicationFactory<BookingApp::Program>
 }
 
 /// <summary>
-/// Stand-in for the auto-complete job (and, since A-03, for a customer using the packages): every few milliseconds, a Confirmed booking whose end + 48 h has passed on the
-/// Booking clock becomes Completed with <c>ended_at</c> = its end, and every package that got completed gets one unit used. It is only here so the seeder's wait-for-Completed path can be tested; D-01 replaces it.
+/// Drives the service's own background jobs on the Booking clock every few milliseconds, because their real timers tick every 5 s and 60 s: the agent task job (queued tasks get an answer from the
+/// fake platform and become Succeeded) and the auto-complete job (a package whose last unit is used becomes Completed). It writes nothing itself, so the state the seeder's tests read is what the real code made.
+/// Without it the seeded packages stay as the API left them (tasks Queued, used-up packages Confirmed), which is what the "no job" tests want.
 /// </summary>
-public sealed class CompletionJobStandIn : IAsyncDisposable
+public sealed class BookingJobDriver : IAsyncDisposable
 {
     readonly CancellationTokenSource _stop = new();
     readonly Task _loop;
 
-    public CompletionJobStandIn(BookingHost booking)
+    public BookingJobDriver(BookingHost booking)
     {
         _ = booking.Services; // build the host here: two threads touching a factory's Services before it exists would build two servers, and two databases
+        var tasks = booking.Services.GetRequiredService<AgentTaskJob>();
+        var complete = booking.Services.GetRequiredService<AutoCompleteJob>();
         _loop = Task.Run(async () =>
-    {
-        while (!_stop.IsCancellationRequested)
         {
-            try
+            while (!_stop.IsCancellationRequested)
             {
-                await booking.Db(async db =>
+                try
                 {
-                    var now = booking.Now;
-                    var due = await db.Bookings.Where(b => b.Status == BookingStatus.Confirmed).ToListAsync();
-                    foreach (var b in due.Where(b => now >= b.EndUtc.AddHours(48))) { b.Status = BookingStatus.Completed; b.EndedAt = b.EndUtc; }
-                    // A-03: a package can be reviewed only after something was used from it. The demo seeder cannot use one yet (the task API comes in B-05, D-01 will make the seeder
-                    // call it), so this stand-in also plays the agent's customer: one unit used on every package that got completed (a package still Confirmed stays unused, so the seeder can still cancel it).
-                    foreach (var b in await db.Bookings.Where(b => b.UnitsUsed == 0 && (b.Status == BookingStatus.Completed || b.Status == BookingStatus.Resolved)).ToListAsync())
-                        b.UnitsUsed = 1;
-                    await db.SaveChangesAsync();
-                    return 0;
-                });
-                await Task.Delay(20, _stop.Token);
+                    await tasks.RunOnceAsync(booking.Now, _stop.Token);
+                    await complete.CompleteDueAsync(booking.Now, _stop.Token);
+                    await Task.Delay(20, _stop.Token);
+                }
+                catch (OperationCanceledException) { }
+                catch (ObjectDisposedException) { return; }
             }
-            catch (OperationCanceledException) { }
-            catch (ObjectDisposedException) { return; }
-        }
         });
     }
 
@@ -160,7 +155,8 @@ public sealed class BookingWorld : IAsyncDisposable
     public SeedContext NewContext() => new(Options, Http, Log, TimeProvider.System);
 
     /// <summary>The Booking step as the tests run it: a short wait for the completion job, a quick poll.</summary>
-    public static BookingSeedStep Step(TimeSpan? wait = null) => new() { CompletionWait = wait ?? TimeSpan.FromSeconds(20), CompletionPoll = TimeSpan.FromMilliseconds(25) };
+    public static BookingSeedStep Step(TimeSpan? wait = null) =>
+        new() { CompletionWait = wait ?? TimeSpan.FromSeconds(20), CompletionPoll = TimeSpan.FromMilliseconds(25), TaskWait = wait ?? TimeSpan.FromSeconds(20) };
 
     /// <summary>What a person would read: a client's own bookings through the public API, by the client's demo name.</summary>
     public async Task<List<JsonElement>> BookingsOf(string clientName)
