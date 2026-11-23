@@ -12,7 +12,7 @@ Columns: **Policy** = what the code declares (checked by the test): `Anonymous`,
 **Profile** = `all` (every deployment) or `fake` (mapped only when `GABINETY_FAKE=1` or `Environment:Kind=Development`; absent in a deployed profile, checked by the test).
 **Note** is for people and is not checked (callers of an internal route are SPEC 5.1; each caller has its own key on the callee, F-03).
 
-**Public edge (F-03, `Gabinety.ServiceDefaults.Edge`, not a policy so not checked by this table):** a request that arrived through the Fly public edge, or that carries `X-Edge-Key`, never reaches an `/internal/*` row below: it is 404 before authentication, whatever key it carries (default on, off in the fake profile). Booking, the one public app, also answers 404 from the edge to everything except `POST /webhooks/payments/{provider}`, `/alive` and `/api/v1/*` other than `/api/v1/admin/*` (`src/Gabinety.Booking/PublicEdge.cs`). No route was added or changed by T-10.10.
+**Public edge (F-03, `Gabinety.ServiceDefaults.Edge`, not a policy so not checked by this table):** a request that arrived through the Fly public edge, or that carries `X-Edge-Key`, never reaches an `/internal/*` row below: it is 404 before authentication, whatever key it carries (default on, off in the fake profile). Booking, the one public app, also answers 404 from the edge to everything except `POST /webhooks/payments/{provider}`, `/alive` and `/api/v1/*` other than `/api/v1/admin/*`, and `/v1/*` (the agent API, API key) (`src/Gabinety.Booking/PublicEdge.cs`). No route was added or changed by T-10.10.
 
 ## Directory
 
