@@ -77,9 +77,14 @@ Columns: **Policy** = what the code declares (checked by the test): `Anonymous`,
 | Booking | DELETE | `/api/v1/me/api-keys/{id}` | Authenticated | all | B-01: revokes an own key, 404 for another user's |
 | Booking | GET | `/v1/models` | ApiKey | all | B-04: agents with a usable Chat package of the key's client; 401 in the OpenAI error shape |
 | Booking | POST | `/v1/chat/completions` | ApiKey | all | B-04: OpenAI-compatible chat, streamed or not; tokens settled after the fact |
+| Booking | POST | `/v1/tasks` | ApiKey | all | B-05: orders a task, takes one unit at once, 202 queued |
+| Booking | GET | `/v1/tasks/{id}` | ApiKey | all | B-05: own task only, 404 for another user's |
 | Booking | POST | `/api/v1/bookings` | Authenticated | all | |
 | Booking | GET | `/api/v1/bookings/{id}` | Authenticated | all | |
 | Booking | GET | `/api/v1/me/bookings` | Authenticated | all | |
+| Booking | POST | `/api/v1/bookings/{id}/tasks` | Authenticated | all | B-05: orders a task of an own Tasks package from the browser |
+| Booking | GET | `/api/v1/me/tasks/{id}` | Authenticated | all | B-05: own task, 404 for another user's |
+| Booking | GET | `/api/v1/me/bookings/{bookingId}/tasks` | Authenticated | all | B-05: the tasks of an own package, newest first |
 | Booking | POST | `/api/v1/bookings/{id}/cancel` | Authenticated | all | |
 | Booking | POST | `/api/v1/bookings/{id}/dispute` | Authenticated | all | |
 | Booking | POST | `/api/v1/bookings/{id}/report-client-no-show` | Authenticated | all | |

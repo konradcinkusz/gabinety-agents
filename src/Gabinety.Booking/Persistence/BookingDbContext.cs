@@ -42,6 +42,7 @@ public sealed class BookingDbContext(DbContextOptions<BookingDbContext> options)
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
     public DbSet<UsageRecord> UsageRecords => Set<UsageRecord>();
+    public DbSet<AgentTask> AgentTasks => Set<AgentTask>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(BookingDbContext).Assembly);

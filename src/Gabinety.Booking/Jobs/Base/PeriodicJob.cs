@@ -29,6 +29,9 @@ public abstract class PeriodicJob(TimeProvider time, IConfiguration config, JobM
     /// <summary>The <c>job</c> label: a constant per job class (<c>hold_expiry</c>), never built from data.</summary>
     public abstract string Name { get; }
 
+    /// <summary>How often the loop runs: <c>Jobs:IntervalSeconds</c> (default 60). A job that must run more often overrides it.</summary>
+    protected virtual TimeSpan Interval => ReadInterval(config);
+
     /// <summary>One run of the work. <paramref name="now"/> is read once by the loop. Throw to report a failure; only <paramref name="ct"/> may cancel it.</summary>
     public abstract Task RunOnceAsync(DateTimeOffset now, CancellationToken ct);
 
@@ -60,7 +63,7 @@ public abstract class PeriodicJob(TimeProvider time, IConfiguration config, JobM
     async Task LoopAsync(CancellationToken stop)
     {
         if (!ReadBool(config, "Jobs:Enabled", true)) return;
-        var interval = ReadInterval(config);
+        var interval = Interval;
         using var timer = new PeriodicTimer(interval, time);
         var due = time.GetUtcNow() + interval;
         try

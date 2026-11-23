@@ -57,6 +57,8 @@ booking       Notifications:Smtp:TlsMode               optional
 booking       Notifications:Smtp:User                  optional
 booking       Notifications:Smtp:Password              optional    secret
 booking       Jobs:IntervalSeconds                     optional
+booking       Jobs:AgentTasks:IntervalSeconds          optional    default 5; how often queued agent tasks are picked up (B-05)
+booking       Agents:TaskTimeoutMinutes                optional    default 30; a task that runs longer is treated as failed (B-05)
 
 reputation    ConnectionStrings:reputationdb           required
 reputation    Internal:Callers:Owner                   optional

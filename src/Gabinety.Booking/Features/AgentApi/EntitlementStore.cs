@@ -57,6 +57,28 @@ public class EntitlementStore(BookingDbContext db, TimeProvider time)
         await ChangeInMemoryAsync(bookingId, used => used + units, ct);
     }
 
+    /// <summary>
+    /// Adds <paramref name="units"/> only while that stays within <c>UnitsTotal</c> (one conditional statement), and says whether it did. A task is a whole unit and never
+    /// overshoots, so two requests racing for the last unit cannot both get it.
+    /// </summary>
+    public virtual async Task<bool> TryConsumeAsync(Guid bookingId, long units, CancellationToken ct)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(units);
+        if (db.Database.IsRelational())
+            return await db.Bookings.Where(b => b.Id == bookingId && b.UnitsUsed + units <= b.UnitsTotal)
+                .ExecuteUpdateAsync(s => s.SetProperty(b => b.UnitsUsed, b => b.UnitsUsed + units), ct) > 0;
+        await InMemoryGate.WaitAsync(ct);
+        try
+        {
+            var row = await db.Bookings.SingleOrDefaultAsync(b => b.Id == bookingId, ct);
+            if (row is null || row.UnitsUsed + units > row.UnitsTotal) return false;
+            row.UnitsUsed += units;
+            await db.SaveChangesAsync(ct);
+            return true;
+        }
+        finally { InMemoryGate.Release(); }
+    }
+
     /// <summary>Consumes and writes the <see cref="UsageRecord"/> of it (numbers only). <paramref name="apiKeyId"/> is null for a signed-in client of the web panel.</summary>
     public virtual async Task ConsumeAndRecordAsync(BookingEntity package, long units, Guid? apiKeyId, CancellationToken ct)
     {
