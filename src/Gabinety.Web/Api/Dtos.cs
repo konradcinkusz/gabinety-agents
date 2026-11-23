@@ -99,7 +99,9 @@ public sealed record ApiKeyDto(Guid Id, string Name, string Prefix, DateTimeOffs
 public sealed record ApiKeyCreatedDto(Guid Id, string Name, string Prefix, string Key, DateTimeOffset CreatedAt);
 
 /// <summary>A task of a package (B-05). <c>Status</c> is <c>queued | running | succeeded | failed</c>; <c>Output</c> is text of the agent, shown as plain text and never as markup.</summary>
-public sealed record AgentTaskDto(Guid Id, string Status, string? Output, DateTimeOffset CreatedAt, DateTimeOffset? CompletedAt);
+/// <remarks>Booking writes a task in snake case (<c>created_at</c>, <c>completed_at</c>, the shape of the OpenAI-style API of B-05), unlike the camel case of its other views.</remarks>
+public sealed record AgentTaskDto(Guid Id, string Status, string? Output, [property: System.Text.Json.Serialization.JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
+    [property: System.Text.Json.Serialization.JsonPropertyName("completed_at")] DateTimeOffset? CompletedAt);
 
 public sealed record TaskCreatedDto(Guid Id, string Status);
 

@@ -22,6 +22,22 @@ public class ClientAreaClientTests
     static readonly Guid Id = Guid.Parse("018f0000-0000-7000-8000-0000000000b1");
 
     [Fact]
+    public async Task The_task_list_is_read_in_the_snake_case_shape_Booking_writes_with_both_dates()
+    {
+        var (client, backend) = Bookings();
+        backend.Respond = _ => FakeBackend.Raw("""[{"id":"018f0000-0000-7000-8000-0000000000c1","status":"succeeded","output":"Gotowe.","created_at":"2026-11-23T18:26:00.2989739Z","completed_at":"2026-11-23T18:26:00.6302108Z"},{"id":"018f0000-0000-7000-8000-0000000000c2","status":"queued","output":null,"created_at":"2026-11-23T18:27:00Z","completed_at":null}]""");
+
+        var result = await client.TasksAsync(Id);
+
+        Assert.True(result.IsOk);
+        var done = result.Value![0];
+        Assert.Equal(new DateTimeOffset(2026, 11, 23, 18, 26, 0, TimeSpan.Zero).AddTicks(2989739), done.CreatedAt);
+        Assert.Equal(new DateTimeOffset(2026, 11, 23, 18, 26, 0, TimeSpan.Zero).AddTicks(6302108), done.CompletedAt);
+        Assert.Equal(new DateTimeOffset(2026, 11, 23, 18, 27, 0, TimeSpan.Zero), result.Value[1].CreatedAt);
+        Assert.Null(result.Value[1].CompletedAt);
+    }
+
+    [Fact]
     public async Task Create_posts_the_json_the_service_reads_with_the_key_in_the_header_and_no_start()
     {
         var (client, backend) = Bookings();
