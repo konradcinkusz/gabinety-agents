@@ -75,6 +75,8 @@ Columns: **Policy** = what the code declares (checked by the test): `Anonymous`,
 | Booking | POST | `/api/v1/me/api-keys` | Authenticated | all | B-01: creates a key, the plain key is in this answer only; at most 5 active |
 | Booking | GET | `/api/v1/me/api-keys` | Authenticated | all | B-01: own active keys, never the key itself |
 | Booking | DELETE | `/api/v1/me/api-keys/{id}` | Authenticated | all | B-01: revokes an own key, 404 for another user's |
+| Booking | GET | `/v1/models` | ApiKey | all | B-04: agents with a usable Chat package of the key's client; 401 in the OpenAI error shape |
+| Booking | POST | `/v1/chat/completions` | ApiKey | all | B-04: OpenAI-compatible chat, streamed or not; tokens settled after the fact |
 | Booking | POST | `/api/v1/bookings` | Authenticated | all | |
 | Booking | GET | `/api/v1/bookings/{id}` | Authenticated | all | |
 | Booking | GET | `/api/v1/me/bookings` | Authenticated | all | |

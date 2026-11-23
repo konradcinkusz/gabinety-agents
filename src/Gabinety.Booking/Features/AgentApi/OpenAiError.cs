@@ -27,6 +27,7 @@ public static class OpenAiError
 
     public static IResult Unauthorized() => Result(401, "Incorrect API key provided.", InvalidRequest, InvalidApiKey);
     public static IResult BadRequest(string message) => Result(400, message, InvalidRequest, InvalidRequest);
+    public static IResult TooLarge() => Result(413, "The request body is too large.", InvalidRequest, "request_too_large");
     public static IResult ModelNotFound_() => Result(404, "The model does not exist or you have no active package for it.", InvalidRequest, ModelNotFound);
     public static IResult QuotaExhausted() => Result(429, "Your package for this model is used up.", InsufficientQuota, InsufficientQuota);
     public static IResult Upstream() => Result(502, "The agent platform did not answer.", "api_error", UpstreamError);

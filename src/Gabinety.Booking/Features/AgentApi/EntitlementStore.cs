@@ -57,6 +57,14 @@ public class EntitlementStore(BookingDbContext db, TimeProvider time)
         await ChangeInMemoryAsync(bookingId, used => used + units, ct);
     }
 
+    /// <summary>Consumes and writes the <see cref="UsageRecord"/> of it (numbers only). <paramref name="apiKeyId"/> is null for a signed-in client of the web panel.</summary>
+    public virtual async Task ConsumeAndRecordAsync(BookingEntity package, long units, Guid? apiKeyId, CancellationToken ct)
+    {
+        await ConsumeAsync(package.Id, units, ct);
+        db.UsageRecords.Add(new UsageRecord { Id = Guid.NewGuid(), BookingId = package.Id, ApiKeyId = apiKeyId, Kind = package.Kind, Units = units, CreatedAt = time.GetUtcNow() });
+        await db.SaveChangesAsync(ct);
+    }
+
     /// <summary>Takes <paramref name="units"/> back (a task that failed). <c>UnitsUsed</c> never goes below 0.</summary>
     public virtual async Task RefundUnitsAsync(Guid bookingId, long units, CancellationToken ct)
     {
