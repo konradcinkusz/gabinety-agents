@@ -45,9 +45,9 @@ booking       Payments:Stripe:SecretKey                required    secret
 booking       Payments:Stripe:WebhookSecret            required    secret
 booking       Payments:Stripe:ApiBase                  optional    tests only
 booking       Payments:WebhookSecret                   fake-only   the Mock provider's
-booking       Agents:Provider                          optional    Fake (fake profile only) or Http; B-03. Becomes required with the agent API (D-03)
-booking       Agents:Upstream:BaseUrl                  optional    the agent platform's address, read when Agents:Provider is Http
-booking       Agents:Upstream:ApiKey                   optional    secret; read when Agents:Provider is Http
+booking       Agents:Provider                          required    Http when deployed (Fake only in the fake profile, B-03); the code lets a deployed host without it start and fails on first use (AGENT-API.md), so the estate must set it
+booking       Agents:Upstream:BaseUrl                  required    the agent platform's address (no /v1 at the end), read when Agents:Provider is Http
+booking       Agents:Upstream:ApiKey                   required    secret; read when Agents:Provider is Http
 booking       Agents:Upstream:TimeoutSeconds           optional    default 600
 booking       Notifications:Provider                   optional    Log by default; Smtp only when the host and the sender are configured (deploy/secrets.map, EMAIL.md)
 booking       Notifications:Smtp:Host                  optional    absent: the log sender, a startup warning and email: Degraded
@@ -59,6 +59,8 @@ booking       Notifications:Smtp:Password              optional    secret
 booking       Jobs:IntervalSeconds                     optional
 booking       Jobs:AgentTasks:IntervalSeconds          optional    default 5; how often queued agent tasks are picked up (B-05)
 booking       Agents:TaskTimeoutMinutes                optional    default 30; a task that runs longer is treated as failed (B-05)
+booking       Access:ValidityDays                      optional    default 30; days a purchased package is valid, from the purchase (the owner's constant, CONTRACTS 9); the web shows 30 as text
+booking       Access:ReportedOpenSlots                 optional    default 10; the constant sent to the ranking as open slots (an agent is always available)
 
 reputation    ConnectionStrings:reputationdb           required
 reputation    Internal:Callers:Owner                   optional
