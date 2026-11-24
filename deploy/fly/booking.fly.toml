@@ -27,10 +27,17 @@ primary_region = "fra"
   # Notifications__Provider is NOT set here on purpose: the code default is Log and the deploy stages Smtp (a secret) only when NOTIFICATIONS_SMTP_HOST and NOTIFICATIONS_SMTP_FROM
   # are set (deploy/secrets.map). Log outside the fake profile is announced at startup and as email: Degraded in /health/details; it never claims delivery.
   # Billing__FirstConsultationFeeBps is the owner's constant (CONTRACTS 9, D-17): not set here, the code default applies.
+  # The agent platform (D-03, docs/operations/AGENT-API.md). Agents__Provider is Http when deployed (Fake is the fake profile's: a deployed host without the setting still starts but cannot
+  # serve /v1 or run a task). The address is the platform's root WITHOUT /v1 (the host adds /v1/chat/completions); the owner fills the placeholder. The key is a secret (below).
+  Agents__Provider = "Http"
+  Agents__Upstream__BaseUrl = "https://<agent-platform-host>"
+  # Not set here, the code defaults apply (docs/operations/AGENT-API.md): Agents__Upstream__TimeoutSeconds (600), Agents__TaskTimeoutMinutes (30), Jobs__AgentTasks__IntervalSeconds (5),
+  # and the owner's constants Access__ValidityDays (30 days of validity of a package, CONTRACTS 9) and Access__ReportedOpenSlots (10).
 # Secrets (NOT here), set once with `fly secrets set --app gabinety-booking-staging`:
 #   ConnectionStrings__bookingdb
 #   Internal__Callers__Reputation, Internal__Callers__Directory, Internal__Keys__Directory   (one key per caller and callee, never shared; F-03)
 #   optional Internal__Callers__Owner
+#   Agents__Upstream__ApiKey   (required: GitHub secret AGENTS_UPSTREAM_API_KEY, the key of the agent platform; docs/operations/AGENT-API.md)
 #   Payments__Stripe__SecretKey, Payments__Stripe__WebhookSecret   (required: GitHub secrets PAYMENTS_STRIPE_SECRET_KEY and PAYMENTS_STRIPE_WEBHOOK_SECRET; docs/operations/PAYMENTS-GO-LIVE.md)
 #   optional Notifications__Provider (staged as Smtp only with host and sender), Notifications__Smtp__Host/FromAddress/Port/TlsMode/User/Password   (docs/operations/EMAIL.md)
 
@@ -40,7 +47,7 @@ primary_region = "fra"
   auto_stop_machines = "off"
   auto_start_machines = true
   min_machines_running = 1
-  # Public listener (F-03): the payment webhook POST /webhooks/payments/{provider} (SPEC 4.3). Fly cannot expose one path, so the whole app answers on <app>.fly.dev and the CODE filters what the public edge may reach (src/Gabinety.Booking/PublicEdge.cs): the webhook, /alive and /api/v1/* except /api/v1/admin/*; /internal/*, /health, OpenAPI and admin are 404 from the edge. The web app reaches Booking over .internal. Owner decision on which apps are public: see the PR. Min 1: in-request and it runs the jobs (stats push, payouts, notifications).
+  # Public listener (F-03): the payment webhook POST /webhooks/payments/{provider} (SPEC 4.3). Fly cannot expose one path, so the whole app answers on <app>.fly.dev and the CODE filters what the public edge may reach (src/Gabinety.Booking/PublicEdge.cs): the webhook, /alive, the agent API /v1/* (API key) and /api/v1/* except /api/v1/admin/*; /internal/*, /health, OpenAPI and admin are 404 from the edge. The web app reaches Booking over .internal. Owner decision on which apps are public: see the PR. Min 1: in-request and it runs the jobs (stats push, payouts, notifications).
 
   # Liveness only (/alive runs no dependency check, P7); /health reports optional dependencies and must never fail a deploy. Always on, it runs the jobs (SPEC 4.3).
   [[http_service.checks]]

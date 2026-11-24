@@ -1,8 +1,8 @@
 # Getting started
 
-How to run Gabinety Tech on your machine, sign in, click through every journey (J1 to J7), pass business time, and run each test layer.
+How to run Gabinety Agents (a marketplace of AI agents) on your machine, sign in, click through every journey (J1 to J8), call the public API, pass business time, and run each test layer. The code keeps the old names: `Practitioner` is an agent, `Offering` a package, `Booking` a purchased package (`docs/agentic/PLAN.md`, section 1).
 
-Every command below was run on Linux with the .NET SDK 10.0.404 (`global.json` asks for 10.0.100 or a later 10.0 feature band), Node 22 and pnpm 10, on 2026-11-17. Where a result is quoted it is what the command printed. Section 8 lists what could not be run in that environment.
+The commands of sections 1 to 6 were first run on Linux with the .NET SDK 10.0.404 (`global.json` asks for 10.0.100 or a later 10.0 feature band; 10.0.100 does not compile `MyBookings.razor`, so use 10.0.404 or newer), Node 22 and pnpm 10, on 2026-11-17, and sections 3 and 5 were rewritten for the agent marketplace on 2026-11-24 from the code and the Playwright journeys (section 8 says what that means). Where a result is quoted it is what the command printed.
 
 ## 1. Start the fake profile
 
@@ -16,7 +16,7 @@ bash dotnet-install.sh --channel 10.0 --install-dir "$HOME/.dotnet"     # about 
 export PATH="$HOME/.dotnet:$PATH"; dotnet --version                       # 10.0.404 when this was written
 ```
 
-(`ci.dot.net` is blocked in some sandboxes; `builds.dotnet.microsoft.com` is the host to use.) Then start the profile. `dotnet run` stays in the foreground for as long as the profile runs, so use a second terminal for everything below, or send it to the background (`nohup dotnet run ... > /tmp/apphost.log 2>&1 &`):
+(`ci.dot.net` is blocked in some sandboxes and the install script asks it first; if it fails with 403, download `https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.404/dotnet-sdk-10.0.404-linux-x64.tar.gz` and unpack it into the install directory.) Then start the profile. `dotnet run` stays in the foreground for as long as the profile runs, so use a second terminal for everything below, or send it to the background (`nohup dotnet run ... > /tmp/apphost.log 2>&1 &`):
 
 ```bash
 dotnet run --project src/Gabinety.AppHost --launch-profile fake
@@ -58,9 +58,9 @@ Exit code 0 means all ok; 1 means a line starts with `FAIL`. It waits up to `LIM
 
 ### The seeder, and how to know it finished
 
-Once Directory, Booking, Reputation and DevIdentity are healthy the AppHost starts the `seeder` resource by itself. It fills the system through the services' HTTP APIs: ten practitioners (six approved), four clients, availability, twelve bookings in every state, three reviews (`tools/Gabinety.DemoSeeder/README.md`). While it works it **moves the test clock of Booking** to make bookings complete, then puts it back to 0.
+Once Directory, Booking, Reputation and DevIdentity are healthy the AppHost starts the `seeder` resource by itself. It fills the system through the services' HTTP APIs: ten fictional agents (six approved), four clients, packages of two kinds (`Tasks` and `Chat`), eleven purchases in every state (use of a package goes through the real task API), an API key for `demo-client`, three reviews (`tools/Gabinety.DemoSeeder/README.md`). It does not move the test clock; it waits for the service's own jobs (task job every 5 s, auto-complete job every 60 s).
 
-A seed is finished when **all three** hold: no `Gabinety.DemoSeeder` process is running, both clocks answer `offsetMinutes: 0` (section 5), and that stays true for about 10 seconds (the e2e harness uses exactly this test, `tests/e2e/harness/wait-for-profile.cjs`). `check-fake-profile.sh` shows the data is there but does not prove the seeder has stopped. Do not move the clock or book while it runs.
+A seed is finished when **all three** hold: no `Gabinety.DemoSeeder` process is running, both clocks answer `offsetMinutes: 0` (section 5), and that stays true for about 10 seconds (the e2e harness uses exactly this test, `tests/e2e/harness/wait-for-profile.cjs`). `check-fake-profile.sh` shows the data is there but does not prove the seeder has stopped. Do not buy packages or move the clock while it runs.
 
 To wait for it in a script (the same test, polled every 5 s; run it after `scripts/check-fake-profile.sh` is green):
 
@@ -76,7 +76,7 @@ done; echo seeded
 
 Measured on a cold start (see "Walkthrough record"): about 95 s from `dotnet run` until all services answered and the seeder started, and about 2 min 40 s more until the seeder had finished: roughly **4 min 20 s in all**. `check-fake-profile.sh` was already green while the seeder was still running and the Booking clock was shifted, so do not start a journey on that alone.
 
-Measured: a full `--reset` (remove all `demo-` data, then seed again) against a running profile took **2 min 17 s**. Booking waits for its auto-complete job (it runs every 60 s) to complete three bookings, so expect roughly 2 minutes after the services are healthy, longer on a slow machine (the harness allows up to 8 minutes).
+A full `--reset` (remove all `demo-` data, then seed again) against a running profile took **2 min 17 s** with the previous (consultation) seeder, which moved the clock. The agent seeder waits for the task job and for Booking's auto-complete job (every 60 s, up to 75 s) to complete single-task packages; the harness allows up to 8 minutes. Both durations are from the old seeder: the new one was not timed here.
 
 Run the seeder by hand (to top up, or to reset after you changed a lot):
 
@@ -121,102 +121,117 @@ The six approved practitioners that appear in the public list, with the account 
 
 You can also register a new account at `/rejestracja`; any e-mail works (no verification step in the stand-in).
 
-## 3. What to click: journeys J1 to J7
+## 3. What to click: journeys J1 to J8
 
-Each journey is an automated Playwright test in `tests/e2e/journeys/` (SPEC 10); the steps below are the same by hand. Polish button names are the app's own.
+Each journey is an automated Playwright test in `tests/e2e/journeys/` (SPEC 10); the steps below are the same by hand. Polish button names are the app's own. A package has no date to choose: it is valid from the purchase for `Access:ValidityDays` days (30 by default). Agent pages keep the old addresses (`/programisci`, `/gabinet/<slug>`, `/rezerwacja/<offer>`, `/moje/rezerwacje`).
 
-### J1 Browse a category and open a profile (no sign-in)
-1. `/programisci`: the list of practitioners. In the "Filtry" navigation click a problem category: you land on `/programisci/<category>` and see "Wyniki: N".
-2. Click a practitioner card: `/gabinet/<slug>` with "O mnie", "Oferta", ratings and "Zarezerwuj: <offer>" links.
+### J1 Browse a category and open an agent's profile (no sign-in)
+1. `/programisci`: the list of agents; every card carries the "Agent AI" label. In the "Filtry" navigation click a problem category: you land on `/programisci/<category>` and see "Wyniki: N".
+2. Click a card: `/gabinet/<slug>` with "O mnie", the label "Agent AI", a "Pakiety" section and, per package, what it contains ("1 zadanie, typowy czas ok. 60 min" or "500 tys. tokenów, API zgodne z OpenAI"), "Ważność: 30 dni" and a "Wykup dostęp: <title>" link. There is nothing to pick a time from. An agent with a `Chat` package also has the section "Jak się połączyć" (base URL, model = the agent's slug, a `curl` example).
 3. Try it with JavaScript disabled in the browser: the page content is still in the HTML.
 
-### J2 A new practitioner onboards, the administrator approves
+### J2 A new provider creates an agent, the administrator approves
 1. `/rejestracja`: e-mail, password, tick "Akceptuję Regulamin...", "Załóż konto".
 2. `/gabinet-programisty`: "Nazwa wyświetlana" then "Załóż gabinet": status "Szkic" (draft) and a checklist.
 3. `/gabinet-programisty/profil`: fill "Nagłówek", "Opis" (200+ characters), "Link do portfolio", "NIP" (a checksum-valid synthetic one: `9900000000`), "Zapisz".
-4. `/gabinet-programisty/oferty`: name, description, price in zł, "Rodzaj problemu", at least one technology, "Zapisz". (Availability: `/gabinet-programisty/dostepnosc`.)
+4. `/gabinet-programisty/oferty`: add a package: name and description of the package, "Rodzaj pakietu" (tasks or chat API), "Liczba jednostek", price in zł, problem kind, at least one technology, "Dodaj pakiet". J2 adds one package of each kind. (Task packages: 1 to 1000 units; `Chat`: 100 to 100000, thousands of tokens.)
 5. Back on `/gabinet-programisty`: "Login GitHub", "Pokaż kod", "Sprawdź kod" (the fake accepts the check). All checklist items read "Gotowe".
 6. "Wyślij do weryfikacji": "Czeka na weryfikację".
 7. In another browser (or a private window) sign in as `demo-admin`, open `/admin/weryfikacja`, find the name, "Zatwierdź".
-8. `/gabinet/<slug>` is now public and the profile is in `/programisci?q=<name>`.
+8. `/gabinet/<slug>` is now public with both packages, and the agent is in `/programisci?q=<name>`.
 
-### J3 Book, pay, complete, review (the main path)
+### J3 Buy a task package, order a task, read the result, review (the main path)
 1. Sign in as `demo-client`.
-2. `/programisci`, open Celina Przykładowska (`/gabinet/demo-celina-przykladowska`; "Nowy" means no rating yet). Choose a time (a link like `10:30`) on an offer.
-3. `/rezerwacja/<offer>`: "Opisz problem" (type a few sentences), "Zapłać".
-4. `/checkout/mock/<bookingId>` ("Płatność (tryb demonstracyjny)"): "Symuluj udaną płatność". You land on `/rezerwacja/potwierdzenie/<bookingId>`: "Rezerwacja potwierdzona. Dziękujemy!". Note the booking id in the address.
-5. `/moje/rezerwacje` shows it as "Potwierdzona". As `demo-practitioner-3`, `/moje/rezerwacje?role=practitioner` shows it with the brief.
-6. Pass time (section 5): move the clock past the end of the consultation plus 48 hours. The offset is counted **from now**, not from the booking: for a consultation that ends in 28 hours you need about 28 + 48 = 76 hours = 4560 minutes (add a margin). Booking's job runs every 60 s; within a minute the booking is completed (`canReview` turns true).
-7. `/moje/opinie/<bookingId>`: choose a rating, "Treść opinii", "Wyślij opinię": "Dziękujemy za opinię". The review is on the public profile (in a browser; the review list is loaded by the page's JavaScript, so it is not in the HTML that `curl` gets, see J3 by curl below). A practitioner shows "Nowy" until three reviews exist, then the average. Set the clock back to 0 afterwards (section 5).
+2. `/programisci`, open Celina Przykładowska (`/gabinet/demo-celina-przykladowska`; "Nowy" means no rating yet). On her single-task package click "Wykup dostęp: <title>".
+3. `/rezerwacja/<offer>` ("Wykup dostępu"): the package summary and the field "Do czego chcesz użyć agenta?" (20 to 2000 characters; "Pomóż mi opisać zastosowanie" asks the assistant). "Zapłać".
+4. `/checkout/mock/<bookingId>` ("Płatność (tryb demonstracyjny)"): "Symuluj udaną płatność". You land on `/rezerwacja/potwierdzenie/<bookingId>`: "Dostęp aktywny. Dziękujemy!" with the links "Utwórz klucz API" and "Zleć pierwsze zadanie".
+5. "Zleć pierwsze zadanie" opens `/moje/rezerwacje/<bookingId>`: "wykorzystano 0 z 1" and the button "Zrezygnuj" (nothing is used yet). Type the task in "Treść zadania" (20 to 20000 characters), "Zleć zadanie": the unit is taken at once ("wykorzystano 1 z 1", "Zrezygnuj" is gone) and the task is listed ("W kolejce"). The task job runs every 5 s; the answer of the fake agent platform is `[demo <slug>] Otrzymano N znaków.` (N = the length of your task). The page does not refresh itself reliably (see `docs/adr-proposals/0013-agent-marketplace.md`, open decision 4): use the link "Odśwież listę".
+6. Within about a minute Booking's auto-complete job completes the used-up package ("Zakończony"); only then (and when a unit was used) the link "Wystaw opinię" appears. You can review until 14 days after the package ends.
+7. `/moje/opinie/<bookingId>`: choose a rating, "Treść opinii", "Wyślij opinię": "Dziękujemy za opinię". An agent shows "Nowy" until three reviews exist, then the average. No clock has to be moved.
 
-A profile that already has reviews (after running the e2e suite, or the seeded practitioners 1, 2 and 5) will not show "Nowy"; reseed (section 1) or use another practitioner.
+A profile that already has reviews (after running the e2e suite, or the seeded agents 1, 2 and 5) will not show "Nowy"; reseed (section 1) or use another agent.
 
 #### J3 by curl (no browser)
 
-The same path through the real HTTP surface, without a browser: the web host never lets a browser call a backend, so this talks to the services directly with the user's bearer token from the identity stand-in (what `tests/e2e/harness` does for its set-up). Needs `curl` and `jq`; run it after the seeder has finished (section 1). The web host's own pages (step 7) need a session cookie, which only the sign-in form sets, so they are checked here anonymously.
+The same path through the real HTTP surface. The web host never lets a browser call a backend, so this talks to the services directly with the user's bearer token from the identity stand-in (what `tests/e2e/harness` does for its set-up). Needs `curl` and `jq`; run it after the seeder has finished (section 1). Two kinds of calls are shown: the panel's own endpoints with the user's token (`/api/v1/...`) and the public API with an API key (`/v1/...`, section "Call the public API" below).
 
 ```bash
-W=localhost:3000; B=localhost:5102/api/v1; R=localhost:5103/api/v1
-K=demo-development-internal-key-not-a-secret
+B=localhost:5102/api/v1; D=localhost:5101/api/v1
 tok() { curl -s -H 'Content-Type: application/json' -d "{\"email\":\"$1@demo.example\",\"password\":\"Demo-Dev-Passw0rd!\"}" localhost:5100/api/v1/auth/login | jq -r .accessToken; }   # never print it
-CT=$(tok demo-client); PT=$(tok demo-practitioner-3)
+CT=$(tok demo-client)
 auth() { echo "Authorization: Bearer $1"; }
 
-# 1. browse (no sign-in): the public profile read straight from Directory has the ids
-curl -s localhost:5101/api/v1/practitioners/demo-celina-przykladowska | jq -c '{id,isNew,offer:.offerings[0].id}'
-P=<id from above>; OFF=<offer id>
-curl -s -H "$(auth $CT)" "$B/practitioners/$P/slots?offeringId=$OFF&from=$(date +%F)&to=$(date -d '+13 days' +%F)" | jq -c '.slots[0]'
-START=<startUtc of a slot>; END=<its endUtc>
+# 1. browse (no sign-in): the public profile read straight from Directory has the ids; "kind" is "tasks" or "chat"
+curl -s $D/practitioners/demo-celina-przykladowska | jq -c '{isNew,offers:[.offerings[]|{id,kind,units,title}]}'
+OFF=<id of her "tasks" package>
 
-# 2. book: 201 {"bookingId":...,"status":"PendingPayment","checkoutUrl":...}
+# 2. buy: 201 {"bookingId":...,"status":"PendingPayment","checkoutUrl":...}; there is no startUtc
 ID=$(curl -s -H "$(auth $CT)" -H "Idempotency-Key: $(cat /proc/sys/kernel/random/uuid)" -H 'Content-Type: application/json' \
-  -d "{\"offeringId\":\"$OFF\",\"startUtc\":\"$START\",\"brief\":{\"text\":\"Prototyp z modelem językowym.\",\"aiAssisted\":false}}" $B/bookings | jq -r .bookingId)
+  -d "{\"offeringId\":\"$OFF\",\"brief\":{\"text\":\"Prototyp z modelem językowym.\",\"aiAssisted\":false}}" $B/bookings | jq -r .bookingId)
 
-# 3. pay on the mock: {"outcome":"Applied"}; the booking is then Confirmed / payment Succeeded
+# 3. pay on the mock: {"outcome":"Applied"}; the package is then Confirmed, payment Succeeded
 curl -s -H "$(auth $CT)" -H 'Content-Type: application/json' -d "{\"bookingId\":\"$ID\",\"outcome\":\"succeeded\"}" $B/payments/simulate
-curl -s -H "$(auth $CT)" $B/bookings/$ID | jq -c '{status,payment}'
-curl -s -H "$(auth $PT)" $B/bookings/$ID | jq -c '{status,brief:.brief.text}'   # the practitioner sees it, with the brief
+curl -s -H "$(auth $CT)" $B/bookings/$ID | jq -c '{status,kind,unitsTotal,unitsUsed,startUtc,endUtc}'
 
-# 4. pass time: minutes from NOW to END + 48 h (+ a margin), on both services
-M=$(( ( $(date -d "$END" +%s) + 48*3600 - $(date +%s) ) / 60 + 60 ))
-for p in 5102 5103; do curl -s -X POST -H "X-Internal-Key: $K" -H 'Content-Type: application/json' -d "{\"offsetMinutes\":$M}" localhost:$p/internal/v1/test/clock; done
+# 4. order a task as the signed-in client: 202 {"id":...,"status":"queued"}; the unit is taken at once
+T=$(curl -s -H "$(auth $CT)" -H 'Content-Type: application/json' -d '{"input":"Zaproponuj architekturę prostego prototypu wyszukiwania w dokumentach."}' $B/bookings/$ID/tasks | jq -r .id)
 
-# 5. wait for the auto-complete job (took 21 s when run; allow up to about 70 s)
+# 5. wait for the task job (every 5 s) and read the answer
+until curl -s -H "$(auth $CT)" $B/me/tasks/$T | jq -e '.status=="succeeded"' >/dev/null; do sleep 2; done
+curl -s -H "$(auth $CT)" $B/me/tasks/$T | jq -c .
+# {"id":"...","status":"succeeded","output":"[demo demo-celina-przykladowska] Otrzymano 70 znaków.","created_at":"...","completed_at":"..."}
+
+# 6. the package completes when its last unit is used (auto-complete job, every 60 s); then it can be reviewed
 until curl -s -H "$(auth $CT)" $B/bookings/$ID | jq -e '.status=="Completed" and .canReview' >/dev/null; do sleep 5; done
-
-# 6. review: 201 {"reviewId":...,"status":"Published"}
-curl -s -H "$(auth $CT)" -H 'Content-Type: application/json' -d "{\"bookingId\":\"$ID\",\"rating\":5,\"text\":\"Rzetelna konsultacja.\"}" $R/reviews
-for p in 5102 5103; do curl -s -X POST -H "X-Internal-Key: $K" -H 'Content-Type: application/json' -d '{"offsetMinutes":0}' localhost:$p/internal/v1/test/clock; done
-
-# 7. the published review (public, no cookie), and the pages
-curl -s $R/practitioners/$P/reviews | jq -c '.items[0]'
-for u in /programisci /gabinet/demo-celina-przykladowska; do curl -s -o /dev/null -w "$u %{http_code}\n" $W$u; done
-curl -s -o /dev/null -w "/moje/rezerwacje %{http_code}\n" $W/moje/rezerwacje      # 302 to /logowanie without the session cookie
+curl -s -H "$(auth $CT)" -H 'Content-Type: application/json' -d "{\"bookingId\":\"$ID\",\"rating\":5,\"text\":\"Rzetelny wynik zadania.\"}" localhost:5103/api/v1/reviews
 ```
 
-`GET $B/me/bookings` needs `?role=client` or `?role=practitioner` (400 without it).
+`GET $B/me/bookings` needs `?role=client` or `?role=practitioner` (400 without it). The list of a package's tasks is `GET $B/me/bookings/$ID/tasks`.
+
+#### Call the public API
+
+The public API is served by Booking (`http://localhost:5102/v1` in the fake profile) and authenticated with an API key, not a token. Keys are made in the panel (`/moje/klucze`, "Utwórz klucz"; the full key is shown once) or with `POST $B/me/api-keys` (`{"name":"..."}`, 201 with the field `key`, once). `demo-client` owns a `Chat` package of `demo-bartosz-testowy`. Full description: `docs/operations/AGENT-API.md`.
+
+```bash
+KEY=$(curl -s -H "$(auth $CT)" -H 'Content-Type: application/json' -d '{"name":"curl"}' $B/me/api-keys | jq -r .key)   # at most 5 active keys per account
+curl -s localhost:5102/v1/models -H "Authorization: Bearer $KEY"
+# {"object":"list","data":[{"id":"demo-bartosz-testowy","object":"model","owned_by":"gabinety"}]}
+curl -s localhost:5102/v1/chat/completions -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
+  -d '{"model":"demo-bartosz-testowy","messages":[{"role":"user","content":"test"}]}' | jq -c '{c:.choices[0].message.content,t:.usage.total_tokens}'
+# {"c":"[demo demo-bartosz-testowy] Otrzymano 4 znaków.","t":21}
+curl -sN localhost:5102/v1/chat/completions -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
+  -d '{"model":"demo-bartosz-testowy","stream":true,"messages":[{"role":"user","content":"test"}]}'   # SSE, ends with data: [DONE]
+```
 
 ### J4 The assistant is down
-1. As `demo-client`, open a booking form (J3 steps 1 to 3) for `demo-dariusz-fikcyjny`.
-2. In "Opisz problem" type a brief containing the text `[[unavailable]]` (the fake model answers "unavailable" to it), click "Pomóż mi opisać problem".
-3. You see "Asystent jest chwilowo niedostępny. Opisz problem samodzielnie i zarezerwuj termin." and no suggestion; your text is untouched; "Zapłać" still books.
+1. As `demo-client`, open a purchase form (J3 steps 1 to 3) for `demo-dariusz-fikcyjny`.
+2. In the field "Do czego chcesz użyć agenta?" type a text containing `[[unavailable]]` (the fake model answers "unavailable" to it), click "Pomóż mi opisać zastosowanie".
+3. You see the note that the assistant is temporarily unavailable and no suggestion; your text is untouched; "Zapłać" still buys the package.
 
-### J5 Cancel: refund early, none late
-1. Book and pay (J3 steps 1 to 4) for a start time more than 24 hours ahead. Open `/moje/rezerwacje/<id>`, "Anuluj rezerwację": the dialog says 100 % refund; "Tak, anuluj rezerwację": "Zwrócona w całości".
-2. Book another; move the clock to 12 hours before its start (section 5); cancel: the dialog says "brak zwrotu", the result is "Anulowana przez klienta (bez zwrotu)" and the payment stays "Opłacona".
+### J5 Cancel: a full refund before the first use, no cancel after
+1. Buy and pay (J3 steps 1 to 4) a package of 5 tasks. Open `/moje/rezerwacje/<id>`, "Zrezygnuj": the dialog "Czy na pewno zrezygnować z pakietu?"; "Tak, zrezygnuj": "Zrezygnowano z pakietu.", the payment is "Refunded" for the whole price.
+2. Buy another, order one task, reload: "Zrezygnuj" is gone, and a direct `POST .../cancel` is refused with 409 `invalid_transition`. There is no 24-hour rule any more.
 
-### J6 Dispute and partial refund
-1. As the client, book and pay; move the clock 30 minutes past the end.
-2. `/moje/rezerwacje/<id>`: "Zgłoś spór", "Opis sporu", "Wyślij zgłoszenie": "Spór w toku".
-3. Sign in as `demo-admin`, `/admin/spory`: find the booking id, "Rozstrzygnij", "Zwróć klientowi część", "Kwota zwrotu w zł", "Notatka", "Przejdź do potwierdzenia", "Potwierdź rozstrzygnięcie".
-4. `/admin/ksiega`: the ledger (download as CSV). For a 250,00 zł booking refunded 100,00 zł: `ClientCharge` 25000, `Refund` 10000, `PlatformFee` 2250, `PractitionerPayout` 12750 (grosz). The payout row appears after Booking's payout job (every 60 s). `/admin/opinie` is the review-moderation list.
+### J6 Claim and partial refund
+1. As the client, buy and pay a package of 5 tasks and order one task (a claim is allowed on an active package and on a completed one until its end plus 72 hours).
+2. `/moje/rezerwacje/<id>`: "Zgłoś reklamację", "Opis reklamacji", "Wyślij zgłoszenie".
+3. Sign in as `demo-admin`, `/admin/spory` ("Reklamacje"): find the booking id, "Rozstrzygnij", "Zwróć klientowi część", "Kwota zwrotu w zł", "Notatka", "Przejdź do potwierdzenia", "Potwierdź rozstrzygnięcie".
+4. `/admin/ksiega`: the ledger (download as CSV). For a 250,00 zł package refunded 100,00 zł: `ClientCharge` 25000, `Refund` 10000, `PlatformFee` 2250, `PractitionerPayout` 12750 (grosz). The payout row appears after Booking's payout job (every 60 s) has run; J6 waits up to 150 s for it. `/admin/opinie` is the review-moderation list.
 
 ### J7 A foreign origin is refused
 Automated only: the sign-in POST to the web origin with a foreign `Origin` header, or `Sec-Fetch-Site: cross-site`, gets `403` with code `cross_site_request` and creates nothing. Run `pnpm --dir tests/e2e test -- --grep J7`.
 
+### J8 Buy a Chat package, create a key, call the API
+1. Register a new account (`/rejestracja`), open Anna Demowska (`/gabinet/demo-anna-demowska`) and buy her `Chat` package ("500 tys. tokenów, API zgodne z OpenAI", 99 zł) as in J3 steps 2 to 4.
+2. The confirmation ("Dostęp aktywny. Dziękujemy!") shows how to connect: the base URL (`http://localhost:5102/v1` in the fake profile), the model (`demo-anna-demowska`) and "Utwórz klucz API".
+3. `/moje/klucze` ("Klucze API"): "Nazwa klucza", "Utwórz klucz". The key (`gab_` and 40 characters) is shown once; the list later shows only its prefix and "jeszcze nie użyto" until it is used.
+4. Call `GET /v1/models`, then `POST /v1/chat/completions` plain and with `"stream":true` (the commands above). An agent without a package gives 404 `model_not_found`; a wrong key 401 `invalid_api_key`.
+5. Each answer costs `N / 4 + 20` tokens (N = the length of the messages). `/moje/rezerwacje/<id>` shows "wykorzystano X z 500 tys. tokenów" (in whole thousands: a small use reads 0).
+6. "Unieważnij: <name>", "Tak, unieważnij": the key stops working at once (401).
+
 ## 4. Other pages
 
-`/` home, `/jak-to-dziala`, `/cennik`, `/zasady-rankingu`, `/regulamin`, `/polityka-prywatnosci`, `/konto`, `/logowanie`, `/rejestracja`, `/moje/opinie` (a practitioner's reviews, "Opinie o mnie").
+`/` home, `/jak-to-dziala`, `/cennik`, `/zasady-rankingu`, `/regulamin`, `/polityka-prywatnosci`, `/konto`, `/logowanie`, `/rejestracja`, `/moje/opinie` (a provider's reviews, "Opinie o mnie"), `/moje/klucze` (API keys), `/moje/rezerwacje` (purchased packages, "Moje dostępy").
 
 ## 5. Advance the test clock
 
@@ -239,7 +254,7 @@ done
 # {"offsetMinutes":0,"now":"2026-11-17T22:53:21.2769198+00:00"}
 ```
 
-`offsetMinutes` is the absolute offset, not a step. Without the key the answer is `401`. **Offsets are from now.** `offsetMinutes` moves "now"; it does not jump to a booking. To complete a booking that ends at `END`, use (`END` + 48 h − the real now) in minutes. The 2940 minutes above (49 h) only complete a booking that ended a few minutes ago. A first try with 4500 minutes against a consultation ending 28 h ahead left it `Confirmed` (75 h is less than 28 + 48 h plus the time already passed); 5000 completed it within 21 s. The booking jobs (auto-complete, payout) run on the shifted time, once a minute: after moving the clock allow up to about 60 seconds. **Set it back to 0 when you are done**, and do not move it while the seeder runs.
+`offsetMinutes` is the absolute offset, not a step. Without the key the answer is `401`. **Offsets are from now.** `offsetMinutes` moves "now"; it does not jump to a package. The journeys of the agent marketplace need no clock move to complete a package (a used-up package completes through the auto-complete job in a minute); the clock is for what depends on real time: a package expires `Access:ValidityDays` (30) days after the purchase and then becomes `Completed`, a claim is allowed until the end of the package plus 72 hours, a review until 14 days after it. For a package bought now that ends in 30 days, `43200` minutes moves "now" to its end. The booking jobs (auto-complete, payout) run on the shifted time, once a minute: after moving the clock allow up to about 60 seconds. **Set it back to 0 when you are done**, and do not move it while the seeder runs.
 
 ## 6. Run the tests
 
@@ -255,9 +270,8 @@ done
 
 Results measured:
 
-- `dotnet build -warnaserror`: `Build succeeded. 0 Warning(s) 0 Error(s)`.
-- `dotnet test --filter "tier!=integration"`: all projects passed (Llm 91, Architecture 43, Scheduling 10, Billing 36, Assistant 152 passed and 2 skipped, Ranking 14, Integration (unit tier) 123, Directory 355, Reputation 239, Booking 631), 1 min 10 s.
-- `pnpm --dir tests/e2e test` against the fresh fake profile: `18 passed (2.9m)` (harness, J1 to J7).
+- `dotnet build -warnaserror` and `dotnet test --filter "tier!=integration"`: see the numbers of 2026-11-24 in section 8.
+- `pnpm --dir tests/e2e test` against the fresh fake profile: 34 tests in 12 files (harness, J1 to J8, `ui-gate`), none skipped (`playwright test --list` counts them; the last full run is in the description of the pull request that added J8).
 - Evals with the fake model: `Passed! - Failed: 0, Passed: 19, Skipped: 2`.
 
 End-to-end details:
@@ -265,7 +279,7 @@ End-to-end details:
 - Chromium at a fixed path (sandboxes, some CI images): `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium`. Traces off: `--trace off`. Pick journeys: `pnpm --dir tests/e2e test -- --grep "J3|J4"`.
 - Interactive pages are entered with `gotoInteractive`/`watchCircuit` (`tests/e2e/harness/circuit.ts`), which wait for the circuit (`StartCircuit` answered on the websocket) before anything is typed; nothing sleeps. The web host has no `/api/proxy`, so the set-up and verification calls of the journeys go to the backends directly with the signed-in user's token (`harness/auth.ts`).
 - The run waits for the services and for the seeder to finish (section 1; up to `E2E_WAIT_SECONDS`, `E2E_SEEDER_WAIT_SECONDS`; `E2E_WAIT_FOR_SEEDER=0` skips it on a profile that has been seeded already).
-- The journeys write data (J3 adds three reviews to Celina Przykładowska and then she no longer shows "Nowy"). CI throws its stack away. On a long-lived local profile run with `E2E_RESEED=1`: after each journey that wrote data the harness removes the `demo-` data and seeds again (minutes per run), so the next run starts clean. Without it a second full run can fail J3 ("start from the seeded profile with no reviews"); restart the profile or reseed (section 1) first.
+- The journeys write data (J3 adds three reviews to Celina Przykładowska and then she no longer shows "Nowy"; J8 and J5 create their own `demo-` clients). CI throws its stack away. On a long-lived local profile run with `E2E_RESEED=1`: after each journey that wrote data the harness removes the `demo-` data and seeds again (minutes per run), so the next run starts clean. Without it a second full run can fail J3 ("start from the seeded profile with no reviews"); restart the profile or reseed (section 1) first.
 - `scripts/smoke-llm.sh` makes ONE real model call. It refuses when `CI` is set or `Llm__Provider=Fake` (printed `smoke-llm: refusing to run when CI is set ...` and `smoke-llm: Llm:Provider is Fake; a smoke run needs a real model.`, exit 2).
 
 ## 7. The default profile and Docker
@@ -307,7 +321,8 @@ Accounts and secrets are not something this repository can create (T-09.01): the
 
 - The default profile (including the authservice container added to it in the real-authservice change; it compiles and its image digest is checked by `scripts/check-authservice-pin.sh`, but nobody has started it), the integration tier and the Docker images: the container used had no Docker daemon. `dotnet test --filter "tier=integration"` failed with `DockerUnavailableException` as expected; `dotnet run ... --launch-profile default` (with the internal key given) printed nothing and was still waiting after 100 s.
 - `scripts/smoke-llm.sh` and the live evals against a real model (spend credits, need owner credentials). Only their refusals were run.
-- Click-through by hand in a browser: the steps in section 3 are taken from the Playwright journeys, which pass (18 of 18), not from a person following this text. The J3 path was later followed on a fresh checkout with `curl` only (see "Walkthrough record"); the clicking itself, the Polish button names and the page rendering in a real browser (including the client-loaded review list on the public profile) were still not done by a person.
+- On 2026-11-24, on `main` after D-02, with SDK 10.0.404: `dotnet build -warnaserror` gave 0 warnings and 0 errors; `dotnet test --filter "tier!=integration"` passed in every project (Llm 91, Architecture 55, Scheduling 10, Billing 36, Assistant 159 passed and 2 skipped, Ranking 18, Integration (unit tier) 206, Directory 415, Edge 51, Contracts 34, Reputation 314, Booking 1066, Web 1653). The fake profile was started and `scripts/check-fake-profile.sh` printed eight `ok` lines; the "J3 by curl" and "Call the public API" recipes of section 3 were run as written (only the offer id looked up by `jq`) and printed what the comments say. `pnpm --dir tests/e2e exec playwright test --list` counts 34 tests in 12 files with no `fixme` or `skip`; the Playwright suite itself was **not run** in this session (it passed 34 of 34 in the pull request that added J8).
+- Click-through by hand in a browser: the steps in section 3 are taken from the Playwright journeys and their page objects, not from a person following this text; the Polish button names are the ones the journeys use. The page rendering in a real browser (including the client-loaded review list on the public profile) was not checked by a person. The "Walkthrough record" at the end is a historical record of the consultation product.
 
 ## Walkthrough record
 
