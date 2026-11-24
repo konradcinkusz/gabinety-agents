@@ -105,7 +105,13 @@ Tylko właściciel (inaczej 404 `task_not_found`):
 
 Błąd (status inny niż 2xx, wyjątek, odpowiedź bez tekstu): zadanie wraca do kolejki; po **3 startach** (`Attempts`) staje się `failed`, a jednostka wraca do pakietu. Zadanie `running` dłużej niż `Agents:TaskTimeoutMinutes` (domyślnie 30) liczy się jak błąd. Platforma jest wyznaczana dopiero wtedy, gdy w kolejce jest zadanie.
 
-Znane ograniczenie: pakiet `Tasks` przechodzi w `Completed`, gdy `UnitsUsed >= UnitsTotal` (`AutoCompleteJob`, co 60 s). Jeśli ostatnie zadanie potem zakończy się `failed`, jednostka wraca, ale pakiet zostaje `Completed`. Do decyzji właściciela (ADR 0013).
+**Nieudane zadanie po auto-zakończeniu pakietu** (decyzja właściciela, ADR 0013). Pakiet `Tasks` przechodzi w `Completed`, gdy `UnitsUsed >= UnitsTotal` (`AutoCompleteJob`, co 60 s). Jeśli ostatnie zadanie potem zakończy się `failed`, jednostka wraca (`EntitlementStore.RefundUnitsAsync`), a `AgentTaskJob` **przywraca pakiet do `Confirmed`** (`PackageReopening`, wyzwalacz `UnitRefunded`), żeby klient mógł jej użyć. Robi to w jednej transakcji z blokadą wiersza (`BookingTransitions`, tak jak `AutoCompleteJob`) i **tylko gdy wszystko poniższe jest prawdą** (sprawdzane pod blokadą):
+
+- pakiet jest `Completed` (nie `Disputed`, `Resolved` ani anulowany), rodzaju `Tasks`, i ma wolną jednostkę (`UnitsUsed < UnitsTotal`);
+- ważność się nie skończyła (`EndUtc > teraz`): pakiet zakończył się wyczerpaniem jednostek, a nie upływem czasu. Po `EndUtc` status zostaje, jednostka mimo to wraca;
+- nic nie wypłacono: nie ma wiersza `Payout` (w żadnym stanie, także `Pending`) ani wpisu księgi `PractitionerPayout`.
+
+Skutek: status `Confirmed`, `EndedAt`, `PayoutDueAt`, `FeeMinor` i `PayoutMinor` puste, a **niewypłacony** wpis księgi `PlatformFee` usunięty (jak przy reklamacji: `MoneyReopening`, wzór `ReopenMoney`), co zwalnia parę klient-agent dla zakupu, który naprawdę zarobi prowizję. Gdy warunki nie są spełnione (wypłacono, reklamacja, minął `EndUtc`), pakiet zostaje, jak dziś. Jednostka wraca i pakiet otwiera się dwoma kolejnymi zatwierdzonymi krokami (zwrot, potem otwarcie); równoległy `AutoCompleteJob` albo zakończy pakiet przed zwrotem (wtedy otwarcie go cofnie), albo zobaczy wolną jednostkę i go nie zakończy (`IsDue` jest sprawdzane pod blokadą). Przerwanie procesu między krokami zostawia stan jak przed zmianą (`Completed` z wolną jednostką, droga reklamacji otwarta). Na InMemory (profil `fake`, testy) blokadę zastępuje jedna bramka procesu dla `BookingTransitions` i `EntitlementStore`. Test wyścigu: `PackageReopeningTests` (InMemory) i `PackageReopeningIntegrationTests` (PostgreSQL).
 
 Treść zadania i odpowiedź są tekstem użytkownika: są zapisane w bazie i zwracane właścicielowi, nigdy nie trafiają do logów ani komunikatów błędów. Usunięcie danych użytkownika czyści `InputText` i `OutputText`.
 

@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Gabinety.Booking.Agents.Abstractions;
 using Gabinety.Booking.Features.AgentApi;
+using Gabinety.Booking.Features.Lifecycle.Core;
 using Gabinety.Booking.Jobs.Base;
 using Gabinety.Booking.Persistence;
 using Gabinety.Contracts.Directory;
@@ -139,6 +140,9 @@ public class AgentTaskJob(IServiceScopeFactory scopes, TimeProvider time, IConfi
         db.UsageRecords.Add(new UsageRecord { Id = Guid.NewGuid(), BookingId = t.BookingId, ApiKeyId = null, Kind = OfferingKind.Tasks, Units = -1, CreatedAt = now });
         await db.SaveChangesAsync(ct);
         await sp.GetRequiredService<EntitlementStore>().RefundUnitsAsync(t.BookingId, 1, ct);
+        // The refunded unit may belong to a package AutoCompleteJob completed because its units ran out: bring it back so the client can use the unit (ADR-0013). A no-op in every other case.
+        if (await PackageReopening.TryAsync(sp.GetRequiredService<BookingTransitions>(), t.BookingId, now, ct))
+            log.LogInformation("AgentTasks: package {BookingId} is open again after the refund of a failed task", t.BookingId);
         log.LogWarning("AgentTasks: task {TaskId} failed after {Attempts} attempts, its unit went back to package {BookingId}", t.Id, t.Attempts, t.BookingId);
     }
 

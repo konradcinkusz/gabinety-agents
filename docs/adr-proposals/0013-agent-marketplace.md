@@ -1,6 +1,6 @@
 # ADR-0013 (propozycja): marketplace agentów AI zamiast konsultacji
 
-- Status: **proponowana**, do potwierdzenia przez właściciela. Pierwsze osiem decyzji to propozycje z sekcji 4 planu (`docs/agentic/PLAN.md`); sekcja „Decyzje podjęte w trakcie” opisuje to, co wykonawcy faktycznie zdecydowali w PR #2 do #5; sekcja „Otwarte decyzje właściciela” to pytania, na które kod dziś nie odpowiada.
+- Status: **proponowana**, do potwierdzenia przez właściciela. Pierwsze osiem decyzji to propozycje z sekcji 4 planu (`docs/agentic/PLAN.md`); sekcja „Decyzje podjęte w trakcie” opisuje to, co wykonawcy faktycznie zdecydowali w PR #2 do #5; sekcja „Decyzje właściciela” zbiera cztery pytania, na które kod nie odpowiadał: właściciel rozstrzygnął trzy (adres `/v1`, nieudane ostatnie zadanie po auto-zakończeniu, odświeżanie listy zadań; w jego zleceniu to punkty 1, 2 i 3), czwarta (rozłączony strumień czatu) jest otwarta. Reszta dokumentu pozostaje propozycją do potwierdzenia.
 - Data: 2026-11-24.
 - Zadanie: D-03 (5). Opis oparty na kodzie `main` po D-02 i na opisach scalonych PR #2, #3, #4 i #5. Repozytorium specyfikacji (`gabinety-tech-spec`) jest tylko do odczytu dla wykonawcy, więc propozycja leży tutaj; stałe z sekcji 9 kontraktów (np. ważność pakietu) należą do właściciela.
 - Buduje na: ADR-0009 (kod w tym repozytorium, specyfikacja w osobnym), ADR-0010 (frontend Blazor), propozycje 0011 (Stripe Connect) i 0012.
@@ -58,9 +58,9 @@ Zapisane tu, żeby nie ginęły w opisach PR. Każdą można wycofać osobno.
 
 Pytanie z zadania: czy wdrożony host bez `Agents:Provider` ma nie startować? Sprawdzone przez zmianę `AgentsFeature` tak, by brak ustawienia poza profilem `fake` zatrzymywał start (usunięty warunek `!string.IsNullOrWhiteSpace(provider)` przy filtrze startu). Wynik: `dotnet test --filter "tier!=integration"` miał **26 porażek** w `Gabinety.Booking.Tests` (m.in. `PublicEdgeTests`, `RouteAuthTests`, `ClockApiTests`, `MockPaymentsFailClosedTests`, `SmtpWiringTests`, `AgentTaskJobTests.A_deployed_host_without_a_platform_starts...`), bo testy profilu wdrożonego uruchamiają host bez platformy. Zmianę **wycofano**. Zamiast niej konfiguracja wdrożenia wymusza ustawienia: `Agents__Provider = "Http"` i adres platformy w `booking.fly.toml`, wymagany sekret `AGENTS_UPSTREAM_API_KEY` w `secrets.map` i wiersze `required` w `config-keys.map`. Host bez tych ustawień nie zostanie wdrożony (wdrożenie odmawia placeholdera i brakującego sekretu), a przypadkowy start bez nich daje błąd przy pierwszym użyciu. Gdyby właściciel chciał twardego startu w kodzie, trzeba najpierw dać testom profilu wdrożonego atrapę platformy.
 
-## Otwarte decyzje właściciela
+## Decyzje właściciela
 
-Poniższe rekomendacje to propozycje wykonawcy, nie rozstrzygnięcia.
+Decyzje 1, 2 i 4 właściciel rozstrzygnął (opisane niżej wraz z tym, co zrobiono); decyzja 3 (rozłączony strumień czatu) jest dalej otwarta, a jej rekomendacja to propozycja wykonawcy, nie rozstrzygnięcie.
 
 ### 1. Adres `/v1`: ROZSTRZYGNIĘTE (właściciel): pod adresem strony (opcja B)
 
@@ -79,17 +79,18 @@ Pytanie: sekcja „Jak się połączyć” podawała klientowi `Site:BaseUrl` + 
 
 **Skutki i ryzyka.** Web jest teraz częścią ścieżki API: jego restart przerywa strumienie w toku, a długi strumień zajmuje jedno z 150 połączeń maszyny 512 MB (limit połączeń jest ustawiony pod okna przeglądarki, `docs/operations/PERFORMANCE.md`; ruch API nie był mierzony). Proxy nie ponawia żądań (ciała strumieniowego nie da się powtórzyć) i nie ma całkowitego limitu czasu odpowiedzi (jest tylko 5 s na połączenie i 15 min do nagłówków). Gdy ruch API zacznie obciążać stronę, opcja C (E-05) jest dalej otwarta. Booking nadal odpowiada na `/v1` pod własnym adresem, ale klientom podaje się adres strony.
 
-### 2. Co robić, gdy ostatnie zadanie kończy się `failed` po auto-zakończeniu pakietu?
+### 2. Ostatnie zadanie `failed` po auto-zakończeniu pakietu: ROZSTRZYGNIĘTE (właściciel): opcja B, zwrot jednostki cofa pakiet do `Confirmed`
 
-`AutoCompleteJob` przenosi pakiet `Tasks` w `Completed`, gdy `UnitsUsed >= UnitsTotal`, a wypłata dostawcy zostaje wyznaczona (`EndUtc + 72 h`, patrz wyżej). Jeśli ostatnie zadanie potem zakończy się `failed` (trzy nieudane starty), jednostka wraca, ale pakiet już jest `Completed`, więc klient ma wolną jednostkę, której nie może użyć (`POST /v1/tasks` szuka pakietów `Confirmed`).
+Pytanie: `AutoCompleteJob` przenosi pakiet `Tasks` w `Completed`, gdy `UnitsUsed >= UnitsTotal`; jeśli ostatnie zadanie potem kończy się `failed`, jednostka wraca, ale pakiet już jest `Completed`, więc klient ma wolną jednostkę, której nie może użyć. Proponowałem C (nie kończyć pakietu, dopóki są zadania `queued` lub `running`); **właściciel wybrał B**.
 
-| Opcja | Skutek |
-|---|---|
-| A. Nic nie robić | klient musi zgłosić reklamację (pakiet `Completed` do `EndUtc + 72 h`); najprostsze, ale to ręczna praca administratora |
-| B. Zwrot jednostki cofa pakiet do `Confirmed` | wymaga nowego przejścia w `BookingStateMachine` i anulowania wyznaczonej wypłaty; więcej kodu, najlepsze dla klienta |
-| C. `AutoCompleteJob` nie kończy pakietu, dopóki są zadania `queued` lub `running` | zapobiega problemowi u źródła; pakiet kończy się trochę później |
+**Co zrobiono** (`PackageReopening`, `AgentTaskJob.FailAsync`):
+- nowy wyzwalacz `BookingTrigger.UnitRefunded` i jedno nowe przejście `Completed` -> `Confirmed` w `BookingStateMachine` (test tabeli rozszerzony, wyczerpujące sprawdzenie innych par dalej przechodzi);
+- po zwrocie jednostki zadanie w tle woła `PackageReopening.TryAsync`: jedna transakcja z blokadą wiersza przez `BookingTransitions`, z regułami sprawdzanymi **pod blokadą**: pakiet `Completed` rodzaju `Tasks` z wolną jednostką, `EndUtc > teraz`, brak wiersza `Payout` (każdy stan) i wpisu `PractitionerPayout` (nowa `TransitionRequest.DbPrecondition`, sprawdzenie z bazą w transakcji). Inaczej nic się nie zmienia (wypłacono, `Disputed`/`Resolved`, minął `EndUtc`);
+- skutek: `Confirmed`, `EndedAt`, `PayoutDueAt`, `FeeMinor`, `PayoutMinor` puste i usunięty **niewypłacony** wpis `PlatformFee`. `FeeHook` zostawia wiersz księgi przy zakończeniu (nalicza prowizję i pisze `PlatformFee`), więc cofnięcie robi to samo co reklamacja: wspólna `MoneyReopening.Reopen` (wzór `ReopenMoney` z `DisputeFeature`, wydzielony i używany w obu miejscach), a hook zwalnia zajętą parę w zastępniku InMemory tylko wtedy, gdy ten pakiet ją miał. Para jest wolna dla zakupu, który naprawdę zarobi prowizję (test: po ponownym wyczerpaniu pakiet znów ma jeden wiersz `PlatformFee`);
+- wyścig z `AutoCompleteJob`: zwrot jednostki i otwarcie to dwa zatwierdzone kroki w tej kolejności; `AutoCompleteJob` sprawdza `IsDue` pod blokadą wiersza, więc albo zakończy pakiet przed zwrotem (otwarcie go cofnie), albo zobaczy wolną jednostkę i go nie zakończy. Na InMemory nie ma blokady wiersza, więc `BookingTransitions` i `EntitlementStore` dzielą jedną bramkę procesu (bez niej test wyścigu pada w kilku rundach; sprawdzone). To usuwa też znany wyścig InMemory opisany wyżej dla `AutoCompleteJob` i równoległej reklamacji (zmiana dotyczy tylko InMemory);
+- testy: `PackageReopeningTests` (InMemory: reguła na wierszu, cała ścieżka, ponowne zakończenie z prowizją, dwie jednostki, po `EndUtc`, wypłacono lub w trakcie, `Disputed`/`Resolved`/anulowany, reklamacja po zakończeniu, 40 rund wyścigu) i `PackageReopeningIntegrationTests` (`tier=integration`, PostgreSQL 17: ścieżka z prawdziwym SQL, blokada przez `Payout` i wpis wypłaty, 25 rund dwóch zadań zakończenia i nieudanego zadania naraz).
 
-Rekomendacja: C. Zmienia jeden warunek zadania w tle, nie dodaje przejść stanu i nie dotyka wypłat. Żadna ścieżka e2e dziś tego nie wywołuje (atrapa platformy nie zawodzi), więc test jeszcze nie istnieje.
+**Ograniczenia.** Zwrot jednostki i otwarcie to dwa kroki: przerwanie procesu między nimi zostawia `Completed` z wolną jednostką (jak przed zmianą; klient może zgłosić reklamację do `EndUtc + 72 h`). Nie rusza ścieżki `TasksFeature.QueueAsync` (zwrot, gdy nie da się zapisać zadania w tym samym żądaniu). Opcja C (nie kończyć pakietu przy zadaniach w toku) nie została zrobiona i nie jest potrzebna, dopóki B działa; mogłaby dojść jako dodatkowa osłona.
 
 ### 3. Rozliczanie rozłączonego strumienia czatu
 
@@ -120,6 +121,6 @@ Rekomendacja: B teraz (najmniejsza zmiana, napis przestaje kłamać, znika błą
 ## Skutki
 
 - Kod i dokumenty opisują agentów AI; stare nazwy w kodzie to dług opisany w etapie E planu.
-- Decyzje 1 (adres `/v1`), 2 i 4 rozstrzygnięte (niżej); otwarte decyzje blokują: decyzja 2 pewność rozliczeń zadań, decyzja 3 uczciwość rozliczenia czatu, decyzja 4 poprawność komunikatu w panelu.
+- Decyzje 1 (adres `/v1`), 2 (nieudane ostatnie zadanie) i 4 (odświeżanie listy) rozstrzygnięte; otwarta zostaje decyzja 3 (uczciwość rozliczenia czatu przy rozłączonym strumieniu).
 - Przed prawdziwymi płatnościami trzeba wykonać zmiany z `docs/operations/PAYMENTS-AGENTS.md` (E-03; wymaga nowej decyzji zastępującej propozycję 0011).
 - Połączenie z prawdziwą platformą agentów nie zostało sprawdzone: `HttpAgentUpstream` ma testy, ale nie działał z żadną prawdziwą platformą, a kroki GitHub Copilot BYOK są niezweryfikowane (`docs/operations/COPILOT-BYOK.md`).

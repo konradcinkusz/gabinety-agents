@@ -10,6 +10,8 @@ public enum BookingTrigger
 {
     PaymentSucceeded, PaymentFailed, HoldExpired, ClientCancels, PractitionerCancels,
     CompletionWindowElapsed, ClientNoShowReported, ClientDisputes, AdminResolves,
+    /// <summary>A task failed and its unit went back to a package the job had completed because its units ran out (ADR-0013, owner decision 2): <c>Completed</c> back to <c>Confirmed</c>. The caller's preconditions decide whether it may.</summary>
+    UnitRefunded,
 }
 
 /// <summary>Next is null when the transition is rejected.</summary>
@@ -32,6 +34,7 @@ public static class BookingStateMachine
         [(BookingStatus.Confirmed, BookingTrigger.ClientNoShowReported)] = BookingStatus.ClientNoShow,
         [(BookingStatus.Confirmed, BookingTrigger.ClientDisputes)] = BookingStatus.Disputed,
         [(BookingStatus.Completed, BookingTrigger.ClientDisputes)] = BookingStatus.Disputed, // until start + 72 h (CONTRACTS 4.2), enforced by the caller; ADR proposal 0011
+        [(BookingStatus.Completed, BookingTrigger.UnitRefunded)] = BookingStatus.Confirmed, // only for a package completed by running out of units, before its end and before any payout: the caller checks (PackageReopening)
         [(BookingStatus.Disputed, BookingTrigger.AdminResolves)] = BookingStatus.Resolved,
     };
 
