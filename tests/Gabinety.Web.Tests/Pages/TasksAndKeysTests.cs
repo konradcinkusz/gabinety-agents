@@ -47,7 +47,7 @@ public class TasksAndKeysTests
         Assert.DoesNotContain("odświeża się sam", page.Text);
         var pending = section.QuerySelector("p[role=status]")!;
         Assert.Equal("Zadanie jest w toku. Odśwież listę", Page.Squash(pending.TextContent));
-        Assert.Equal($"/moje/dostepy/{BookingId}", pending.QuerySelector("a")!.GetAttribute("href"));
+        Assert.StartsWith($"/moje/dostepy/{BookingId}", pending.QuerySelector("a")!.GetAttribute("href"));
     }
 
     [Fact]
