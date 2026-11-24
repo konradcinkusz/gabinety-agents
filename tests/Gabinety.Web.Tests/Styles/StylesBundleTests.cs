@@ -61,7 +61,7 @@ public partial class StylesBundleTests
             _ => FakeBackend.Json(Sample.Cards(1)),
         };
         var browser = web.NewBrowser();
-        var list = await browser.GetAsync("/programisci");
+        var list = await browser.GetAsync("/agenci");
         var bundle = await browser.GetAsync("/" + StylesheetLink().Matches(list.Html).Last().Groups[1].Value.TrimStart('/'));
         var cardScope = Regex.Match(list.Html, @"<article class=""card card--link practitioner-card"" data-testid=""practitioner-card"" (b-\w+)").Groups[1].Value;
         Assert.NotEmpty(cardScope);

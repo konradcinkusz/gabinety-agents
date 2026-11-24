@@ -1,7 +1,7 @@
 namespace Gabinety.Web.Text;
 
 /// <summary>
-/// The Polish text of the provider's area (the agent's owner) (<c>/gabinet-programisty/*</c>). Strings of the Next.js area (<c>web/src/components/practitioner/strings.ts</c>) are verbatim where the journeys read them
+/// The Polish text of the provider's area (the agent's owner) (<c>/panel-agenta/*</c>). Strings of the Next.js area (<c>web/src/components/practitioner/strings.ts</c>) are verbatim where the journeys read them
 /// (J2: the checklist item names, <c>Gotowe</c>, <c>Do zrobienia</c>, <c>Szkic</c>, <c>Zapisano.</c>, the submit and GitHub messages); the rest follows docs/ui/DESIGN-CONTRACT.md section 8.
 /// </summary>
 public static class PlPractitioner

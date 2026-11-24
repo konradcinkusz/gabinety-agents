@@ -15,7 +15,7 @@
 #   BLAZOR circuits (ADR-0010, "memory per circuit"): ONLY_CIRCUITS=1 measures only the Blazor host's memory under N open interactive pages and exits (needs the fake profile or perf-stack running, and
 #                      `pnpm --dir tests/e2e install`); without ONLY_CIRCUITS the section runs after the others when BLAZOR_CIRCUITS=1.
 #                      BLAZOR_START=1 (default) publishes and starts a RELEASE build on BLAZOR_PORT (3002), capped like the 512 MB Fly machine (scripts/perf/blazor-host.sh); BLAZOR_URL + BLAZOR_PID measure a host
-#                      you started yourself. CIRCUIT_LEVELS "10,25,50,100" (cumulative), CIRCUIT_PAGE (/moje/rezerwacje: an interactive page), MEMORY_LIMIT_MB (512).
+#                      you started yourself. CIRCUIT_LEVELS "10,25,50,100" (cumulative), CIRCUIT_PAGE (/moje/dostepy: an interactive page), MEMORY_LIMIT_MB (512).
 #   PR113_SIDES        order of the two web apps in the comparison (default "baseline current"; run it again as "current baseline" to see an order effect)
 # Tools: scripts/perf/load.mjs (HTTP load, exact percentiles; the reason it is not autocannon or hey is in its header) and Lighthouse, pinned below, fetched by npx
 # on demand (nothing is added to any package.json). Exit code: 0 when the measurement ran (a miss is a result, not a failure), 1 when it could not run.
@@ -47,7 +47,7 @@ circuits() {
   printf 'blazor-circuits\t%s\n' "node scripts/perf/measure-circuits.mjs --url $url --pid $pid --levels ${CIRCUIT_LEVELS:-10,25,50,100}" >> "$OUT/commands.txt"
   say "== blazor-circuits"
   local rc=0
-  node "$ROOT/scripts/perf/measure-circuits.mjs" --url "$url" --pid "$pid" --levels "${CIRCUIT_LEVELS:-10,25,50,100}" --page "${CIRCUIT_PAGE:-/moje/rezerwacje}" \
+  node "$ROOT/scripts/perf/measure-circuits.mjs" --url "$url" --pid "$pid" --levels "${CIRCUIT_LEVELS:-10,25,50,100}" --page "${CIRCUIT_PAGE:-/moje/dostepy}" \
     --budget-mb "${MEMORY_LIMIT_MB:-512}" --out "$OUT" >&2 || rc=$?
   [ "$started" = 1 ] && "$ROOT/scripts/perf/blazor-host.sh" stop
   return $rc
@@ -116,7 +116,7 @@ if [ -n "${BASELINE_WEB_URL:-}" ]; then
   slug=$(basename "$PROFILE_URL")
   for side in ${PR113_SIDES:-baseline current}; do
     base="$BASELINE_WEB_URL"; [ $side = current ] && base="$WEB_URL"
-    for page in programisci:/programisci gabinet:/gabinet/$slug regulamin:/regulamin; do
+    for page in programisci:/agenci gabinet:/agent/$slug regulamin:/regulamin; do
       name=${page%%:*}; path=${page#*:}
       curl -s -o /dev/null "$base$path"; curl -s -o /dev/null "$base$path"
       for c in 1 "$CONC"; do run "pr113-$side-$name-c$c" $LOAD --name "pr113-$side-$name-c$c" --concurrency "$c" --duration "$DURATION" --warmup 3 --urls "$base$path"; done

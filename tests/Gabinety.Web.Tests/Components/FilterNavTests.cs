@@ -9,7 +9,7 @@ public class FilterNavTests : BunitContext
     /// <summary>Renders the panel the way <see cref="ListView"/> feeds it on the page.</summary>
     IRenderedComponent<FilterNav> Nav(ListState state)
     {
-        var view = new ListView(state, Sample.Taxonomy, Sample.Sitemap(5, true, "/programisci/audyt-kodu"));
+        var view = new ListView(state, Sample.Taxonomy, Sample.Sitemap(5, true, "/agenci/audyt-kodu"));
         return Render<FilterNav>(p => p.Add(f => f.State, state).Add(f => f.Groups, view.Filters()).Add(f => f.ActiveCount, view.ActiveFilters));
     }
 
@@ -69,7 +69,7 @@ public class FilterNavTests : BunitContext
         var cut = Nav(new ListState("audyt-kodu", MaxPriceMinor: 15000, Q: "kod"));
         Assert.Equal("form", cut.Find("nav[aria-label=Filtry]").Children[0].LocalName);
         var form = cut.Find("form[role=search]");
-        Assert.Equal(("get", "/programisci/audyt-kodu"), (form.GetAttribute("method"), form.GetAttribute("action")));
+        Assert.Equal(("get", "/agenci/audyt-kodu"), (form.GetAttribute("method"), form.GetAttribute("action")));
         Assert.Equal("15000", form.QuerySelector("input[type=hidden][name=maxPriceMinor]")!.GetAttribute("value"));
         Assert.Null(form.QuerySelector("input[type=hidden][name=duration]"));
         var search = form.QuerySelector("input[name=q]")!;

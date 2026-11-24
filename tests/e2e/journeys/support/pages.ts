@@ -5,7 +5,7 @@ import { gotoInteractive } from "../../harness/circuit";
 
 export class CategoryNav {
   constructor(readonly page: Page) {}
-  /** The problem filter links ("Filtry"); a category link leads to /programisci/<slug>. */
+  /** The problem filter links ("Filtry"); a category link leads to /agenci/<slug>. */
   link(name: string): Locator { return this.page.getByRole("navigation", { name: "Filtry" }).getByRole("link", { name, exact: true }); }
 }
 
@@ -32,21 +32,21 @@ export class RegisterPage {
   }
 }
 
-/** /gabinet-programisty and its tabs: the practitioner's side of onboarding. */
+/** /panel-agenta and its tabs: the practitioner's side of onboarding. */
 export class PractitionerArea {
   constructor(readonly page: Page) {}
   async createProfile(displayName: string) {
-    await gotoInteractive(this.page, "/gabinet-programisty");
+    await gotoInteractive(this.page, "/panel-agenta");
     await this.page.getByLabel("Nazwa wyświetlana").fill(displayName);
     await this.page.getByRole("button", { name: "Załóż gabinet" }).click();
     await expect(this.page.getByRole("heading", { level: 1, name: "Panel dostawcy" })).toBeVisible();
   }
   checklistItem(name: string): Locator { return this.page.getByRole("listitem").filter({ hasText: name }); }
-  /** One package in the provider's list (/gabinet-programisty/oferty): the list item that holds its title. */
+  /** One package in the provider's list (/panel-agenta/oferty): the list item that holds its title. */
   offer(title: string): Locator { return this.page.getByRole("list", { name: "Twoje pakiety" }).getByRole("listitem").filter({ hasText: title }); }
 
   async fillProfile(p: { headline: string; bio: string; portfolioUrl: string; nip: string }) {
-    await gotoInteractive(this.page, "/gabinet-programisty/profil");
+    await gotoInteractive(this.page, "/panel-agenta/profil");
     await this.page.getByLabel("Nagłówek").fill(p.headline);
     await this.page.getByLabel("Opis").fill(p.bio);
     await this.page.getByLabel("Link do portfolio").fill(p.portfolioUrl);
@@ -56,7 +56,7 @@ export class PractitionerArea {
   }
 
   async addOffering(o: { title: string; description: string; price: string; kind?: "Tasks" | "Chat"; units?: string }) {
-    await gotoInteractive(this.page, "/gabinet-programisty/oferty?nowa=1"); // the form is closed until "Dodaj pakiet" (UX-042)
+    await gotoInteractive(this.page, "/panel-agenta/oferty?nowa=1"); // the form is closed until "Dodaj pakiet" (UX-042)
     await this.page.getByLabel("Nazwa pakietu").fill(o.title);
     await this.page.getByLabel("Opis pakietu").fill(o.description);
     await this.page.getByLabel("Cena (zł)").fill(o.price);
@@ -70,7 +70,7 @@ export class PractitionerArea {
   }
 
   async linkGithub(login: string) {
-    await gotoInteractive(this.page, "/gabinet-programisty");
+    await gotoInteractive(this.page, "/panel-agenta");
     await this.page.getByLabel("Login GitHub").fill(login);
     await this.page.getByRole("button", { name: "Pokaż kod" }).click();
     await this.page.getByRole("button", { name: "Sprawdź kod" }).click();

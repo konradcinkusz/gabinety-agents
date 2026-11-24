@@ -8,7 +8,7 @@ namespace Gabinety.Web.Tests.Pages;
 /// <summary>C-03: the tasks of a package and the API keys, against fake backends. The plain key is shown once; the result of a task is text and never markup.</summary>
 public class TasksAndKeysTests
 {
-    static readonly string Detail_ = $"/moje/rezerwacje/{BookingId}";
+    static readonly string Detail_ = $"/moje/dostepy/{BookingId}";
     static readonly string Client = Detail_ + "?role=client";
     static readonly DateTimeOffset At = new(2026, 11, 20, 12, 0, 0, TimeSpan.Zero);
     const string Input = "Przygotuj plan migracji dla syntetycznej aplikacji demo, dane testowe.";

@@ -11,7 +11,7 @@ public sealed class ClientAreaFixture : IAsyncDisposable
     public static readonly Guid OfferingId = Guid.Parse("018f0000-0000-7000-8000-0000000000a1");
     public static readonly Guid BookingId = Guid.Parse("018f0000-0000-7000-8000-0000000000b1");
     public static readonly DateTimeOffset Start = new(2026, 12, 8, 11, 0, 0, TimeSpan.Zero); // 12:00 in Warsaw
-    public static string BookingUrl => $"/rezerwacja/{OfferingId}?gabinet=demo-anna-demowska";
+    public static string BookingUrl => $"/dostep/{OfferingId}?gabinet=demo-anna-demowska";
 
     public WebFactory Web { get; }
     public Browser Browser { get; }

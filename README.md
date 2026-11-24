@@ -40,7 +40,7 @@ Prawdziwy [authservice](https://github.com/konradcinkusz/authservice) jest doł�
 - podłączenie przez GitHub Copilot: kroki po stronie Copilota są niezweryfikowane ([docs/operations/COPILOT-BYOK.md](docs/operations/COPILOT-BYOK.md)),
 - decyzja, czy `/v1` ma być pod adresem strony (dziś odpowiada Booking, a strona go nie przekazuje); lista decyzji właściciela: [docs/adr-proposals/0013-agent-marketplace.md](docs/adr-proposals/0013-agent-marketplace.md),
 - weryfikacja prawna regulaminu i polityki prywatności (znacznik `DO WERYFIKACJI PRAWNEJ`), logowanie przez GitHub do końca (potrzebuje prawdziwej aplikacji OAuth), potwierdzanie e-mail, prawdziwy e-mail i model językowy (wymagają kont i sekretów właściciela) oraz zweryfikowane wdrożenie,
-- porządki z etapu E planu: martwy kod terminów (`Features/Slots`, `Scheduling`), adresy stron (`/programisci`, `/gabinet/{slug}`, `/rezerwacja/...`) i nazwy w kodzie zostają dawne.
+- reszta etapu E planu: E-03 do E-06 (płatności rzeczywiste, wielu agentów jednego dostawcy, osobna usługa `/v1`, zmiana nazw w kodzie) czekają na decyzje właściciela; napisy „gabinet” w tekstach strony i nazwy w kodzie (`Practitioner`, `Booking`) zostają dawne. E-01 (martwy kod terminów) i E-02 (adresy `/agenci`, `/agent/{slug}`, `/dostep/...`, `/moje/dostepy`, `/panel-agenta`; stare adresy odpowiadają 301) są zrobione.
 
 ## Szybki start
 

@@ -1,4 +1,4 @@
-@page "/gabinet-programisty"
+@page "/panel-agenta"
 @attribute [Authorize]
 @layout PractitionerLayout
 @using Gabinety.Web.Components.Pages.Bookings
@@ -92,11 +92,11 @@ else if (Profile is not null) @* Blazor renders once before an async OnInitializ
                                     <strong>@b.OfferingTitle</strong>
                                     <span class="muted">@BookingFormat.MetaLine(BookingFormat.Name(b.Client?.DisplayName), string.Format(PlPractitioner.Dashboard.Bought, PlFormat.DayLong(b.StartUtc)), BookingFormat.UsageLine(b.Kind, b.UnitsUsed, b.UnitsTotal))</span>
                                 </div>
-                                <a href="@($"/moje/rezerwacje/{b.Id}?role={BookingClient.PractitionerRole}")" aria-label="@($"{PlPractitioner.Dashboard.Details}: {b.OfferingTitle}")">@PlPractitioner.Dashboard.Details</a>
+                                <a href="@($"/moje/dostepy/{b.Id}?role={BookingClient.PractitionerRole}")" aria-label="@($"{PlPractitioner.Dashboard.Details}: {b.OfferingTitle}")">@PlPractitioner.Dashboard.Details</a>
                             </li>
                         }
                     </ul>
-                    <p><a href="@($"/moje/rezerwacje?role={BookingClient.PractitionerRole}")">@PlPractitioner.Dashboard.AllBookings</a></p>
+                    <p><a href="@($"/moje/dostepy?role={BookingClient.PractitionerRole}")">@PlPractitioner.Dashboard.AllBookings</a></p>
                 }
             }
         </section>
@@ -185,7 +185,7 @@ else if (Profile is not null) @* Blazor renders once before an async OnInitializ
     int _activePackages;
     bool _recentFailed;
 
-    string PublicPath => "/gabinet/" + Uri.EscapeDataString(Profile!.Slug);
+    string PublicPath => "/agent/" + Uri.EscapeDataString(Profile!.Slug);
 
     string? Error(string field) => _errors.GetValueOrDefault(field);
 

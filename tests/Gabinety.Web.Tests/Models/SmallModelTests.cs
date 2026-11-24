@@ -12,9 +12,9 @@ namespace Gabinety.Web.Tests.Models;
 public class ReturnTargetTests
 {
     [Theory]
-    [InlineData("/moje/rezerwacje", "/moje/rezerwacje")]
-    [InlineData("/moje/rezerwacje?status=Confirmed&role=practitioner", "/moje/rezerwacje?status=Confirmed&role=practitioner")]
-    [InlineData("/programisci/audyt-kodu?q=a%20b", "/programisci/audyt-kodu?q=a%20b")]
+    [InlineData("/moje/dostepy", "/moje/dostepy")]
+    [InlineData("/moje/dostepy?status=Confirmed&role=practitioner", "/moje/dostepy?status=Confirmed&role=practitioner")]
+    [InlineData("/agenci/audyt-kodu?q=a%20b", "/agenci/audyt-kodu?q=a%20b")]
     [InlineData(null, "/")] [InlineData("", "/")] [InlineData("moje", "/")]
     [InlineData("//evil.example", "/")] [InlineData("/\\evil.example", "/")] [InlineData("https://evil.example/x", "/")] [InlineData("http://x.invalid.evil/", "/")]
     [InlineData("/ok\r\nSet-Cookie: a=b", "/")] [InlineData("/a\\b", "/")]
@@ -26,7 +26,7 @@ public class ReturnTargetTests
     public void The_login_link_carries_the_target_in_the_one_return_parameter()
     {
         Assert.Equal("/logowanie", ReturnTarget.LoginUrl("/"));
-        Assert.Equal("/logowanie?redirect=%2Fmoje%2Frezerwacje%3Fstatus%3DConfirmed", ReturnTarget.LoginUrl("/moje/rezerwacje?status=Confirmed"));
+        Assert.Equal("/logowanie?redirect=%2Fmoje%2Fdostepy%3Fstatus%3DConfirmed", ReturnTarget.LoginUrl("/moje/dostepy?status=Confirmed"));
     }
 }
 

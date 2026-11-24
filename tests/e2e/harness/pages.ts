@@ -10,7 +10,7 @@ export class HomePage {
 export class PractitionerListPage {
   constructor(readonly page: Page) {}
   async goto(query = "") {
-    await this.page.goto(`/programisci${query}`);
+    await this.page.goto(`/agenci${query}`);
     await expect(this.heading()).toBeVisible();
   }
   heading(): Locator { return this.page.getByRole("heading", { level: 1 }); }

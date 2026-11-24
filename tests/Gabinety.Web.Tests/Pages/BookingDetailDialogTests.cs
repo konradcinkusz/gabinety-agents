@@ -7,7 +7,7 @@ namespace Gabinety.Web.Tests.Pages;
 /// <summary>UX-031: the header block of each state, the cancel / dispute / no-show actions as native dialogs (enhance.js upgrades them, the markup alone is a visible block), the rebook link.</summary>
 public class BookingDetailDialogTests
 {
-    static readonly string Detail_ = $"/moje/rezerwacje/{BookingId}";
+    static readonly string Detail_ = $"/moje/dostepy/{BookingId}";
     static readonly string Client = Detail_ + "?role=client";
 
     static async Task<ClientAreaFixture> Open(BookingDetailDto booking)
@@ -106,7 +106,7 @@ public class BookingDetailDialogTests
         Assert.Equal(("Wystaw opinię", $"/moje/opinie/{BookingId}"), (review.TextContent, review.GetAttribute("href")!));
         Assert.Single(page.All("a"), a => a.TextContent == "Wystaw opinię");
         var rebook = page.All("a").Single(a => a.TextContent == "Wykup ponownie");
-        Assert.Equal(("btn btn--secondary", "/gabinet/demo-anna-demowska"), (rebook.ClassName, rebook.GetAttribute("href")!));
+        Assert.Equal(("btn btn--secondary", "/agent/demo-anna-demowska"), (rebook.ClassName, rebook.GetAttribute("href")!));
         Assert.Empty(page.All("a[target=_blank]"));
     }
 
@@ -144,8 +144,8 @@ public class BookingDetailDialogTests
     // ---- pure helpers
 
     [Theory]
-    [InlineData("Completed", "demo-slug", "/gabinet/demo-slug")]
-    [InlineData("CancelledByPractitioner", " demo slug ", "/gabinet/demo%20slug")]
+    [InlineData("Completed", "demo-slug", "/agent/demo-slug")]
+    [InlineData("CancelledByPractitioner", " demo slug ", "/agent/demo%20slug")]
     [InlineData("Confirmed", "demo-slug", null)]
     [InlineData("Completed", "", null)]
     [InlineData("Completed", null, null)]

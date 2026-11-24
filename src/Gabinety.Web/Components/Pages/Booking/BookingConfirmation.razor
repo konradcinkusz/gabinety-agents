@@ -1,4 +1,4 @@
-@page "/rezerwacja/potwierdzenie/{BookingId:guid}"
+@page "/dostep/potwierdzenie/{BookingId:guid}"
 @attribute [Authorize]
 @inject BookingClient Bookings
 @inject NavigationManager Navigation
@@ -55,10 +55,10 @@ else if (_booking is { } b)
             </section>
         }
         <div class="form-actions">
-            @if (confirmed && b.Kind != "Chat") {<a class="btn btn--primary" href="@($"/moje/rezerwacje/{b.Id}?role=client#zadania")" data-testid="first-task">@BookFlowText.Confirmation.FirstTask</a>}
+            @if (confirmed && b.Kind != "Chat") {<a class="btn btn--primary" href="@($"/moje/dostepy/{b.Id}?role=client#zadania")" data-testid="first-task">@BookFlowText.Confirmation.FirstTask</a>}
             @if (confirmed) {<a class="btn btn--primary" href="/moje/klucze" data-testid="create-key">@BookFlowText.Confirmation.CreateKey</a>}
-            <a class="btn btn--secondary" href="@($"/moje/rezerwacje/{b.Id}?role=client")">@BookFlowText.Confirmation.View</a>
-            <a class="btn btn--secondary" href="/programisci">@BookFlowText.Confirmation.ToSearch</a>
+            <a class="btn btn--secondary" href="@($"/moje/dostepy/{b.Id}?role=client")">@BookFlowText.Confirmation.View</a>
+            <a class="btn btn--secondary" href="/agenci">@BookFlowText.Confirmation.ToSearch</a>
         </div>
     </div>
 }

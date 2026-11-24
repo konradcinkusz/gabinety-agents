@@ -21,7 +21,7 @@ public class PresentationalComponentTests : BunitContext
         var cut = Render<PractitionerCard>(p => p.Add(c => c.Practitioner, Sample.Card(badges: ["email", "approved"], rating: new RatingDto(4.5, 12), isNew: false)));
         Assert.Equal("practitioner-card", cut.Find("article").GetAttribute("data-testid"));
         var link = cut.Find("h2 a");
-        Assert.Equal(("Anna Demowska", "/gabinet/demo-anna-demowska"), (link.TextContent, link.GetAttribute("href")));
+        Assert.Equal(("Anna Demowska", "/agent/demo-anna-demowska"), (link.TextContent, link.GetAttribute("href")));
         Assert.Equal("Audyty kodu .NET i konsultacje architektury", cut.Find("p").TextContent);
         Assert.Equal(["Agent AI", "Zweryfikowany"], cut.FindAll(".badge").Select(b => b.TextContent)); // P-LIST-2: one badge, the checks are on the profile
         Assert.Contains("badge--success", cut.Find(".badge--success").ClassName);
@@ -66,14 +66,14 @@ public class PresentationalComponentTests : BunitContext
     public void The_filters_mark_the_current_choice_and_carry_the_other_filters_in_the_search_form()
     {
         var state = new ListState("audyt-kodu", Duration: 60, MaxPriceMinor: 30000, Q: "kod");
-        var view = new ListView(state, Sample.Taxonomy, Sample.Sitemap(5, true, "/programisci/audyt-kodu"));
+        var view = new ListView(state, Sample.Taxonomy, Sample.Sitemap(5, true, "/agenci/audyt-kodu"));
         var cut = Render<FilterNav>(p => p.Add(f => f.State, state).Add(f => f.Groups, view.Filters()));
         Assert.Equal("Filtry", cut.Find("nav").GetAttribute("aria-label"));
         Assert.Equal(["Problem", "Technologia", "Typowy czas wykonania", "Cena do"], cut.FindAll("h2").Select(h => h.TextContent));
         var current = cut.FindAll("a[aria-current=true]").Select(a => a.TextContent).ToList();
         Assert.Equal(["Audyt kodu", "Wszystkie", "60 min", "do 300,00 zł"], current);
         var form = cut.Find("form[role=search]");
-        Assert.Equal(("get", "/programisci/audyt-kodu"), (form.GetAttribute("method"), form.GetAttribute("action")));
+        Assert.Equal(("get", "/agenci/audyt-kodu"), (form.GetAttribute("method"), form.GetAttribute("action")));
         Assert.Equal("60", form.QuerySelector("input[name=duration]")!.GetAttribute("value"));
         Assert.Equal("30000", form.QuerySelector("input[name=maxPriceMinor]")!.GetAttribute("value"));
         Assert.Equal("kod", form.QuerySelector("input[name=q]")!.GetAttribute("value"));
@@ -84,8 +84,8 @@ public class PresentationalComponentTests : BunitContext
     public void Pagination_renders_only_the_links_it_has()
     {
         Assert.Empty(Render<Pagination>().FindAll("nav"));
-        var next = Render<Pagination>(p => p.Add(x => x.NextHref, "/programisci?cursor=B"));
-        Assert.Equal(["/programisci?cursor=B"], next.FindAll("a").Select(a => a.GetAttribute("href")));
+        var next = Render<Pagination>(p => p.Add(x => x.NextHref, "/agenci?cursor=B"));
+        Assert.Equal(["/agenci?cursor=B"], next.FindAll("a").Select(a => a.GetAttribute("href")));
         Assert.Equal("next", next.Find("a").GetAttribute("rel"));
         var both = Render<Pagination>(p => p.Add(x => x.NextHref, "/n").Add(x => x.PreviousHref, "/p"));
         Assert.Equal(["prev", "next"], both.FindAll("a").Select(a => a.GetAttribute("rel")));
@@ -136,12 +136,12 @@ public class LayoutTests : BunitContext
         var auth = AddAuthorization();
         auth.SetNotAuthorized();
         var visitor = Render<MainLayout>(p => p.Add(l => l.Body, Body()));
-        Assert.Equal(["/programisci", "/jak-to-dziala", "/cennik"], visitor.FindAll("header .site-nav a").Select(a => a.GetAttribute("href")));
+        Assert.Equal(["/agenci", "/jak-to-dziala", "/cennik"], visitor.FindAll("header .site-nav a").Select(a => a.GetAttribute("href")));
         Assert.Equal(["/logowanie", "/rejestracja"], visitor.FindAll("header .site-account a").Select(a => a.GetAttribute("href")));
         auth.SetAuthorized("demo-client@demo.example");
         var member = Render<MainLayout>(p => p.Add(l => l.Body, Body()));
-        Assert.Equal(["/programisci", "/jak-to-dziala", "/cennik"], member.FindAll("header .site-nav a").Select(a => a.GetAttribute("href")));
-        Assert.Equal(["/moje/rezerwacje", "/moje/klucze", "/konto", "/gabinet-programisty", "/wyloguj"], member.FindAll("header .account-menu a").Select(a => a.GetAttribute("href")));
+        Assert.Equal(["/agenci", "/jak-to-dziala", "/cennik"], member.FindAll("header .site-nav a").Select(a => a.GetAttribute("href")));
+        Assert.Equal(["/moje/dostepy", "/moje/klucze", "/konto", "/panel-agenta", "/wyloguj"], member.FindAll("header .account-menu a").Select(a => a.GetAttribute("href")));
     }
 
     [Fact]
@@ -197,7 +197,7 @@ public class MyBookingsTests : BunitContext
     IRenderedComponent<MyBookings> Open(string? role = null, string? status = null, string? cursor = null)
     {
         var query = string.Join('&', new[] { role is null ? null : $"role={Uri.EscapeDataString(role)}", status is null ? null : $"status={Uri.EscapeDataString(status)}", cursor is null ? null : $"cursor={Uri.EscapeDataString(cursor)}" }.Where(q => q is not null));
-        Services.GetRequiredService<NavigationManager>().NavigateTo("/moje/rezerwacje" + (query.Length > 0 ? "?" + query : ""));
+        Services.GetRequiredService<NavigationManager>().NavigateTo("/moje/dostepy" + (query.Length > 0 ? "?" + query : ""));
         return Render<MyBookings>();
     }
 
@@ -223,7 +223,7 @@ public class MyBookingsTests : BunitContext
         var links = nav.QuerySelectorAll("a.tabs__link").ToList();
         Assert.Equal(["Klient", "Dostawca"], links.Select(a => a.TextContent));
         Assert.Equal(["page", null], links.Select(a => a.GetAttribute("aria-current")));
-        Assert.Equal(["/moje/rezerwacje?role=client", "/moje/rezerwacje?role=practitioner"], links.Select(a => a.GetAttribute("href")));
+        Assert.Equal(["/moje/dostepy?role=client", "/moje/dostepy?role=practitioner"], links.Select(a => a.GetAttribute("href")));
         Assert.Equal(["Dostawca"], Open("practitioner").FindAll("a.tabs__link[aria-current=page]").Select(a => a.TextContent));
     }
 
@@ -254,7 +254,7 @@ public class MyBookingsTests : BunitContext
     {
         var cut = Open("practitioner");
         var link = cut.Find("[data-testid=booking-row] a.booking-row__link");
-        Assert.Matches(@"^/moje/rezerwacje/[0-9a-f-]{36}\?role=practitioner$", link.GetAttribute("href"));
+        Assert.Matches(@"^/moje/dostepy/[0-9a-f-]{36}\?role=practitioner$", link.GetAttribute("href"));
         Assert.Equal("Szczegóły", link.TextContent); // J3 finds it with getByRole("link", { name: "Szczegóły" }) inside the row's listitem: the text is exactly this
         Assert.Equal("Pierwsza", cut.Find($"#{link.GetAttribute("aria-describedby")}").TextContent); // the title says which booking it opens
         Assert.Equal("LI", link.Closest("li")!.TagName);
@@ -298,7 +298,7 @@ public class MyBookingsTests : BunitContext
         Assert.Empty(cut.FindAll("form"));
         Assert.Equal(["Wszystkie", "Oczekuje na płatność", "Aktywny"], chips.Select(a => a.TextContent)); // the statuses the loaded role has, in the contract's order
         Assert.Equal([ "true", null, null], chips.Select(a => a.GetAttribute("aria-current")));
-        Assert.Equal("/moje/rezerwacje?role=practitioner&status=Confirmed", chips[2].GetAttribute("href"));
+        Assert.Equal("/moje/dostepy?role=practitioner&status=Confirmed", chips[2].GetAttribute("href"));
         Assert.Single(cut.FindAll("h1"));
     }
 
@@ -309,7 +309,7 @@ public class MyBookingsTests : BunitContext
         var cut = Open("practitioner", "Completed");
         var chips = cut.Find("[data-testid=status-filter]").QuerySelectorAll("a.chip");
         Assert.Equal(["Wszystkie", "Zakończony"], chips.Select(a => a.TextContent));
-        Assert.Equal(["/moje/rezerwacje?role=practitioner", "/moje/rezerwacje?role=practitioner&status=Completed"], chips.Select(a => a.GetAttribute("href")));
+        Assert.Equal(["/moje/dostepy?role=practitioner", "/moje/dostepy?role=practitioner&status=Completed"], chips.Select(a => a.GetAttribute("href")));
         Assert.Equal([null, "true"], chips.Select(a => a.GetAttribute("aria-current")));
         Assert.Equal("Brak dostępów o tym statusie.", cut.Find("[data-testid=bookings-empty] p").TextContent);
     }
@@ -321,7 +321,7 @@ public class MyBookingsTests : BunitContext
             ? FakeBackend.Json(new PageDto<BookingViewDto>([Sample.Booking("Strona druga")], null))
             : FakeBackend.Json(new PageDto<BookingViewDto>([Sample.Booking("Strona pierwsza")], "C 2"));
         var cut = Open("practitioner", "Confirmed");
-        Assert.Equal("/moje/rezerwacje?role=practitioner&status=Confirmed&cursor=C%202", cut.Find("a[rel=next]").GetAttribute("href")); // the cursor is escaped
+        Assert.Equal("/moje/dostepy?role=practitioner&status=Confirmed&cursor=C%202", cut.Find("a[rel=next]").GetAttribute("href")); // the cursor is escaped
         var second = Open("practitioner", "Confirmed", "C2");
         Assert.Equal("/api/v1/me/bookings?role=practitioner&status=Confirmed&cursor=C2", _booking.Requests.Last().PathAndQuery);
         Assert.Equal(["Strona druga"], second.FindAll("[data-testid=booking-row] .booking-row__title").Select(h => h.TextContent));
@@ -335,7 +335,7 @@ public class MyBookingsTests : BunitContext
         var empty = Open().Find("[data-testid=bookings-empty]");
         Assert.Equal("Brak dostępów", empty.QuerySelector("h2")!.TextContent);
         Assert.Equal("Znajdź agenta", empty.QuerySelector("a")!.TextContent);
-        Assert.Equal("/programisci", empty.QuerySelector("a")!.GetAttribute("href"));
+        Assert.Equal("/agenci", empty.QuerySelector("a")!.GetAttribute("href"));
         Assert.Empty(Open().FindAll("[role=alert]"));
         Assert.Empty(Open().FindAll("ul.bookings")); // never an empty list
     }
@@ -346,7 +346,7 @@ public class MyBookingsTests : BunitContext
         _booking.Respond = _ => FakeBackend.Json(new PageDto<BookingViewDto>([], null));
         var empty = Open("client", "Disputed").Find("[data-testid=bookings-empty]");
         Assert.Equal("Brak dostępów o tym statusie.", empty.QuerySelector("p")!.TextContent);
-        Assert.Equal("/moje/rezerwacje?role=client", empty.QuerySelector("a")!.GetAttribute("href"));
+        Assert.Equal("/moje/dostepy?role=client", empty.QuerySelector("a")!.GetAttribute("href"));
     }
 
     [Theory]
@@ -362,7 +362,7 @@ public class MyBookingsTests : BunitContext
         Assert.Equal("alert", alert.GetAttribute("role"));
         Assert.Equal(text, alert.QuerySelector("p")!.TextContent);
         Assert.Equal("Spróbuj ponownie", alert.QuerySelector("a")!.TextContent);
-        Assert.Equal("/moje/rezerwacje?role=practitioner&status=Confirmed", alert.QuerySelector("a")!.GetAttribute("href"));
+        Assert.Equal("/moje/dostepy?role=practitioner&status=Confirmed", alert.QuerySelector("a")!.GetAttribute("href"));
         Assert.DoesNotContain("SERVER-TITLE-MUST-NOT-APPEAR", cut.Markup);
         Assert.Equal("Moje dostępy", cut.Find("h1").TextContent);
         Assert.NotNull(cut.Find("nav.tabs")); // the rest of the page renders
@@ -375,7 +375,7 @@ public class MyBookingsTests : BunitContext
         var alert = Open("practitioner", "Confirmed").Find("[data-testid=bookings-signed-out]");
         Assert.Equal("alert", alert.GetAttribute("role"));
         Assert.Contains("Sesja wygasła", alert.TextContent);
-        Assert.Equal("/logowanie?redirect=%2Fmoje%2Frezerwacje%3Frole%3Dpractitioner%26status%3DConfirmed", alert.QuerySelector("a")!.GetAttribute("href"));
+        Assert.Equal("/logowanie?redirect=%2Fmoje%2Fdostepy%3Frole%3Dpractitioner%26status%3DConfirmed", alert.QuerySelector("a")!.GetAttribute("href"));
     }
 
     // The clock of the fixture is 22 November 2026, 11:00 in Warsaw.

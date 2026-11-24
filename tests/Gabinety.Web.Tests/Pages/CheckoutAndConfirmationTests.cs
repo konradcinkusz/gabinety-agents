@@ -9,7 +9,7 @@ namespace Gabinety.Web.Tests.Pages;
 public class CheckoutAndConfirmationTests
 {
     static readonly string Checkout = $"/checkout/mock/{BookingId}";
-    static readonly string Confirmation = $"/rezerwacja/potwierdzenie/{BookingId}";
+    static readonly string Confirmation = $"/dostep/potwierdzenie/{BookingId}";
 
     static async Task<ClientAreaFixture> Fake(BookingDetailDto? booking = null, Action<WebFactory>? configure = null)
     {
@@ -97,12 +97,12 @@ public class CheckoutAndConfirmationTests
         await using var confirmed = await Fake(Detail("Confirmed"));
         var page = await confirmed.Browser.GetAsync(Checkout);
         Assert.Equal("Ten zakup nie oczekuje już na płatność.", page.TextOf(".callout p"));
-        Assert.Equal($"/rezerwacja/potwierdzenie/{BookingId}", page.One(".callout a")!.GetAttribute("href"));
+        Assert.Equal($"/dostep/potwierdzenie/{BookingId}", page.One(".callout a")!.GetAttribute("href"));
         Assert.Empty(page.All("form"));
 
         await using var expired = await Fake(Detail("Expired", payment: "Failed"));
         var other = await expired.Browser.GetAsync(Checkout);
-        Assert.Equal("/gabinet/demo-anna-demowska", other.One(".callout a")!.GetAttribute("href"));
+        Assert.Equal("/agent/demo-anna-demowska", other.One(".callout a")!.GetAttribute("href"));
     }
 
     [Fact]
@@ -112,7 +112,7 @@ public class CheckoutAndConfirmationTests
         var page = await f.Browser.GetAsync(Checkout);
         Assert.Contains("Czas na płatność minął.", page.Text);
         Assert.All(page.All("form button"), b => Assert.True(b.HasAttribute("disabled"))); // never an opacity trick: really disabled
-        Assert.Contains(page.All("a"), a => a.GetAttribute("href") == "/gabinet/demo-anna-demowska");
+        Assert.Contains(page.All("a"), a => a.GetAttribute("href") == "/agent/demo-anna-demowska");
     }
 
     [Fact]
@@ -163,7 +163,7 @@ public class CheckoutAndConfirmationTests
         Assert.Equal("failed", JsonDocument.Parse(f.Web.Booking.Requests.Single(r => r.Method == HttpMethod.Post).Body!).RootElement.GetProperty("outcome").GetString());
         var alert = page.One(".callout--danger[role=alert]")!;
         Assert.Contains("Płatność nie powiodła się. Dostęp nie został aktywowany.", alert.TextContent);
-        Assert.Equal("/gabinet/demo-anna-demowska", alert.QuerySelector("a")!.GetAttribute("href"));
+        Assert.Equal("/agent/demo-anna-demowska", alert.QuerySelector("a")!.GetAttribute("href"));
         Assert.All(page.All("form button"), b => Assert.True(b.HasAttribute("disabled")));
     }
 
@@ -217,7 +217,7 @@ public class CheckoutAndConfirmationTests
         Assert.Equal("Aktywny", page.One("[data-testid=confirmation-state] .badge")!.TextContent);
         Assert.DoesNotContain(" ·", page.TextOf(".booking-summary")); // no separator glued to nothing (F-03)
         // C-02: a task package leads to the first task and to the keys; there is no calendar file and no meeting link
-        Assert.Equal([$"/moje/rezerwacje/{BookingId}?role=client#zadania", "/moje/klucze", $"/moje/rezerwacje/{BookingId}?role=client", "/programisci"], page.All(".form-actions a").Select(a => a.GetAttribute("href")));
+        Assert.Equal([$"/moje/dostepy/{BookingId}?role=client#zadania", "/moje/klucze", $"/moje/dostepy/{BookingId}?role=client", "/agenci"], page.All(".form-actions a").Select(a => a.GetAttribute("href")));
         Assert.Equal(["Zleć pierwsze zadanie", "Utwórz klucz API", "Zobacz dostęp", "Wróć do wyszukiwarki"], page.All(".form-actions a").Select(a => a.TextContent.Trim()));
         Assert.Empty(page.All("a[target=_blank]")); Assert.DoesNotContain("kalendarz", page.Html); Assert.DoesNotContain("spotkania", page.Text);
         Assert.Empty(page.All("[data-testid=connect]")); // a task package has no API connection steps
@@ -307,7 +307,7 @@ public class CheckoutAndConfirmationTests
         f.Web.Booking.Respond = _ => FakeBackend.Problem(HttpStatusCode.NotFound, "not_found");
         Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync(Confirmation)).Status);
         await using var visitor = await ClientAreaFixture.Visitor();
-        Assert.Equal($"/logowanie?redirect=%2Frezerwacja%2Fpotwierdzenie%2F{BookingId}", (await visitor.Browser.GetAsync(Confirmation)).Location);
+        Assert.Equal($"/logowanie?redirect=%2Fdostep%2Fpotwierdzenie%2F{BookingId}", (await visitor.Browser.GetAsync(Confirmation)).Location);
     }
 
     // ---- where the payment provider returns the browser (Stripe Checkout success URL)

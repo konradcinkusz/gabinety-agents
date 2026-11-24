@@ -46,9 +46,9 @@ public class LoginStatesTests
     public async Task The_page_offers_github_and_registration_and_both_keep_the_return_target()
     {
         await using var web = Web();
-        var page = await web.NewBrowser().GetAsync("/logowanie?redirect=%2Fmoje%2Frezerwacje");
-        Assert.Equal("/oauth/github/start?redirect=%2Fmoje%2Frezerwacje", page.All("main a.btn").Single(a => a.TextContent == "Zaloguj się przez GitHub").GetAttribute("href"));
-        Assert.Equal("/rejestracja?redirect=%2Fmoje%2Frezerwacje", page.All("main a").Single(a => a.TextContent == "Załóż konto").GetAttribute("href"));
+        var page = await web.NewBrowser().GetAsync("/logowanie?redirect=%2Fmoje%2Fdostepy");
+        Assert.Equal("/oauth/github/start?redirect=%2Fmoje%2Fdostepy", page.All("main a.btn").Single(a => a.TextContent == "Zaloguj się przez GitHub").GetAttribute("href"));
+        Assert.Equal("/rejestracja?redirect=%2Fmoje%2Fdostepy", page.All("main a").Single(a => a.TextContent == "Załóż konto").GetAttribute("href"));
         var plain = await web.NewBrowser().GetAsync("/logowanie");
         Assert.Equal("/oauth/github/start", plain.All("main a.btn").Single(a => a.TextContent.Contains("GitHub")).GetAttribute("href"));
     }
@@ -66,7 +66,7 @@ public class LoginStatesTests
 
     // ---- two factor ----
 
-    static async Task<(Browser Browser, Page Challenge)> FirstStep(WebFactory web, string redirect = "/moje/rezerwacje")
+    static async Task<(Browser Browser, Page Challenge)> FirstStep(WebFactory web, string redirect = "/moje/dostepy")
     {
         web.Identity.RequireTwoFactor = true;
         var browser = web.NewBrowser();
@@ -80,7 +80,7 @@ public class LoginStatesTests
         await using var web = Web();
         var (browser, first) = await FirstStep(web);
         Assert.Equal(HttpStatusCode.Found, first.Status);
-        Assert.Equal("/logowanie/kod?redirect=%2Fmoje%2Frezerwacje", first.Location);
+        Assert.Equal("/logowanie/kod?redirect=%2Fmoje%2Fdostepy", first.Location);
         Assert.DoesNotContain(first.SetCookies, c => c.StartsWith("gt_session="));
         var cookie = first.SetCookies.Single(c => c.StartsWith("gt_2fa="));
         Assert.Contains("httponly", cookie, StringComparison.OrdinalIgnoreCase);
@@ -96,7 +96,7 @@ public class LoginStatesTests
         Assert.Equal("one-time-code", page.One("#two-factor-code")!.GetAttribute("autocomplete"));
         Assert.Equal("numeric", page.One("#two-factor-code")!.GetAttribute("inputmode"));
         Assert.DoesNotContain("challenge-1", page.Html); // the challenge never reaches the page
-        Assert.Equal("/logowanie/kod?redirect=%2Fmoje%2Frezerwacje&recovery=1", page.All("main a").Single(a => a.TextContent == "Użyj kodu odzyskiwania").GetAttribute("href"));
+        Assert.Equal("/logowanie/kod?redirect=%2Fmoje%2Fdostepy&recovery=1", page.All("main a").Single(a => a.TextContent == "Użyj kodu odzyskiwania").GetAttribute("href"));
     }
 
     [Fact]
@@ -104,13 +104,13 @@ public class LoginStatesTests
     {
         await using var web = Web();
         var (browser, _) = await FirstStep(web);
-        var done = await browser.PostFormAsync("/logowanie/kod?redirect=%2Fmoje%2Frezerwacje", new Dictionary<string, string> { ["Model.Code"] = "123 456" });
+        var done = await browser.PostFormAsync("/logowanie/kod?redirect=%2Fmoje%2Fdostepy", new Dictionary<string, string> { ["Model.Code"] = "123 456" });
         Assert.Equal(HttpStatusCode.Found, done.Status);
-        Assert.Equal("/moje/rezerwacje", done.Location);
+        Assert.Equal("/moje/dostepy", done.Location);
         Assert.Contains(done.SetCookies, c => c.StartsWith("gt_session="));
         Assert.Contains(done.SetCookies, c => c.StartsWith("gt_2fa=;") && c.Contains("expires=Thu, 01 Jan 1970", StringComparison.OrdinalIgnoreCase));
         Assert.Contains("\"code\":\"123456\"", web.Identity.Backend.Requests.Single(r => r.PathAndQuery == "/api/v1/auth/2fa/login").Body); // spaces dropped
-        Assert.Equal(HttpStatusCode.OK, (await browser.GetAsync("/moje/rezerwacje")).Status);
+        Assert.Equal(HttpStatusCode.OK, (await browser.GetAsync("/moje/dostepy")).Status);
     }
 
     [Fact]
@@ -157,8 +157,8 @@ public class LoginStatesTests
         await using var web = Web();
         var none = await web.NewBrowser().GetAsync("/logowanie/kod");
         Assert.Equal("/logowanie?error=session_expired", none.Location);
-        var forged = await web.NewBrowser().WithCookie("gt_2fa", "CfDJ8-forged-value").GetAsync("/logowanie/kod?redirect=%2Fmoje%2Frezerwacje");
-        Assert.Equal("/logowanie?redirect=%2Fmoje%2Frezerwacje&error=session_expired", forged.Location);
+        var forged = await web.NewBrowser().WithCookie("gt_2fa", "CfDJ8-forged-value").GetAsync("/logowanie/kod?redirect=%2Fmoje%2Fdostepy");
+        Assert.Equal("/logowanie?redirect=%2Fmoje%2Fdostepy&error=session_expired", forged.Location);
         var post = await web.Client().PostAsync("/logowanie/kod", new FormUrlEncodedContent(new Dictionary<string, string> { ["_handler"] = "two-factor", ["Model.Code"] = FakeIdentity.TwoFactorCode }));
         Assert.Equal(HttpStatusCode.BadRequest, post.StatusCode); // no page, no token, no challenge: nothing is accepted
         Assert.DoesNotContain(post.Headers.TryGetValues("Set-Cookie", out var cookies) ? cookies : [], c => c.StartsWith("gt_session="));
@@ -205,8 +205,8 @@ public class ShellTests
     public async Task A_visitor_sees_the_two_buttons_the_sign_in_one_keeps_the_page_and_there_is_no_account_menu()
     {
         await using var web = Web();
-        var page = await web.NewBrowser().GetAsync("/programisci?q=kod");
-        Assert.Equal(["/logowanie?redirect=%2Fprogramisci%3Fq%3Dkod", "/rejestracja?redirect=%2Fprogramisci%3Fq%3Dkod"], Hrefs(page, ".site-account a"));
+        var page = await web.NewBrowser().GetAsync("/agenci?q=kod");
+        Assert.Equal(["/logowanie?redirect=%2Fagenci%3Fq%3Dkod", "/rejestracja?redirect=%2Fagenci%3Fq%3Dkod"], Hrefs(page, ".site-account a"));
         Assert.Equal(["Zaloguj się", "Załóż konto"], page.All(".site-account a").Select(a => a.TextContent));
         Assert.Contains("btn--ghost", page.One(".site-account a")!.ClassName);
         Assert.Contains("btn--primary", page.All(".site-account a")[1].ClassName);
@@ -219,7 +219,7 @@ public class ShellTests
     {
         await using var web = Web();
         Assert.Equal(["/logowanie", "/rejestracja"], Hrefs(await web.NewBrowser().GetAsync("/"), ".site-account a"));
-        Assert.Equal(["/logowanie", "/rejestracja"], Hrefs(await web.NewBrowser().GetAsync("/logowanie?redirect=%2Fmoje%2Frezerwacje"), ".site-account a"));
+        Assert.Equal(["/logowanie", "/rejestracja"], Hrefs(await web.NewBrowser().GetAsync("/logowanie?redirect=%2Fmoje%2Fdostepy"), ".site-account a"));
     }
 
     [Fact]
@@ -228,9 +228,9 @@ public class ShellTests
         await using var web = Web();
         var browser = web.NewBrowser();
         await SignIn.As(web, browser);
-        var page = await browser.GetAsync("/programisci");
-        Assert.Equal(["/programisci", "/jak-to-dziala", "/cennik"], Hrefs(page, ".site-nav a"));
-        Assert.Equal(["/moje/rezerwacje", "/moje/klucze", "/konto", "/gabinet-programisty", "/wyloguj"], Hrefs(page, ".account-menu a"));
+        var page = await browser.GetAsync("/agenci");
+        Assert.Equal(["/agenci", "/jak-to-dziala", "/cennik"], Hrefs(page, ".site-nav a"));
+        Assert.Equal(["/moje/dostepy", "/moje/klucze", "/konto", "/panel-agenta", "/wyloguj"], Hrefs(page, ".account-menu a"));
         Assert.Equal(["Moje dostępy", "Klucze API", "Konto", "Zostań dostawcą", "Wyloguj się"], page.All(".account-menu a").Select(a => a.TextContent));
         Assert.DoesNotContain("Panel dostawcy", page.One("header")!.TextContent);
         Assert.Null(page.One(".site-account .btn--primary"));
@@ -244,7 +244,7 @@ public class ShellTests
         await using var web = Web();
         var browser = web.NewBrowser();
         await SignIn.As(web, browser);
-        var page = await browser.GetAsync("/programisci");
+        var page = await browser.GetAsync("/agenci");
         var trigger = page.One(".account-menu summary")!;
         Assert.Equal("DC", trigger.QuerySelector(".account-menu__avatar")!.TextContent);
         Assert.Equal("true", trigger.QuerySelector(".account-menu__avatar")!.GetAttribute("aria-hidden"));
@@ -262,12 +262,12 @@ public class ShellTests
         web.Identity.Roles = [role];
         var single = web.NewBrowser();
         await SignIn.As(web, single);
-        Assert.Contains("/admin/weryfikacja", Hrefs(await single.GetAsync("/programisci"), ".account-menu a"));
+        Assert.Contains("/admin/weryfikacja", Hrefs(await single.GetAsync("/agenci"), ".account-menu a"));
 
         web.Identity.Roles = ["User", role]; // two roles: an array on the wire
         var many = web.NewBrowser();
         await SignIn.As(web, many);
-        var page = await many.GetAsync("/programisci");
+        var page = await many.GetAsync("/agenci");
         Assert.Contains("/admin/weryfikacja", Hrefs(page, ".account-menu a"));
         Assert.Equal(["Administracja", "Wyloguj się"], page.All(".account-menu a").TakeLast(2).Select(a => a.TextContent));
     }
@@ -279,14 +279,14 @@ public class ShellTests
         web.Identity.Roles = ["User"];
         var b = web.NewBrowser();
         await SignIn.As(web, b);
-        Assert.DoesNotContain("/admin/weryfikacja", Hrefs(await b.GetAsync("/programisci"), "header a"));
+        Assert.DoesNotContain("/admin/weryfikacja", Hrefs(await b.GetAsync("/agenci"), "header a"));
     }
 
     [Theory]
-    [InlineData("/programisci", "Agenci")]
-    [InlineData("/programisci/audyt-kodu", "Agenci")]
+    [InlineData("/agenci", "Agenci")]
+    [InlineData("/agenci/audyt-kodu", "Agenci")]
     [InlineData("/jak-to-dziala", "Jak to działa")]
-    [InlineData("/moje/rezerwacje", "Moje dostępy")]
+    [InlineData("/moje/dostepy", "Moje dostępy")]
     public async Task The_current_section_carries_aria_current_page_and_only_that_one(string path, string label)
     {
         await using var web = Web();
@@ -306,7 +306,7 @@ public class ShellTests
         var browser = web.NewBrowser();
         await SignIn.As(web, browser);
         var before = MeCalls(web);
-        var page = await browser.GetAsync("/programisci");
+        var page = await browser.GetAsync("/agenci");
         Assert.Equal(1, MeCalls(web) - before); // the header asks, the footer reads the same answer
         Assert.Contains("Panel dostawcy", Labels(page, ".account-menu a"));
         Assert.DoesNotContain("Zostań dostawcą", page.One("header")!.TextContent);
@@ -326,7 +326,7 @@ public class ShellTests
         web.Directory.Respond = r => r.RequestUri!.AbsolutePath == "/api/v1/me" ? new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError) : inner(r);
         var browser = web.NewBrowser();
         await SignIn.As(web, browser);
-        var page = await browser.GetAsync("/programisci");
+        var page = await browser.GetAsync("/agenci");
         Assert.Contains("Zostań dostawcą", Labels(page, ".account-menu a"));
         Assert.DoesNotContain("Panel dostawcy", page.One("header")!.TextContent);
         Assert.DoesNotContain("Panel dostawcy", page.One("footer")!.TextContent);
@@ -362,23 +362,23 @@ public class ShellTests
     {
         await using var web = Web();
         var browser = web.NewBrowser();
-        var visitor = await browser.GetAsync("/programisci");
+        var visitor = await browser.GetAsync("/agenci");
         var menu = visitor.One("header details.site-menu")!;
         Assert.Equal("Menu", menu.QuerySelector("summary")!.TextContent);
         Assert.Null(menu.GetAttribute("open")); // closed until opened (and a new page is a new, closed menu)
-        Assert.Equal(["/programisci", "/jak-to-dziala", "/cennik", "/logowanie?redirect=%2Fprogramisci", "/rejestracja?redirect=%2Fprogramisci"], menu.QuerySelectorAll("a").Select(a => a.GetAttribute("href")));
+        Assert.Equal(["/agenci", "/jak-to-dziala", "/cennik", "/logowanie?redirect=%2Fagenci", "/rejestracja?redirect=%2Fagenci"], menu.QuerySelectorAll("a").Select(a => a.GetAttribute("href")));
         Assert.Empty(visitor.All("header script"));
 
         await SignIn.As(web, browser);
-        var member = await browser.GetAsync("/programisci");
-        Assert.Equal(["/programisci", "/jak-to-dziala", "/cennik", "/moje/rezerwacje", "/moje/klucze", "/konto", "/gabinet-programisty", "/wyloguj"], member.One("header details.site-menu")!.QuerySelectorAll("a").Select(a => a.GetAttribute("href")));
+        var member = await browser.GetAsync("/agenci");
+        Assert.Equal(["/agenci", "/jak-to-dziala", "/cennik", "/moje/dostepy", "/moje/klucze", "/konto", "/panel-agenta", "/wyloguj"], member.One("header details.site-menu")!.QuerySelectorAll("a").Select(a => a.GetAttribute("href")));
     }
 
     [Fact]
     public async Task The_page_has_a_skip_link_to_main_one_main_landmark_named_navigations_and_a_footer_in_three_columns()
     {
         await using var web = Web();
-        var page = await web.NewBrowser().GetAsync("/programisci");
+        var page = await web.NewBrowser().GetAsync("/agenci");
         Assert.Equal("#main", page.One("a.skip-link")!.GetAttribute("href"));
         Assert.Equal("Przejdź do treści", page.One("a.skip-link")!.TextContent);
         Assert.Equal("main", page.One("#main")!.TagName.ToLowerInvariant());
@@ -387,7 +387,7 @@ public class ShellTests
         var footer = page.One("footer")!;
         Assert.Equal(["Produkt", "Dla dostawców", "Prawne"], footer.QuerySelectorAll(".site-footer__title").Select(t => t.TextContent));
         Assert.Equal(3, footer.QuerySelectorAll("nav").Length);
-        Assert.Equal(["/programisci", "/jak-to-dziala", "/cennik", "/zasady-rankingu", "/rejestracja", "/regulamin", "/polityka-prywatnosci"], footer.QuerySelectorAll("a").Select(a => a.GetAttribute("href")));
+        Assert.Equal(["/agenci", "/jak-to-dziala", "/cennik", "/zasady-rankingu", "/rejestracja", "/regulamin", "/polityka-prywatnosci"], footer.QuerySelectorAll("a").Select(a => a.GetAttribute("href")));
         Assert.Equal(["Agenci", "Jak to działa", "Cennik", "Zasady rankingu", "Zostań dostawcą", "Regulamin", "Polityka prywatności"], footer.QuerySelectorAll("a").Select(a => a.TextContent));
         Assert.Matches(@"© \d{4} Gabinety Tech", footer.TextContent);
     }
@@ -396,7 +396,7 @@ public class ShellTests
     public async Task The_brand_is_the_link_text_and_the_logo_mark_is_decorative()
     {
         await using var web = Web();
-        var brand = (await web.NewBrowser().GetAsync("/programisci")).One("header a.brand")!;
+        var brand = (await web.NewBrowser().GetAsync("/agenci")).One("header a.brand")!;
         Assert.Equal("Gabinety Tech", brand.TextContent.Trim());
         Assert.Equal("true", brand.QuerySelector("svg.brand__mark")!.GetAttribute("aria-hidden"));
         Assert.Equal("currentColor", brand.QuerySelector("svg.brand__mark rect")!.GetAttribute("fill"));
@@ -406,7 +406,7 @@ public class ShellTests
     public async Task The_flash_region_is_in_the_page_from_the_first_render_and_shows_known_messages_only()
     {
         await using var web = Web();
-        var page = await web.NewBrowser().GetAsync("/programisci");
+        var page = await web.NewBrowser().GetAsync("/agenci");
         var region = page.One("[data-testid=flash]")!;
         Assert.Equal("status", region.GetAttribute("role"));
         Assert.Equal("polite", region.GetAttribute("aria-live"));
@@ -420,7 +420,7 @@ public class ShellTests
         await using var web = Web();
         var browser = web.NewBrowser();
         await SignIn.As(web, browser);
-        var menu = await browser.GetAsync("/programisci");
+        var menu = await browser.GetAsync("/agenci");
         Assert.Equal("/wyloguj", menu.All(".account-menu a").Last().GetAttribute("href"));
         var done = await browser.PostFormAsync("/wyloguj", new Dictionary<string, string>());
         var home = await browser.GetAsync(done.Location!);

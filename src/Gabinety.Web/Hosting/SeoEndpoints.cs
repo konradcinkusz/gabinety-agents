@@ -10,7 +10,7 @@ namespace Gabinety.Web.Hosting;
 public static class SeoContent
 {
     /// <summary>Paths crawlers must not visit (SPEC 6.5).</summary>
-    public static readonly string[] DisallowedPaths = ["/moje", "/gabinet-programisty", "/admin", "/rezerwacja", "/checkout", "/api"];
+    public static readonly string[] DisallowedPaths = ["/moje", "/panel-agenta", "/admin", "/dostep", "/checkout", "/api"];
 
     /// <summary>Every approved practitioner and only the categories the API marks indexable (a thin category is <c>noindex</c> and so is not offered).</summary>
     public static string Sitemap(string baseUrl, SitemapDto dto)
@@ -19,7 +19,7 @@ public static class SeoContent
         foreach (var c in dto.Categories.Where(c => c.Indexable))
             xml.Append("<url><loc>").Append(SecurityElement.Escape(baseUrl + c.Path)).Append("</loc></url>\n");
         foreach (var p in dto.Practitioners ?? [])
-            xml.Append("<url><loc>").Append(SecurityElement.Escape($"{baseUrl}/gabinet/{Uri.EscapeDataString(p.Slug)}")).Append("</loc><lastmod>")
+            xml.Append("<url><loc>").Append(SecurityElement.Escape($"{baseUrl}/agent/{Uri.EscapeDataString(p.Slug)}")).Append("</loc><lastmod>")
                .Append(p.LastModified.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture)).Append("</lastmod></url>\n");
         return xml.Append("</urlset>\n").ToString();
     }

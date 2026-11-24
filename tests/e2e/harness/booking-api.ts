@@ -141,7 +141,7 @@ export async function reviewAttemptStatus(request: APIRequestContext, bookingId:
   return (await retrying(() => reputation(request).post(`/reviews`, { data: { bookingId, rating, text } }))).status();
 }
 
-/** The booking id out of a `/checkout/mock/<id>` or `/rezerwacja/potwierdzenie/<id>` address. */
+/** The booking id out of a `/checkout/mock/<id>` or `/dostep/potwierdzenie/<id>` address. */
 export function bookingIdFromUrl(url: string): string {
   const m = /\/(?:checkout\/mock|rezerwacja\/potwierdzenie|moje\/opinie|moje\/rezerwacje)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i.exec(url);
   if (!m) throw new Error("no booking id in the address");

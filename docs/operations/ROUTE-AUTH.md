@@ -139,10 +139,10 @@ The middleware is UX, the services are the boundary: a signed-in page still call
 | Web | ANY | `/health` | Anonymous | all | liveness/readiness (kernel) |
 | Web | ANY | `/alive` | Anonymous | all | liveness (kernel) |
 | Web | PAGE | `/` | Anonymous | all | home, static server rendering |
-| Web | PAGE | `/programisci` | Anonymous | all | public list, static server rendering |
-| Web | PAGE | `/programisci/{Problem}` | Anonymous | all | public list of a category |
-| Web | PAGE | `/programisci/{Problem}/{Tech}` | Anonymous | all | public list of a category and a technology |
-| Web | PAGE | `/gabinet/{Slug}` | Anonymous | all | public profile with JSON-LD, slot picker and reviews; 404/410/503 as statuses |
+| Web | PAGE | `/agenci` | Anonymous | all | public list, static server rendering |
+| Web | PAGE | `/agenci/{Problem}` | Anonymous | all | public list of a category |
+| Web | PAGE | `/agenci/{Problem}/{Tech}` | Anonymous | all | public list of a category and a technology |
+| Web | PAGE | `/agent/{Slug}` | Anonymous | all | public profile with JSON-LD, slot picker and reviews; 404/410/503 as statuses |
 | Web | PAGE | `/jak-to-dziala` | Anonymous | all | static page |
 | Web | PAGE | `/cennik` | Anonymous | all | static page, fee rate from configuration |
 | Web | PAGE | `/zasady-rankingu` | Anonymous | all | ranking rules from the Directory; 503 when it does not answer |
@@ -165,22 +165,22 @@ The middleware is UX, the services are the boundary: a signed-in page still call
 | Web | PAGE | `/admin/ksiega` | Admin | all | ledger by period, first rows as a table |
 | Web | GET | `/admin/ksiega/csv` | Admin | all | ledger CSV, STREAMED from Booking with the administrator's own bearer (nothing buffered); an error mid-stream aborts the connection |
 | Web | PAGE | `/admin/podejrzane` | Admin | all | suspicious client-practitioner pairs (T-10.03) |
-| Web | PAGE | `/moje/rezerwacje` | Authenticated | all | my bookings (client and practitioner tabs), static server rendering |
-| Web | PAGE | `/moje/rezerwacje/{BookingId}` | Authenticated | all | booking detail with cancel, dispute and no-show (form posts, antiforgery) |
+| Web | PAGE | `/moje/dostepy` | Authenticated | all | my bookings (client and practitioner tabs), static server rendering |
+| Web | PAGE | `/moje/dostepy/{BookingId}` | Authenticated | all | booking detail with cancel, dispute and no-show (form posts, antiforgery) |
 | Web | PAGE | `/moje/klucze` | Authenticated | all | my API keys: create (the plain key is shown once, in the response of the form post), list (prefix only) and revoke; static server rendering, antiforgery |
 | Web | PAGE | `/moje/opinie` | Authenticated | all | the practitioner's own reviews and replies |
 | Web | PAGE | `/moje/opinie/{BookingId}` | Authenticated | all | write a review (form post, antiforgery) |
-| Web | PAGE | `/rezerwacja/{OfferingId}` | Authenticated | all | booking form: brief, assistant suggestion, pay (form posts, antiforgery) |
-| Web | PAGE | `/rezerwacja/potwierdzenie/{BookingId}` | Authenticated | all | confirmation |
+| Web | PAGE | `/dostep/{OfferingId}` | Authenticated | all | booking form: brief, assistant suggestion, pay (form posts, antiforgery) |
+| Web | PAGE | `/dostep/potwierdzenie/{BookingId}` | Authenticated | all | confirmation |
 | Web | PAGE | `/checkout/mock/{BookingId}` | Authenticated | all | mock checkout: answers 404 unless the fake profile runs the mock provider (`WebOptions.MockPayments`); the clock alone is interactive |
 | Web | PAGE | `/bookings/{BookingId}` | Authenticated | all | where the payment provider returns the browser (Stripe Checkout success URL): redirects to the confirmation |
 | Web | PAGE | `/konto` | Authenticated | all | account: e-mail, consents, data export link, account deletion (static rendering, forms with antiforgery) |
 | Web | GET | `/konto/export` | Authenticated | all | the user's data as a no-store JSON attachment (the identity service's export, passed through) |
-| Web | PAGE | `/gabinet-programisty` | Authenticated | all | practitioner dashboard and onboarding, static server rendering; any signed-in account may become a practitioner (ADR-0012, "Practitioner area") |
-| Web | PAGE | `/gabinet-programisty/profil` | Authenticated | all | practitioner profile form |
-| Web | PAGE | `/gabinet-programisty/oferty` | Authenticated | all | offers: list, confirmation before disabling, re-enable, form |
-| Web | PAGE | `/gabinet-programisty/platnosci` | Authenticated | all | payments account status and onboarding link (PAYMENTS-GO-LIVE) |
-| Web | PAGE | `/practitioner/payments` | Authenticated | all | the return and refresh address Booking gives Stripe; forwards to `/gabinet-programisty/platnosci` |
+| Web | PAGE | `/panel-agenta` | Authenticated | all | practitioner dashboard and onboarding, static server rendering; any signed-in account may become a practitioner (ADR-0012, "Practitioner area") |
+| Web | PAGE | `/panel-agenta/profil` | Authenticated | all | practitioner profile form |
+| Web | PAGE | `/panel-agenta/oferty` | Authenticated | all | offers: list, confirmation before disabling, re-enable, form |
+| Web | PAGE | `/panel-agenta/platnosci` | Authenticated | all | payments account status and onboarding link (PAYMENTS-GO-LIVE) |
+| Web | PAGE | `/practitioner/payments` | Authenticated | all | the return and refresh address Booking gives Stripe; forwards to `/panel-agenta/platnosci` |
 | Web | PAGE | `/not-found` | Anonymous | all | status code re-execution target |
 | Web | PAGE | `/Error` | Anonymous | all | exception handler target |
 | Web | ANY | `/_blazor` | Anonymous | all | circuit websocket: refused first by the origin guard for a foreign page |
@@ -190,3 +190,5 @@ The middleware is UX, the services are the boundary: a signed-in page still call
 | Web | GET | `/_framework/opaque-redirect` | Anonymous | all | framework |
 | Web | GET | `/{**path:file}` | Anonymous | all | the static-asset fallback for files under `wwwroot` (public files, never data); anonymous through the group in `MapWebEndpoints` |
 | Web | HEAD | `/{**path:file}` | Anonymous | all | as above |
+
+**Old page addresses (E-02).** The Web host is not a route of the table above for these: a middleware (`LegacyRedirects`, before authentication) answers `GET` and `HEAD` with `301` and keeps the rest of the path and the query string. `/programisci...` to `/agenci...`, `/gabinet/{slug}` to `/agent/{slug}`, `/rezerwacja...` to `/dostep...`, `/moje/rezerwacje...` to `/moje/dostepy...`, `/gabinet-programisty...` to `/panel-agenta...`. A signed-out visitor is redirected first and signs in at the new address.

@@ -473,7 +473,7 @@ public class BlazorRealAuthTests(RealAuthFixture auth, ITestOutputHelper output)
         using var host = new BlazorHost(auth.Main);
         var visitor = host.Visitor();
 
-        var start = await visitor.Get("/oauth/github/start?redirect=%2Fmoje%2Frezerwacje");
+        var start = await visitor.Get("/oauth/github/start?redirect=%2Fmoje%2Fdostepy");
 
         Assert.Equal(HttpStatusCode.Found, start.Status);
         var cookie = start.SetCookie("gt_oauth_state")!;
@@ -484,7 +484,7 @@ public class BlazorRealAuthTests(RealAuthFixture auth, ITestOutputHelper output)
         Assert.Matches("^[A-Za-z0-9_-]{40,}$", state);
         Assert.StartsWith(auth.Main.Url + "/api/v1/external-auth/login?provider=GitHub&returnUrl=", start.Location);
         var returnUrl = System.Web.HttpUtility.ParseQueryString(new Uri(start.Location!).Query)["returnUrl"]!;
-        Assert.StartsWith($"{RealAuthFixture.WebOrigin}/oauth/callback?redirect=%2Fmoje%2Frezerwacje&state=" + state, returnUrl);
+        Assert.StartsWith($"{RealAuthFixture.WebOrigin}/oauth/callback?redirect=%2Fmoje%2Fdostepy&state=" + state, returnUrl);
 
         // What authservice does with exactly that URL: a redirect to GitHub's authorize page. (It would not accept it if the origin, the path or the provider were off.)
         using var http = auth.Main.Client();

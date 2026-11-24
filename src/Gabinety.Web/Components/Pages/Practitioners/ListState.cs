@@ -39,7 +39,7 @@ public sealed partial record ListState(string? Problem = null, string? Tech = nu
     /// <summary>"Clear filters": the category stays, everything narrowing it goes.</summary>
     public ListState Cleared() => new(Problem, Tech);
 
-    public string Path => Problem is null ? "/programisci" : Tech is null ? $"/programisci/{Problem}" : $"/programisci/{Problem}/{Tech}";
+    public string Path => Problem is null ? "/agenci" : Tech is null ? $"/agenci/{Problem}" : $"/agenci/{Problem}/{Tech}";
 
     public string Href()
     {

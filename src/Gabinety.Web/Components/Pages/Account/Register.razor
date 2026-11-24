@@ -85,7 +85,7 @@
 
     string Back => ReturnTarget.Safe(Redirect);
     /// <summary>A registration that continues a booking: the context line says so. Only the sanitised target is read; the query itself is never printed.</summary>
-    bool ForBooking => Back.StartsWith("/rezerwacja/", StringComparison.Ordinal);
+    bool ForBooking => Back.StartsWith("/dostep/", StringComparison.Ordinal);
     string GithubHref => OAuthEndpoints.StartPath + (Back == "/" ? "" : $"?{ReturnTarget.Parameter}={Uri.EscapeDataString(Back)}");
 
     protected override async Task OnInitializedAsync()

@@ -100,7 +100,7 @@ public class SearchIntegrationTests(PgSearchFixture pg) : IClassFixture<PgSearch
         Assert.Equal(HttpStatusCode.OK, (await c.GetAsync("/api/v1/practitioners/" + p.Slug)).StatusCode);
         var m = (await c.GetFromJsonAsync<Gabinety.Contracts.Directory.SitemapDto>("/api/v1/sitemap", Sk.J))!;
         Assert.Equal(4, m.Practitioners.Count);
-        Assert.Contains(new Gabinety.Contracts.Directory.SitemapCategory("/programisci/code-review/dotnet", 3, true), m.Categories);
-        Assert.Contains(new Gabinety.Contracts.Directory.SitemapCategory("/programisci/audyt-kodu/csharp", 1, false), m.Categories);
+        Assert.Contains(new Gabinety.Contracts.Directory.SitemapCategory("/agenci/code-review/dotnet", 3, true), m.Categories);
+        Assert.Contains(new Gabinety.Contracts.Directory.SitemapCategory("/agenci/audyt-kodu/csharp", 1, false), m.Categories);
     }
 }

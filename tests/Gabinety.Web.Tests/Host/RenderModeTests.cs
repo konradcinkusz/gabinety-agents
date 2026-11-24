@@ -81,7 +81,7 @@ public partial class RenderModeTests
         web.Booking.Respond = _ => FakeBackend.Json(new Gabinety.Web.Api.PageDto<Gabinety.Web.Api.BookingViewDto>([Sample.Booking("Konsultacja z prerenderu")], null));
         var browser = web.NewBrowser();
 
-        foreach (var path in new[] { "/", "/programisci", "/programisci/audyt-kodu", "/logowanie" })
+        foreach (var path in new[] { "/", "/agenci", "/agenci/audyt-kodu", "/logowanie" })
         {
             var page = await browser.GetAsync(path);
             Assert.DoesNotContain("<!--Blazor:", page.Html); // no component marker: no circuit will ever start for this page
@@ -90,7 +90,7 @@ public partial class RenderModeTests
 
         await SignIn.As(web, browser);
         // The client area is static too: no circuit for a list of bookings, and its HTML is complete.
-        var mine = await browser.GetAsync("/moje/rezerwacje");
+        var mine = await browser.GetAsync("/moje/dostepy");
         Assert.DoesNotContain("<!--Blazor:", mine.Html);
         Assert.Equal("Konsultacja z prerenderu", mine.TextOf("[data-testid=booking-row] .booking-row__title"));
     }

@@ -11,7 +11,7 @@ export class PractitionerProfilePage {
    */
   async goto(slug: string, displayName: string) {
     const h1 = this.page.getByRole("heading", { level: 1, name: displayName });
-    await gotoInteractive(this.page, `/gabinet/${slug}`);
+    await gotoInteractive(this.page, `/agent/${slug}`);
     try {
       await expect(async () => {
         if (!(await h1.isVisible())) await this.page.reload();
@@ -39,10 +39,10 @@ export class PractitionerProfilePage {
   /** Clicks the purchase link and waits for the booking form. If the host renders it interactively, nothing typed before its circuit is live would count, so the circuit is awaited. */
   async openBookingForm(link: Locator) {
     const circuit = watchCircuit(this.page);
-    const answer = this.page.waitForResponse((r) => ["document", "fetch", "xhr"].includes(r.request().resourceType()) && /\/rezerwacja\/[0-9a-f-]{36}/.test(new URL(r.url()).pathname));
+    const answer = this.page.waitForResponse((r) => ["document", "fetch", "xhr"].includes(r.request().resourceType()) && /\/dostep\/[0-9a-f-]{36}/.test(new URL(r.url()).pathname));
     await link.click();
     const res = await answer;
-    await this.page.waitForURL(/\/rezerwacja\//);
+    await this.page.waitForURL(/\/dostep\//);
     await awaitCircuitIfInteractive(res, circuit); // enhanced navigation answers a fetch, not a document; a static form has no circuit, an interactive one is awaited
   }
   newBadge(): Locator { return this.page.getByText("Nowy", { exact: true }); }
@@ -85,7 +85,7 @@ export class MockCheckoutPage {
       await expect(this.succeed()).toBeEnabled({ timeout: 5_000 });
     }).toPass({ timeout: 90_000, intervals: [2_000, 5_000, 10_000] });
     await this.succeed().click();
-    await this.page.waitForURL(/\/rezerwacja\/potwierdzenie\//);
+    await this.page.waitForURL(/\/dostep\/potwierdzenie\//);
     await expect(async () => {
       if (!(await this.page.getByText("Dostęp aktywny. Dziękujemy!").isVisible())) await this.page.reload();
       await expect(this.page.getByText("Dostęp aktywny. Dziękujemy!")).toBeVisible({ timeout: 5_000 });
@@ -93,7 +93,7 @@ export class MockCheckoutPage {
   }
 }
 
-/** The confirmation page of an active package (/rezerwacja/potwierdzenie/{id}). */
+/** The confirmation page of an active package (/dostep/potwierdzenie/{id}). */
 export class ConfirmationPage {
   constructor(readonly page: Page) {}
   heading(): Locator { return this.page.getByRole("heading", { level: 1, name: "Dostęp aktywny" }); }

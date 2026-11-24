@@ -4,7 +4,7 @@ using Gabinety.Web.Components.Pages.PractitionerArea;
 
 namespace Gabinety.Web.Tests.PractitionerAreaTests;
 
-/// <summary>The dashboard and onboarding at <c>/gabinet-programisty</c>, through the real host with a stateful fake of the services. Hooks of journey J2 are named in the test names.</summary>
+/// <summary>The dashboard and onboarding at <c>/panel-agenta</c>, through the real host with a stateful fake of the services. Hooks of journey J2 are named in the test names.</summary>
 public class DashboardHostTests
 {
     static string Clean(string s) => Page.Squash(s.Replace(' ', ' '));
@@ -13,9 +13,9 @@ public class DashboardHostTests
     public async Task A_visitor_is_sent_to_sign_in_and_comes_back()
     {
         await using var web = new WebFactory();
-        var page = await web.NewBrowser().GetAsync("/gabinet-programisty");
+        var page = await web.NewBrowser().GetAsync("/panel-agenta");
         Assert.Equal(HttpStatusCode.Found, page.Status);
-        Assert.Equal("/logowanie?redirect=%2Fgabinet-programisty", page.Location);
+        Assert.Equal("/logowanie?redirect=%2Fpanel-agenta", page.Location);
     }
 
     [Fact]
@@ -23,7 +23,7 @@ public class DashboardHostTests
     {
         var (web, browser, _) = await PractitionerBrowsers.SignedIn();
         await using var _ = web;
-        var page = await browser.GetAsync("/gabinet-programisty");
+        var page = await browser.GetAsync("/panel-agenta");
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Equal("Załóż swój gabinet", page.TextOf("h1"));
         Assert.Single(page.All("h1"));
@@ -42,9 +42,9 @@ public class DashboardHostTests
     {
         var (web, browser, world) = await PractitionerBrowsers.SignedIn();
         await using var _ = web;
-        var response = await browser.Submit("/gabinet-programisty", "create-profile", [new("displayName", "  Demo Jedyny  ")]);
+        var response = await browser.Submit("/panel-agenta", "create-profile", [new("displayName", "  Demo Jedyny  ")]);
         Assert.Contains((int)response.Status, new[] { 302, 303 });
-        Assert.Equal("/gabinet-programisty?flash=gabinet-created", response.Location);
+        Assert.Equal("/panel-agenta?flash=gabinet-created", response.Location);
         Assert.Equal("Demo Jedyny", world.Profile!.DisplayName);
         var post = web.Directory.Requests.Single(r => r.Method == HttpMethod.Post && r.PathAndQuery == "/api/v1/me/practitioner");
         Assert.StartsWith("Bearer ", post.Authorization);
@@ -60,7 +60,7 @@ public class DashboardHostTests
     {
         var (web, browser, world) = await PractitionerBrowsers.SignedIn();
         await using var _ = web;
-        var response = await browser.Submit("/gabinet-programisty", "create-profile", [new("displayName", name)]);
+        var response = await browser.Submit("/panel-agenta", "create-profile", [new("displayName", name)]);
         Assert.Equal(HttpStatusCode.OK, response.Status);
         Assert.Null(world.Profile);
         Assert.DoesNotContain(web.Directory.Requests, r => r.Method == HttpMethod.Post);
@@ -76,7 +76,7 @@ public class DashboardHostTests
     {
         var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.EmailVerified = false; });
         await using var _ = web;
-        var page = await browser.GetAsync("/gabinet-programisty");
+        var page = await browser.GetAsync("/panel-agenta");
         Assert.Equal("Panel dostawcy", page.TextOf("h1"));
         Assert.Equal(["Szkic"], page.All(".badge").Select(b => b.TextContent).Where(t => t == "Szkic")); // J2: getByText("Szkic", exact) is one element
         var items = page.All("[data-item]");
@@ -95,7 +95,7 @@ public class DashboardHostTests
     {
         var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
-        var page = await browser.GetAsync("/gabinet-programisty");
+        var page = await browser.GetAsync("/panel-agenta");
         foreach (var name in new[] { "Nagłówek profilu", "Opis (co najmniej 200 znaków)", "Co najmniej jeden aktywny pakiet", "Połączone konto GitHub", "Poprawny numer NIP", "Link do portfolio", "Potwierdzony adres e-mail" })
             Assert.Equal(1, page.All("li").Count(li => li.TextContent.Contains(name))); // getByRole("listitem").filter({hasText}) must match one
         Assert.Equal(1, page.ExactText("Szkic"));
@@ -106,13 +106,13 @@ public class DashboardHostTests
     {
         var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.CompleteProfile(); });
         await using var _ = web;
-        var page = await browser.GetAsync("/gabinet-programisty");
+        var page = await browser.GetAsync("/panel-agenta");
         Assert.All(page.All("[data-item]"), i => Assert.Contains("Gotowe", i.TextContent)); // J2: toContainText("Gotowe")
         Assert.False(page.All("button").Single(b => b.TextContent == "Wyślij do weryfikacji").HasAttribute("disabled"));
         Assert.Contains("Po wysłaniu administrator sprawdzi profil", page.TextOf("#submit-help"));
 
-        var response = await browser.Submit("/gabinet-programisty", "submit-profile");
-        Assert.Equal("/gabinet-programisty?flash=profile-submitted", response.Location);
+        var response = await browser.Submit("/panel-agenta", "submit-profile");
+        Assert.Equal("/panel-agenta?flash=profile-submitted", response.Location);
         Assert.Equal("Submitted", world.Profile!.Status);
         var after = await browser.GetAsync(response.Location!);
         Assert.Equal("Profil wysłany. Administrator sprawdzi go i da znać.", after.TextOf("[data-testid=flash]")); // J2 text
@@ -125,7 +125,7 @@ public class DashboardHostTests
     {
         var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.CompleteProfile(); });
         await using var _ = web;
-        var response = await browser.Submit("/gabinet-programisty", "submit-profile", afterGet: () => world.EmailVerified = false);
+        var response = await browser.Submit("/panel-agenta", "submit-profile", afterGet: () => world.EmailVerified = false);
         Assert.Equal(HttpStatusCode.OK, response.Status);
         var alert = response.One("[data-testid=submit-note]")!;
         Assert.Equal("alert", alert.GetAttribute("role"));
@@ -139,7 +139,7 @@ public class DashboardHostTests
     {
         var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
-        var requested = await browser.Submit("/gabinet-programisty", "github-request", [new("githubLogin", "demo-gh")]);
+        var requested = await browser.Submit("/panel-agenta", "github-request", [new("githubLogin", "demo-gh")]);
         Assert.Equal(HttpStatusCode.OK, requested.Status);
         Assert.Equal("gabinety-verify-ABCDEFGHJK", requested.TextOf("[data-testid=github-code] code"));
         Assert.False(requested.One("[data-testid=github-code]")!.HasAttribute("hidden"));
@@ -147,7 +147,7 @@ public class DashboardHostTests
 
         var code = requested.One("[data-testid=github-code]")!;
         Dictionary<string, string> Posted() => code.QuerySelectorAll("input[type=hidden]").ToDictionary(i => i.GetAttribute("name")!, i => i.GetAttribute("value")!);
-        async Task<Page> Verify() => await browser.SendAsync(new HttpRequestMessage(HttpMethod.Post, "/gabinet-programisty") { Content = new FormUrlEncodedContent(Posted()) });
+        async Task<Page> Verify() => await browser.SendAsync(new HttpRequestMessage(HttpMethod.Post, "/panel-agenta") { Content = new FormUrlEncodedContent(Posted()) });
 
         var notYet = await Verify();
         Assert.Equal(HttpStatusCode.OK, notYet.Status);
@@ -156,8 +156,8 @@ public class DashboardHostTests
 
         world.GithubBioHasCode = true;
         var linked = await Verify();
-        Assert.Equal("/gabinet-programisty", linked.Location);
-        var after = await browser.GetAsync("/gabinet-programisty");
+        Assert.Equal("/panel-agenta", linked.Location);
+        var after = await browser.GetAsync("/panel-agenta");
         Assert.Equal("Połączono konto GitHub: demo-gh.", after.TextOf("[data-testid=github-linked]")); // J2 text
         Assert.Contains("Gotowe", after.One("[data-item=Github]")!.TextContent);
     }
@@ -168,7 +168,7 @@ public class DashboardHostTests
     {
         var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
-        var page = await browser.Submit("/gabinet-programisty", "github-request", [new("githubLogin", login)]);
+        var page = await browser.Submit("/panel-agenta", "github-request", [new("githubLogin", login)]);
         if (login == "-") { Assert.Single(web.Directory.Requests, r => r.PathAndQuery.EndsWith("github-link")); return; } // "-" has the allowed alphabet; the service decides the rest
         Assert.DoesNotContain(web.Directory.Requests, r => r.PathAndQuery.EndsWith("github-link"));
         Assert.Contains("Login GitHub to 1 do 39 znaków", page.TextOf("#githubLogin-error"));
@@ -184,21 +184,21 @@ public class DashboardHostTests
     {
         var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.CompleteProfile(); w.PaymentState = "pending"; });
         await using var _ = web;
-        var page = await browser.GetAsync("/gabinet-programisty");
+        var page = await browser.GetAsync("/panel-agenta");
         var callout = page.One("[data-testid=public-profile]")!;
         Assert.Contains("callout--success", callout.ClassName);
         Assert.Equal("Twój profil jest publiczny", callout.QuerySelector("h2")!.TextContent);
-        Assert.Equal("/gabinet/demo-programista", callout.QuerySelector("a")!.GetAttribute("href"));
+        Assert.Equal("/agent/demo-programista", callout.QuerySelector("a")!.GetAttribute("href"));
         Assert.Equal("Zobacz profil publiczny", callout.QuerySelector("a")!.TextContent);
         var copy = callout.QuerySelector("button")!;
-        Assert.Equal(("Skopiuj link", "copy", "/gabinet/demo-programista", "Skopiowano"), (copy.TextContent, copy.GetAttribute("data-enhance"), copy.GetAttribute("data-copy"), copy.GetAttribute("data-done")));
+        Assert.Equal(("Skopiuj link", "copy", "/agent/demo-programista", "Skopiowano"), (copy.TextContent, copy.GetAttribute("data-enhance"), copy.GetAttribute("data-copy"), copy.GetAttribute("data-done")));
         Assert.True(copy.HasAttribute("hidden")); // enhance.js shows it; without the script it is simply not there
         Assert.Null(page.One("[data-testid=next-steps]")); // the four cards are gone
         Assert.Null(page.One("[data-item]")); // an approved profile has no submit checklist any more
         Assert.Equal(0, page.All(".badge").Count(b => b.TextContent == "Gotowe"));
         Assert.Equal(1, page.ExactText("Zatwierdzony")); // J2: the panel agrees
         var next = page.One("[data-testid=next-step]")!; // the one open step (payments) is still named, with its link
-        Assert.Equal("/gabinet-programisty/platnosci", next.QuerySelector("a")!.GetAttribute("href"));
+        Assert.Equal("/panel-agenta/platnosci", next.QuerySelector("a")!.GetAttribute("href"));
     }
 
     [Fact]
@@ -209,7 +209,7 @@ public class DashboardHostTests
         for (var i = 7; i >= 1; i--) world.Bookings.Add(Booking($"Pakiet {i}", -i, i == 1 ? null : $"Demo Klient {i}") with { UnitsTotal = 10, UnitsUsed = i, EndUtc = DateTimeOffset.UtcNow.AddDays(20) });
         world.Bookings.Add(Booking("Minione", -3, status: "Completed") with { EndUtc = DateTimeOffset.UtcNow.AddDays(-1) });
         world.Bookings.Add(Booking("Zrezygnowane", -2, status: "CancelledByClient"));
-        var page = await browser.GetAsync("/gabinet-programisty");
+        var page = await browser.GetAsync("/panel-agenta");
         var rows = page.All("[data-testid=recent] [data-booking]");
         Assert.Equal(5, rows.Count);
         Assert.Equal(["Pakiet 1", "Zrezygnowane", "Pakiet 2", "Minione", "Pakiet 3"], rows.Select(r => r.QuerySelector("strong")!.TextContent));
@@ -219,7 +219,7 @@ public class DashboardHostTests
         Assert.Contains("wykorzystano 2 z 10", second.TextContent);
         Assert.Equal("Aktywne pakiety: 7", page.TextOf("[data-testid=active-packages]")); // seven are confirmed and not over; the completed and the cancelled are not
         var id = second.GetAttribute("data-booking");
-        Assert.Equal($"/moje/rezerwacje/{id}?role=practitioner", second.QuerySelector("a")!.GetAttribute("href"));
+        Assert.Equal($"/moje/dostepy/{id}?role=practitioner", second.QuerySelector("a")!.GetAttribute("href"));
         Assert.Equal("Szczegóły", second.QuerySelector("a")!.TextContent);
         Assert.Contains(web.Booking.Requests, r => r.PathAndQuery == "/api/v1/me/bookings?role=practitioner");
         Assert.Null(page.One("[data-testid=upcoming]")); // the next appointments are gone
@@ -230,7 +230,7 @@ public class DashboardHostTests
     {
         var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.CompleteProfile(); });
         await using var _ = web;
-        var page = await browser.GetAsync("/gabinet-programisty");
+        var page = await browser.GetAsync("/panel-agenta");
         Assert.Equal("Nikt nie wykupił jeszcze pakietu Twojego agenta.", page.TextOf("[data-testid=recent-empty]"));
         Assert.Equal("Aktywne pakiety: 0", page.TextOf("[data-testid=active-packages]"));
     }
@@ -241,12 +241,12 @@ public class DashboardHostTests
     {
         var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.CompleteProfile(); w.BookingsFail = !serviceDown; w.BookingDown = serviceDown; });
         await using var _ = web;
-        var page = await browser.GetAsync("/gabinet-programisty");
+        var page = await browser.GetAsync("/panel-agenta");
         Assert.Equal(HttpStatusCode.OK, page.Status);
         var warn = page.One("[data-testid=recent-failed]")!;
         Assert.Contains("callout--warning", warn.ClassName);
         Assert.Contains("Nie możemy teraz pokazać zakupów", warn.TextContent);
-        Assert.Equal("/gabinet-programisty", warn.QuerySelector("a")!.GetAttribute("href"));
+        Assert.Equal("/panel-agenta", warn.QuerySelector("a")!.GetAttribute("href"));
         Assert.Null(page.One("[data-testid=recent-empty]"));
         Assert.Equal("Panel dostawcy", page.TextOf("h1"));
         Assert.NotNull(page.One("[data-testid=public-profile]")); // the rest of the page is there
@@ -258,7 +258,7 @@ public class DashboardHostTests
     {
         var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.CompleteProfile(github: false); w.EmailVerified = false; });
         await using var _ = web;
-        var page = await browser.GetAsync("/gabinet-programisty");
+        var page = await browser.GetAsync("/panel-agenta");
         Assert.Single(page.All("ol.checklist")); // the "Co dalej" cards are merged into it
         Assert.Null(page.One("[data-testid=next-steps]"));
         Assert.DoesNotContain("Co dalej", page.Text);
@@ -282,7 +282,7 @@ public class DashboardHostTests
     {
         var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.CompleteProfile(github: false); });
         await using var _ = web;
-        var page = await browser.GetAsync("/gabinet-programisty");
+        var page = await browser.GetAsync("/panel-agenta");
         var submit = page.All("button").Single(b => b.TextContent == "Wyślij do weryfikacji");
         Assert.True(submit.HasAttribute("disabled"));
         Assert.Equal("true", submit.GetAttribute("aria-disabled"));
@@ -291,7 +291,7 @@ public class DashboardHostTests
 
         var (web2, browser2, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.CompleteProfile(); });
         await using var _2 = web2;
-        var ready = (await browser2.GetAsync("/gabinet-programisty")).All("button").Single(b => b.TextContent == "Wyślij do weryfikacji");
+        var ready = (await browser2.GetAsync("/panel-agenta")).All("button").Single(b => b.TextContent == "Wyślij do weryfikacji");
         Assert.False(ready.HasAttribute("disabled"));
         Assert.Null(ready.GetAttribute("aria-disabled"));
     }
@@ -301,7 +301,7 @@ public class DashboardHostTests
     {
         var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Submitted"); w.CompleteProfile(); });
         await using var _ = web;
-        var page = await browser.GetAsync("/gabinet-programisty");
+        var page = await browser.GetAsync("/panel-agenta");
         Assert.Equal(7, page.All("[data-item]").Count);
         Assert.Equal("Postęp: 7 z 7", page.TextOf("[data-testid=progress]"));
         Assert.Equal(0, page.All(".badge").Count(b => b.TextContent == "Następny krok"));
@@ -315,12 +315,12 @@ public class DashboardHostTests
     {
         var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.CompleteProfile(); w.PaymentState = state; });
         await using var _ = web;
-        var page = await browser.GetAsync("/gabinet-programisty");
+        var page = await browser.GetAsync("/panel-agenta");
         Assert.Equal(banner, page.One("[data-testid=payments-banner]") is not null);
         if (banner)
         {
             Assert.Contains("Bez gotowego konta płatności nie możesz sprzedawać pakietów", page.TextOf("[data-testid=payments-banner]"));
-            Assert.Equal("/gabinet-programisty/platnosci", page.One("[data-testid=payments-banner] a")!.GetAttribute("href"));
+            Assert.Equal("/panel-agenta/platnosci", page.One("[data-testid=payments-banner] a")!.GetAttribute("href"));
         }
     }
 
@@ -329,7 +329,7 @@ public class DashboardHostTests
     {
         var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.CompleteProfile(); w.BookingDown = true; });
         await using var _ = web;
-        var page = await browser.GetAsync("/gabinet-programisty");
+        var page = await browser.GetAsync("/panel-agenta");
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Null(page.One("[data-testid=payments-banner]"));
         Assert.DoesNotContain(PractitionerPaths.Payments, page.One("[data-testid=next-step]")?.InnerHtml ?? ""); // unreadable payments are never offered as the next step
@@ -341,11 +341,11 @@ public class DashboardHostTests
     {
         var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.DirectoryDown = true; });
         await using var _ = web;
-        var page = await browser.GetAsync("/gabinet-programisty");
+        var page = await browser.GetAsync("/panel-agenta");
         Assert.Equal(HttpStatusCode.ServiceUnavailable, page.Status);
         var alert = page.One("[data-testid=unavailable]")!;
         Assert.Equal("alert", alert.GetAttribute("role"));
-        Assert.Equal("/gabinet-programisty", alert.QuerySelector("a")!.GetAttribute("href"));
+        Assert.Equal("/panel-agenta", alert.QuerySelector("a")!.GetAttribute("href"));
         Assert.Equal("Panel dostawcy", page.TextOf("h1"));
         Assert.DoesNotContain("SERVER-", page.Html);
     }
@@ -356,7 +356,7 @@ public class DashboardHostTests
         var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Rejected"); w.CompleteProfile(); });
         await using var _ = web;
         world.Profile = world.Profile! with { StatusReason = "Uzupełnij opis profilu" };
-        var page = await browser.GetAsync("/gabinet-programisty");
+        var page = await browser.GetAsync("/panel-agenta");
         Assert.Contains("Powód: Uzupełnij opis profilu", page.Text);
         Assert.Contains("Popraw profil zgodnie z powodem", page.Text);
         Assert.False(page.All("button").Single(b => b.TextContent == "Wyślij do weryfikacji").HasAttribute("disabled"));
@@ -368,7 +368,7 @@ public class DashboardHostTests
         var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
         world.Profile = world.Profile! with { StatusReason = "<img src=x onerror=alert(1)>" };
-        var page = await browser.GetAsync("/gabinet-programisty");
+        var page = await browser.GetAsync("/panel-agenta");
         Assert.Empty(page.All("img"));
         Assert.Contains("<img src=x onerror=alert(1)>", page.Text);
     }
@@ -378,9 +378,9 @@ public class DashboardHostTests
     {
         var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Submitted"); w.CompleteProfile(); });
         await using var _ = web;
-        var page = await browser.GetAsync("/gabinet-programisty");
+        var page = await browser.GetAsync("/panel-agenta");
         var token = page.One("input[name=__RequestVerificationToken]");
-        var forged = await browser.SendAsync(new HttpRequestMessage(HttpMethod.Post, "/gabinet-programisty") { Content = new FormUrlEncodedContent(new Dictionary<string, string> { ["_handler"] = "submit-profile", ["__RequestVerificationToken"] = token?.GetAttribute("value") ?? "x" }) });
+        var forged = await browser.SendAsync(new HttpRequestMessage(HttpMethod.Post, "/panel-agenta") { Content = new FormUrlEncodedContent(new Dictionary<string, string> { ["_handler"] = "submit-profile", ["__RequestVerificationToken"] = token?.GetAttribute("value") ?? "x" }) });
         Assert.Equal(HttpStatusCode.BadRequest, forged.Status);
         Assert.DoesNotContain(web.Directory.Requests, r => r.PathAndQuery.EndsWith("/submit"));
         Assert.Equal("Submitted", world.Profile!.Status);
@@ -391,10 +391,10 @@ public class DashboardHostTests
     {
         var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
-        var requested = await browser.Submit("/gabinet-programisty", "github-request", [new("githubLogin", "demo-gh")]);
+        var requested = await browser.Submit("/panel-agenta", "github-request", [new("githubLogin", "demo-gh")]);
         var hidden = requested.One("[data-testid=github-code]")!.QuerySelectorAll("input[type=hidden]").ToDictionary(i => i.GetAttribute("name")!, i => i.GetAttribute("value")!);
         hidden["code"] = "<script>alert(1)</script> and some other text";
-        var response = await browser.SendAsync(new HttpRequestMessage(HttpMethod.Post, "/gabinet-programisty") { Content = new FormUrlEncodedContent(hidden) });
+        var response = await browser.SendAsync(new HttpRequestMessage(HttpMethod.Post, "/panel-agenta") { Content = new FormUrlEncodedContent(hidden) });
         Assert.Equal(HttpStatusCode.OK, response.Status);
         Assert.DoesNotContain("alert(1)", response.Html);
         Assert.True(response.One("[data-testid=github-code]")!.HasAttribute("hidden")); // nothing of the forged text is shown

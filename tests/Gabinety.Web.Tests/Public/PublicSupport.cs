@@ -34,7 +34,7 @@ public static class PublicSupport
     public static Func<HttpRequestMessage, HttpResponseMessage> DefaultDirectory(PractitionerProfileDto? profile = null) => r => r.RequestUri!.AbsolutePath switch
     {
         "/api/v1/taxonomy" => FakeBackend.Json(Sample.Taxonomy),
-        "/api/v1/sitemap" => FakeBackend.Json(new SitemapDto([new("/programisci", 6, true), new("/programisci/audyt-kodu", 6, true), new("/programisci/migracja", 2, false)],
+        "/api/v1/sitemap" => FakeBackend.Json(new SitemapDto([new("/agenci", 6, true), new("/agenci/audyt-kodu", 6, true), new("/agenci/migracja", 2, false)],
             [new("demo-anna-demowska", new DateTimeOffset(2026, 11, 20, 8, 30, 0, TimeSpan.Zero)), new("demo-bartek", new DateTimeOffset(2026, 11, 21, 8, 30, 0, TimeSpan.Zero))])),
         "/api/v1/ranking-rules" => FakeBackend.Json(Rules),
         "/api/v1/practitioners/demo-anna-demowska" => FakeBackend.Json(profile ?? Profile()),

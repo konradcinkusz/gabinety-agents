@@ -128,7 +128,7 @@ public class ReviewsTests
         Assert.StartsWith(text, page.TextOf("section [role=status]"));
         Assert.DoesNotContain("Ten dostęp ma już opinię", page.Text); // F-14
         Assert.Empty(page.All("form"));
-        Assert.Equal("/moje/rezerwacje", page.One("section a")!.GetAttribute("href"));
+        Assert.Equal("/moje/dostepy", page.One("section a")!.GetAttribute("href"));
         Assert.Equal(published(status), page.One("section [role=status]")!.ClassName?.Contains("callout--success") == true);
     }
 
@@ -155,7 +155,7 @@ public class ReviewsTests
         var page = await f.Post(Form, "review", ("Model.Rating", "5"), ("Model.Text", Text));
         Assert.Equal(heading, page.TextOf("h2"));
         Assert.Empty(page.All("form"));
-        Assert.Equal("/moje/rezerwacje", page.One("section a")!.GetAttribute("href"));
+        Assert.Equal("/moje/dostepy", page.One("section a")!.GetAttribute("href"));
     }
 
     [Fact]
@@ -218,7 +218,7 @@ public class ReviewsTests
         var page = await f.Browser.GetAsync("/moje/opinie");
         var empty = page.One("[data-testid=no-profile]")!;
         Assert.Equal("Opinie widzą tu dostawcy", empty.QuerySelector("h2")!.TextContent);
-        Assert.Equal("/gabinet-programisty", empty.QuerySelector("a")!.GetAttribute("href"));
+        Assert.Equal("/panel-agenta", empty.QuerySelector("a")!.GetAttribute("href"));
         Assert.Empty(f.Web.Reputation.Requests); // nothing to list
     }
 

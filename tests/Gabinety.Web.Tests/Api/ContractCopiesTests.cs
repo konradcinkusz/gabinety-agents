@@ -79,7 +79,7 @@ public class ContractCopiesTests
 
     [Fact]
     public void The_sitemap() =>
-        RoundTrip<W.SitemapDto>(new Gabinety.Contracts.Directory.SitemapDto([new SitemapPractitioner("s", At)], [new SitemapCategory("/programisci", 6, true)]), check: c => Assert.True(c.Categories[0].Indexable));
+        RoundTrip<W.SitemapDto>(new Gabinety.Contracts.Directory.SitemapDto([new SitemapPractitioner("s", At)], [new SitemapCategory("/agenci", 6, true)]), check: c => Assert.True(c.Categories[0].Indexable));
 
     [Theory]
     [InlineData(OfferingKind.Tasks, 10)] [InlineData(OfferingKind.Chat, 500)]

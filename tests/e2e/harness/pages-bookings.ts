@@ -1,14 +1,14 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import { gotoInteractive } from "./circuit";
 
-/** Page objects of the booking detail (/moje/rezerwacje/{id}), the API keys page (/moje/klucze) and the administrator's claims list (/admin/spory), for J3, J5, J6 and J8. Role and label locators only. */
+/** Page objects of the booking detail (/moje/dostepy/{id}), the API keys page (/moje/klucze) and the administrator's claims list (/admin/spory), for J3, J5, J6 and J8. Role and label locators only. */
 export class BookingDetailPage {
   constructor(readonly page: Page) {}
   /** Opens the detail; a page that shows an error banner instead (the services answered 429/503 under the shared rate limit) is reloaded a few times. */
   async goto(bookingId: string) {
     const heading = this.page.getByRole("heading", { level: 2 }).first();
     for (let attempt = 1; ; attempt++) {
-      await gotoInteractive(this.page, `/moje/rezerwacje/${bookingId}?role=client`);
+      await gotoInteractive(this.page, `/moje/dostepy/${bookingId}?role=client`);
       try {
         await expect(heading).toBeVisible({ timeout: 8_000 });
         return;

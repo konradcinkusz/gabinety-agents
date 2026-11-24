@@ -20,7 +20,7 @@ public class StaticPageStructureTests
         Assert.All(page.All("ol.steps > li.step"), li => Assert.False(string.IsNullOrWhiteSpace(li.TextContent)));
         Assert.Equal(3, page.All("section.card").Count); // one card per section: client, payments, practitioner
         var cta = page.One("section[aria-labelledby=how-cta] a.btn.btn--primary")!;
-        Assert.Equal("/programisci", cta.GetAttribute("href"));
+        Assert.Equal("/agenci", cta.GetAttribute("href"));
         Assert.Equal("how-cta", page.All(".prose > section").Last().GetAttribute("aria-labelledby")); // the call to action closes the page
     }
 
@@ -43,7 +43,7 @@ public class StaticPageStructureTests
         Assert.Single(page.All("h1"));
         Assert.Equal(2, page.All("table.table--cards").Count);
         Assert.Equal("Podział ceny pakietu 120,00 zł", page.TextOf("section[aria-labelledby=pricing-example-2] caption").Replace(' ', ' '));
-        Assert.Equal("/programisci", page.One(".prose a[href='/programisci']")!.GetAttribute("href"));
+        Assert.Equal("/agenci", page.One(".prose a[href='/agenci']")!.GetAttribute("href"));
     }
 
     [Fact]
@@ -80,7 +80,7 @@ public class StaticPageStructureTests
         Assert.Equal("noindex,follow", page.One("meta[name=robots]")!.GetAttribute("content"));
 
         var form = page.One("[data-testid=page-not-found] form[role=search]")!;
-        Assert.Equal("/programisci", form.GetAttribute("action"));
+        Assert.Equal("/agenci", form.GetAttribute("action"));
         Assert.Equal("get", form.GetAttribute("method")!.ToLowerInvariant());
         var input = form.QuerySelector("input")!;
         Assert.Equal("q", input.GetAttribute("name"));
@@ -94,7 +94,7 @@ public class StaticPageStructureTests
         await using var web = PublicSupport.Host(FakeBackend.Throw(new HttpRequestException("down")));
         var page = await web.NewBrowser().GetAsync("/nie-ma-takiej-strony");
         Assert.Equal(HttpStatusCode.NotFound, page.Status);
-        Assert.NotNull(page.One("form[role=search][action='/programisci']"));
+        Assert.NotNull(page.One("form[role=search][action='/agenci']"));
         Assert.Empty(page.All("[data-testid=page-not-found] .chip"));
         Assert.Null(page.One("[data-testid=page-not-found] h2"));
     }

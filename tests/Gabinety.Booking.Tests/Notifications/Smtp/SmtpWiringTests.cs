@@ -165,7 +165,7 @@ public class SmtpWiringTests
         using var ms = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(Assert.Single(server.Mails).Data));
         var parsed = MimeKit.MimeMessage.Load(ms);
         Assert.Equal("Przypomnienie: konsultacja już jutro", parsed.Subject);
-        Assert.Contains($"https://gabinety.demo.invalid/moje/rezerwacje/{booking.Id}", parsed.TextBody);
+        Assert.Contains($"https://gabinety.demo.invalid/moje/dostepy/{booking.Id}", parsed.TextBody);
         Assert.DoesNotContain("MARKER-BRIEF", parsed.TextBody + parsed.HtmlBody);
     }
 }

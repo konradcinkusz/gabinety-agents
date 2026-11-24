@@ -53,6 +53,7 @@ public static class WebHostingExtensions
         app.UseSecurityHeaders(options); // sets headers when the response starts and never answers by itself, so every response, a refusal included, carries them
         app.UseBrowserOriginGuard(); // before everything that acts: a foreign Origin never reaches the circuit, antiforgery or authentication
         app.UseStatusCodePagesWithReExecute("/not-found", "?status={0}", createScopeForStatusCodePages: true); // the status rides along: the page says "Brak dostępu" for 403
+        app.UseLegacyRedirects(); // E-02: the old page addresses answer 301, before authentication
         app.UseAuthentication();
         app.UseAuthorization();
         app.UseAntiforgery();

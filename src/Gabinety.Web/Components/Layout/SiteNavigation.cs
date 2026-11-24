@@ -41,7 +41,7 @@ public sealed record FooterModel(IReadOnlyList<NavItem> Product, NavItem Practit
 /// </summary>
 public static class SiteNavigation
 {
-    public static readonly NavItem Practitioners = new("/programisci", Pl.Nav.Search);
+    public static readonly NavItem Practitioners = new("/agenci", Pl.Nav.Search);
     public static readonly NavItem HowItWorks = new("/jak-to-dziala", Pl.Nav.HowItWorks);
     public static readonly NavItem Pricing = new("/cennik", Pl.Nav.Pricing);
     public static readonly NavItem RankingRules = new("/zasady-rankingu", Pl.Nav.RankingRules);
@@ -53,8 +53,8 @@ public static class SiteNavigation
     public static IReadOnlyList<NavItem> Product { get; } = [Practitioners, HowItWorks, Pricing, RankingRules];
 
     public static readonly NavItem SignIn = new(ReturnTarget.LoginPath, Pl.Nav.SignIn), Register = new(ReturnTarget.RegisterPath, Pl.Nav.Register);
-    public static readonly NavItem MyBookings = new("/moje/rezerwacje", Pl.Nav.MyBookings), ApiKeys = new("/moje/klucze", Pl.Nav.ApiKeys), Account = new("/konto", Pl.Nav.Account), SignOut = new(ReturnTarget.LogoutPath, Pl.Nav.SignOut);
-    public static readonly NavItem PractitionerArea = new("/gabinet-programisty", Pl.Nav.PractitionerArea), BecomePractitioner = new("/gabinet-programisty", Pl.Nav.BecomePractitioner);
+    public static readonly NavItem MyBookings = new("/moje/dostepy", Pl.Nav.MyBookings), ApiKeys = new("/moje/klucze", Pl.Nav.ApiKeys), Account = new("/konto", Pl.Nav.Account), SignOut = new(ReturnTarget.LogoutPath, Pl.Nav.SignOut);
+    public static readonly NavItem PractitionerArea = new("/panel-agenta", Pl.Nav.PractitionerArea), BecomePractitioner = new("/panel-agenta", Pl.Nav.BecomePractitioner);
     public static readonly NavItem Admin = new("/admin/weryfikacja", Pl.Nav.Admin, "/admin");
     public static readonly NavItem VisitorBecomePractitioner = new("/rejestracja", Pl.Nav.BecomePractitioner);
     public static readonly NavItem Terms = new("/regulamin", Pl.Site.Terms), Privacy = new("/polityka-prywatnosci", Pl.Site.Privacy);

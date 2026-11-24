@@ -42,8 +42,8 @@ public class DocumentHeadTests
             "/api/v1/practitioners/demo-anna-demowska" => FakeBackend.Json(ClientAreaFixture.Profile()),
             _ => new HttpResponseMessage(HttpStatusCode.NotFound),
         };
-        var page = await web.NewBrowser().GetAsync("/gabinet/demo-anna-demowska");
-        Assert.Equal("http://localhost/gabinet/demo-anna-demowska", page.One("link[rel=canonical]")!.GetAttribute("href"));
+        var page = await web.NewBrowser().GetAsync("/agent/demo-anna-demowska");
+        Assert.Equal("http://localhost/agent/demo-anna-demowska", page.One("link[rel=canonical]")!.GetAttribute("href"));
         Assert.Equal("http://localhost/og-image.png", page.One("meta[property='og:image']")!.GetAttribute("content"));
         Assert.Equal("summary_large_image", page.One("meta[name='twitter:card']")!.GetAttribute("content"));
     }

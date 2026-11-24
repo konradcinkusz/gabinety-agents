@@ -5,12 +5,12 @@ import { expectNoSeriousA11yViolations } from "../harness/a11y";
 // critical axe violation. READ ONLY (it clicks nothing and posts nothing), so it needs no reseed and cannot disturb the money journeys. The full audit with screenshots stays
 // `tests/e2e/tools/ui-audit/audit.mjs` (it writes, so it is run by hand on a throw-away stack). Tap targets are not asserted yet: the page tasks of the plan bring them to zero first.
 const PHONE = { width: 390, height: 844 };
-const PROFILE = "/gabinet/demo-celina-przykladowska";
+const PROFILE = "/agent/demo-celina-przykladowska";
 
 const ROUTES: Record<string, string[]> = {
-  visitor: ["/", "/programisci", "/programisci/audyt-kodu", PROFILE, "/jak-to-dziala", "/zasady-rankingu", "/cennik", "/regulamin", "/polityka-prywatnosci", "/logowanie", "/rejestracja", "/rejestracja/sprawdz-skrzynke"],
-  "demo-client": ["/konto", "/moje/rezerwacje"],
-  "demo-practitioner-3": ["/gabinet-programisty", "/gabinet-programisty/profil", "/gabinet-programisty/oferty", "/gabinet-programisty/dostepnosc", "/gabinet-programisty/platnosci", "/moje/rezerwacje?role=practitioner"],
+  visitor: ["/", "/agenci", "/agenci/audyt-kodu", PROFILE, "/jak-to-dziala", "/zasady-rankingu", "/cennik", "/regulamin", "/polityka-prywatnosci", "/logowanie", "/rejestracja", "/rejestracja/sprawdz-skrzynke"],
+  "demo-client": ["/konto", "/moje/dostepy"],
+  "demo-practitioner-3": ["/panel-agenta", "/panel-agenta/profil", "/panel-agenta/oferty", "/panel-agenta/dostepnosc", "/panel-agenta/platnosci", "/moje/dostepy?role=practitioner"],
   "demo-admin": ["/admin/weryfikacja", "/admin/spory", "/admin/ksiega", "/admin/opinie", "/admin/podejrzane"],
 };
 

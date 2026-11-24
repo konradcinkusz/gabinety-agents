@@ -12,7 +12,7 @@ test.describe("harness smoke", () => {
     await expectNoSeriousA11yViolations(page);
   });
 
-  test("/programisci lists the 6 seeded practitioners", async ({ page }) => {
+  test("/agenci lists the 6 seeded practitioners", async ({ page }) => {
     const list = new PractitionerListPage(page);
     await list.goto();
     for (const p of APPROVED_DEMO_PRACTITIONERS) await expect(list.profileLink(p.name)).toBeVisible();
@@ -34,7 +34,7 @@ test.describe("harness smoke", () => {
 
   test("a demo user signs in", async ({ page, context, signInAs }) => {
     await signInAs("demo-client");
-    await page.goto("/moje/rezerwacje");
+    await page.goto("/moje/dostepy");
     await expect(page).not.toHaveURL(/\/logowanie/);
     expect((await context.cookies()).length).toBeGreaterThan(0);
   });

@@ -30,7 +30,7 @@ public class BookingFormTests
         await using var f = await ClientAreaFixture.Visitor();
         var page = await f.Browser.GetAsync(BookingUrl);
         Assert.Equal(HttpStatusCode.Found, page.Status);
-        Assert.StartsWith("/logowanie?redirect=%2Frezerwacja%2F", page.Location);
+        Assert.StartsWith("/logowanie?redirect=%2Fdostep%2F", page.Location);
         Assert.Contains("gabinet%3Ddemo-anna-demowska", page.Location);
         Assert.Empty(f.Web.Directory.Requests);
     }
@@ -80,10 +80,10 @@ public class BookingFormTests
     public async Task Without_a_profile_slug_the_page_says_the_address_is_incomplete_and_goes_to_the_search(string slug)
     {
         await using var f = await Open();
-        var page = await f.Browser.GetAsync($"/rezerwacja/{OfferingId}{slug}");
+        var page = await f.Browser.GetAsync($"/dostep/{OfferingId}{slug}");
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Contains("Adres jest niepełny.", page.Text);
-        Assert.Equal("/programisci", page.One("a.btn")!.GetAttribute("href"));
+        Assert.Equal("/agenci", page.One("a.btn")!.GetAttribute("href"));
         Assert.Empty(page.All("form"));
     }
 
@@ -103,9 +103,9 @@ public class BookingFormTests
     {
         await using var f = await Open();
         f.Web.Directory.Respond = r => r.RequestUri!.AbsolutePath.EndsWith("demo-anna-demowska") ? FakeBackend.Json(Profile()) : FakeBackend.Problem(HttpStatusCode.NotFound, "not_found");
-        Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync($"/rezerwacja/{OfferingId}?gabinet=demo-nikt")).Status);
-        Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync($"/rezerwacja/{Guid.NewGuid()}?gabinet=demo-anna-demowska")).Status);
-        Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync("/rezerwacja/nie-guid?gabinet=demo-anna-demowska")).Status);
+        Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync($"/dostep/{OfferingId}?gabinet=demo-nikt")).Status);
+        Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync($"/dostep/{Guid.NewGuid()}?gabinet=demo-anna-demowska")).Status);
+        Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync("/dostep/nie-guid?gabinet=demo-anna-demowska")).Status);
     }
 
     [Fact]
@@ -223,7 +223,7 @@ public class BookingFormTests
         var alert = page.One("[data-testid=booking-error]")!;
         Assert.Equal("alert", alert.GetAttribute("role"));
         Assert.Equal(text, alert.QuerySelector("p")!.TextContent);
-        Assert.Equal(profile ? "/gabinet/demo-anna-demowska" : null, alert.QuerySelector("a")?.GetAttribute("href"));
+        Assert.Equal(profile ? "/agent/demo-anna-demowska" : null, alert.QuerySelector("a")?.GetAttribute("href"));
         Assert.DoesNotContain("SERVER-TITLE-MUST-NOT-APPEAR", page.Html);
         Assert.DoesNotContain("SERVER-DETAIL-MUST-NOT-APPEAR", page.Html);
         Assert.Equal(Brief, page.One("#brief")!.TextContent); // nothing the visitor typed is lost
@@ -244,7 +244,7 @@ public class BookingFormTests
         await using var f = await Open(booking: _ => FakeBackend.Problem(HttpStatusCode.Unauthorized, "unauthenticated"));
         var page = await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", Brief));
         Assert.Equal(HttpStatusCode.Found, page.Status);
-        Assert.StartsWith("/logowanie?redirect=%2Frezerwacja%2F", page.Location);
+        Assert.StartsWith("/logowanie?redirect=%2Fdostep%2F", page.Location);
     }
 
     // ---- one key per attempt (CONTRACTS 0)

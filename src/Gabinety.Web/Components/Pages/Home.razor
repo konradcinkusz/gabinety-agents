@@ -12,7 +12,7 @@
     <h1>@Pl.Home.Title</h1>
     <p class="lead">@Pl.Home.Lead</p>
     @* A plain GET form: works without JavaScript. The field and the button share one row (G-7, P-HOME-1). *@
-    <form method="get" action="/programisci" role="search" aria-label="@Pl.Home.SearchRegion" class="search-form">
+    <form method="get" action="/agenci" role="search" aria-label="@Pl.Home.SearchRegion" class="search-form">
         <div class="field">
             <label for="home-q">@Pl.Home.SearchLabel</label>
             <input id="home-q" name="q" type="text" maxlength="60" placeholder="@Pl.Home.SearchPlaceholder" autocomplete="off" />
@@ -21,9 +21,9 @@
     </form>
     <p class="cluster examples">
         <span class="muted">@PlPages.HomeExtra.ExamplesLead</span>
-        <a class="chip" href="/programisci?q=audyt%20kodu">@PlPages.HomeExtra.ExampleAudit</a>
-        <a class="chip" href="/programisci?q=migracja%20.NET">@PlPages.HomeExtra.ExampleMigration</a>
-        <a class="chip" href="/programisci?q=integracja%20AI">@PlPages.HomeExtra.ExampleAi</a>
+        <a class="chip" href="/agenci?q=audyt%20kodu">@PlPages.HomeExtra.ExampleAudit</a>
+        <a class="chip" href="/agenci?q=migracja%20.NET">@PlPages.HomeExtra.ExampleMigration</a>
+        <a class="chip" href="/agenci?q=integracja%20AI">@PlPages.HomeExtra.ExampleAi</a>
     </p>
 </header>
 
@@ -40,7 +40,7 @@
             {
                 var count = CountOf(c.Slug);
                 <li class="card card--link tile">
-                    <a class="tile__link" href="@($"/programisci/{Uri.EscapeDataString(c.Slug)}")">@c.NamePl</a>
+                    <a class="tile__link" href="@($"/agenci/{Uri.EscapeDataString(c.Slug)}")">@c.NamePl</a>
                     <p class="tile__text">@DescriptionOf(c)</p>
                     @if (count is { } total)
                     {
@@ -50,7 +50,7 @@
             }
         </ul>
     }
-    <a href="/programisci">@Pl.Home.AllPractitioners</a>
+    <a href="/agenci">@Pl.Home.AllPractitioners</a>
 </section>
 
 @if (_featured is { Count: > 0 } featured)
@@ -63,7 +63,7 @@
             @foreach (var p in featured)
             {
                 <li class="card card--link featured__card">
-                    <h3 class="featured__name"><a href="@($"/gabinet/{p.Slug}")">@p.DisplayName</a></h3>
+                    <h3 class="featured__name"><a href="@($"/agent/{p.Slug}")">@p.DisplayName</a></h3>
                     <p class="featured__headline">@p.Headline</p>
                     <p class="num featured__price">@string.Format(PlPages.HomeExtra.FeaturedFrom, Money.Pln(p.FromPrice.AmountMinor))</p>
                 </li>
@@ -140,13 +140,13 @@
         _problems = taxonomyTask.Result.IsOk ? taxonomyTask.Result.Value!.Problems : null;
         _sitemap = sitemapTask.Result.Value?.Categories ?? [];
         // The trust row counts the approved practitioners (the plain list's count); with no answer the row simply omits the number.
-        _verified = _sitemap.FirstOrDefault(c => c.Path == "/programisci")?.PractitionerCount;
+        _verified = _sitemap.FirstOrDefault(c => c.Path == "/agenci")?.PractitionerCount;
         // The first page of the list, three of it. A failed read leaves the region out.
         _featured = featuredTask.Result.IsOk ? featuredTask.Result.Value!.Items.Take(3).ToList() : null;
     }
 
     /// <summary>The practitioner count of a category from the sitemap; absent when the sitemap does not answer or does not list it.</summary>
-    int? CountOf(string slug) => _sitemap.FirstOrDefault(c => c.Path == $"/programisci/{slug}")?.PractitionerCount;
+    int? CountOf(string slug) => _sitemap.FirstOrDefault(c => c.Path == $"/agenci/{slug}")?.PractitionerCount;
 
     static string DescriptionOf(CategoryDto c) =>
         PlPages.HomeExtra.CategoryDescriptions.TryGetValue(c.Slug, out var text) ? text : string.Format(PlPages.HomeExtra.CategoryFallback, c.NamePl);

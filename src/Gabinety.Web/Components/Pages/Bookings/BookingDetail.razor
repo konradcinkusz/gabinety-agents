@@ -1,4 +1,4 @@
-@page "/moje/rezerwacje/{BookingId:guid}"
+@page "/moje/dostepy/{BookingId:guid}"
 @attribute [Authorize]
 @using Gabinety.Web.Components.Pages.Shared
 @inject BookingClient Bookings
@@ -185,7 +185,7 @@ else if (_booking is { } b)
                 }
             </section>
         }
-        <p><a href="/moje/rezerwacje?role=@_role">@BookingsText.Back</a></p>
+        <p><a href="/moje/dostepy?role=@_role">@BookingsText.Back</a></p>
     </div>
 }
 
@@ -203,7 +203,7 @@ else if (_booking is { } b)
     public sealed class TaskForm { public string? Input { get; set; } }
 
     /// <summary>The path the action buttons post back to (a GET form: the query is replaced by the form's own fields).</summary>
-    string DetailPath => $"/moje/rezerwacje/{BookingId}";
+    string DetailPath => $"/moje/dostepy/{BookingId}";
 
     BookingDetailDto? _booking;
     ApiFailure? _failure, _actionFailure;
@@ -232,7 +232,7 @@ else if (_booking is { } b)
     };
 
     string DetailHref(string? action = null, string? done = null) =>
-        $"/moje/rezerwacje/{BookingId}?role={_role}" + (action is null ? "" : "&action=" + action) + (done is null ? "" : "&done=" + done);
+        $"/moje/dostepy/{BookingId}?role={_role}" + (action is null ? "" : "&action=" + action) + (done is null ? "" : "&done=" + done);
 
     protected override async Task OnInitializedAsync()
     {

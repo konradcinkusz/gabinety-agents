@@ -19,8 +19,8 @@ public class HomePageTests : BunitContext
 
     SitemapDto _sitemap = new(
     [
-        new("/programisci", 9, true), new("/programisci/audyt-kodu", 6, true), new("/programisci/migracja-legacy-dotnet", 1, false),
-        new("/programisci/integracja-ai", 2, true), new("/programisci/automatyzacja-procesow", 5, true),
+        new("/agenci", 9, true), new("/agenci/audyt-kodu", 6, true), new("/agenci/migracja-legacy-dotnet", 1, false),
+        new("/agenci/integracja-ai", 2, true), new("/agenci/automatyzacja-procesow", 5, true),
     ]);
 
     PageDto<PractitionerCardDto> _cards = Sample.Cards(5);
@@ -79,7 +79,7 @@ public class HomePageTests : BunitContext
         var cut = Open();
         var links = cut.FindAll("[data-testid=categories] a.tile__link");
         Assert.Equal(["Audyt kodu", "Migracja legacy .NET"], links.Take(2).Select(a => a.TextContent));
-        Assert.Equal("/programisci/migracja-legacy-dotnet", links[1].GetAttribute("href"));
+        Assert.Equal("/agenci/migracja-legacy-dotnet", links[1].GetAttribute("href"));
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public class HomePageTests : BunitContext
         var cards = region.Children;
         Assert.Equal(3, cards.Length);                                       // the first page, three of it
         Assert.All(cards, c => Assert.Contains("card--link", c.ClassName));
-        Assert.Equal(("Osoba Demo 1", "/gabinet/demo-person-1"), (cards[0].QuerySelector("h3 a")!.TextContent, cards[0].QuerySelector("h3 a")!.GetAttribute("href")));
+        Assert.Equal(("Osoba Demo 1", "/agent/demo-person-1"), (cards[0].QuerySelector("h3 a")!.TextContent, cards[0].QuerySelector("h3 a")!.GetAttribute("href")));
         Assert.Equal("Audyty kodu .NET i konsultacje architektury", cards[0].QuerySelector(".featured__headline")!.TextContent);
         Assert.Equal("od 250,00 zł", Plain(cards[0].QuerySelector(".featured__price")!.TextContent));
     }
@@ -151,7 +151,7 @@ public class HomePageTests : BunitContext
     [InlineData(25, "25 zatwierdzonych agentów")]
     public void The_trust_row_states_the_verified_count_in_the_right_polish_form(int verified, string expected)
     {
-        _sitemap = new([new("/programisci", verified, true)]);
+        _sitemap = new([new("/agenci", verified, true)]);
         var cut = Open();
         Assert.Equal(expected, cut.Find("[data-testid=trust] li").TextContent);
     }
@@ -170,7 +170,7 @@ public class HomePageTests : BunitContext
         var cut = Open();
         Assert.Single(cut.FindAll("h1"));
         Assert.Equal(
-            ["/programisci?q=audyt%20kodu", "/programisci?q=migracja%20.NET", "/programisci?q=integracja%20AI"],
+            ["/agenci?q=audyt%20kodu", "/agenci?q=migracja%20.NET", "/agenci?q=integracja%20AI"],
             cut.FindAll(".examples a.chip").Select(a => a.GetAttribute("href")));
         Assert.Equal(["audyt kodu", "migracja .NET", "integracja AI"], cut.FindAll(".examples a.chip").Select(a => a.TextContent));
         var cta = cut.Find("a.btn.btn--secondary");

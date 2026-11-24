@@ -1,4 +1,4 @@
-@page "/gabinet/{Slug}"
+@page "/agent/{Slug}"
 @attribute [AllowAnonymous]
 @attribute [Microsoft.AspNetCore.OutputCaching.OutputCache(PolicyName = Gabinety.Web.Hosting.PublicPageCachePolicy.Name)]
 @inject DirectoryClient Directory
@@ -9,8 +9,8 @@
 
 @if (_profile is { } p)
 {
-    <PageMeta Title="@string.Format(PlPages.Profile.MetaTitle, p.DisplayName)" Description="@string.Format(PlPages.Profile.MetaDescription, p.DisplayName, p.Headline)" Path="@($"/gabinet/{Uri.EscapeDataString(p.Slug)}")" Type="profile" Robots="index,follow">
-        <script type="application/ld+json">@((MarkupString)ProfileJsonLd.Build(p, Site.SiteBaseUrl + $"/gabinet/{Uri.EscapeDataString(p.Slug)}"))</script>
+    <PageMeta Title="@string.Format(PlPages.Profile.MetaTitle, p.DisplayName)" Description="@string.Format(PlPages.Profile.MetaDescription, p.DisplayName, p.Headline)" Path="@($"/agent/{Uri.EscapeDataString(p.Slug)}")" Type="profile" Robots="index,follow">
+        <script type="application/ld+json">@((MarkupString)ProfileJsonLd.Build(p, Site.SiteBaseUrl + $"/agent/{Uri.EscapeDataString(p.Slug)}"))</script>
     </PageMeta>
     var portfolio = ProfileJsonLd.SafeHttps(p.PortfolioUrl);
     var checks = p.Badges.Where(b => b != "approved").ToList();
@@ -110,7 +110,7 @@
         @if (_reviews is null)
         {
             <Alert Variant="AlertVariant.Warning" TestId="reviews-unavailable">@PlPages.Profile.ReviewsUnavailable</Alert>
-            <a class="btn" href="@($"/gabinet/{Uri.EscapeDataString(p.Slug)}#opinie")">@PlPages.Profile.Retry</a>
+            <a class="btn" href="@($"/agent/{Uri.EscapeDataString(p.Slug)}#opinie")">@PlPages.Profile.Retry</a>
         }
         else if (_reviews.Items.Count == 0 && ReviewCursor is null)
         {
@@ -138,7 +138,7 @@
             </ul>
             @if (_reviews.NextCursor is { } next)
             {
-                <a class="btn" href="@($"/gabinet/{Uri.EscapeDataString(p.Slug)}?opinie={Uri.EscapeDataString(next)}#opinie")">@PlPages.Profile.ReviewsMore</a>
+                <a class="btn" href="@($"/agent/{Uri.EscapeDataString(p.Slug)}?opinie={Uri.EscapeDataString(next)}#opinie")">@PlPages.Profile.ReviewsMore</a>
             }
         }
     </section>
@@ -155,13 +155,13 @@
 }
 else if (_gone)
 {
-    @* A profile the Directory calls gone is a 410 with the same page as a 404 (F-09). The 404 itself is the router's not-found page, which says the same for /gabinet/... *@
-    <PageMeta Title="@(PlPages.Profile.NotFoundTitle + " | " + Pl.Site.Name)" Description="@PlPages.Profile.NotFoundBody" Path="@($"/gabinet/{Uri.EscapeDataString(Slug)}")" Robots="noindex,follow" />
+    @* A profile the Directory calls gone is a 410 with the same page as a 404 (F-09). The 404 itself is the router's not-found page, which says the same for /agent/... *@
+    <PageMeta Title="@(PlPages.Profile.NotFoundTitle + " | " + Pl.Site.Name)" Description="@PlPages.Profile.NotFoundBody" Path="@($"/agent/{Uri.EscapeDataString(Slug)}")" Robots="noindex,follow" />
     <ProfileNotFoundBlock Suggestions="_suggestions" />
 }
 else
 {
-    <PageMeta Title="@(Pl.Site.Name)" Description="@PlPages.Profile.Unavailable" Path="@($"/gabinet/{Uri.EscapeDataString(Slug)}")" Robots="noindex,follow" />
+    <PageMeta Title="@(Pl.Site.Name)" Description="@PlPages.Profile.Unavailable" Path="@($"/agent/{Uri.EscapeDataString(Slug)}")" Robots="noindex,follow" />
     <h1>@PlPages.Profile.NotFoundTitle</h1>
     <Alert Variant="AlertVariant.Danger" TestId="unavailable">@PlPages.Profile.Unavailable</Alert>
 }
@@ -180,7 +180,7 @@ else
     List<string> TechNames(OfferingDto o) => [.. o.TechSlugs.Select(t => _techs.GetValueOrDefault(t) ?? t)];
 
     /// <summary>The purchase page of the package; it looks the package up in this profile, so the slug travels in the query (no endpoint resolves an offering id on its own).</summary>
-    static string BookHref(string slug, OfferingDto o) => $"/rezerwacja/{o.Id}?gabinet={Uri.EscapeDataString(slug)}";
+    static string BookHref(string slug, OfferingDto o) => $"/dostep/{o.Id}?gabinet={Uri.EscapeDataString(slug)}";
 
     /// <summary>"10 zadań, typowy czas ok. 30 min" for a task package, "500 tys. tokenów, API zgodne z OpenAI" for a chat package (<c>Units</c> are thousands of tokens).</summary>
     public static string UnitsLine(OfferingDto o) => UnitsLine(o.Kind, o.Units, o.DurationMinutes);

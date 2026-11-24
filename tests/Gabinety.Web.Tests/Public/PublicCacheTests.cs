@@ -21,7 +21,7 @@ public class PublicCacheTests
     }
 
     [Theory]
-    [InlineData("/")] [InlineData("/programisci")] [InlineData("/programisci/audyt-kodu")] [InlineData("/gabinet/demo-anna-demowska")] [InlineData("/jak-to-dziala")] [InlineData("/cennik")]
+    [InlineData("/")] [InlineData("/agenci")] [InlineData("/agenci/audyt-kodu")] [InlineData("/agent/demo-anna-demowska")] [InlineData("/jak-to-dziala")] [InlineData("/cennik")]
     [InlineData("/zasady-rankingu")] [InlineData("/regulamin")] [InlineData("/polityka-prywatnosci")] [InlineData("/sitemap.xml")] [InlineData("/robots.txt")]
     public async Task An_anonymous_get_of_a_public_page_is_served_from_the_cache_the_second_time(string path)
     {
@@ -40,17 +40,17 @@ public class PublicCacheTests
     {
         await using var web = PublicSupport.Host();
         var browser = web.NewBrowser();
-        await browser.GetAsync("/programisci");
+        await browser.GetAsync("/agenci");
         var after = web.Directory.Calls;
-        await browser.GetAsync("/programisci?duration=30");
+        await browser.GetAsync("/agenci?duration=30");
         Assert.True(web.Directory.Calls > after); // another query: not the cached plain list
         var filtered = web.Directory.Calls;
-        await browser.GetAsync("/programisci?duration=30");
-        await browser.GetAsync("/programisci");
+        await browser.GetAsync("/agenci?duration=30");
+        await browser.GetAsync("/agenci");
         Assert.Equal(filtered, web.Directory.Calls); // both now cached
-        await browser.GetAsync("/programisci?duration=60");
+        await browser.GetAsync("/agenci?duration=60");
         Assert.True(web.Directory.Calls > filtered); // a third query is a third entry
-        await browser.GetAsync("/programisci/audyt-kodu");
+        await browser.GetAsync("/agenci/audyt-kodu");
         Assert.Contains(web.Directory.Requests, r => r.PathAndQuery.StartsWith("/api/v1/practitioners?problem=audyt-kodu")); // another route too
     }
 
@@ -59,8 +59,8 @@ public class PublicCacheTests
     {
         await using var web = PublicSupport.Host();
         var browser = web.NewBrowser();
-        var plain = await browser.GetAsync("/gabinet/demo-anna-demowska");
-        var day = await browser.GetAsync($"/gabinet/demo-anna-demowska?oferta={PublicSupport.OfferA}&dzien=2026-11-25");
+        var plain = await browser.GetAsync("/agent/demo-anna-demowska");
+        var day = await browser.GetAsync($"/agent/demo-anna-demowska?oferta={PublicSupport.OfferA}&dzien=2026-11-25");
         Assert.NotEqual(plain.Html, day.Html);
     }
 
@@ -83,9 +83,9 @@ public class PublicCacheTests
     {
         await using var web = PublicSupport.Host();
         var browser = web.NewBrowser();
-        await browser.GetAsync("/programisci?q=x", ("Cookie", $"{AuthenticationExtensions.CookieName}=anything")); // first: with a session
+        await browser.GetAsync("/agenci?q=x", ("Cookie", $"{AuthenticationExtensions.CookieName}=anything")); // first: with a session
         var calls = web.Directory.Calls;
-        await browser.GetAsync("/programisci?q=x"); // then anonymous: must render, because nothing was stored
+        await browser.GetAsync("/agenci?q=x"); // then anonymous: must render, because nothing was stored
         Assert.True(web.Directory.Calls > calls);
     }
 
@@ -117,13 +117,13 @@ public class PublicCacheTests
     {
         await using var web = PublicSupport.Host();
         var browser = web.NewBrowser();
-        Assert.Equal(HttpStatusCode.NotFound, (await browser.GetAsync("/gabinet/nie-ma")).Status);
+        Assert.Equal(HttpStatusCode.NotFound, (await browser.GetAsync("/agent/nie-ma")).Status);
         var calls = web.Directory.Calls;
-        Assert.Equal(HttpStatusCode.NotFound, (await browser.GetAsync("/gabinet/nie-ma")).Status);
+        Assert.Equal(HttpStatusCode.NotFound, (await browser.GetAsync("/agent/nie-ma")).Status);
         Assert.True(web.Directory.Calls > calls);
         // ... and when the profile appears, the very next request sees it: a missing page is not remembered for five minutes.
         web.Directory.Respond = PublicSupport.DefaultDirectory().Let(d => (Func<HttpRequestMessage, HttpResponseMessage>)(r => r.RequestUri!.AbsolutePath == "/api/v1/practitioners/nie-ma" ? FakeBackend.Json(PublicSupport.Profile()) : d(r)));
-        Assert.Equal(HttpStatusCode.OK, (await browser.GetAsync("/gabinet/nie-ma")).Status);
+        Assert.Equal(HttpStatusCode.OK, (await browser.GetAsync("/agent/nie-ma")).Status);
     }
 
     [Fact]
@@ -142,9 +142,9 @@ public class PublicCacheTests
     {
         await using var web = PublicSupport.Host(r => r.RequestUri!.AbsolutePath.StartsWith("/api/v1/practitioners/") ? FakeBackend.Problem(HttpStatusCode.Gone, "gone") : PublicSupport.DefaultDirectory()(r));
         var browser = web.NewBrowser();
-        Assert.Equal(HttpStatusCode.Gone, (await browser.GetAsync("/gabinet/demo-anna-demowska")).Status);
+        Assert.Equal(HttpStatusCode.Gone, (await browser.GetAsync("/agent/demo-anna-demowska")).Status);
         var calls = web.Directory.Calls;
-        await browser.GetAsync("/gabinet/demo-anna-demowska");
+        await browser.GetAsync("/agent/demo-anna-demowska");
         Assert.True(web.Directory.Calls > calls);
     }
 
@@ -196,9 +196,9 @@ public class PublicCacheTests
             .Select(e => e.RoutePattern.RawText).Order().ToList();
         Assert.DoesNotContain("/logowanie", cached);
         Assert.DoesNotContain("/wyloguj", cached);
-        Assert.DoesNotContain("/moje/rezerwacje", cached);
+        Assert.DoesNotContain("/moje/dostepy", cached);
         Assert.DoesNotContain("/oauth/callback", cached);
-        Assert.Contains("/gabinet/{Slug}", cached);
+        Assert.Contains("/agent/{Slug}", cached);
         Assert.Contains("/sitemap.xml", cached);
     }
 }

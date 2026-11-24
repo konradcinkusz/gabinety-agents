@@ -16,12 +16,12 @@ mkdirSync(OUT, { recursive: true });
 const slug = "demo-celina-przykladowska";
 const PUBLIC_ROUTES = [
   { id: "home", path: "/", dark: "both" },
-  { id: "programisci", path: "/programisci", dark: "both" },
-  { id: "programisci-category", path: "/programisci/audyt-kodu" },
-  { id: "programisci-category-tech", path: "/programisci/audyt-kodu/dotnet", shots: "none" },
-  { id: "programisci-filtered-empty", path: "/programisci?q=zzzzzz", shots: "mobile" },
-  { id: "gabinet-profile", path: `/gabinet/${slug}`, dark: "both" },
-  { id: "gabinet-unknown", path: "/gabinet/demo-nie-ma-takiego", shots: "mobile" },
+  { id: "programisci", path: "/agenci", dark: "both" },
+  { id: "programisci-category", path: "/agenci/audyt-kodu" },
+  { id: "programisci-category-tech", path: "/agenci/audyt-kodu/dotnet", shots: "none" },
+  { id: "programisci-filtered-empty", path: "/agenci?q=zzzzzz", shots: "mobile" },
+  { id: "gabinet-profile", path: `/agent/${slug}`, dark: "both" },
+  { id: "gabinet-unknown", path: "/agent/demo-nie-ma-takiego", shots: "mobile" },
   { id: "jak-to-dziala", path: "/jak-to-dziala", shots: "mobile" },
   { id: "zasady-rankingu", path: "/zasady-rankingu", shots: "mobile" },
   { id: "cennik", path: "/cennik", dark: true },
@@ -32,7 +32,7 @@ const PUBLIC_ROUTES = [
   { id: "rejestracja-sprawdz-skrzynke", path: "/rejestracja/sprawdz-skrzynke", shots: "mobile" },
   { id: "not-found", path: "/nie-ma-takiej-strony", shots: "mobile" },
 ];
-const AUTH_GUARDS = ["/konto", "/moje/rezerwacje", "/gabinet-programisty", "/admin/spory", "/checkout/mock/00000000-0000-0000-0000-000000000000"];
+const AUTH_GUARDS = ["/konto", "/moje/dostepy", "/panel-agenta", "/admin/spory", "/checkout/mock/00000000-0000-0000-0000-000000000000"];
 
 /** Routes per role; `{...}` placeholders are filled from discovery. */
 const ROLE_ROUTES = {
@@ -40,21 +40,21 @@ const ROLE_ROUTES = {
   client: [
     { id: "home-signed-in", path: "/", shots: "desktop" },
     { id: "konto", path: "/konto" },
-    { id: "moje-rezerwacje", path: "/moje/rezerwacje", dark: true },
-    { id: "moje-rezerwacje-practitioner-tab", path: "/moje/rezerwacje?role=practitioner", shots: "none" },
+    { id: "moje-rezerwacje", path: "/moje/dostepy", dark: true },
+    { id: "moje-rezerwacje-practitioner-tab", path: "/moje/dostepy?role=practitioner", shots: "none" },
     { id: "moje-opinie", path: "/moje/opinie", shots: "desktop" },
     { id: "admin-forbidden", path: "/admin/spory", shots: "desktop" },
-    { id: "gabinet-programisty-forbidden", path: "/gabinet-programisty", shots: "desktop" },
+    { id: "gabinet-programisty-forbidden", path: "/panel-agenta", shots: "desktop" },
   ],
   practitioner: [
-    { id: "gabinet-programisty", path: "/gabinet-programisty", dark: true },
-    { id: "gabinet-programisty-profil", path: "/gabinet-programisty/profil" },
-    { id: "gabinet-programisty-oferty", path: "/gabinet-programisty/oferty" },
-    { id: "gabinet-programisty-dostepnosc", path: "/gabinet-programisty/dostepnosc", dark: true },
-    { id: "gabinet-programisty-platnosci", path: "/gabinet-programisty/platnosci", shots: "desktop" },
-    { id: "moje-rezerwacje-practitioner", path: "/moje/rezerwacje?role=practitioner" },
+    { id: "gabinet-programisty", path: "/panel-agenta", dark: true },
+    { id: "gabinet-programisty-profil", path: "/panel-agenta/profil" },
+    { id: "gabinet-programisty-oferty", path: "/panel-agenta/oferty" },
+    { id: "gabinet-programisty-dostepnosc", path: "/panel-agenta/dostepnosc", dark: true },
+    { id: "gabinet-programisty-platnosci", path: "/panel-agenta/platnosci", shots: "desktop" },
+    { id: "moje-rezerwacje-practitioner", path: "/moje/dostepy?role=practitioner" },
     { id: "konto", path: "/konto", shots: "none" },
-    { id: "booking-detail-practitioner", path: "/moje/rezerwacje/{practitionerBooking}?role=practitioner" },
+    { id: "booking-detail-practitioner", path: "/moje/dostepy/{practitionerBooking}?role=practitioner" },
   ],
   admin: [
     { id: "admin-weryfikacja", path: "/admin/weryfikacja", dark: true },
@@ -77,13 +77,13 @@ async function discover(browser) {
   const ids = {};
   const ctx = await newContext(browser, { userName: "demo-client", vp: 1440, scheme: "light" });
   const page = await ctx.newPage();
-  await page.goto("/moje/rezerwacje"); await settle(page);
-  ids.clientBookings = [...new Set(await page.$$eval('a[href^="/moje/rezerwacje/"]', (as) => as.map((a) => a.getAttribute("href").split("?")[0].split("/").pop())))];
+  await page.goto("/moje/dostepy"); await settle(page);
+  ids.clientBookings = [...new Set(await page.$$eval('a[href^="/moje/dostepy/"]', (as) => as.map((a) => a.getAttribute("href").split("?")[0].split("/").pop())))];
   await ctx.close();
   const pc = await newContext(browser, { userName: "demo-practitioner-3", vp: 1440, scheme: "light" });
   const pp = await pc.newPage();
-  await pp.goto("/moje/rezerwacje?role=practitioner"); await settle(pp);
-  ids.practitionerBookings = [...new Set(await pp.$$eval('a[href^="/moje/rezerwacje/"]', (as) => as.map((a) => a.getAttribute("href").split("?")[0].split("/").pop())))];
+  await pp.goto("/moje/dostepy?role=practitioner"); await settle(pp);
+  ids.practitionerBookings = [...new Set(await pp.$$eval('a[href^="/moje/dostepy/"]', (as) => as.map((a) => a.getAttribute("href").split("?")[0].split("/").pop())))];
   await pc.close();
   const ac = await newContext(browser, { userName: "demo-admin", vp: 1440, scheme: "light" });
   const ap = await ac.newPage();
@@ -187,7 +187,7 @@ for (const g of flowsOnly ? [] : AUTH_GUARDS) {
 }
 if (!flowsOnly) {
   const ctx = await newContext(browser, { userName: "demo-client", vp: 1440, scheme: "light" });
-  for (const g of ["/admin/weryfikacja", "/admin/ksiega", "/gabinet-programisty"]) { const r = await ctx.request.get(g, { maxRedirects: 0 }); guards.push({ who: "client", path: g, status: r.status(), location: r.headers()["location"] ?? null }); }
+  for (const g of ["/admin/weryfikacja", "/admin/ksiega", "/panel-agenta"]) { const r = await ctx.request.get(g, { maxRedirects: 0 }); guards.push({ who: "client", path: g, status: r.status(), location: r.headers()["location"] ?? null }); }
   await ctx.close();
 }
 

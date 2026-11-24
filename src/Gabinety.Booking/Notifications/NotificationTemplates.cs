@@ -29,7 +29,7 @@ public static class NotificationTemplates
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "no template for this kind"),
     };
 
-    const string Booking = "/moje/rezerwacje/{0}";
+    const string Booking = "/moje/dostepy/{0}";
 
     /// <param name="siteBaseUrl"><c>Site:BaseUrl</c>; a trailing slash is trimmed here too.</param>
     public static RenderedEmail Render(NotificationKind kind, string siteBaseUrl, Guid bookingId, DateTimeOffset startUtc, bool forPractitioner = false)

@@ -7,7 +7,7 @@ namespace Gabinety.Web.Tests.Models;
 /// <summary>Plain C# model tests: no renderer (BLAZOR-WEB-APP section 10). They mirror web/src/lib/seo/listUrl.ts and metadata.ts.</summary>
 public class ListStateTests
 {
-    [Fact] public void An_empty_request_is_the_plain_list() => Assert.Equal("/programisci", ListState.Parse(null, null, null, null, null, null).Href());
+    [Fact] public void An_empty_request_is_the_plain_list() => Assert.Equal("/agenci", ListState.Parse(null, null, null, null, null, null).Href());
 
     [Theory]
     [InlineData("30", 30)] [InlineData("60", 60)] [InlineData("45", null)] [InlineData("abc", null)] [InlineData("-30", null)] [InlineData(null, null)]
@@ -32,14 +32,14 @@ public class ListStateTests
     public void Links_keep_the_other_filters_and_return_to_the_first_page()
     {
         var s = ListState.Parse("audyt-kodu", "dotnet", "60", "30000", "kod", "CUR");
-        Assert.Equal("/programisci/audyt-kodu/dotnet?duration=60&maxPriceMinor=30000&q=kod&cursor=CUR", s.Href());
-        Assert.Equal("/programisci/audyt-kodu/dotnet?duration=60&maxPriceMinor=30000&q=kod", s.FirstPage().Href());
-        Assert.Equal("/programisci/audyt-kodu/dotnet?maxPriceMinor=30000&q=kod", s.WithDuration(null).Href());
-        Assert.Equal("/programisci/migracja?duration=60&maxPriceMinor=30000&q=kod", s.WithProblem("migracja").Href()); // a new problem drops the technology and the cursor
-        Assert.Equal("/programisci/audyt-kodu/dotnet", s.Cleared().Href());
+        Assert.Equal("/agenci/audyt-kodu/dotnet?duration=60&maxPriceMinor=30000&q=kod&cursor=CUR", s.Href());
+        Assert.Equal("/agenci/audyt-kodu/dotnet?duration=60&maxPriceMinor=30000&q=kod", s.FirstPage().Href());
+        Assert.Equal("/agenci/audyt-kodu/dotnet?maxPriceMinor=30000&q=kod", s.WithDuration(null).Href());
+        Assert.Equal("/agenci/migracja?duration=60&maxPriceMinor=30000&q=kod", s.WithProblem("migracja").Href()); // a new problem drops the technology and the cursor
+        Assert.Equal("/agenci/audyt-kodu/dotnet", s.Cleared().Href());
     }
 
-    [Fact] public void The_search_text_is_escaped_in_a_link() => Assert.Equal("/programisci?q=a%26b%20c", new ListState(Q: "a&b c").Href());
+    [Fact] public void The_search_text_is_escaped_in_a_link() => Assert.Equal("/agenci?q=a%26b%20c", new ListState(Q: "a&b c").Href());
 
     [Theory]
     [InlineData(null, null, null, null, false)] [InlineData("30", null, null, null, true)] [InlineData(null, "15000", null, null, true)] [InlineData(null, null, "x", null, true)] [InlineData(null, null, null, "c", true)]
@@ -48,7 +48,7 @@ public class ListStateTests
 
 public class ListViewTests
 {
-    static ListView View(ListState? s = null, int count = 6, bool indexable = true, string path = "/programisci") =>
+    static ListView View(ListState? s = null, int count = 6, bool indexable = true, string path = "/agenci") =>
         new(s ?? new ListState(), Sample.Taxonomy, Sample.Sitemap(count, indexable, path));
 
     [Fact]
@@ -63,10 +63,10 @@ public class ListViewTests
     [Fact]
     public void A_category_and_a_technology_name_themselves_from_the_taxonomy()
     {
-        var c = View(new ListState("audyt-kodu"), path: "/programisci/audyt-kodu");
+        var c = View(new ListState("audyt-kodu"), path: "/agenci/audyt-kodu");
         Assert.Equal("Audyt kodu", c.Heading);
         Assert.Equal("Audyt kodu: agenci AI | Gabinety Tech", c.MetaTitle);
-        var t = View(new ListState("audyt-kodu", "dotnet"), path: "/programisci/audyt-kodu/dotnet");
+        var t = View(new ListState("audyt-kodu", "dotnet"), path: "/agenci/audyt-kodu/dotnet");
         Assert.Equal("Audyt kodu: .NET", t.Heading);
         Assert.Contains("Audyt kodu i .NET", t.MetaTitle);
     }
@@ -80,7 +80,7 @@ public class ListViewTests
     public void Robots_follow_the_indexable_flag_and_variants(int count, bool indexable, bool variant, string robots) =>
         Assert.Equal(robots, View(new ListState(Duration: variant ? 30 : null), count, indexable).Robots);
 
-    [Fact] public void A_variant_points_at_the_plain_list_as_its_canonical() => Assert.Equal("/programisci/audyt-kodu", View(new ListState("audyt-kodu", Duration: 30, Cursor: "x"), path: "/programisci/audyt-kodu").CanonicalPath);
+    [Fact] public void A_variant_points_at_the_plain_list_as_its_canonical() => Assert.Equal("/agenci/audyt-kodu", View(new ListState("audyt-kodu", Duration: 30, Cursor: "x"), path: "/agenci/audyt-kodu").CanonicalPath);
 
     [Fact]
     public void Filters_mark_the_current_choice_and_offer_technologies_only_inside_a_problem()
@@ -92,8 +92,8 @@ public class ListViewTests
         var inside = View(new ListState("audyt-kodu", Duration: 60)).Filters();
         Assert.Equal(["Problem", "Technologia", "Typowy czas wykonania", "Cena do"], inside.Select(g => g.Title));
         Assert.Contains(inside[0].Items, i => i is { Label: "Audyt kodu", Current: true });
-        Assert.Contains(inside[2].Items, i => i is { Label: "60 min", Current: true, Href: "/programisci/audyt-kodu?duration=60" });
-        Assert.Contains(inside[3].Items, i => i.Label == "do 150,00 zł" && i.Href == "/programisci/audyt-kodu?duration=60&maxPriceMinor=15000");
+        Assert.Contains(inside[2].Items, i => i is { Label: "60 min", Current: true, Href: "/agenci/audyt-kodu?duration=60" });
+        Assert.Contains(inside[3].Items, i => i.Label == "do 150,00 zł" && i.Href == "/agenci/audyt-kodu?duration=60&maxPriceMinor=15000");
     }
 }
 

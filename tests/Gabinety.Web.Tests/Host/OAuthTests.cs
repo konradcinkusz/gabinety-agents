@@ -20,14 +20,14 @@ public class OAuthTests
     {
         await using var web = Web();
         var browser = web.NewBrowser();
-        var (start, state, target) = await Start(browser, "?redirect=%2Fmoje%2Frezerwacje");
+        var (start, state, target) = await Start(browser, "?redirect=%2Fmoje%2Fdostepy");
         Assert.Equal(HttpStatusCode.Found, start.Status);
         Assert.Equal("http://auth.test/api/v1/external-auth/login", target.GetLeftPart(UriPartial.Path));
         var q = HttpUtility.ParseQueryString(target.Query);
         Assert.Equal("GitHub", q["provider"]);
         var returnUrl = new Uri(q["returnUrl"]!);
         Assert.Equal("http://localhost/oauth/callback", returnUrl.GetLeftPart(UriPartial.Path)); // Site:BaseUrl, never evil.example
-        Assert.Equal("/moje/rezerwacje", HttpUtility.ParseQueryString(returnUrl.Query)["redirect"]);
+        Assert.Equal("/moje/dostepy", HttpUtility.ParseQueryString(returnUrl.Query)["redirect"]);
         Assert.True(state.Length >= 43);
         var cookie = Assert.Single(start.SetCookies);
         Assert.StartsWith($"gt_oauth_state={state}", cookie);
@@ -69,16 +69,16 @@ public class OAuthTests
     {
         await using var web = Web();
         var browser = web.NewBrowser();
-        var (_, state, _) = await Start(browser, "?redirect=%2Fmoje%2Frezerwacje");
+        var (_, state, _) = await Start(browser, "?redirect=%2Fmoje%2Fdostepy");
         web.Identity.Backend.Respond = r => r.RequestUri!.AbsolutePath == "/api/v1/external-auth/exchange"
             ? FakeBackend.Json(new { accessToken = web.Identity.Issue(email: "gh@demo.example"), refreshToken = "r", expiresIn = 3600 })
             : FakeBackend.Raw(web.Identity.Jwks());
-        var cb = await browser.GetAsync($"/oauth/callback?code=one-time&state={state}&redirect=%2Fmoje%2Frezerwacje");
-        Assert.Equal(("/moje/rezerwacje", true), (cb.Location, browser.Cookies.ContainsKey("gt_session")));
+        var cb = await browser.GetAsync($"/oauth/callback?code=one-time&state={state}&redirect=%2Fmoje%2Fdostepy");
+        Assert.Equal(("/moje/dostepy", true), (cb.Location, browser.Cookies.ContainsKey("gt_session")));
         Assert.False(browser.Cookies.ContainsKey("gt_oauth_state")); // single use
         Assert.Contains(cb.SetCookies, c => c.StartsWith("gt_oauth_state=;") && c.Contains("expires=Thu, 01 Jan 1970", StringComparison.OrdinalIgnoreCase));
         Assert.Contains("\"code\":\"one-time\"", web.Identity.Backend.Requests.Single(r => r.PathAndQuery.Contains("exchange")).Body);
-        Assert.Equal(HttpStatusCode.OK, (await browser.GetAsync("/moje/rezerwacje")).Status);
+        Assert.Equal(HttpStatusCode.OK, (await browser.GetAsync("/moje/dostepy")).Status);
     }
 
     [Theory]

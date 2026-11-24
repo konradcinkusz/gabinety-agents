@@ -19,7 +19,7 @@ const PAGE = `<!doctype html><html lang="pl"><body>
   <div class="slot-picker"><a class="slot" data-utc="2026-12-01T08:30:00Z" href="/s">09:30</a><p id="note" data-enhance="local-time-note" data-template="Strefa: {zone}. {pl} w Polsce to {local} u Ciebie." data-title="{local} ({zone})" hidden></p></div>
   <input id="pw" type="password" value="secret"/>
   <button type="button" id="reveal" data-enhance="reveal" data-target="#pw" data-show="Pokaż" data-hide="Ukryj" hidden>Pokaż</button>
-  <button type="button" id="copy" data-enhance="copy" data-copy="/gabinet/x" data-done="Skopiowano" hidden>Kopiuj</button>
+  <button type="button" id="copy" data-enhance="copy" data-copy="/agent/x" data-done="Skopiowano" hidden>Kopiuj</button>
 </body></html>`;
 
 test.describe("enhance.js", () => {
