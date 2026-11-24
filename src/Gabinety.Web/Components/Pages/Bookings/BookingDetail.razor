@@ -11,7 +11,6 @@
 <PageTitle>@BookingsText.DetailMetaTitle</PageTitle>
 <HeadContent>
     <meta name="robots" content="noindex,follow" />
-    @if (_tasks.Any(t => t.Status is "queued" or "running")) {<meta http-equiv="refresh" content="5" />}
 </HeadContent>
 <h1>@BookingsText.DetailTitle</h1>
 

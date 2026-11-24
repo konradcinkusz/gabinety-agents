@@ -105,18 +105,16 @@ Dziś nic nie jest naliczane, gdy klient rozłączy się przed końcem strumieni
 
 Rekomendacja: C z oznaczeniem w `UsageRecord`, że wartość jest szacunkiem, albo A, jeśli ryzyko nadużycia jest małe (pakiet jest opłacony z góry i ważny 30 dni). Decyzja zależy od tego, co platforma agentów zwraca przy zerwanym połączeniu.
 
-### 4. Odświeżanie listy zadań
+### 4. Odświeżanie listy zadań: ROZSTRZYGNIĘTE (właściciel): opcja B, bez napisu i bez meta refresh, zostaje „Odśwież listę”
 
-`BookingDetail.razor` ustawia `<meta http-equiv="refresh" content="5">`, gdy są zadania `queued` lub `running`, i pokazuje „Zadanie jest w toku. Strona odświeża się sama.” Po zleceniu zadania następuje nawigacja rozszerzona (enhanced navigation), po której meta refresh nie działa, tak samo dla adresu z fragmentem `#zadania`. Napis nie jest więc prawdą, a zadanie zostaje „W kolejce”, dopóki klient nie kliknie „Odśwież listę”. Dodatkowo axe zgłasza `meta-refresh` jako błąd krytyczny (WCAG 2.2.1), gdy strona jest w stanie „w toku”; testy J3, J5 i J6 pilnują, żeby axe oglądał stronę po odpowiedzi agenta (świadome ominięcie).
+Pytanie: `BookingDetail.razor` ustawiał `<meta http-equiv="refresh" content="5">`, gdy były zadania `queued` lub `running`, i pokazywał „Zadanie jest w toku. Strona odświeża się sama.” Po zleceniu zadania następuje nawigacja rozszerzona (enhanced navigation), po której meta refresh nie działa, tak samo dla adresu z fragmentem `#zadania`, więc napis nie był prawdą. Dodatkowo axe zgłaszał `meta-refresh` jako błąd krytyczny (WCAG 2.2.1) w stanie „w toku”. Proponowałem B teraz i C (skrypt odświeżający listę, wyłączalny przez użytkownika) później; **właściciel wybrał B**.
 
-| Opcja | Skutek |
-|---|---|
-| A. Zostawić | błąd dostępności zgłaszany przez axe przy stanie „w toku”, napis niezgodny z działaniem |
-| B. Usunąć napis „Strona odświeża się sama” i meta refresh, zostawić „Odśwież listę” | prawdziwy komunikat, brak błędu axe; klient odświeża ręcznie |
-| C. Skrypt (np. mały `enhance.js` odświeżający listę co kilka sekund, wyłączalny przez użytkownika) | zgodne z WCAG, jeśli da się to zatrzymać; strona działa bez skryptu jak dziś |
-| D. Strona interaktywna (Blazor circuit) odpytuje stan | wymaga trybu interaktywnego na tej stronie; drożej w pamięci (`docs/operations/PERFORMANCE.md`) |
+**Co zrobiono:**
+- z `BookingDetail.razor` usunięty `<meta http-equiv="refresh">`; tekst to teraz „Zadanie jest w toku.” z linkiem „Odśwież listę” (zwykły link do tej samej strony, działa bez skryptu). Strona potwierdzenia zakupu zachowuje własny meta refresh na czas oczekiwania na płatność (inna sprawa: tam nawigacja jest zwykła, a napis jest prawdziwy);
+- test strony (`TasksAndKeysTests`): brak `meta[http-equiv=refresh]` przy zadaniu w kolejce, brak napisu „odświeża się sam”, link „Odśwież listę” prowadzi na stronę dostępu;
+- e2e: J5 i J6 nie czekają już na wykonanie zadania tylko po to, by ominąć axe (axe ogląda stronę ze zleceniem „w kolejce”), J3 dodatkowo sprawdza axe zaraz po zleceniu; J3 nadal czeka na odpowiedź agenta (przez „Odśwież listę”), bo sprawdza jej treść. Komentarz w `waitForAnswer` poprawiony.
 
-Rekomendacja: B teraz (najmniejsza zmiana, napis przestaje kłamać, znika błąd axe), C później, jeśli klienci będą czekać na wyniki dłużej niż kilkadziesiąt sekund.
+**Zostaje.** Klient widzi wynik po kliknięciu „Odśwież listę”; jeśli będzie czekał na wyniki dłużej niż kilkadziesiąt sekund, opcja C (skrypt odświeżający, wyłączalny) pozostaje do zrobienia.
 
 ## Skutki
 

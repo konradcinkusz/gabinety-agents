@@ -2,7 +2,6 @@ import { expect, test } from "../harness/fixtures";
 import { restoreClock } from "../harness/clock";
 import { resetAndReseed } from "../harness/demo-data";
 import { expectNoSeriousA11yViolations } from "../harness/a11y";
-import { waitForTasksDone } from "../harness/booking-api";
 import { AdminDisputesPage, BookingDetailPage } from "../harness/pages-bookings";
 import {
   actorContext, addDays, addOffering, bookAndPay, day, feeOf, getBooking, ledgerDownload, ledgerRows, type LedgerRow, orderTask, publicProfile, registerDemoUser, uniqueDemoName,
@@ -52,8 +51,6 @@ test.describe("J6 claim and partial refund", () => {
     const b = await bookAndPay(context, { offeringId });
     expect((await getBooking(context, b.id)).price.amountMinor).toBe(PRICE);
     await orderTask(context, b.id, "Opisz granice modułów opisanego monolitu i miejsca do wydzielenia (j6).");
-    // the page refreshes itself with a meta tag while a task is queued or running, and axe rejects that (meta-refresh, WCAG 2.2.1): the journey looks at it once the answer is there
-    await waitForTasksDone(context.request, b.id);
 
     // the client makes the claim in the UI
     const detail = new BookingDetailPage(page);
