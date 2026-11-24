@@ -34,10 +34,10 @@ public sealed class WebOptions
     public bool MockPayments { get; init; }
 
     /// <summary>
-    /// The address of the public API (<c>/v1</c>) as the visitor is shown it in the "how to connect" section. The deployed estate serves it on the site's origin; in a FAKE profile the backends are public
-    /// localhost addresses, so the Booking service's own address is shown. No new setting: it is derived from keys that already exist.
+    /// The address of the public API (<c>/v1</c>) as the visitor is shown it in the "how to connect" section: always the address of the site. The host forwards <c>/v1</c> to the Booking service
+    /// (<see cref="Hosting.AgentApiProxy"/>, ADR-0013 decision 1), in the fake profile too, so the customer has one address everywhere.
     /// </summary>
-    public string ApiBaseUrl => (MockPayments && Backends.GetValueOrDefault(Backend.Booking)?.FirstOrDefault() is { } booking ? booking : SiteBaseUrl) + "/v1";
+    public string ApiBaseUrl => SiteBaseUrl + "/v1";
 
     public bool SecureCookies => SiteBaseUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
 

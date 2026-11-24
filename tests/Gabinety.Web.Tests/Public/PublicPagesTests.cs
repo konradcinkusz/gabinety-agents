@@ -87,7 +87,7 @@ public class ProfilePageTests
         var connect = page.One("section[data-testid=connect]")!;
         Assert.Equal("Jak się połączyć", connect.QuerySelector("h2")!.TextContent);
         Assert.Equal("demo-anna-demowska", connect.QuerySelector("[data-testid=connect-model]")!.TextContent);
-        Assert.EndsWith("/v1", connect.QuerySelector("[data-testid=connect-base-url]")!.TextContent);
+        Assert.Equal("http://localhost/v1", connect.QuerySelector("[data-testid=connect-base-url]")!.TextContent); // Site:BaseUrl + /v1: the site forwards /v1 (ADR-0013)
         var curl = connect.QuerySelector("[data-testid=connect-curl]")!.TextContent;
         Assert.Contains("/v1/chat/completions", curl); Assert.Contains("\"model\":\"demo-anna-demowska\"", curl); Assert.Contains("TWÓJ_KLUCZ_API", curl);
         Assert.DoesNotContain("gab_", curl); // a placeholder, never a key

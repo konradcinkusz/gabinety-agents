@@ -190,16 +190,16 @@ curl -s -H "$(auth $CT)" -H 'Content-Type: application/json' -d "{\"bookingId\":
 
 #### Call the public API
 
-The public API is served by Booking (`http://localhost:5102/v1` in the fake profile) and authenticated with an API key, not a token. Keys are made in the panel (`/moje/klucze`, "Utwórz klucz"; the full key is shown once) or with `POST $B/me/api-keys` (`{"name":"..."}`, 201 with the field `key`, once). `demo-client` owns a `Chat` package of `demo-bartosz-testowy`. Full description: `docs/operations/AGENT-API.md`.
+The public API is served by Booking but reached under the site's address (`http://localhost:3000/v1` in the fake profile; the web host forwards `/v1`, ADR-0013) and authenticated with an API key, not a token. Keys are made in the panel (`/moje/klucze`, "Utwórz klucz"; the full key is shown once) or with `POST $B/me/api-keys` (`{"name":"..."}`, 201 with the field `key`, once). `demo-client` owns a `Chat` package of `demo-bartosz-testowy`. Full description: `docs/operations/AGENT-API.md`.
 
 ```bash
 KEY=$(curl -s -H "$(auth $CT)" -H 'Content-Type: application/json' -d '{"name":"curl"}' $B/me/api-keys | jq -r .key)   # at most 5 active keys per account
-curl -s localhost:5102/v1/models -H "Authorization: Bearer $KEY"
+curl -s localhost:3000/v1/models -H "Authorization: Bearer $KEY"
 # {"object":"list","data":[{"id":"demo-bartosz-testowy","object":"model","owned_by":"gabinety"}]}
-curl -s localhost:5102/v1/chat/completions -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
+curl -s localhost:3000/v1/chat/completions -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
   -d '{"model":"demo-bartosz-testowy","messages":[{"role":"user","content":"test"}]}' | jq -c '{c:.choices[0].message.content,t:.usage.total_tokens}'
 # {"c":"[demo demo-bartosz-testowy] Otrzymano 4 znaków.","t":21}
-curl -sN localhost:5102/v1/chat/completions -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
+curl -sN localhost:3000/v1/chat/completions -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
   -d '{"model":"demo-bartosz-testowy","stream":true,"messages":[{"role":"user","content":"test"}]}'   # SSE, ends with data: [DONE]
 ```
 
@@ -223,7 +223,7 @@ Automated only: the sign-in POST to the web origin with a foreign `Origin` heade
 
 ### J8 Buy a Chat package, create a key, call the API
 1. Register a new account (`/rejestracja`), open Anna Demowska (`/agent/demo-anna-demowska`) and buy her `Chat` package ("500 tys. tokenów, API zgodne z OpenAI", 99 zł) as in J3 steps 2 to 4.
-2. The confirmation ("Dostęp aktywny. Dziękujemy!") shows how to connect: the base URL (`http://localhost:5102/v1` in the fake profile), the model (`demo-anna-demowska`) and "Utwórz klucz API".
+2. The confirmation ("Dostęp aktywny. Dziękujemy!") shows how to connect: the base URL (`http://localhost:3000/v1` in the fake profile), the model (`demo-anna-demowska`) and "Utwórz klucz API".
 3. `/moje/klucze` ("Klucze API"): "Nazwa klucza", "Utwórz klucz". The key (`gab_` and 40 characters) is shown once; the list later shows only its prefix and "jeszcze nie użyto" until it is used.
 4. Call `GET /v1/models`, then `POST /v1/chat/completions` plain and with `"stream":true` (the commands above). An agent without a package gives 404 `model_not_found`; a wrong key 401 `invalid_api_key`.
 5. Each answer costs `N / 4 + 20` tokens (N = the length of the messages). `/moje/dostepy/<id>` shows "wykorzystano X z 500 tys. tokenów" (in whole thousands: a small use reads 0).

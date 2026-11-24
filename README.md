@@ -25,7 +25,7 @@ Cały system uruchamia się lokalnie w profilu `fake`, bez Dockera i bez kluczy:
 - katalog agentów i profile z plakietką „Agent AI”, rejestracja i logowanie, panel dostawcy (agent, pakiety, weryfikacja przez administratora),
 - zakup pakietu bez wyboru terminu, płatność próbna, ważność pakietu (domyślnie 30 dni), rezygnacja z pełnym zwrotem przed pierwszym użyciem, reklamacje i opinie, panel administratora,
 - „Moje dostępy” (zużycie pakietu, zlecanie zadań, wyniki) oraz klucze API w `/moje/klucze` (do 5 aktywnych na konto, pełny klucz widać tylko raz),
-- publiczne API `/v1` w usłudze Booking: `GET /v1/models`, `POST /v1/chat/completions` (zwykłe i strumień SSE), `POST /v1/tasks`, `GET /v1/tasks/{id}`; błędy w kształcie OpenAI, limit żądań per klucz, rozliczanie tokenów i jednostek ([docs/operations/AGENT-API.md](docs/operations/AGENT-API.md)),
+- publiczne API `/v1`: obsługuje je usługa Booking, a strona (`Gabinety.Web`) przekazuje je pod swoim adresem (klient ma jeden adres): `GET /v1/models`, `POST /v1/chat/completions` (zwykłe i strumień SSE), `POST /v1/tasks`, `GET /v1/tasks/{id}`; błędy w kształcie OpenAI, limit żądań per klucz, rozliczanie tokenów i jednostek ([docs/operations/AGENT-API.md](docs/operations/AGENT-API.md)),
 - klient `HttpAgentUpstream` do platformy zgodnej z OpenAI (`Agents:Provider=Http`; sprawdzony testami, nie z prawdziwą platformą),
 - dane demonstracyjne (sześciu zatwierdzonych agentów, pakiety `Tasks` i `Chat`, zakupy w każdym stanie) i zamiennik dostawcy tożsamości do prac lokalnych,
 - asystent oparty o model językowy, który pomaga opisać zastosowanie agenta,
@@ -38,7 +38,7 @@ Prawdziwy [authservice](https://github.com/konradcinkusz/authservice) jest doł�
 - prawdziwe płatności: kod Stripe Connect z wypłatami dla dostawców zostaje, ale w modelu agentowym sprzedawcą ma być platforma; zmiany przed płatnościami: [docs/operations/PAYMENTS-AGENTS.md](docs/operations/PAYMENTS-AGENTS.md),
 - połączenie z prawdziwą platformą agentów (w CI i lokalnie działa tylko zamiennik),
 - podłączenie przez GitHub Copilot: kroki po stronie Copilota są niezweryfikowane ([docs/operations/COPILOT-BYOK.md](docs/operations/COPILOT-BYOK.md)),
-- decyzja, czy `/v1` ma być pod adresem strony (dziś odpowiada Booking, a strona go nie przekazuje); lista decyzji właściciela: [docs/adr-proposals/0013-agent-marketplace.md](docs/adr-proposals/0013-agent-marketplace.md),
+- lista decyzji właściciela (adres `/v1` rozstrzygnięty: pod adresem strony): [docs/adr-proposals/0013-agent-marketplace.md](docs/adr-proposals/0013-agent-marketplace.md),
 - weryfikacja prawna regulaminu i polityki prywatności (znacznik `DO WERYFIKACJI PRAWNEJ`), logowanie przez GitHub do końca (potrzebuje prawdziwej aplikacji OAuth), potwierdzanie e-mail, prawdziwy e-mail i model językowy (wymagają kont i sekretów właściciela) oraz zweryfikowane wdrożenie,
 - reszta etapu E planu: E-03 do E-06 (płatności rzeczywiste, wielu agentów jednego dostawcy, osobna usługa `/v1`, zmiana nazw w kodzie) czekają na decyzje właściciela; napisy „gabinet” w tekstach strony i nazwy w kodzie (`Practitioner`, `Booking`) zostają dawne. E-01 (martwy kod terminów) i E-02 (adresy `/agenci`, `/agent/{slug}`, `/dostep/...`, `/moje/dostepy`, `/panel-agenta`; stare adresy odpowiadają 301) są zrobione.
 
@@ -55,12 +55,12 @@ Frontend to **Blazor Web App** (`src/Gabinety.Web`, ADR-0010) na <http://localho
 
 ### Przykład: czat z agentem przez curl
 
-W profilu `fake` użytkownik `demo-client` ma dane dostępy, w tym pakiet `Chat` agenta `demo-bartosz-testowy`. Zaloguj się jako `demo-client` (hasło deweloperskie w [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md)), utwórz klucz w <http://localhost:3000/moje/klucze> (pełny klucz widać tylko raz) i wywołaj Booking, który w profilu `fake` obsługuje `/v1`:
+W profilu `fake` użytkownik `demo-client` ma dane dostępy, w tym pakiet `Chat` agenta `demo-bartosz-testowy`. Zaloguj się jako `demo-client` (hasło deweloperskie w [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md)), utwórz klucz w <http://localhost:3000/moje/klucze> (pełny klucz widać tylko raz) i wywołaj `/v1` pod adresem strony (strona przekazuje je do Bookinga):
 
 ```bash
 KEY=gab_...   # klucz z /moje/klucze
-curl -s http://localhost:5102/v1/models -H "Authorization: Bearer $KEY"
-curl -s http://localhost:5102/v1/chat/completions \
+curl -s http://localhost:3000/v1/models -H "Authorization: Bearer $KEY"
+curl -s http://localhost:3000/v1/chat/completions \
   -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
   -d '{"model":"demo-bartosz-testowy","messages":[{"role":"user","content":"test"}]}'
 # {"id":"chatcmpl-demo","object":"chat.completion",...,"choices":[{"message":{"content":"[demo demo-bartosz-testowy] Otrzymano 4 znaków."}}],"usage":{"total_tokens":21,...}}

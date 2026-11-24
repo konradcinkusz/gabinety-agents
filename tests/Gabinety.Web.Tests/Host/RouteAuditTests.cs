@@ -71,6 +71,19 @@ public class RouteAuditTests
     }
 
     [Fact]
+    public async Task The_agent_API_prefix_is_one_anonymous_catch_all_that_needs_no_antiforgery_and_nothing_else_lives_under_v1()
+    {
+        // ADR-0013: /v1/* is forwarded to Booking, which authenticates the API key. On this host the route is anonymous by design (no session is involved) and it is the ONLY route under /v1.
+        await using var web = new WebFactory();
+        web.CreateClient();
+        var all = web.Services.GetServices<EndpointDataSource>().SelectMany(s => s.Endpoints).OfType<RouteEndpoint>().ToList();
+        var v1 = all.Where(e => (e.RoutePattern.RawText ?? "").StartsWith("/v1", StringComparison.Ordinal)).ToList();
+        var route = Assert.Single(v1);
+        Assert.Equal("Anonymous", RouteTable.PolicyOf(route));
+        Assert.False(route.Metadata.GetMetadata<Microsoft.AspNetCore.Antiforgery.IAntiforgeryMetadata>()?.RequiresValidation ?? true);
+    }
+
+    [Fact]
     public async Task The_host_denies_by_default_a_route_with_no_policy_needs_a_signed_in_user()
     {
         // The host registers the kernel's fallback policy (RequireAuthenticatedByDefault). A route nobody protected is evaluated against it: refused for a visitor, allowed for a signed-in user.

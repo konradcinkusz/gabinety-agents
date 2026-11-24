@@ -51,13 +51,23 @@ public static class WebHostingExtensions
         var options = app.Services.GetRequiredService<WebOptions>();
         if (!app.Environment.IsDevelopment()) app.UseExceptionHandler("/Error", createScopeForErrors: true);
         app.UseSecurityHeaders(options); // sets headers when the response starts and never answers by itself, so every response, a refusal included, carries them
-        app.UseBrowserOriginGuard(); // before everything that acts: a foreign Origin never reaches the circuit, antiforgery or authentication
+        // /v1 is the agent API (AgentApiProxy): non-browser clients authenticated by an API key, never a cookie. The browser protections do not apply to it and would break it (a cookie session, an antiforgery
+        // token, a cached answer), so they are skipped for that prefix; every other path keeps exactly the pipeline below. The status-code pages stay in the main pipeline (a re-execution has to pass routing
+        // again, which a branch cannot do); the proxy switches them off for its own response so that a provider's error is never replaced by an HTML page (IStatusCodePagesFeature, AgentApiProxy).
+        static bool Browser(HttpContext ctx) => !AgentApiProxy.IsAgentApi(ctx.Request.Path);
+        app.UseWhen(Browser, b => b.UseBrowserOriginGuard()); // before everything that acts: a foreign Origin never reaches the circuit, antiforgery or authentication
         app.UseStatusCodePagesWithReExecute("/not-found", "?status={0}", createScopeForStatusCodePages: true); // the status rides along: the page says "Brak dostępu" for 403
-        app.UseLegacyRedirects(); // E-02: the old page addresses answer 301, before authentication
-        app.UseAuthentication();
-        app.UseAuthorization();
-        app.UseAntiforgery();
-        app.UseOutputCache(); // after authentication: the policy refuses a request that carries a session
+        app.UseWhen(Browser, b =>
+        {
+            b.UseLegacyRedirects(); // E-02: the old page addresses answer 301, before authentication
+            b.UseAuthentication();
+        });
+        app.UseAuthorization(); // runs for /v1 too: its route says AllowAnonymous, anything else under deny by default still needs a session
+        app.UseWhen(Browser, b =>
+        {
+            b.UseAntiforgery();
+            b.UseOutputCache(); // after authentication: the policy refuses a request that carries a session
+        });
         return app;
     }
 
@@ -70,6 +80,7 @@ public static class WebHostingExtensions
         assets.AllowAnonymous();
         assets.MapStaticAssets();
         app.MapOAuth();
+        app.MapAgentApiProxy(); // /v1/*: the public agent API of Booking under the address of the site (ADR-0013)
         app.MapAdminEndpoints(); // the ledger download (a stream, not a page)
         app.MapAccountEndpoints(); // /konto/export
 

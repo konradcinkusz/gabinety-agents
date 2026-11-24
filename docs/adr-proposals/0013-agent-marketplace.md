@@ -17,7 +17,7 @@ Gabinety Tech sprzedawały konsultacje z programistami (termin, spotkanie, opini
 | 2 | Rezygnacja: pełny zwrot tylko przed pierwszym użyciem | `CancelPlanner`: dozwolona w stanie `Confirmed` przy `UnitsUsed == 0`, zawsze pełny zwrot; później 409 `invalid_transition`. Reguły 24 h już nie ma (klasa `RefundPolicy` została, Booking jej nie woła). |
 | 3 | Rozliczanie czatu: suma tokenów wejścia i wyjścia, jedna stawka | z `usage.total_tokens` odpowiedzi dostawcy, po fakcie; ostatnie żądanie może przekroczyć pulę (`UnitsUsed` > `UnitsTotal`). Zakup pakietu `Chat` mnoży jednostki przez 1000. |
 | 4 | Do 5 kluczy na konto, wspólne dla wszystkich agentów | `ApiKeysFeature.MaxActive = 5`; klucz identyfikuje konto, agenta wybiera pole `model`. |
-| 5 | `/v1` w usłudze Booking | tak (`PublicEdge` przepuszcza `/v1`). **Strona go nie przekazuje**; patrz otwarta decyzja 1. |
+| 5 | `/v1` w usłudze Booking | tak (`PublicEdge` przepuszcza `/v1`), a strona przekazuje je pod swoim adresem (`AgentApiProxy`); patrz „Decyzje właściciela” 1. |
 | 6 | Jedno konto techniczne na agenta | bez zmian (`practitioner_exists`); zdjęcie ograniczenia to E-04. |
 | 7 | Wypłaty i prowizja bez zmian w profilu `fake`, do usunięcia przed prawdziwymi płatnościami | bez zmian; termin wypłaty zmieniony (niżej). Zakres usunięcia: `docs/operations/PAYMENTS-AGENTS.md`. |
 | 8 | Plakietka „Agent AI” wszędzie, gdzie widać nazwę agenta | komponent `AiBadge` na karcie, profilu, w podsumowaniu zakupu, na liście i w szczegółach dostępu; J1 sprawdza kartę i profil. |
@@ -50,7 +50,7 @@ Zapisane tu, żeby nie ginęły w opisach PR. Każdą można wycofać osobno.
 **Dane demonstracyjne i ścieżki (PR #5).**
 - Zużycie pakietów w seederze powstaje przez prawdziwe `POST /api/v1/bookings/{id}/tasks`, nie przez zapis do bazy; seeder nie rusza zegara testowego.
 - Trzy poprawki Webu znalezione przez J3 i J8: nazwy pól `created_at`/`completed_at` (lista pokazywała „Zlecone: 1 stycznia 1”), rodzaj pakietu pisany małymi literami w publicznym JSON (pakiet czatu pokazywał „500 zadań”), cofnięta próba `forceLoad`.
-- J8 nie zakłada, że `/v1` jest pod adresem strony: bierze adres z potwierdzenia zakupu i woła Booking wprost.
+- J8 nie zakładał, że `/v1` jest pod adresem strony: brał adres z potwierdzenia zakupu i wołał Booking wprost. Od decyzji 1 (niżej) wszystkie wywołania idą przez stronę, a jedno z nich jest powtórzone na Bookingu dla porównania.
 - Zużycie czatu w panelu to tysiące tokenów dzielone całkowicie, więc małe użycie to „wykorzystano 0 z 500 tys. tokenów”. To decyzja o prezentacji, nie błąd.
 - Znany wyścig na InMemory (profil `fake`): `AutoCompleteJob` i równoległa reklamacja pakietu o wyczerpanych jednostkach; na PostgreSQL chroni blokada wiersza.
 
@@ -62,17 +62,22 @@ Pytanie z zadania: czy wdrożony host bez `Agents:Provider` ma nie startować? S
 
 Poniższe rekomendacje to propozycje wykonawcy, nie rozstrzygnięcia.
 
-### 1. Czy `/v1` ma być pod adresem strony?
+### 1. Adres `/v1`: ROZSTRZYGNIĘTE (właściciel): pod adresem strony (opcja B)
 
-Dziś `/v1` odpowiada Booking (publiczny adres aplikacji Booking, `PublicEdge`), a strona nie ma trasy `/v1`. **Ale** sekcja „Jak się połączyć” (profil agenta, potwierdzenie zakupu) poza profilem z płatnościami próbnymi podaje klientowi `Site:BaseUrl` + `/v1`, czyli adres strony. Na wdrożeniu z prawdziwymi płatnościami przykład `curl` z tej sekcji wskazywałby więc adres, który nie obsługuje `/v1`. To jedyna rozbieżność w kodzie, którą ta decyzja usuwa.
+Pytanie: sekcja „Jak się połączyć” podawała klientowi `Site:BaseUrl` + `/v1`, a strona nie miała trasy `/v1` (odpowiadał tylko Booking), więc przykład `curl` na wdrożeniu z prawdziwymi płatnościami wskazywał adres, który go nie obsługuje. Opcje z propozycji: A (osobny adres API, np. `api.<domena>`), B (strona przekazuje `/v1`), C (osobna usługa API, E-05). Proponowałem A; **właściciel wybrał B**: klient ma jeden adres.
 
-| Opcja | Co trzeba zrobić | Koszt |
-|---|---|---|
-| A. `/v1` zostaje na adresie Booking | dodać ustawienie adresu API w Web (np. `Site:ApiBaseUrl`) i używać go w `WebOptions.ApiBaseUrl`; podać klientom adres Bookinga lub własną domenę wskazującą na niego | najmniej pracy; klient widzi inny host niż strona |
-| B. `/v1` pod adresem strony | przekazywanie `/v1` z Web do Booking (w tym strumień SSE bez buforowania, nagłówek `Authorization`, limit per klucz, który dziś zależy od klucza, nie od adresu) | Web staje się częścią ścieżki API; ryzyko dla strumieni i limitów |
-| C. Osobna usługa API (E-05) | wydzielić `/v1` z Booking | najwięcej pracy; sens, gdy ruch API zacznie obciążać Booking |
+**Co zrobiono** (`src/Gabinety.Web/Hosting/AgentApiProxy.cs`, bez nowej zależności: `HttpClient` z nazwą logiczną `booking`, czyli `Backend:Booking`, strumieniowanie w obie strony; budżet zależności z ADR-0010 bez zmian):
+- trasa `ANY /v1/{**path}` przekazuje metodę, ścieżkę z zapytaniem i ciało **strumieniowo** (do 2 MB jak w Bookingu, także bez `Content-Length`; 413 w kształcie OpenAI) oraz tylko `Authorization`, `Idempotency-Key`, `Content-Type`, `Accept`. **Nie** przekazuje ciasteczek (sesja strony) ani nagłówków hop-by-hop, ani żadnych innych nagłówków klienta;
+- odpowiedź wraca **strumieniowo, bez buforowania** (każdy kawałek jest opróżniany od razu: SSE płynie na bieżąco), z kodem i nagłówkami Bookinga (`Retry-After`, `WWW-Authenticate`), bez hop-by-hop i `Set-Cookie`. Booking niedostępny: 502 `upstream_error` w kształcie OpenAI;
+- adres klienta: istniejącym mechanizmem `X-Client-Address` + `X-Edge-Key` (`BackendHeadersHandler`; Booking czyta adres przez `RateLimits.PartitionKey`, nie przez `Fly-Client-IP`). Limit per klucz bez zmian w Bookingu (liczy go Booking po `sub = apikey:{id}`);
+- nic z ciała, nagłówka `Authorization` ani treści nie trafia do logów;
+- `/v1` jest wyjęte spod filtra Origin, antiforgery, uwierzytelniania ciasteczkiem i pamięci podręcznej odpowiedzi (to klienci spoza przeglądarki, uwierzytelniani kluczem), a strony statusów są wyłączone dla jego odpowiedzi (błąd dostawcy nie zamienia się na stronę HTML). Reszta ścieżek ma potok bez zmian (testy);
+- `ROUTE-AUTH.md` i `RouteAuditTests`: jeden nowy wiersz `ANY /v1/{**path}`, Anonymous po stronie strony (klucz sprawdza Booking), jedyna trasa pod `/v1`; test pilnuje też, że antiforgery jej nie dotyczy;
+- adres w sekcji „Jak się połączyć” to zawsze `Site:BaseUrl` + `/v1` (usunięty wyjątek profilu z płatnościami próbnymi, który podawał adres Bookinga); przykłady `curl` w profilu `fake` wskazują `http://localhost:3000/v1`;
+- J8 w `tests/e2e` woła stronę (adres z potwierdzenia zakupu = `Site:BaseUrl` + `/v1`), a jedno wywołanie powtarza na Bookingu dla porównania;
+- wdrożenie: bez zmian ustawień. `web-blazor.fly.toml` już woła Booking po sieci prywatnej (`Backend__Booking = ….internal:8080`) i ma `RateLimit__TrustedProxyKey`; `check-private-topology.sh` nie wymaga zmian. Dodano komentarze (strumień zajmuje połączenie liczone w `[http_service.concurrency]`).
 
-Rekomendacja: A (z własną domeną typu `api.<domena>`), bo B zmienia profil ruchu strony, a C jest przedwczesne. Do czasu decyzji przykład `curl` na produkcji jest mylący.
+**Skutki i ryzyka.** Web jest teraz częścią ścieżki API: jego restart przerywa strumienie w toku, a długi strumień zajmuje jedno z 150 połączeń maszyny 512 MB (limit połączeń jest ustawiony pod okna przeglądarki, `docs/operations/PERFORMANCE.md`; ruch API nie był mierzony). Proxy nie ponawia żądań (ciała strumieniowego nie da się powtórzyć) i nie ma całkowitego limitu czasu odpowiedzi (jest tylko 5 s na połączenie i 15 min do nagłówków). Gdy ruch API zacznie obciążać stronę, opcja C (E-05) jest dalej otwarta. Booking nadal odpowiada na `/v1` pod własnym adresem, ale klientom podaje się adres strony.
 
 ### 2. Co robić, gdy ostatnie zadanie kończy się `failed` po auto-zakończeniu pakietu?
 
@@ -115,6 +120,6 @@ Rekomendacja: B teraz (najmniejsza zmiana, napis przestaje kłamać, znika błą
 ## Skutki
 
 - Kod i dokumenty opisują agentów AI; stare nazwy w kodzie to dług opisany w etapie E planu.
-- Otwarte decyzje 1 do 4 blokują: decyzja 1 podanie klientom adresu API na produkcji, decyzja 2 pewność rozliczeń zadań, decyzja 3 uczciwość rozliczenia czatu, decyzja 4 poprawność komunikatu w panelu.
+- Decyzje 1 (adres `/v1`), 2 i 4 rozstrzygnięte (niżej); otwarte decyzje blokują: decyzja 2 pewność rozliczeń zadań, decyzja 3 uczciwość rozliczenia czatu, decyzja 4 poprawność komunikatu w panelu.
 - Przed prawdziwymi płatnościami trzeba wykonać zmiany z `docs/operations/PAYMENTS-AGENTS.md` (E-03; wymaga nowej decyzji zastępującej propozycję 0011).
 - Połączenie z prawdziwą platformą agentów nie zostało sprawdzone: `HttpAgentUpstream` ma testy, ale nie działał z żadną prawdziwą platformą, a kroki GitHub Copilot BYOK są niezweryfikowane (`docs/operations/COPILOT-BYOK.md`).

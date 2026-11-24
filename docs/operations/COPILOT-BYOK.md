@@ -8,7 +8,7 @@ Agent z pakietem `Chat` jest dostępny jako zwykłe API zgodne z OpenAI Chat Com
 
 | Co | Wartość |
 |---|---|
-| Adres bazowy | `<adres Booking>/v1`. Profil `fake`: `http://localhost:5102/v1`. Na produkcji adres zależy od otwartej decyzji właściciela, czy `/v1` jest pod adresem strony (`docs/adr-proposals/0013-agent-marketplace.md`); strona „Jak się połączyć” na profilu agenta pokazuje adres, który dziś podaje klientowi. |
+| Adres bazowy | `<adres strony>/v1` (`Site:BaseUrl` + `/v1`), w profilu `fake` `http://localhost:3000/v1`. Strona przekazuje `/v1` do Bookinga (decyzja właściciela, `docs/adr-proposals/0013-agent-marketplace.md`), więc klient ma jeden adres; ten sam adres podaje sekcja „Jak się połączyć” na profilu agenta i w potwierdzeniu zakupu. |
 | Uwierzytelnianie | nagłówek `Authorization: Bearer gab_...` (klucz API z `/moje/klucze`; pełny klucz widać tylko raz) |
 | Nazwa modelu | **slug agenta**, np. `demo-bartosz-testowy` (lista: `GET /v1/models`) |
 | Lista modeli | `GET /v1/models` zwraca tylko agentów, u których konto ma użyteczny pakiet `Chat` |
@@ -32,8 +32,8 @@ Co dziś **nie** jest zaimplementowane po naszej stronie (sprawdzone w kodzie): 
 Przykład wywołania sprawdzający całość bez Copilota:
 
 ```bash
-curl -s http://localhost:5102/v1/models -H "Authorization: Bearer $KEY"
-curl -sN http://localhost:5102/v1/chat/completions -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
+curl -s http://localhost:3000/v1/models -H "Authorization: Bearer $KEY"
+curl -sN http://localhost:3000/v1/chat/completions -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
   -d '{"model":"demo-bartosz-testowy","stream":true,"messages":[{"role":"user","content":"test"}]}'
 ```
 
