@@ -255,7 +255,6 @@ public class CancelApiTests
     {
         var p = new RecordingProvider();
         await using var h = Life.Host(p);
-        await h.WorkWeek();
         var (id, _) = await Pay.CreateBooking(h, Life.Client); // valid from now for 30 days, nothing used
         Assert.Equal(HttpStatusCode.OK, (await Pay.Simulate(h.ClientFor(Life.Client), id, "succeeded")).StatusCode);
         var r = await Life.Cancel(h, id, Life.Client);

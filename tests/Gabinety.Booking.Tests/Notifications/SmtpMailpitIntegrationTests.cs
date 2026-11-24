@@ -73,7 +73,6 @@ public class SmtpMailpitIntegrationTests
         Assert.IsType<SmtpEmailSender>(host.Services.GetRequiredService<IEmailSender>());
         Assert.IsType<ContactResolver>(host.Services.GetRequiredService<IContactResolver>());
 
-        await host.WorkWeek();
         var created = await CreateHost.Post(host.ClientFor(Client), host.Req(text: "demo-brief: " + Secret), CreateHost.Key());
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
         var id = (await created.Body()).GetProperty("bookingId").GetGuid();

@@ -25,9 +25,6 @@ public sealed partial class BookingClient
     public async Task<ApiResult<BookingDetailDto>> DisputeAsync(Guid id, string kind, string text, CancellationToken ct = default) =>
         await PostAsync<BookingDetailDto>($"/api/v1/bookings/{Id(id)}/dispute", new { kind, text = text.Trim() }, await tokens.AccessTokenAsync(ct), ct);
 
-    public async Task<ApiResult<BookingDetailDto>> ReportNoShowAsync(Guid id, CancellationToken ct = default) =>
-        await PostAsync<BookingDetailDto>($"/api/v1/bookings/{Id(id)}/report-client-no-show", null, await tokens.AccessTokenAsync(ct), ct);
-
     /// <summary>The mock checkout's button (fake profile only: the route does not exist elsewhere, a 403 or 404 says so). <paramref name="outcome"/> is <c>succeeded</c> or <c>failed</c>.</summary>
     public async Task<ApiResult<Unit>> SimulatePaymentAsync(Guid bookingId, string outcome, CancellationToken ct = default) =>
         await PostAsync<Unit>("/api/v1/payments/simulate", new { bookingId, outcome }, await tokens.AccessTokenAsync(ct), ct);

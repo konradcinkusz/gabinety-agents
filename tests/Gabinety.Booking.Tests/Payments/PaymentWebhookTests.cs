@@ -16,7 +16,6 @@ public class PaymentWebhookTests
         var h = new CreateHost { MeetingUrl = "https://meet.demo.invalid/room-1" };
         if (secret) h.Settings["Payments:WebhookSecret"] = Pay.Secret;
         configure?.Invoke(h);
-        await h.WorkWeek();
         return h;
     }
 

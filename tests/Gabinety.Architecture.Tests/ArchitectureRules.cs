@@ -12,11 +12,11 @@ public partial class ArchitectureRules
     /// <summary>SPEC 3.2: allowed project edges under src/ and tools/. Anything else is a violation.</summary>
     static readonly Dictionary<string, string[]> AllowedEdges = new()
     {
-        ["Gabinety.Billing"] = [], ["Gabinety.Scheduling"] = [], ["Gabinety.Ranking"] = [], ["Gabinety.Llm"] = [], ["Gabinety.Contracts"] = [],
+        ["Gabinety.Billing"] = [], ["Gabinety.Ranking"] = [], ["Gabinety.Llm"] = [], ["Gabinety.Contracts"] = [],
         ["Gabinety.ServiceDefaults"] = [],
         ["Gabinety.ServiceDefaults.Edge"] = ["Gabinety.ServiceDefaults"], // T-10.10 (F-03): the public-edge guard and key validation, outside the 400-line kernel (SPEC 6)
         ["Gabinety.Directory"] = ["Gabinety.ServiceDefaults", "Gabinety.ServiceDefaults.Edge", "Gabinety.Contracts", "Gabinety.Ranking"],
-        ["Gabinety.Booking"] = ["Gabinety.ServiceDefaults", "Gabinety.ServiceDefaults.Edge", "Gabinety.Contracts", "Gabinety.Billing", "Gabinety.Scheduling"],
+        ["Gabinety.Booking"] = ["Gabinety.ServiceDefaults", "Gabinety.ServiceDefaults.Edge", "Gabinety.Contracts", "Gabinety.Billing"],
         ["Gabinety.Reputation"] = ["Gabinety.ServiceDefaults", "Gabinety.ServiceDefaults.Edge", "Gabinety.Contracts"],
         ["Gabinety.Assistant"] = ["Gabinety.ServiceDefaults", "Gabinety.ServiceDefaults.Edge", "Gabinety.Contracts", "Gabinety.Llm"],
         ["Gabinety.AppHost"] = [.. Services.Select(s => "Gabinety." + s), "Gabinety.Web"],
@@ -39,7 +39,7 @@ public partial class ArchitectureRules
     /// <summary>SPEC 3.2 dependency budget: the only packages a project may reference (absent = unchecked here).</summary>
     static readonly Dictionary<string, string[]> PackageBudget = new()
     {
-        ["Gabinety.Billing"] = [], ["Gabinety.Scheduling"] = [], ["Gabinety.Ranking"] = [], ["Gabinety.Contracts"] = [],
+        ["Gabinety.Billing"] = [], ["Gabinety.Ranking"] = [], ["Gabinety.Contracts"] = [],
         ["Gabinety.Llm"] = ["GitHub.Copilot.SDK"],
         ["Gabinety.Web"] = [], // the ASP.NET Core shared framework only: no component library, no JS interop package, no CSS framework (BLAZOR-WEB-APP section 4)
     };
@@ -142,7 +142,7 @@ public partial class ArchitectureRules
     public void The_web_host_does_not_reach_a_service_or_the_contracts_or_the_SDK()
     {
         var web = Repo.Projects().Single(p => p.Name == "Gabinety.Web");
-        string[] forbidden = ["Gabinety.Contracts", "Gabinety.Llm", "Gabinety.Directory", "Gabinety.Booking", "Gabinety.Reputation", "Gabinety.Assistant", "Gabinety.Billing", "Gabinety.Scheduling", "Gabinety.Ranking", "Gabinety.DevIdentity"];
+        string[] forbidden = ["Gabinety.Contracts", "Gabinety.Llm", "Gabinety.Directory", "Gabinety.Booking", "Gabinety.Reputation", "Gabinety.Assistant", "Gabinety.Billing", "Gabinety.Ranking", "Gabinety.DevIdentity"];
         Assert.True(!web.ProjectRefs.Intersect(forbidden).Any(), $"{web.File} references {string.Join(", ", web.ProjectRefs.Intersect(forbidden))}: the web host talks to the services over HTTP (P3)");
         Assert.Empty(web.PackageRefs);
         Assert.Contains("Gabinety.ServiceDefaults.Edge", AllowedEdges["Gabinety.Web"]); // the origin guard lives there, outside the 400-line kernel

@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using Gabinety.Booking.Clients;
-using Gabinety.Booking.Features.Availability;
 using Gabinety.Booking.Payments.Abstractions;
 using Gabinety.Booking.Persistence;
 using Gabinety.Contracts.Common;
@@ -22,7 +21,7 @@ public sealed class PaymentAccountFeature : IServiceFeature
     public sealed record OnboardingDto(string Provider, string State, string? OnboardingUrl);
     const string UniqueViolation = "23505";
 
-    public void Add(IHostApplicationBuilder builder) { }
+    public void Add(IHostApplicationBuilder builder) => builder.Services.AddSingleton<PractitionerResolver>();
 
     public void Map(IEndpointRouteBuilder endpoints)
     {

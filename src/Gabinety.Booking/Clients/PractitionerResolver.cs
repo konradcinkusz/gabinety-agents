@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using Gabinety.Booking.Clients;
 
-namespace Gabinety.Booking.Features.Availability;
+namespace Gabinety.Booking.Clients;
 
 /// <summary>Maps the token's user id to the practitioner id through Directory, cached per user for 60 s. A non-practitioner is not cached.</summary>
 public sealed class PractitionerResolver(IDirectoryClient directory, TimeProvider time)

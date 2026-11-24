@@ -23,12 +23,6 @@ public enum Resolution { Release, RefundFull, RefundPartial }
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum LedgerKind { ClientCharge, Refund, PlatformFee, PractitionerPayout, PayoutReversal }
 
-public sealed record SlotDto([property: System.Text.Json.Serialization.JsonConverter(typeof(Gabinety.Contracts.Common.UtcInstantConverter))] DateTimeOffset StartUtc, [property: System.Text.Json.Serialization.JsonConverter(typeof(Gabinety.Contracts.Common.UtcInstantConverter))] DateTimeOffset EndUtc);
-public sealed record SlotsResponse(IReadOnlyList<SlotDto> Slots);
-
-public sealed record AvailabilityRuleDto(int IsoWeekday, string StartLocal, string EndLocal);
-public sealed record AvailabilityExceptionDto(DateOnly DateLocal);
-public sealed record AvailabilityDto(IReadOnlyList<AvailabilityRuleDto> Rules, IReadOnlyList<AvailabilityExceptionDto> Exceptions);
 
 public sealed record BriefDto([property: Required, StringLength(2000, MinimumLength = 20)] string Text, string? ProblemSlug, bool AiAssisted);
 /// <summary><c>StartUtc</c> is accepted for older clients and ignored: a package is valid from the moment of purchase. Last, because an optional parameter cannot precede a required one.</summary>

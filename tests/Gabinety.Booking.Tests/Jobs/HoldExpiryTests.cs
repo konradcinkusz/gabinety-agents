@@ -81,7 +81,6 @@ public class HoldExpiryTests : IDisposable
     [Fact]
     public async Task A_booking_paid_between_selection_and_transition_is_left_Confirmed()
     {
-        await h.WorkWeek();
         var (id, _) = await Pay.CreateBooking(h);
         Assert.Equal(HttpStatusCode.OK, (await Pay.Simulate(h.ClientFor("demo-client-1"), id, "succeeded")).StatusCode);
         Assert.Equal(BookingStatus.Confirmed, await Hold.StatusOf(h, id));
@@ -127,7 +126,6 @@ public class HoldExpiryTests : IDisposable
     [Fact]
     public async Task Expiry_keeps_the_payment_Created_so_a_late_success_is_refunded_in_full()
     {
-        await h.WorkWeek();
         var (id, pid) = await Pay.CreateBooking(h);
         h.Clock.Advance(Hold10);
         Assert.Equal(1, await Hold.Job(h).ExpireDueAsync(h.Clock.GetUtcNow(), default));
@@ -145,7 +143,6 @@ public class HoldExpiryTests : IDisposable
     [Fact]
     public async Task After_expiry_a_new_purchase_of_the_same_offering_succeeds()
     {
-        await h.WorkWeek();
         var (first, _) = await Pay.CreateBooking(h, "demo-client-1");
         var other = await CreateHost.Post(h.ClientFor("demo-client-2"), h.Req(), CreateHost.Key());
         Assert.Equal(HttpStatusCode.Created, other.StatusCode); // a live hold blocks nothing: there are no slots (A-02)

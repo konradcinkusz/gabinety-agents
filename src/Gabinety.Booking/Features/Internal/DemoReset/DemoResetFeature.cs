@@ -1,4 +1,4 @@
-using Gabinety.Booking.Features.Availability;
+using Gabinety.Booking.Clients;
 using Gabinety.Booking.Features.Internal.TestClock;
 using Gabinety.Booking.Persistence;
 using Gabinety.ServiceDefaults;
@@ -11,7 +11,6 @@ namespace Gabinety.Booking.Features.Internal.DemoReset;
 /// deployed environment. A booking is in the namespace when its client or its practitioner user id starts with <c>demo-</c> (case-sensitive); its
 /// payments and ledger entries go with it. Idempotency records are keyed by client user, so they go when that user is a demo user. Webhook events carry
 /// no booking or payment reference, so they go by their own id: <c>EventId</c> starting with <c>demo-</c>.
-/// Availability rules and exceptions are NOT touched (see the PR: keyed by practitioner GUID, a demo booking does not prove a demo practitioner).
 /// There is no payouts table on main yet.
 /// </summary>
 public sealed class DemoResetFeature : IServiceFeature

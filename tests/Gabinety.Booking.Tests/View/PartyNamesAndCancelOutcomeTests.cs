@@ -72,7 +72,6 @@ public class PartyNamesTests
     {
         await using var h = Life.Host(new RecordingProvider());
         h.NameClaim = "demo-client-1@example.test";
-        await h.WorkWeek();
         var created = await CreateHost.Post(h.ClientFor(Life.Client), h.Req(), Guid.NewGuid().ToString());
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
         var row = Assert.Single(await h.Bookings());

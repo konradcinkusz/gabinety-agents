@@ -75,27 +75,25 @@ public class StatsPushCalculationTests : IDisposable
     }
 
     [Fact]
-    public async Task The_set_is_practitioners_with_bookings_or_rules_only()
+    public async Task The_set_is_practitioners_with_bookings_only()
     {
-        await h.WorkWeek();
         using var withBooking = Life.Host(new RecordingProvider());
         await StatsFx.Seed(withBooking, BookingStatus.Completed);
         using var scope = h.Services.CreateScope();
         var all = await scope.ServiceProvider.GetRequiredService<StatsCalculator>().ComputeAsync(default);
-        Assert.Contains(h.Practitioner, all.Keys);
+        Assert.DoesNotContain(h.Practitioner, all.Keys);
         Assert.Contains(withBooking.Practitioner, all.Keys);
         Assert.DoesNotContain(Guid.NewGuid(), all.Keys);
     }
 
     // A-03: an agent is always available, so the reported open slots are a constant (Access:ReportedOpenSlots, default 10 = the ranking's "full availability").
     [Fact]
-    public async Task Open_slots_are_the_constant_whatever_the_rules_and_bookings()
+    public async Task Open_slots_are_the_constant_whatever_the_bookings()
     {
-        await StatsFx.Seed(h, BookingStatus.Completed);                          // no availability rules at all
+        await StatsFx.Seed(h, BookingStatus.Completed);                       
         Assert.Equal(StatsCalculator.DefaultReportedOpenSlots, (await StatsFx.StatsOf(h)).OpenSlots14d);
         Assert.Equal(10, StatsCalculator.DefaultReportedOpenSlots);
 
-        await h.WorkWeek();                                                      // rules change nothing
         await StatsFx.Seed(h, BookingStatus.Confirmed, startIn: TimeSpan.FromDays(2));
         Assert.Equal(10, (await StatsFx.StatsOf(h)).OpenSlots14d);
     }

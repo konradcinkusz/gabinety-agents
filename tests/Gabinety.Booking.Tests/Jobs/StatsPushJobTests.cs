@@ -38,7 +38,6 @@ public class StatsPushJobTests : IDisposable
     [InlineData("no-show upheld")]
     public async Task Any_one_of_the_three_counts_changing_triggers_exactly_one_new_push(string what)
     {
-        await h.WorkWeek();
         await StatsFx.Seed(h, BookingStatus.Completed);
         var job = StatsFx.Job(h, client);
         await job.RunOnceAsync(default);

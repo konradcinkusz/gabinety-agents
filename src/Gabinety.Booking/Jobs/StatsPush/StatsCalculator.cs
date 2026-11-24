@@ -9,7 +9,7 @@ namespace Gabinety.Booking.Jobs.StatsPush;
 public sealed record BookingStats(int CompletedCount, int PractitionerCancelCount, int NoShowUpheldCount, int OpenSlots14d);
 
 /// <summary>
-/// Computes <see cref="BookingStats"/> for every practitioner that has bookings or availability rules.
+/// Computes <see cref="BookingStats"/> for every practitioner that has bookings.
 /// <para>Counting rule (CONTRACTS 8.1, the "stats" column is the authority):</para>
 /// <list type="bullet">
 /// <item><c>completed_count</c> = rows in <c>Completed</c> + rows in <c>Resolved</c> with <c>dispute_resolution = 'release'</c> ("as Completed").
@@ -31,11 +31,10 @@ public sealed class StatsCalculator(BookingDbContext db, IConfiguration config)
             .GroupBy(b => new { b.PractitionerId, b.Status, b.DisputeResolution, b.DisputeKind, Cascade = b.StatusReason == FutureBookingCanceller.Reason })
             .Select(g => new { g.Key.PractitionerId, g.Key.Status, g.Key.DisputeResolution, g.Key.DisputeKind, g.Key.Cascade, N = g.Count(), Shortest = g.Min(b => (int)b.DurationMinutes) })
             .ToListAsync(ct);
-        var withRules = (await db.Rules.AsNoTracking().Select(r => r.PractitionerId).Distinct().ToListAsync(ct)).ToHashSet();
 
         var openSlots = config.GetValue("Access:ReportedOpenSlots", DefaultReportedOpenSlots);
         var result = new Dictionary<Guid, BookingStats>();
-        foreach (var id in groups.Select(g => g.PractitionerId).Concat(withRules).Distinct())
+        foreach (var id in groups.Select(g => g.PractitionerId).Distinct())
         {
             ct.ThrowIfCancellationRequested();
             var mine = groups.Where(g => g.PractitionerId == id).ToList();

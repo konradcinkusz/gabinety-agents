@@ -17,7 +17,6 @@ public class CreateBookingApiTests
     {
         var h = new CreateHost();
         configure?.Invoke(h);
-        await h.WorkWeek();
         return h;
     }
 

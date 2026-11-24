@@ -650,57 +650,6 @@ namespace Gabinety.Booking.Persistence.Migrations
 
                     b.ToTable("notifications", (string)null);
                 });
-
-            modelBuilder.Entity("Gabinety.Booking.Persistence.AvailabilityException", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateOnly>("DateLocal")
-                        .HasColumnType("date")
-                        .HasColumnName("date_local");
-
-                    b.Property<Guid>("PractitionerId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("practitioner_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PractitionerId", "DateLocal")
-                        .IsUnique();
-
-                    b.ToTable("availability_exceptions", (string)null);
-                });
-
-            modelBuilder.Entity("Gabinety.Booking.Persistence.AvailabilityRule", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<TimeOnly>("EndLocal")
-                        .HasColumnType("time without time zone")
-                        .HasColumnName("end_local");
-
-                    b.Property<short>("IsoWeekday")
-                        .HasColumnType("smallint")
-                        .HasColumnName("iso_weekday");
-
-                    b.Property<Guid>("PractitionerId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("practitioner_id");
-
-                    b.Property<TimeOnly>("StartLocal")
-                        .HasColumnType("time without time zone")
-                        .HasColumnName("start_local");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PractitionerId", "IsoWeekday");
-
-                    b.ToTable("availability_rules", (string)null);
-                });
 #pragma warning restore 612, 618
         }
     }

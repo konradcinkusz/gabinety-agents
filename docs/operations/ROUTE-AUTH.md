@@ -65,13 +65,10 @@ Columns: **Policy** = what the code declares (checked by the test): `Anonymous`,
 | Booking | ANY | `/alive` | Anonymous | all | |
 | Booking | GET | `/health/details` | Anonymous | all | F-07 |
 | Booking | GET | `/openapi/v1.json` | Anonymous | fake | F-07: served only in the fake profile |
-| Booking | GET | `/api/v1/practitioners/{practitionerId}/slots` | Anonymous | all | public read |
 | Booking | POST | `/webhooks/payments/{provider}` | Anonymous | all | guarded by the provider signature |
 | Booking | POST | `/api/v1/payments/simulate` | Authenticated | fake | Mock provider only, and only the booking's client (F-01, T-10.08); not mapped when deployed |
 | Booking | GET | `/api/v1/me/payments/account` | Authenticated | all | practitioner only; 404 when the provider has no connected accounts (Mock); T-09.05 |
 | Booking | POST | `/api/v1/me/payments/account/onboarding` | Authenticated | all | practitioner only; creates the connected account and returns a single-use onboarding link; T-09.05 |
-| Booking | GET | `/api/v1/me/availability` | Authenticated | all | |
-| Booking | PUT | `/api/v1/me/availability` | Authenticated | all | |
 | Booking | POST | `/api/v1/me/api-keys` | Authenticated | all | B-01: creates a key, the plain key is in this answer only; at most 5 active |
 | Booking | GET | `/api/v1/me/api-keys` | Authenticated | all | B-01: own active keys, never the key itself |
 | Booking | DELETE | `/api/v1/me/api-keys/{id}` | Authenticated | all | B-01: revokes an own key, 404 for another user's |
@@ -87,7 +84,6 @@ Columns: **Policy** = what the code declares (checked by the test): `Anonymous`,
 | Booking | GET | `/api/v1/me/bookings/{bookingId}/tasks` | Authenticated | all | B-05: the tasks of an own package, newest first |
 | Booking | POST | `/api/v1/bookings/{id}/cancel` | Authenticated | all | |
 | Booking | POST | `/api/v1/bookings/{id}/dispute` | Authenticated | all | |
-| Booking | POST | `/api/v1/bookings/{id}/report-client-no-show` | Authenticated | all | |
 | Booking | GET | `/api/v1/admin/disputes` | Admin | all | |
 | Booking | POST | `/api/v1/admin/bookings/{id}/resolve` | Admin | all | |
 | Booking | GET | `/api/v1/admin/ledger.csv` | Admin | all | |

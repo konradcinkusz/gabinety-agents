@@ -67,7 +67,6 @@ public sealed class StripeHostTests : IDisposable
 
     async Task<Guid> NewBooking(string start = "2026-11-18T10:00:00Z")
     {
-        await h.WorkWeek();
         await MakeReady();
         var (id, paymentId) = await Pay.CreateBooking(h, Client, start);
         Assert.Equal(session, paymentId);
@@ -91,7 +90,6 @@ public sealed class StripeHostTests : IDisposable
     [Fact]
     public async Task A_booking_is_refused_while_the_practitioner_has_no_account_and_nothing_is_created_or_sent_to_Stripe()
     {
-        await h.WorkWeek();
         var r = await CreateHost.Post(h.ClientFor(Client), h.Req("2026-11-18T10:00:00Z"), CreateHost.Key());
         Assert.Equal(HttpStatusCode.UnprocessableEntity, r.StatusCode);
         Assert.Equal("practitioner_payments_not_ready", (await r.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
@@ -104,7 +102,6 @@ public sealed class StripeHostTests : IDisposable
     [InlineData(true, "Acme")]      // a ready account at another provider is no account here
     public async Task An_account_that_is_not_ready_or_belongs_to_another_provider_does_not_count(bool ready, string provider)
     {
-        await h.WorkWeek();
         await MakeReady(ready, provider);
         var r = await CreateHost.Post(h.ClientFor(Client), h.Req("2026-11-18T10:00:00Z"), CreateHost.Key());
         Assert.Equal(HttpStatusCode.UnprocessableEntity, r.StatusCode);
@@ -324,7 +321,6 @@ public sealed class StripeHostTests : IDisposable
         Assert.Equal("ready", again.GetProperty("state").GetString());
         Assert.Equal(JsonValueKind.Null, again.GetProperty("onboardingUrl").ValueKind);
 
-        await h.WorkWeek();
         Assert.Equal(HttpStatusCode.Created, (await CreateHost.Post(h.ClientFor(Client), h.Req("2026-11-18T10:00:00Z"), CreateHost.Key())).StatusCode);
     }
 
@@ -352,7 +348,6 @@ public sealed class StripeHostTests : IDisposable
     public async Task With_the_Mock_provider_there_is_no_onboarding_and_a_booking_needs_no_account()
     {
         using var mock = new CreateHost { OwnerUserId = h.OwnerUserId };
-        await mock.WorkWeek();
         Assert.Equal(HttpStatusCode.NotFound, (await mock.ClientFor(mock.OwnerUserId).GetAsync("/api/v1/me/payments/account")).StatusCode);
         Assert.Equal(HttpStatusCode.Created, (await CreateHost.Post(mock.ClientFor(Client), mock.Req("2026-11-18T10:00:00Z"), CreateHost.Key())).StatusCode);
     }

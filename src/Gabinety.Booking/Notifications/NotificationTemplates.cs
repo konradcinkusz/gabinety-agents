@@ -1,5 +1,4 @@
 using System.Globalization;
-using Gabinety.Booking.Features.Slots;
 
 namespace Gabinety.Booking.Notifications;
 
@@ -12,6 +11,8 @@ public sealed record RenderedEmail(string Subject, string Text, string Html);
 /// </summary>
 public static class NotificationTemplates
 {
+    static readonly TimeZoneInfo Warsaw = TimeZoneInfo.FindSystemTimeZoneById("Europe/Warsaw");
+
     sealed record Template(string Subject, string Lead, string LinkLabel, string Path);
 
     static Template For(NotificationKind kind, bool forPractitioner) => kind switch
@@ -35,7 +36,7 @@ public static class NotificationTemplates
     {
         var t = For(kind, forPractitioner);
         var link = siteBaseUrl.TrimEnd('/') + string.Format(CultureInfo.InvariantCulture, t.Path, bookingId);
-        var when = TimeZoneInfo.ConvertTime(startUtc, SlotCalculator.Warsaw).ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture);
+        var when = TimeZoneInfo.ConvertTime(startUtc, Warsaw).ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture);
         var text = $"{t.Lead}\nTermin: {when} (czas polski)\n\n{t.LinkLabel}: {link}\n\nGabinety Tech\n";
         var html = $"<!doctype html>\n<html lang=\"pl\"><head><meta charset=\"utf-8\"><title>{t.Subject}</title></head>\n"
                  + $"<body><p>{t.Lead}</p><p>Termin: {when} (czas polski)</p><p><a href=\"{link}\">{t.LinkLabel}</a></p><p>Gabinety Tech</p></body></html>\n";
