@@ -35,6 +35,8 @@ Seeder with `--factor 200` (`tools/Gabinety.DemoSeeder/README.md`, "Scaled datas
 
 Booking availability exists only for the six catalog practitioners (the slots and booking rows use them; the number of other practitioners does not change a slots query).
 
+**Since the agent marketplace (A-02, E-01) the slots endpoint no longer exists and a purchase has no term.** `scripts/measure-performance.sh` and `scripts/perf/prepare.mjs` no longer measure `GET .../slots` and build the purchase request without `startUtc` (rotating over the offerings of the six catalog agents and the demo clients). The slots row and the "distinct non-overlapping slot" wording below are the record of the run of 2026-11-18, made before the change; a new run has no slots row.
+
 ## 3. Results (SPEC section 13)
 
 | Row | Tool and command | Measured here | Target | Result |

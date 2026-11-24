@@ -82,13 +82,12 @@ say "approved practitioners in the Directory: $approved"
 
 # ---- inputs ----
 node "$ROOT/scripts/perf/prepare.mjs" "$OUT/inputs" "$BOOKINGS" >&2
-LISTS=$(jq -r 'join(",")' "$OUT/inputs/list-urls.json"); SLOTS=$(jq -r 'join(",")' "$OUT/inputs/slots-urls.json")
+LISTS=$(jq -r 'join(",")' "$OUT/inputs/list-urls.json")
 CATEGORY=$(jq -r .web.category "$OUT/inputs/prep.json"); PROFILE_URL=$(jq -r .web.profile "$OUT/inputs/prep.json"); TERMS=$(jq -r .web.terms "$OUT/inputs/prep.json"); LIST_PAGE=$(jq -r .web.list "$OUT/inputs/prep.json")
 
 # ---- SPEC 13 rows that load the services ----
 if [ "${ONLY_PR113:-0}" != 1 ]; then
 run list      $LOAD --name list --concurrency "$CONC" --duration "$DURATION" --warmup 3 --urls "$LISTS"
-run slots     $LOAD --name slots --concurrency "$CONC" --duration "$DURATION" --warmup 3 --urls "$SLOTS"
 run bookings  $LOAD --name bookings --concurrency 4 --requests "$OUT/inputs/booking-requests.json"
 
 # ---- the category page: time to first byte, cached (a first request fills the cache; it is not counted), unloaded and under load ----
