@@ -128,21 +128,6 @@ public class DemoResetApiTests
     }
 
     [Fact]
-    public async Task Reset_leaves_availability_rules_and_exceptions_alone()
-    {
-        await using var h = Host();
-        await h.WorkWeek();
-        await h.Seed(db =>
-        {
-            SeedChain(db, h, "demo-c1", "demo-p1", "Mock", null);
-            db.Exceptions.Add(new() { Id = Guid.NewGuid(), PractitionerId = h.Practitioner, DateLocal = new(2026, 12, 24) });
-        });
-        await Reset(h);
-        Assert.Equal(5, await h.Query(db => db.Rules.CountAsync()));
-        Assert.Equal(1, await h.Query(db => db.Exceptions.CountAsync()));
-    }
-
-    [Fact]
     public async Task A_missing_internal_key_is_401_and_deletes_nothing()
     {
         await using var h = Host();

@@ -67,5 +67,5 @@ writeFileSync(`${outDir}/slots-urls.json`, JSON.stringify(slotUrls));
 writeFileSync(`${outDir}/booking-requests.json`, JSON.stringify(requests));
 const slug0 = base[5], problem0 = problems[0];
 writeFileSync(`${outDir}/prep.json`, JSON.stringify({ listQueries: full.length, slotsUrls: slotUrls.length, bookingRequests: requests.length, bookingsWanted: wanted,
-  web: { category: `${WEB}/programisci/${problem0}`, list: `${WEB}/programisci`, profile: `${WEB}/gabinet/${slug0}`, terms: `${WEB}/regulamin`, home: `${WEB}/` } }, null, 2));
+  web: { category: `${WEB}/agenci/${problem0}`, list: `${WEB}/agenci`, profile: `${WEB}/agent/${slug0}`, terms: `${WEB}/regulamin`, home: `${WEB}/` } }, null, 2));
 console.log(`prepared: ${full.length} list queries, ${slotUrls.length} slots urls, ${requests.length} of ${wanted} booking requests`);

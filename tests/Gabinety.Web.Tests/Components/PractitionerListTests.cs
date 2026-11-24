@@ -50,7 +50,7 @@ public class PractitionerListTests : BunitContext
         var links = cut.FindAll("a");
         Assert.Single(links); // one link: the stretched link of the card, with no second target inside it
         Assert.Equal("Anna Demowska", links[0].TextContent);
-        Assert.Equal("/gabinet/demo-anna-demowska", links[0].GetAttribute("href"));
+        Assert.Equal("/agent/demo-anna-demowska", links[0].GetAttribute("href"));
     }
 
     [Theory]
@@ -130,9 +130,9 @@ public class PractitionerListTests : BunitContext
         var view = new ListView(ListState.Parse("audyt-kodu", "dotnet", "30", "30000", "kod", null), Sample.Taxonomy, Sample.Sitemap(6));
         var chips = view.ActiveChips();
         Assert.Equal(["30 min", "do 300 zł", "Szukaj: „kod”"], chips.Select(c => c.Label));
-        Assert.Equal("/programisci/audyt-kodu/dotnet?maxPriceMinor=30000&q=kod", chips[0].Href);
-        Assert.Equal("/programisci/audyt-kodu/dotnet?duration=30&q=kod", chips[1].Href);
-        Assert.Equal("/programisci/audyt-kodu/dotnet?duration=30&maxPriceMinor=30000", chips[2].Href);
+        Assert.Equal("/agenci/audyt-kodu/dotnet?maxPriceMinor=30000&q=kod", chips[0].Href);
+        Assert.Equal("/agenci/audyt-kodu/dotnet?duration=30&q=kod", chips[1].Href);
+        Assert.Equal("/agenci/audyt-kodu/dotnet?duration=30&maxPriceMinor=30000", chips[2].Href);
     }
 
     [Fact]

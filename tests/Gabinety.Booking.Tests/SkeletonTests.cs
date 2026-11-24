@@ -45,7 +45,7 @@ public class SkeletonAuthTests : IDisposable
         });
         var c = f.CreateClient();
         c.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        Assert.Equal(HttpStatusCode.Unauthorized, (await c.GetAsync("/api/v1/me/availability")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await c.GetAsync("/api/v1/me/api-keys")).StatusCode);
     }
 
     [Fact]

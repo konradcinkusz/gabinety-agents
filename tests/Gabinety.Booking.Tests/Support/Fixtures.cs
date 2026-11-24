@@ -112,12 +112,6 @@ sealed class BookingFactory : WebApplicationFactory<Program>
 
 static class Http
 {
-    public static Task<HttpResponseMessage> PutAvailability(this HttpClient c, object[] rules, object[]? exceptions = null) =>
-        c.PutAsJsonAsync("/api/v1/me/availability", new { rules, exceptions = exceptions ?? [] });
-
-    public static object Rule(int day, string start, string end) => new { isoWeekday = day, startLocal = start, endLocal = end };
-    public static object Day(string date) => new { dateLocal = date };
-
     public static async Task<JsonElement> Body(this HttpResponseMessage r) =>
         JsonDocument.Parse(await r.Content.ReadAsStringAsync()).RootElement.Clone();
 }

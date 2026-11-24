@@ -106,12 +106,12 @@ public sealed class SearchFeature : IServiceFeature
             .Where(o => o.IsActive && approved.Any(p => p.Id == o.PractitionerId))
             .Select(o => new { o.PractitionerId, o.ProblemSlug, o.TechSlugs }).ToListAsync(ct);
 
-        var counts = new Dictionary<string, HashSet<Guid>> { ["/programisci"] = rows.Select(r => r.PractitionerId).ToHashSet() };
+        var counts = new Dictionary<string, HashSet<Guid>> { ["/agenci"] = rows.Select(r => r.PractitionerId).ToHashSet() };
         void Add(string path, Guid id) { if (!counts.TryGetValue(path, out var set)) counts[path] = set = []; set.Add(id); }
         foreach (var r in rows.Where(r => problems.Contains(r.ProblemSlug)))
         {
-            Add($"/programisci/{r.ProblemSlug}", r.PractitionerId);
-            foreach (var t in r.TechSlugs.Where(techs.Contains)) Add($"/programisci/{r.ProblemSlug}/{t}", r.PractitionerId);
+            Add($"/agenci/{r.ProblemSlug}", r.PractitionerId);
+            foreach (var t in r.TechSlugs.Where(techs.Contains)) Add($"/agenci/{r.ProblemSlug}/{t}", r.PractitionerId);
         }
         var categories = counts.OrderBy(c => c.Key, StringComparer.Ordinal)
             .Select(c => new SitemapCategory(c.Key, c.Value.Count, c.Value.Count >= IndexableFrom)).ToList();

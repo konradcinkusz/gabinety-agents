@@ -26,7 +26,7 @@ public class SitemapTests(SearchFactory f)
         await f.Reset();
         var m = await Map();
         Assert.Empty(m.Practitioners);
-        Assert.Equal([new SitemapCategory("/programisci", 0, false)], m.Categories);
+        Assert.Equal([new SitemapCategory("/agenci", 0, false)], m.Categories);
     }
 
     [Fact]
@@ -35,14 +35,14 @@ public class SitemapTests(SearchFactory f)
         await f.Reset();
         for (var i = 0; i < 2; i++) await f.Approved(null, new Spec("code-review", ["dotnet"]));
         var two = await Map();
-        Assert.Contains(new SitemapCategory("/programisci/code-review", 2, false), two.Categories);
-        Assert.Contains(new SitemapCategory("/programisci/code-review/dotnet", 2, false), two.Categories);
+        Assert.Contains(new SitemapCategory("/agenci/code-review", 2, false), two.Categories);
+        Assert.Contains(new SitemapCategory("/agenci/code-review/dotnet", 2, false), two.Categories);
         await f.Approved(null, new Spec("code-review", ["dotnet", "csharp"]));
         var three = await Map();
-        Assert.Contains(new SitemapCategory("/programisci", 3, true), three.Categories);
-        Assert.Contains(new SitemapCategory("/programisci/code-review", 3, true), three.Categories);
-        Assert.Contains(new SitemapCategory("/programisci/code-review/dotnet", 3, true), three.Categories);
-        Assert.Contains(new SitemapCategory("/programisci/code-review/csharp", 1, false), three.Categories);
+        Assert.Contains(new SitemapCategory("/agenci", 3, true), three.Categories);
+        Assert.Contains(new SitemapCategory("/agenci/code-review", 3, true), three.Categories);
+        Assert.Contains(new SitemapCategory("/agenci/code-review/dotnet", 3, true), three.Categories);
+        Assert.Contains(new SitemapCategory("/agenci/code-review/csharp", 1, false), three.Categories);
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public class SitemapTests(SearchFactory f)
         await f.Seed(PractitionerStatus.Approved, null, new Spec("code-review", ["dotnet"], Active: false));    // approved, not listed
         var m = await Map();
         Assert.Equal(2, m.Practitioners.Count);                                                                   // every Approved one is in the sitemap
-        Assert.Equal(["/programisci", "/programisci/code-review", "/programisci/code-review/dotnet"], m.Categories.Select(c => c.Path));
+        Assert.Equal(["/agenci", "/agenci/code-review", "/agenci/code-review/dotnet"], m.Categories.Select(c => c.Path));
         Assert.All(m.Categories, c => Assert.Equal(1, c.PractitionerCount));
         Assert.DoesNotContain(m.Categories, c => c.Path.Contains("audyt-kodu"));
     }
@@ -69,7 +69,7 @@ public class SitemapTests(SearchFactory f)
         var m = await Map();
         Assert.Equal([new SitemapPractitioner("demo-aaa", a.UpdatedAt), new SitemapPractitioner("demo-bbb", b.UpdatedAt)], m.Practitioners);
         Assert.Equal(m.Categories.Select(c => c.Path).Order(StringComparer.Ordinal), m.Categories.Select(c => c.Path));
-        Assert.Equal("/programisci", m.Categories[0].Path);
+        Assert.Equal("/agenci", m.Categories[0].Path);
     }
 }
 

@@ -73,7 +73,6 @@ public class SmtpMailpitIntegrationTests
         Assert.IsType<SmtpEmailSender>(host.Services.GetRequiredService<IEmailSender>());
         Assert.IsType<ContactResolver>(host.Services.GetRequiredService<IContactResolver>());
 
-        await host.WorkWeek();
         var created = await CreateHost.Post(host.ClientFor(Client), host.Req(text: "demo-brief: " + Secret), CreateHost.Key());
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
         var id = (await created.Body()).GetProperty("bookingId").GetGuid();
@@ -104,7 +103,7 @@ public class SmtpMailpitIntegrationTests
             Assert.DoesNotContain(SmtpPassword, all);
             // Mailpit's own metadata ("Username") records the SMTP login name: that is the server's record of the session, not the message. The message carries none of it.
             Assert.DoesNotContain("demo-smtp-user", m.GetProperty("Subject").GetString() + m.GetProperty("Text").GetString() + m.GetProperty("HTML").GetString());
-            Assert.Contains($"/moje/rezerwacje/{id}", m.GetProperty("Text").GetString()); // the link to the page, nothing from the brief
+            Assert.Contains($"/moje/dostepy/{id}", m.GetProperty("Text").GetString()); // the link to the page, nothing from the brief
         }
 
         Assert.All(host.Logs.Lines, l =>

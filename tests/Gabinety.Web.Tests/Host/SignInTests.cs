@@ -18,7 +18,7 @@ public class SignInTests
     public async Task The_login_page_is_a_real_form_with_labels_an_antiforgery_token_and_no_script()
     {
         await using var web = Web();
-        var page = await web.NewBrowser().GetAsync("/logowanie?redirect=%2Fmoje%2Frezerwacje");
+        var page = await web.NewBrowser().GetAsync("/logowanie?redirect=%2Fmoje%2Fdostepy");
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Equal("Logowanie", page.TextOf("h1"));
         var form = page.One("form[method=post]")!;
@@ -68,9 +68,9 @@ public class SignInTests
     {
         await using var web = Web();
         var browser = web.NewBrowser();
-        await SignIn.As(web, browser, returnTo: "/moje/rezerwacje");
+        await SignIn.As(web, browser, returnTo: "/moje/dostepy");
 
-        var page = await browser.GetAsync("/moje/rezerwacje");
+        var page = await browser.GetAsync("/moje/dostepy");
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Equal("Moje dostępy", page.TextOf("h1"));
         Assert.Equal(["Konsultacja demo", "Druga konsultacja"], page.All("[data-testid=booking-row] .booking-row__title").Select(h => h.TextContent));
@@ -83,8 +83,8 @@ public class SignInTests
         Assert.StartsWith("Bearer eyJ", seen.Authorization);
         Assert.DoesNotContain("eyJ", page.Html); // and no token anywhere in the page, prerendered state included
         Assert.DoesNotContain(web.Identity.Backend.Requests[0].Body ?? "", page.Html);
-        Assert.Equal(["/programisci", "/jak-to-dziala", "/cennik"], page.All("header .site-nav a").Select(a => a.GetAttribute("href")));
-        Assert.Equal(["/moje/rezerwacje", "/moje/klucze", "/konto", "/gabinet-programisty", "/wyloguj"], page.All("header .account-menu a").Select(a => a.GetAttribute("href")));
+        Assert.Equal(["/agenci", "/jak-to-dziala", "/cennik"], page.All("header .site-nav a").Select(a => a.GetAttribute("href")));
+        Assert.Equal(["/moje/dostepy", "/moje/klucze", "/konto", "/panel-agenta", "/wyloguj"], page.All("header .account-menu a").Select(a => a.GetAttribute("href")));
     }
 
     [Fact]
@@ -93,9 +93,9 @@ public class SignInTests
         await using var web = Web();
         var browser = web.NewBrowser();
         await SignIn.As(web, browser);
-        await browser.GetAsync("/moje/rezerwacje?role=practitioner&status=Confirmed");
+        await browser.GetAsync("/moje/dostepy?role=practitioner&status=Confirmed");
         Assert.Equal("/api/v1/me/bookings?role=practitioner&status=Confirmed", web.Booking.Requests.Last().PathAndQuery);
-        await browser.GetAsync("/moje/rezerwacje?role=admin&status=Hacked%26x");
+        await browser.GetAsync("/moje/dostepy?role=admin&status=Hacked%26x");
         Assert.Equal("/api/v1/me/bookings?role=client", web.Booking.Requests.Last().PathAndQuery); // anything else is the default view
     }
 
@@ -103,15 +103,15 @@ public class SignInTests
     public async Task Without_a_session_an_authenticated_page_redirects_to_sign_in_with_the_target_preserved()
     {
         await using var web = Web();
-        var page = await web.NewBrowser().GetAsync("/moje/rezerwacje?role=practitioner&status=Confirmed");
+        var page = await web.NewBrowser().GetAsync("/moje/dostepy?role=practitioner&status=Confirmed");
         Assert.Equal(HttpStatusCode.Found, page.Status);
-        Assert.Equal("/logowanie?redirect=%2Fmoje%2Frezerwacje%3Frole%3Dpractitioner%26status%3DConfirmed", page.Location);
+        Assert.Equal("/logowanie?redirect=%2Fmoje%2Fdostepy%3Frole%3Dpractitioner%26status%3DConfirmed", page.Location);
         Assert.Empty(web.Booking.Requests); // nothing was asked of the backend for an anonymous visitor
     }
 
     [Theory]
-    [InlineData("/moje/rezerwacje", "/moje/rezerwacje")]
-    [InlineData("/moje/rezerwacje?status=Confirmed", "/moje/rezerwacje?status=Confirmed")]
+    [InlineData("/moje/dostepy", "/moje/dostepy")]
+    [InlineData("/moje/dostepy?status=Confirmed", "/moje/dostepy?status=Confirmed")]
     [InlineData("//evil.example/phish", "/")]
     [InlineData("https://evil.example", "/")]
     [InlineData("/\\evil.example", "/")]
@@ -181,9 +181,9 @@ public class SignInTests
         await using var web = Web();
         var browser = web.NewBrowser();
         await SignIn.As(web, browser);
-        var page = await browser.GetAsync("/logowanie?redirect=%2Fmoje%2Frezerwacje");
+        var page = await browser.GetAsync("/logowanie?redirect=%2Fmoje%2Fdostepy");
         Assert.Equal(HttpStatusCode.Found, page.Status);
-        Assert.Equal("/moje/rezerwacje", page.Location);
+        Assert.Equal("/moje/dostepy", page.Location);
     }
 
     [Fact]
@@ -204,7 +204,7 @@ public class SignInTests
 
         var replay = web.NewBrowser();
         replay.Client.DefaultRequestHeaders.Add("Cookie", $"gt_session={sid}");
-        var page = await replay.GetAsync("/moje/rezerwacje");
+        var page = await replay.GetAsync("/moje/dostepy");
         Assert.Equal(HttpStatusCode.Found, page.Status); // the replayed cookie finds no session
         Assert.StartsWith("/logowanie?redirect=", page.Location);
         var home = await browser.GetAsync("/?flash=signed-out");
@@ -219,7 +219,7 @@ public class SignInTests
         {
             var b = web.NewBrowser();
             b.Client.DefaultRequestHeaders.Add("Cookie", cookie);
-            Assert.Equal(HttpStatusCode.Found, (await b.GetAsync("/moje/rezerwacje")).Status);
+            Assert.Equal(HttpStatusCode.Found, (await b.GetAsync("/moje/dostepy")).Status);
         }
     }
 
@@ -230,7 +230,7 @@ public class SignInTests
         var browser = web.NewBrowser();
         await SignIn.As(web, browser);
         web.Booking.Respond = FakeBackend.Throw(new HttpRequestException("down"));
-        var page = await browser.GetAsync("/moje/rezerwacje");
+        var page = await browser.GetAsync("/moje/dostepy");
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Equal("Brak połączenia z usługą dostępów. Spróbuj ponownie za chwilę.", page.TextOf("[data-testid=unavailable] p"));
         Assert.Equal("alert", page.One("[data-testid=unavailable]")!.GetAttribute("role"));

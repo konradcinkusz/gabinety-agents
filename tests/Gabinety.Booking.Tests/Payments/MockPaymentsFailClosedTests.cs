@@ -85,7 +85,6 @@ public class MockPaymentsFailClosedTests
     public async Task Simulate_is_not_mapped_in_a_deployed_profile()
     {
         await using var fake = new CreateHost();
-        await fake.WorkWeek();
         var (id, _) = await Pay.CreateBooking(fake);
 
         await using var deployed = new CreateHost().AsDeployed("Production");
@@ -98,7 +97,6 @@ public class MockPaymentsFailClosedTests
     public async Task Another_signed_in_user_cannot_simulate_someone_elses_booking_and_it_does_not_change()
     {
         await using var h = new CreateHost { MeetingUrl = "https://meet.demo.invalid/room-1" };
-        await h.WorkWeek();
         var (id, _) = await Pay.CreateBooking(h, Owner);
 
         foreach (var outcome in new[] { "succeeded", "failed" })
@@ -114,7 +112,6 @@ public class MockPaymentsFailClosedTests
     public async Task The_practitioner_of_the_booking_is_not_its_client_and_cannot_simulate_either()
     {
         await using var h = new CreateHost();
-        await h.WorkWeek();
         var (id, _) = await Pay.CreateBooking(h, Owner);
         Assert.Equal(HttpStatusCode.NotFound, (await Pay.Simulate(h.ClientFor(h.OwnerUserId), id, "succeeded")).StatusCode);
     }
@@ -123,7 +120,6 @@ public class MockPaymentsFailClosedTests
     public async Task An_admin_who_is_not_the_client_cannot_simulate_either()
     {
         await using var h = new CreateHost();
-        await h.WorkWeek();
         var (id, _) = await Pay.CreateBooking(h, Owner);
         Assert.Equal(HttpStatusCode.NotFound, (await Pay.Simulate(h.ClientFor("demo-admin", "Admin"), id, "succeeded")).StatusCode);
     }
@@ -132,7 +128,6 @@ public class MockPaymentsFailClosedTests
     public async Task The_client_of_the_booking_can_simulate_it_in_the_fake_profile()
     {
         await using var h = new CreateHost { MeetingUrl = "https://meet.demo.invalid/room-1" };
-        await h.WorkWeek();
         var (id, _) = await Pay.CreateBooking(h, Owner);
         Assert.Equal(HttpStatusCode.OK, (await Pay.Simulate(h.ClientFor(Owner), id, "succeeded")).StatusCode);
         Assert.Equal(BookingStatus.Confirmed, (await h.Query(db => db.Bookings.Where(b => b.Id == id).Select(b => b.Status).SingleAsync())));
@@ -144,13 +139,11 @@ public class MockPaymentsFailClosedTests
     public async Task With_no_secret_the_webhook_is_accepted_for_Mock_and_rejected_for_any_other_provider_name()
     {
         await using var mock = new CreateHost();
-        await mock.WorkWeek();
         var (id, pid) = await Pay.CreateBooking(mock);
         var body = Pay.EventJson("evt-1", "PaymentSucceeded", pid);
         Assert.Equal(HttpStatusCode.OK, (await Pay.Webhook(mock.ClientFor(null), body, null)).StatusCode);
 
         await using var other = new CreateHost().AsDeployed("Production");
-        await other.WorkWeek();
         var (id2, pid2) = await Pay.CreateBooking(other);
         var body2 = Pay.EventJson("evt-2", "PaymentSucceeded", pid2);
         Assert.Equal(HttpStatusCode.Unauthorized, (await Pay.Webhook(other.ClientFor(null), body2, null, "acme")).StatusCode);

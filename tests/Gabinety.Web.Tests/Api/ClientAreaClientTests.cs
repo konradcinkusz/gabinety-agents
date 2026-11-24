@@ -117,14 +117,12 @@ public class ClientAreaClientTests
     }
 
     [Fact]
-    public async Task Dispute_sends_the_wire_kind_and_the_trimmed_text_and_no_show_sends_no_body()
+    public async Task Dispute_sends_the_wire_kind_and_the_trimmed_text()
     {
         var (client, backend) = Bookings();
         backend.Respond = _ => FakeBackend.Json(ClientAreaFixture.Detail());
         await client.DisputeAsync(Id, "not_as_described", "  Opis sporu.  ");
-        await client.ReportNoShowAsync(Id);
         Assert.Equal("""{"kind":"not_as_described","text":"Opis sporu."}""", backend.Requests[0].Body);
-        Assert.Equal(($"/api/v1/bookings/{Id}/report-client-no-show", null), (backend.Requests[1].PathAndQuery, backend.Requests[1].Body));
     }
 
     [Fact]

@@ -66,5 +66,5 @@ public static class OnboardingChecklist
 /// <summary>The routes of the area, in one place.</summary>
 public static class PractitionerPaths
 {
-    public const string Home = "/gabinet-programisty", Profile = "/gabinet-programisty/profil", Offers = "/gabinet-programisty/oferty", Payments = "/gabinet-programisty/platnosci";
+    public const string Home = "/panel-agenta", Profile = "/panel-agenta/profil", Offers = "/panel-agenta/oferty", Payments = "/panel-agenta/platnosci";
 }

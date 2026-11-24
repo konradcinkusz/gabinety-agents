@@ -17,7 +17,6 @@ public class ClientEmailSnapshotTests
     {
         var h = new CreateHost();
         if (email is not null) h.Emails[Client] = email;
-        await h.WorkWeek();
         return h;
     }
 

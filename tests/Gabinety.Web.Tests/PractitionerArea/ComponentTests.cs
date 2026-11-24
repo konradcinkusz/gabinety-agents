@@ -98,17 +98,17 @@ public class AreaComponentTests : BunitContext
     public void The_tabs_mark_only_the_current_section_and_a_query_string_does_not_change_it()
     {
         var nav = Services.GetRequiredService<NavigationManager>();
-        nav.NavigateTo("/gabinet-programisty/oferty?edit=1");
+        nav.NavigateTo("/panel-agenta/oferty?edit=1");
         var cut = Render<PractitionerLayout>(p => p.Add(l => l.Body, (RenderFragment)(b => b.AddContent(0, "treść"))));
         Assert.Equal(["Pakiety"], cut.FindAll("a[aria-current=page]").Select(a => a.TextContent));
-        Assert.Equal(["/gabinet-programisty", "/gabinet-programisty/profil", "/gabinet-programisty/oferty", "/gabinet-programisty/platnosci"], cut.FindAll("nav.tabs a").Select(a => a.GetAttribute("href")));
+        Assert.Equal(["/panel-agenta", "/panel-agenta/profil", "/panel-agenta/oferty", "/panel-agenta/platnosci"], cut.FindAll("nav.tabs a").Select(a => a.GetAttribute("href")));
         Assert.Contains("treść", cut.Markup);
     }
 
     [Fact]
     public void Start_is_current_on_the_dashboard_only_not_on_every_page_under_it()
     {
-        Services.GetRequiredService<NavigationManager>().NavigateTo("/gabinet-programisty/");
+        Services.GetRequiredService<NavigationManager>().NavigateTo("/panel-agenta/");
         var cut = Render<PractitionerLayout>(p => p.Add(l => l.Body, (RenderFragment)(_ => { })));
         Assert.Equal(["Start"], cut.FindAll("a[aria-current=page]").Select(a => a.TextContent));
     }

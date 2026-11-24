@@ -104,15 +104,15 @@ public class RegistrationTests
     {
         await using var web = Web();
         var browser = web.NewBrowser();
-        var r = await browser.PostFormAsync("/rejestracja?redirect=%2Fmoje%2Frezerwacje", Form());
+        var r = await browser.PostFormAsync("/rejestracja?redirect=%2Fmoje%2Fdostepy", Form());
         Assert.Equal(HttpStatusCode.Found, r.Status);
-        Assert.Equal("/moje/rezerwacje", r.Location);
+        Assert.Equal("/moje/dostepy", r.Location);
         Assert.Contains(r.SetCookies, c => c.StartsWith("gt_session="));
         var body = web.Identity.Backend.Requests.Single(x => x.PathAndQuery == "/api/v1/auth/register").Body!;
         Assert.Contains("\"acceptedTermsVersion\":\"2026-01-01\"", body);
         Assert.Contains("\"acceptedPrivacyVersion\":\"2026-01-01\"", body);
         Assert.Contains("\"locale\":\"pl\"", body);
-        Assert.Equal(HttpStatusCode.OK, (await browser.GetAsync("/moje/rezerwacje")).Status);
+        Assert.Equal(HttpStatusCode.OK, (await browser.GetAsync("/moje/dostepy")).Status);
     }
 
     [Theory]
@@ -189,19 +189,19 @@ public class RegistrationTests
     public async Task A_signed_in_visitor_is_sent_on_and_the_login_link_keeps_the_target()
     {
         await using var web = Web();
-        var anon = await web.NewBrowser().GetAsync("/rejestracja?redirect=%2Fmoje%2Frezerwacje");
-        Assert.Equal("/logowanie?redirect=%2Fmoje%2Frezerwacje", anon.All("main a").Single(a => a.TextContent == "Zaloguj się").GetAttribute("href"));
+        var anon = await web.NewBrowser().GetAsync("/rejestracja?redirect=%2Fmoje%2Fdostepy");
+        Assert.Equal("/logowanie?redirect=%2Fmoje%2Fdostepy", anon.All("main a").Single(a => a.TextContent == "Zaloguj się").GetAttribute("href"));
         var browser = web.NewBrowser();
         await SignIn.As(web, browser);
-        var page = await browser.GetAsync("/rejestracja?redirect=%2Fmoje%2Frezerwacje");
-        Assert.Equal("/moje/rezerwacje", page.Location);
+        var page = await browser.GetAsync("/rejestracja?redirect=%2Fmoje%2Fdostepy");
+        Assert.Equal("/moje/dostepy", page.Location);
     }
 
     [Fact]
     public async Task The_github_button_keeps_the_target()
     {
         await using var web = Web();
-        var page = await web.NewBrowser().GetAsync("/rejestracja?redirect=%2Fmoje%2Frezerwacje");
-        Assert.Equal("/oauth/github/start?redirect=%2Fmoje%2Frezerwacje", page.All("main a.btn").Single(a => a.TextContent.Contains("GitHub")).GetAttribute("href"));
+        var page = await web.NewBrowser().GetAsync("/rejestracja?redirect=%2Fmoje%2Fdostepy");
+        Assert.Equal("/oauth/github/start?redirect=%2Fmoje%2Fdostepy", page.All("main a.btn").Single(a => a.TextContent.Contains("GitHub")).GetAttribute("href"));
     }
 }

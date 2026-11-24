@@ -39,10 +39,6 @@ public sealed record RankingConstantsDto(int M, double Mu, int MinReviewsToShowR
 
 public sealed record RankingRulesDto(string Version, DateTimeOffset EffectiveFrom, RankingWeightsDto Weights, RankingConstantsDto Constants);
 
-public sealed record SlotDto(DateTimeOffset StartUtc, DateTimeOffset EndUtc);
-
-public sealed record SlotsDto(IReadOnlyList<SlotDto> Slots);
-
 public sealed record PractitionerRefDto(Guid Id, string DisplayName, string Slug);
 
 public sealed record ClientRefDto(string DisplayName);
@@ -64,15 +60,6 @@ public sealed record BriefDto(string Text, string? ProblemSlug, bool AiAssisted)
 
 /// <summary>A package has no time slot (docs/agentic/PLAN.md A-02): the request carries no <c>startUtc</c>.</summary>
 public sealed record CreateBookingRequestDto(Guid OfferingId, BriefDto Brief);
-
-/// <summary>The service insists on a UTC instant written with <c>Z</c> (CONTRACTS 0): <c>2026-12-08T11:00:00Z</c>, never <c>+00:00</c> or a local offset.</summary>
-public sealed class UtcInstantWriter : System.Text.Json.Serialization.JsonConverter<DateTimeOffset>
-{
-    public override DateTimeOffset Read(ref System.Text.Json.Utf8JsonReader reader, Type typeToConvert, System.Text.Json.JsonSerializerOptions options) => reader.GetDateTimeOffset();
-
-    public override void Write(System.Text.Json.Utf8JsonWriter writer, DateTimeOffset value, System.Text.Json.JsonSerializerOptions options) =>
-        writer.WriteStringValue(value.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.FFFFFFF'Z'", System.Globalization.CultureInfo.InvariantCulture));
-}
 
 /// <summary><c>CheckoutUrl</c> is where the browser goes next: the mock checkout of this site, or the payment provider's page (Stripe Checkout) which returns to the site afterwards.</summary>
 public sealed record CreateBookingResponseDto(Guid BookingId, string Status, DateTimeOffset HoldExpiresAt, string CheckoutUrl);

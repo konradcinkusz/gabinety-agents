@@ -191,7 +191,6 @@ public class ClockApiTests
     public async Task A_booking_created_after_moving_the_clock_uses_the_offset_time_for_created_at_and_the_hold()
     {
         await using var h = FakeHost();
-        await h.WorkWeek();
         await SetOffset(h, 60); // now = 2026-11-16 13:00Z, the slot is Tuesday 10:00Z
         var r = await CreateHost.Post(h.ClientFor("demo-client-clock"), h.Req(), CreateHost.Key());
         Assert.Equal(HttpStatusCode.Created, r.StatusCode);

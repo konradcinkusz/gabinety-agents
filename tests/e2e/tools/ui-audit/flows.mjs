@@ -32,14 +32,14 @@ export async function runFlows(browser, { OUT, shotCount, findings }) {
     const page = await ctx.newPage(); page.setDefaultTimeout(25000);
     let bookingId;
     await attempt("browse", async () => {
-      await page.goto("/programisci"); await settle(page);
+      await page.goto("/agenci"); await settle(page);
       await page.getByRole("navigation", { name: "Filtry" }).getByRole("link", { name: "Audyt kodu", exact: true }).click(); await settle(page);
       await snap(page, "client", "01-category", "after choosing a category");
     });
     await attempt("profile+slot", async () => {
-      await page.goto("/gabinet/demo-celina-przykladowska"); await settle(page, 1500);
+      await page.goto("/agent/demo-celina-przykladowska"); await settle(page, 1500);
       const slot = page.getByRole("link", { name: /^\d{2}:\d{2}$/ }).first();
-      await slot.click(); await page.waitForURL(/\/rezerwacja\//); await settle(page);
+      await slot.click(); await page.waitForURL(/\/dostep\//); await settle(page);
       await snap(page, "client", "02-booking-form", "booking page, empty");
     });
     await attempt("booking validation", async () => {
@@ -59,9 +59,9 @@ export async function runFlows(browser, { OUT, shotCount, findings }) {
       await page.getByRole("button", { name: "Symuluj udaną płatność" }).click(); await page.waitForURL(/potwierdzenie/); await settle(page, 1500);
       await snap(page, "client", "06-confirmation", "confirmation");
     });
-    await attempt("my bookings", async () => { await page.goto("/moje/rezerwacje"); await settle(page); await snap(page, "client", "07-my-bookings", "list with the new booking"); });
+    await attempt("my bookings", async () => { await page.goto("/moje/dostepy"); await settle(page); await snap(page, "client", "07-my-bookings", "list with the new booking"); });
     await attempt("detail+cancel", async () => {
-      await page.goto(`/moje/rezerwacje/${bookingId}?role=client`); await settle(page);
+      await page.goto(`/moje/dostepy/${bookingId}?role=client`); await settle(page);
       await snap(page, "client", "08-booking-detail", "new booking, confirmed");
       await page.getByRole("button", { name: "Anuluj rezerwację" }).click(); await page.waitForTimeout(400);
       await snap(page, "client", "09-cancel-dialog", "cancel confirmation dialog");
@@ -70,8 +70,8 @@ export async function runFlows(browser, { OUT, shotCount, findings }) {
     });
     await attempt("review", async () => {
       // the review form is reached from a completed booking's detail page ("Wystaw opinię"), not from the list
-      await page.goto("/moje/rezerwacje"); await settle(page);
-      const hrefs = await page.$$eval('a[href^="/moje/rezerwacje/"]', (as) => as.map((a) => a.getAttribute("href")));
+      await page.goto("/moje/dostepy"); await settle(page);
+      const hrefs = await page.$$eval('a[href^="/moje/dostepy/"]', (as) => as.map((a) => a.getAttribute("href")));
       let found = false;
       for (const h of hrefs) {
         await page.goto(h); await settle(page, 500);
@@ -88,8 +88,8 @@ export async function runFlows(browser, { OUT, shotCount, findings }) {
       await snap(page, "client", "14-review-sent", "after sending the review");
     });
     await attempt("dispute", async () => {
-      await page.goto("/moje/rezerwacje"); await settle(page);
-      const hrefs = await page.$$eval('a[href^="/moje/rezerwacje/"]', (as) => as.map((a) => a.getAttribute("href")));
+      await page.goto("/moje/dostepy"); await settle(page);
+      const hrefs = await page.$$eval('a[href^="/moje/dostepy/"]', (as) => as.map((a) => a.getAttribute("href")));
       let done = false;
       for (const h of hrefs) {
         await page.goto(h); await settle(page, 500);
@@ -130,18 +130,18 @@ export async function runFlows(browser, { OUT, shotCount, findings }) {
       await snap(p2, "visitor", "login-wrong-password", "wrong password"); await c2.close();
     });
     await attempt("onboarding", async () => {
-      await page.goto("/gabinet-programisty"); await settle(page);
+      await page.goto("/panel-agenta"); await settle(page);
       await snap(page, "newpractitioner", "03-create-profile", "no profile yet");
       await page.getByLabel("Nazwa wyświetlana").fill("Demo Audytowy"); await page.getByRole("button", { name: "Załóż gabinet" }).click();
       await page.getByRole("heading", { level: 1, name: "Panel programisty" }).waitFor(); await settle(page);
       await snap(page, "newpractitioner", "04-dashboard-draft", "draft dashboard with checklist");
-      await page.goto("/gabinet-programisty/profil"); await settle(page);
+      await page.goto("/panel-agenta/profil"); await settle(page);
       await page.getByRole("button", { name: "Zapisz" }).click(); await page.waitForTimeout(600);
       await snap(page, "newpractitioner", "05-profile-validation", "profile saved empty");
-      await page.goto("/gabinet-programisty/oferty?nowa=1"); await settle(page);
+      await page.goto("/panel-agenta/oferty?nowa=1"); await settle(page);
       await page.getByRole("button", { name: "Zapisz" }).click(); await page.waitForTimeout(600);
       await snap(page, "newpractitioner", "06-offerings-validation", "offer saved empty");
-      await page.goto("/gabinet-programisty/dostepnosc"); await settle(page);
+      await page.goto("/panel-agenta/dostepnosc"); await settle(page);
       await snap(page, "newpractitioner", "07-availability-empty", "availability, nothing set");
     });
     await ctx.close();

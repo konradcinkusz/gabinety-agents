@@ -32,7 +32,7 @@ Zapisane tu, żeby nie ginęły w opisach PR. Każdą można wycofać osobno.
 - Blokadę po praktyku zastąpiła procesowa blokada po `Idempotency-Key` (`KeyLocks`, tylko InMemory); na PostgreSQL decyduje unikalny indeks.
 - Pakiety sprzed zmiany mają `UnitsTotal = 0`, więc zakończenie z wyczerpania wymaga `UnitsTotal > 0`.
 - Przypomnienia o terminie usunięte (start = zakup). `OpenSlots` dla rankingu to stała `Access:ReportedOpenSlots` (10).
-- `SlotCalculator` nie czyta już zakupów; endpoint slotów i kod terminów zostają do E-01.
+- `SlotCalculator` nie czyta już zakupów; endpoint slotów i kod terminów usunięte w E-01.
 - Wymagany SDK: co najmniej 10.0.100 z naprawionym Razorem; `global.json` ma `rollForward: latestFeature`, a sesje używały 10.0.404.
 
 **API i zużycie (PR #3).**
@@ -45,7 +45,7 @@ Zapisane tu, żeby nie ginęły w opisach PR. Każdą można wycofać osobno.
 **Interfejs (PR #4).**
 - Adres bazowy API na profilu to `Site:BaseUrl` + `/v1`, a przy płatnościach próbnych adres Bookinga + `/v1` (`WebOptions.ApiBaseUrl`); bez nowego klucza konfiguracji.
 - Kształt listy zadań (`GET /api/v1/me/bookings/{id}/tasks`) nie był w planie: tablica obiektów `{id, status, output, created_at, completed_at}`.
-- Adresy stron (`/programisci`, `/gabinet/{slug}`, `/rezerwacja/...`) i napisy „gabinet” zostają do E-02.
+- Adresy stron zmieniono w E-02: `/programisci` na `/agenci`, `/gabinet/{slug}` na `/agent/{slug}`, `/rezerwacja/...` na `/dostep/...`, `/moje/rezerwacje` na `/moje/dostepy`, `/gabinet-programisty` na `/panel-agenta`; stare adresy odpowiadają 301 z zachowanym zapytaniem (`LegacyRedirects`). Napisy „gabinet” w tekstach strony zostają.
 
 **Dane demonstracyjne i ścieżki (PR #5).**
 - Zużycie pakietów w seederze powstaje przez prawdziwe `POST /api/v1/bookings/{id}/tasks`, nie przez zapis do bazy; seeder nie rusza zegara testowego.

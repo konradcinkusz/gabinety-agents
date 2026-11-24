@@ -25,7 +25,7 @@ else if (_booking is { } b)
     {
         <div class="callout callout--info" role="status">
             <p>@BookFlowText.Checkout.Closed</p>
-            @if (b.Status == "Confirmed") {<a class="btn btn--primary" href="@($"/rezerwacja/potwierdzenie/{b.Id}")">@BookFlowText.Checkout.ToBooking</a>}
+            @if (b.Status == "Confirmed") {<a class="btn btn--primary" href="@($"/dostep/potwierdzenie/{b.Id}")">@BookFlowText.Checkout.ToBooking</a>}
             else {<a class="btn btn--secondary" href="@ProfileHref(b)">@BookFlowText.Checkout.ToProfile</a>}
         </div>
     }
@@ -64,7 +64,7 @@ else if (_booking is { } b)
     sealed class CheckoutForm { public string? Outcome { get; set; } }
 
     string CurrentPath => "/" + Navigation.ToBaseRelativePath(Navigation.Uri);
-    static string ProfileHref(BookingDetailDto b) => string.IsNullOrWhiteSpace(b.Practitioner.Slug) ? "/programisci" : "/gabinet/" + Uri.EscapeDataString(b.Practitioner.Slug);
+    static string ProfileHref(BookingDetailDto b) => string.IsNullOrWhiteSpace(b.Practitioner.Slug) ? "/agenci" : "/agent/" + Uri.EscapeDataString(b.Practitioner.Slug);
 
     protected override async Task OnInitializedAsync()
     {
@@ -84,7 +84,7 @@ else if (_booking is { } b)
         var result = await Bookings.SimulatePaymentAsync(BookingId, outcome);
         if (result.IsOk)
         {
-            if (outcome == "succeeded") { Navigation.NavigateTo($"/rezerwacja/potwierdzenie/{BookingId}"); return; }
+            if (outcome == "succeeded") { Navigation.NavigateTo($"/dostep/potwierdzenie/{BookingId}"); return; }
             _declined = true;
             return;
         }

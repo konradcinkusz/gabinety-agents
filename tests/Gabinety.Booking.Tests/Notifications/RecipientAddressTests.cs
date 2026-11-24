@@ -60,7 +60,6 @@ public class RecipientAddressTests
         /// <summary>Creates a booking as the client with the secret brief and confirms it by the payment simulation: two confirmations, two reminders, a review request.</summary>
         public async Task<Guid> ConfirmedBooking()
         {
-            await Host.WorkWeek();
             var r = await CreateHost.Post(Host.ClientFor(Client), Host.Req(text: Brief), CreateHost.Key());
             Assert.Equal(HttpStatusCode.Created, r.StatusCode);
             var id = (await r.Body()).GetProperty("bookingId").GetGuid();

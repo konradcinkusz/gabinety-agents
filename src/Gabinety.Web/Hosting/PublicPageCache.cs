@@ -31,7 +31,7 @@ public sealed class PublicPageCachePolicy(IConfiguration config) : IOutputCacheP
         context.AllowCacheStorage = allowed;
         context.AllowLocking = true;
         context.ResponseExpirationTimeSpan = Duration;
-        context.CacheVaryByRules.QueryKeys = "*"; // route + every query key: /programisci?duration=30 and /programisci are two entries
+        context.CacheVaryByRules.QueryKeys = "*"; // route + every query key: /agenci?duration=30 and /agenci are two entries
         context.CacheVaryByRules.HeaderNames = "Accept-Encoding";
         return ValueTask.CompletedTask;
     }

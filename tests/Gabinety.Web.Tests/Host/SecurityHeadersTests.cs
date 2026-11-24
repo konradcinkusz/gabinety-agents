@@ -74,7 +74,7 @@ public class SecurityHeadersTests
         web.Directory.Respond = _ => FakeBackend.Json(Sample.Taxonomy);
         var browser = web.NewBrowser();
         var styles = Regex.Match((await browser.GetAsync("/")).Html, "href=\"([^\"]*styles[^\"]*\\.css)\"").Groups[1].Value;
-        foreach (var path in new[] { "/", "/programisci", "/nie-ma-takiej", "/health", "/alive", "/moje/rezerwacje", styles, "/_framework/blazor.web.js" })
+        foreach (var path in new[] { "/", "/agenci", "/nie-ma-takiej", "/health", "/alive", "/moje/dostepy", styles, "/_framework/blazor.web.js" })
         {
             var page = await browser.GetAsync(path);
             Assert.True(page.Header("Content-Security-Policy") is { Length: > 0 } && page.Header("X-Content-Type-Options") == "nosniff", $"{path} → {(int)page.Status}");

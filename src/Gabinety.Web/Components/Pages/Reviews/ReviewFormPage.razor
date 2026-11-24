@@ -14,7 +14,7 @@
     <section class="card stack" aria-labelledby="thanks">
         <h2 id="thanks">@ReviewsText.Done.Title</h2>
         <div class="@("callout callout--" + (sent == "published" ? "success" : "info"))" role="status">@(sent == "published" ? ReviewsText.Done.Published : ReviewsText.Done.Held)</div>
-        <p><a href="/moje/rezerwacje">@ReviewsText.Form.Back</a></p>
+        <p><a href="/moje/dostepy">@ReviewsText.Form.Back</a></p>
     </section>
 }
 else if (_state is "already" or "not-reviewable")
@@ -22,7 +22,7 @@ else if (_state is "already" or "not-reviewable")
     <section class="card stack">
         <h2>@(_state == "already" ? ReviewsText.Already.Title : ReviewsText.NotReviewable.Title)</h2>
         <p>@(_state == "already" ? ReviewsText.Already.Body : ReviewsText.NotReviewable.Body)</p>
-        <p><a href="/moje/rezerwacje">@ReviewsText.Form.Back</a></p>
+        <p><a href="/moje/dostepy">@ReviewsText.Form.Back</a></p>
     </section>
 }
 else
@@ -59,7 +59,7 @@ else
         @if (_failure is not null) {<div class="callout callout--danger" role="alert" data-testid="review-error"><p>@ReviewRules.FailureText(_failure)</p></div>}
         <div class="form-actions">
             <button type="submit" class="btn btn--primary">@ReviewsText.Form.Submit</button>
-            <a class="btn btn--ghost" href="/moje/rezerwacje">@ReviewsText.Form.Back</a>
+            <a class="btn btn--ghost" href="/moje/dostepy">@ReviewsText.Form.Back</a>
         </div>
     </form>
 }

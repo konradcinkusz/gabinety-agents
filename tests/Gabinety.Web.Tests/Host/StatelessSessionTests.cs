@@ -57,7 +57,7 @@ public sealed class StatelessSessionTests : IDisposable
             cookie = await SignIn.As(before, browser);
         }
         await using var after = Process(identity); // empty memory, same key ring
-        var page = await WithCookie(after, cookie).GetAsync("/moje/rezerwacje");
+        var page = await WithCookie(after, cookie).GetAsync("/moje/dostepy");
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Equal("Moje dostępy", page.TextOf("h1"));
         Assert.Equal(["refresh-1"], identity.SpentRefreshTokens); // exactly the refresh token the sign-in put in the cookie, once
@@ -75,7 +75,7 @@ public sealed class StatelessSessionTests : IDisposable
         try
         {
             await using var after = Process(identity, other.FullName);
-            var page = await WithCookie(after, cookie).GetAsync("/moje/rezerwacje");
+            var page = await WithCookie(after, cookie).GetAsync("/moje/dostepy");
             Assert.Equal(HttpStatusCode.Found, page.Status);
             Assert.StartsWith("/logowanie?redirect=", page.Location);
         }
@@ -97,7 +97,7 @@ public sealed class StatelessSessionTests : IDisposable
         }
         await using var after = Process(identity); // loads both keys; the new one is the default for sealing
         Assert.Equal(2, after.Services.GetRequiredService<IKeyManager>().GetAllKeys().Count);
-        Assert.Equal(HttpStatusCode.OK, (await WithCookie(after, cookie).GetAsync("/moje/rezerwacje")).Status);
+        Assert.Equal(HttpStatusCode.OK, (await WithCookie(after, cookie).GetAsync("/moje/dostepy")).Status);
     }
 
     [Fact]
@@ -111,7 +111,7 @@ public sealed class StatelessSessionTests : IDisposable
             before.Services.GetRequiredService<IKeyManager>().RevokeAllKeys(DateTimeOffset.UtcNow, "test"); // the operator's decision, not a rotation
         }
         await using var after = Process(identity);
-        Assert.Equal(HttpStatusCode.Found, (await WithCookie(after, cookie).GetAsync("/moje/rezerwacje")).Status);
+        Assert.Equal(HttpStatusCode.Found, (await WithCookie(after, cookie).GetAsync("/moje/dostepy")).Status);
     }
 
     [Theory]
@@ -128,7 +128,7 @@ public sealed class StatelessSessionTests : IDisposable
             "append" => cookie + "AAAA",
             _ => "CfDJ8",
         };
-        var page = await WithCookie(web, bad).GetAsync("/moje/rezerwacje");
+        var page = await WithCookie(web, bad).GetAsync("/moje/dostepy");
         Assert.Equal(HttpStatusCode.Found, page.Status);
         Assert.StartsWith("/logowanie?redirect=", page.Location);
         Assert.Equal(calls, web.Identity.Backend.Calls);
@@ -144,7 +144,7 @@ public sealed class StatelessSessionTests : IDisposable
             var browser = before.NewBrowser();
             first = await SignIn.As(before, browser);
             identity.AccessLifetime = TimeSpan.FromHours(1); // what the rotation hands out
-            var page = await browser.GetAsync("/moje/rezerwacje");
+            var page = await browser.GetAsync("/moje/dostepy");
             Assert.Equal(HttpStatusCode.OK, page.Status);
             Assert.Equal(1, identity.RefreshCalls); // the sign-in token was about to expire: one rotation
             Assert.Contains(page.SetCookies, c => c.StartsWith("gt_session=") && !c.StartsWith("gt_session=;")); // the new refresh token rides on this response
@@ -152,9 +152,9 @@ public sealed class StatelessSessionTests : IDisposable
             Assert.NotEqual(first, second);
         }
         await using var after = Process(identity);
-        Assert.Equal(HttpStatusCode.OK, (await WithCookie(after, second).GetAsync("/moje/rezerwacje")).Status); // the newest refresh token: accepted
+        Assert.Equal(HttpStatusCode.OK, (await WithCookie(after, second).GetAsync("/moje/dostepy")).Status); // the newest refresh token: accepted
         await using var replay = Process(identity);
-        var spent = await WithCookie(replay, first).GetAsync("/moje/rezerwacje"); // the one already spent: authservice refuses it (and revokes the family)
+        var spent = await WithCookie(replay, first).GetAsync("/moje/dostepy"); // the one already spent: authservice refuses it (and revokes the family)
         Assert.Contains("Sesja wygasła", spent.Text);
         Assert.Contains(spent.SetCookies, c => c.StartsWith("gt_session=;")); // the dead cookie is deleted
     }
@@ -166,7 +166,7 @@ public sealed class StatelessSessionTests : IDisposable
         string cookie;
         await using (var before = Process(identity)) cookie = await SignIn.As(before, before.NewBrowser());
         await using var after = Process(identity);
-        var pages = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => WithCookie(after, cookie).GetAsync("/moje/rezerwacje")));
+        var pages = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => WithCookie(after, cookie).GetAsync("/moje/dostepy")));
         Assert.All(pages, p => Assert.Equal(HttpStatusCode.OK, p.Status));
         Assert.Equal(1, identity.RefreshCalls);
         Assert.Equal(identity.SpentRefreshTokens.Distinct().Count(), identity.SpentRefreshTokens.Count); // never twice: a replay would have revoked the session
@@ -181,7 +181,7 @@ public sealed class StatelessSessionTests : IDisposable
         var browser = web.NewBrowser();
         await SignIn.As(web, browser);
         identity.RefreshStatus = status;
-        var page = await browser.GetAsync("/moje/rezerwacje");
+        var page = await browser.GetAsync("/moje/dostepy");
         Assert.Equal(HttpStatusCode.OK, page.Status); // the old token still lasts a few seconds
         Assert.DoesNotContain(page.SetCookies, c => c.StartsWith("gt_session=;")); // and the cookie is kept
         identity.RefreshStatus = 0;
@@ -201,11 +201,11 @@ public sealed class StatelessSessionTests : IDisposable
             Assert.Contains(before.Identity.Backend.Requests, r => r.PathAndQuery == "/api/v1/auth/logout" && r.Authorization!.StartsWith("Bearer eyJ"));
         }
         await using var after = Process(identity); // no memory of the sign-out: the identity service refuses the refresh token
-        var page = await WithCookie(after, cookie).GetAsync("/moje/rezerwacje");
+        var page = await WithCookie(after, cookie).GetAsync("/moje/dostepy");
         var again = WithCookie(after, cookie);
         Assert.Contains("Sesja wygasła", page.Text); // the refresh token is revoked: the page says the session ended...
         Assert.Contains(page.SetCookies, c => c.StartsWith("gt_session=;")); // ...and the dead cookie is deleted with the same response
-        Assert.Equal(HttpStatusCode.Found, (await again.GetAsync("/moje/rezerwacje")).Status); // while the cookie is still sent the host refuses it at once
+        Assert.Equal(HttpStatusCode.Found, (await again.GetAsync("/moje/dostepy")).Status); // while the cookie is still sent the host refuses it at once
         Assert.Single(after.Identity.Backend.Requests, r => r.PathAndQuery.Contains("/auth/refresh")); // without asking the identity service again
     }
 

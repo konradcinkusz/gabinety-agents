@@ -105,7 +105,7 @@ test.describe("J3 buy a task package, order a task, see the result, review", () 
       expect(seen.status).toBe("Confirmed");
       expect(seen.payment.status).toBe("Succeeded");
       expect(seen.brief?.text).toBe(BRIEFS[0]);
-      await pp.goto("/moje/rezerwacje?role=practitioner");
+      await pp.goto("/moje/dostepy?role=practitioner");
       await expect(pp.getByRole("listitem").filter({ hasText: "Aktywny" }).filter({ hasText: offering.title })).toHaveCount(1);
       await expectNoSeriousA11yViolations(pp);
     } finally {
@@ -113,12 +113,12 @@ test.describe("J3 buy a task package, order a task, see the result, review", () 
     }
 
     // ---- 3. the confirmation leads to the first task: ordered in the panel, answered by the agent ----
-    await page.goto(`/rezerwacja/potwierdzenie/${bookingIds[0]}`);
+    await page.goto(`/dostep/potwierdzenie/${bookingIds[0]}`);
     const confirmation = new ConfirmationPage(page);
     await expect(confirmation.heading()).toBeVisible();
     await expect(confirmation.createKeyLink()).toBeVisible();
     await confirmation.firstTaskLink().click();
-    await page.waitForURL(new RegExp(`/moje/rezerwacje/${bookingIds[0]}`));
+    await page.waitForURL(new RegExp(`/moje/dostepy/${bookingIds[0]}`));
 
     const detail = new BookingDetailPage(page);
     await expect(detail.usage()).toHaveText("wykorzystano 0 z 1");
@@ -187,7 +187,7 @@ test.describe("J3 buy a task package, order a task, see the result, review", () 
     expect(atThree.rating!.average).toBeCloseTo(AVERAGE, 1);
 
     // ---- 8. the reviews are visible on the public page (the list is read live; the rating block of the page is cached 5 min by the web app) ----
-    await page.goto(`/gabinet/${SLUG}`);
+    await page.goto(`/agent/${SLUG}`);
     const reviews = profile.reviewsSection();
     for (const r of REVIEWS) {
       await expect(reviews.getByText(r.text)).toBeVisible();

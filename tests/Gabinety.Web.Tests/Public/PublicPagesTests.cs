@@ -8,7 +8,7 @@ namespace Gabinety.Web.Tests.Public;
 /// <summary>The wave-2 public pages as a visitor with no JavaScript gets them: complete HTML in the first response, the statuses, the hooks of DESIGN-CONTRACT section 9.</summary>
 public class ProfilePageTests
 {
-    static async Task<Page> Get(WebFactory web, string path = "/gabinet/demo-anna-demowska") => await web.NewBrowser().GetAsync(path);
+    static async Task<Page> Get(WebFactory web, string path = "/agent/demo-anna-demowska") => await web.NewBrowser().GetAsync(path);
 
     [Fact]
     public async Task The_profile_has_its_content_the_hooks_and_the_structured_data_in_the_first_response()
@@ -21,13 +21,13 @@ public class ProfilePageTests
         Assert.Equal(["Audyt kodu .NET", "Krótka konsultacja"], page.All("ul.offerings li h3").Select(h => h.TextContent)); // getByRole("heading", {level: 3}) inside the offer's listitem
         var offer = page.All("ul.offerings > li")[0];
         // C-01: a package has no slot; the link goes to the purchase page of the package, which finds the package in this profile by the slug.
-        Assert.Equal($"/rezerwacja/{PublicSupport.OfferA}?gabinet=demo-anna-demowska", offer.QuerySelector("a[aria-label='Wykup dostęp: Audyt kodu .NET']")!.GetAttribute("href"));
+        Assert.Equal($"/dostep/{PublicSupport.OfferA}?gabinet=demo-anna-demowska", offer.QuerySelector("a[aria-label='Wykup dostęp: Audyt kodu .NET']")!.GetAttribute("href"));
         var ld = page.All("script[type='application/ld+json']"); // exactly one, with the display name (journey J1)
         Assert.Single(ld);
         Assert.Contains("Anna Ąćęł Demowska", ld[0].TextContent);
         Assert.Equal("ProfessionalService", JsonDocument.Parse(ld[0].TextContent).RootElement.GetProperty("@type").GetString());
         Assert.Equal("Anna Ąćęł Demowska: agent AI | Gabinety Tech", page.Dom.Title);
-        Assert.Equal("http://localhost/gabinet/demo-anna-demowska", page.One("link[rel=canonical]")!.GetAttribute("href"));
+        Assert.Equal("http://localhost/agent/demo-anna-demowska", page.One("link[rel=canonical]")!.GetAttribute("href"));
         Assert.Equal("index,follow", page.One("meta[name=robots]")!.GetAttribute("content"));
         Assert.Contains("Audyty kodu .NET", page.One("meta[name=description]")!.GetAttribute("content"));
         Assert.Equal("reviews-title", page.One("section#opinie")!.GetAttribute("aria-labelledby")); // named by its heading: getByRole("region", {name: "Opinie"})
@@ -41,7 +41,7 @@ public class ProfilePageTests
         var page = await Get(web);
         var book = page.All("ul.offerings > li")[1].QuerySelector("a.btn--primary")!;
         Assert.Equal("Wykup dostęp", book.TextContent); Assert.Equal("Wykup dostęp: Krótka konsultacja", book.GetAttribute("aria-label"));
-        Assert.Equal($"/rezerwacja/{PublicSupport.OfferB}?gabinet=demo-anna-demowska", book.GetAttribute("href"));
+        Assert.Equal($"/dostep/{PublicSupport.OfferB}?gabinet=demo-anna-demowska", book.GetAttribute("href"));
         Assert.Empty(web.Booking.Requests); // no slot is read: the Booking service is not asked at all
         Assert.Null(page.One(".slot-days")); Assert.Null(page.One("a.slot"));
     }
@@ -180,14 +180,14 @@ public class ProfilePageTests
     {
         var review = new ReviewDto(Guid.NewGuid(), 5, "<b>Świetnie</b> & szybko", new DateTimeOffset(2026, 11, 20, 12, 0, 0, TimeSpan.Zero), new ReplyDto("Dziękuję!", new DateTimeOffset(2026, 11, 21, 12, 0, 0, TimeSpan.Zero)));
         await using var web = PublicSupport.Host(reputation: r => FakeBackend.Json(new PageDto<ReviewDto>([review], "CUR2")));
-        var page = await Get(web, "/gabinet/demo-anna-demowska?opinie=CUR1");
+        var page = await Get(web, "/agent/demo-anna-demowska?opinie=CUR1");
         Assert.Equal($"/api/v1/practitioners/{PublicSupport.PractitionerId}/reviews?cursor=CUR1", web.Reputation.Requests[0].PathAndQuery);
         var item = page.One("section#opinie li")!;
         Assert.Contains("Zweryfikowany klient · Ocena: 5 z 5 · 20 listopada 2026", item.TextContent);
         Assert.Contains("<b>Świetnie</b> & szybko", item.TextContent);
         Assert.Null(item.QuerySelector("b")); // review text is never markup
         Assert.Contains("Dziękuję!", item.QuerySelector(".reply")!.TextContent);
-        Assert.Equal("/gabinet/demo-anna-demowska?opinie=CUR2#opinie", page.One("section#opinie a.btn")!.GetAttribute("href"));
+        Assert.Equal("/agent/demo-anna-demowska?opinie=CUR2#opinie", page.One("section#opinie a.btn")!.GetAttribute("href"));
 
         await using var none = PublicSupport.Host();
         var empty = await Get(none);
@@ -222,10 +222,10 @@ public class ProfilePageTests
     public async Task F09_an_unknown_profile_is_a_404_that_says_programmer_not_page_and_offers_the_way_on()
     {
         await using var web = PublicSupport.Host();
-        var page = await Get(web, "/gabinet/nie-ma-takiego");
+        var page = await Get(web, "/agent/nie-ma-takiego");
         Assert.Equal(HttpStatusCode.NotFound, page.Status);
         Assert.Equal("Nie znaleziono agenta", page.TextOf("h1")); Assert.Single(page.All("h1"));
-        Assert.Equal("/programisci", page.One("[data-testid=profile-not-found] a.btn")!.GetAttribute("href"));
+        Assert.Equal("/agenci", page.One("[data-testid=profile-not-found] a.btn")!.GetAttribute("href"));
         Assert.Equal(["Audyt kodu", "Migracja"], page.All("[data-testid=profile-not-found] .chip").Select(c => c.TextContent));
         Assert.Equal("noindex,follow", page.One("meta[name=robots]")!.GetAttribute("content"));
         Assert.Null(page.One("script[type='application/ld+json']"));
@@ -352,10 +352,10 @@ public class ListPageFixesTests
     public async Task F05_an_empty_filtered_result_says_zero_and_never_the_categorys_total()
     {
         await using var web = Host(0, false);
-        var page = await web.NewBrowser().GetAsync("/programisci?q=zzzzzz");
+        var page = await web.NewBrowser().GetAsync("/agenci?q=zzzzzz");
         Assert.Equal("Wyniki: 0", page.TextOf("[data-testid=count]"));
         Assert.Contains("Nie ma agentów dla tych filtrów", page.TextOf("[data-testid=empty]"));
-        Assert.Equal("/programisci", page.One(".empty-state a.btn--ghost")!.GetAttribute("href")); // Wyczyść filtry, shown because a filter is active
+        Assert.Equal("/agenci", page.One(".empty-state a.btn--ghost")!.GetAttribute("href")); // Wyczyść filtry, shown because a filter is active
         Assert.Empty(page.All("[data-testid=practitioner-list]"));
     }
 
@@ -363,18 +363,18 @@ public class ListPageFixesTests
     public async Task F05_the_count_of_a_filtered_whole_result_is_its_items_and_an_open_ended_one_states_none()
     {
         await using var whole = Host(2, false);
-        Assert.Equal("Wyniki: 2", (await whole.NewBrowser().GetAsync("/programisci?duration=30")).TextOf("[data-testid=count]"));
+        Assert.Equal("Wyniki: 2", (await whole.NewBrowser().GetAsync("/agenci?duration=30")).TextOf("[data-testid=count]"));
         await using var more = Host(2, true);
-        Assert.Null((await more.NewBrowser().GetAsync("/programisci?duration=30")).One("[data-testid=count]"));
+        Assert.Null((await more.NewBrowser().GetAsync("/agenci?duration=30")).One("[data-testid=count]"));
         await using var plain = Host(2, true);
-        Assert.Equal("Wyniki: 6", (await plain.NewBrowser().GetAsync("/programisci")).TextOf("[data-testid=count]")); // unfiltered: the sitemap's count
+        Assert.Equal("Wyniki: 6", (await plain.NewBrowser().GetAsync("/agenci")).TextOf("[data-testid=count]")); // unfiltered: the sitemap's count
     }
 
     [Fact]
     public async Task P_LIST_the_filters_are_one_disclosure_with_segmented_duration_and_price_and_a_breadcrumb_on_a_category()
     {
         await using var web = Host(2, false);
-        var page = await web.NewBrowser().GetAsync("/programisci/audyt-kodu/dotnet?duration=30");
+        var page = await web.NewBrowser().GetAsync("/agenci/audyt-kodu/dotnet?duration=30");
         Assert.Equal("Filtry (3)", page.TextOf("details.filters > summary")); // problem, technology and duration are active
         Assert.NotNull(page.One("details.filters[open] nav[aria-label=Filtry]")); // the navigation keeps its name (hook)
         Assert.Equal(2, page.All("nav[aria-label=Filtry] ul.segmented").Count);
@@ -387,7 +387,7 @@ public class ListPageFixesTests
     {
         await using var web = PublicSupport.Host(r => r.RequestUri!.AbsolutePath == "/api/v1/practitioners"
             ? FakeBackend.Json(new PageDto<PractitionerCardDto>([Sample.Card(rating: new RatingDto(4.8, 25), isNew: false)], null)) : PublicSupport.DefaultDirectory()(r));
-        var card = (await web.NewBrowser().GetAsync("/programisci")).One("[data-testid=practitioner-card]")!;
+        var card = (await web.NewBrowser().GetAsync("/agenci")).One("[data-testid=practitioner-card]")!;
         Assert.Equal(["Agent AI", "Zweryfikowany"], card.QuerySelectorAll(".badge").Select(b => b.TextContent));
         Assert.Equal("★ 4,8 (25)", card.QuerySelector(".practitioner-card__rating")!.TextContent);
     }
@@ -404,8 +404,8 @@ public class SeoEndpointsTests
         Assert.StartsWith("application/xml", page.Header("Content-Type"));
         var ns = XNamespace.Get("http://www.sitemaps.org/schemas/sitemap/0.9");
         var urls = XDocument.Parse(page.Html).Root!.Elements(ns + "url").ToList(); // parses: well-formed XML
-        Assert.Equal(["http://localhost/programisci", "http://localhost/programisci/audyt-kodu", "http://localhost/gabinet/demo-anna-demowska", "http://localhost/gabinet/demo-bartek"], urls.Select(u => u.Element(ns + "loc")!.Value));
-        Assert.DoesNotContain("/programisci/migracja", page.Html); // 2 practitioners: noindex, so not offered
+        Assert.Equal(["http://localhost/agenci", "http://localhost/agenci/audyt-kodu", "http://localhost/agent/demo-anna-demowska", "http://localhost/agent/demo-bartek"], urls.Select(u => u.Element(ns + "loc")!.Value));
+        Assert.DoesNotContain("/agenci/migracja", page.Html); // 2 practitioners: noindex, so not offered
         Assert.Equal("2026-11-20T08:30:00.000Z", urls[2].Element(ns + "lastmod")!.Value);
         Assert.Null(urls[0].Element(ns + "lastmod"));
     }
@@ -432,7 +432,7 @@ public class SeoEndpointsTests
         var page = await web.NewBrowser().GetAsync("/robots.txt");
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.StartsWith("text/plain", page.Header("Content-Type"));
-        Assert.Equal(["User-Agent: *", "Allow: /", "Disallow: /moje", "Disallow: /gabinet-programisty", "Disallow: /admin", "Disallow: /rezerwacja", "Disallow: /checkout", "Disallow: /api", "", "Sitemap: http://localhost/sitemap.xml", ""],
+        Assert.Equal(["User-Agent: *", "Allow: /", "Disallow: /moje", "Disallow: /panel-agenta", "Disallow: /admin", "Disallow: /dostep", "Disallow: /checkout", "Disallow: /api", "", "Sitemap: http://localhost/sitemap.xml", ""],
             page.Html.Split('\n'));
         Assert.Empty(page.SetCookies);
     }
@@ -441,7 +441,7 @@ public class SeoEndpointsTests
     public void The_disallowed_paths_are_the_private_areas_and_the_api()
     {
         // pinned as a literal since the cutover (it was compared with the Next.js list in web/src/lib/seo/sitemap.ts, which went with web/)
-        Assert.Equal(["/moje", "/gabinet-programisty", "/admin", "/rezerwacja", "/checkout", "/api"], Gabinety.Web.Hosting.SeoContent.DisallowedPaths);
+        Assert.Equal(["/moje", "/panel-agenta", "/admin", "/dostep", "/checkout", "/api"], Gabinety.Web.Hosting.SeoContent.DisallowedPaths);
     }
 }
 

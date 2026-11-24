@@ -63,7 +63,7 @@ public sealed class ListView(ListState state, TaxonomyDto taxonomy, SitemapDto s
     public IReadOnlyList<(string Label, string? Href)> Breadcrumb()
     {
         if (ProblemName is null) return [];
-        var crumbs = new List<(string, string?)> { (Pl.ListPage.AllTitle, "/programisci"), (ProblemName, TechName is null ? null : $"/programisci/{State.Problem}") };
+        var crumbs = new List<(string, string?)> { (Pl.ListPage.AllTitle, "/agenci"), (ProblemName, TechName is null ? null : $"/agenci/{State.Problem}") };
         if (TechName is not null) crumbs.Add((TechName, null));
         return crumbs;
     }

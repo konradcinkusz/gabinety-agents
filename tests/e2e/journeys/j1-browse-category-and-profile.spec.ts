@@ -29,7 +29,7 @@ test.describe("J1 visitor browses a category and opens a profile", () => {
       await list.goto();
       await expectNoSeriousA11yViolations(page);
       await new CategoryNav(page).link(category!.namePl).click();
-      await expect(page).toHaveURL(new RegExp(`/programisci/${category!.slug}`));
+      await expect(page).toHaveURL(new RegExp(`/agenci/${category!.slug}`));
       await expect(list.heading()).toHaveText(category!.namePl);
       await expect(page.getByText(/^Wyniki: \d+$/)).toBeVisible();
       await expect(list.profileLink(expected!.displayName)).toBeVisible();
@@ -40,7 +40,7 @@ test.describe("J1 visitor browses a category and opens a profile", () => {
 
     await test.step("open the profile from the card; it shows what the Directory holds", async () => {
       await new PractitionerListPage(page).open(expected!.displayName);
-      await expect(page).toHaveURL(new RegExp(`/gabinet/${expected!.slug}$`));
+      await expect(page).toHaveURL(new RegExp(`/agent/${expected!.slug}$`));
       const view = new PublicProfilePage(page);
       await expect(page.getByText(profile!.headline)).toBeVisible();
       await expect(page.getByRole("heading", { level: 2, name: "O mnie" })).toBeVisible();
@@ -67,7 +67,7 @@ test.describe("J1 visitor browses a category and opens a profile", () => {
       const noJs = await browser.newContext({ javaScriptEnabled: false, baseURL: urls.web, locale: "pl-PL", timezoneId: "Europe/Warsaw" });
       try {
         const p = await noJs.newPage();
-        const res = await p.goto(`/gabinet/${expected!.slug}`);
+        const res = await p.goto(`/agent/${expected!.slug}`);
         expect(res?.status()).toBe(200);
         const view = new PublicProfilePage(p);
         await expect(view.heading(profile!.displayName)).toBeVisible();
@@ -81,7 +81,7 @@ test.describe("J1 visitor browses a category and opens a profile", () => {
           await expect(p.getByText(o.description)).toBeVisible();
           await expect(view.offering(o.title)).toContainText(factsOf(o));
           // booking works without scripts: a plain link to the booking page of that offering (the page adds `?gabinet=<slug>` to come back to)
-          await expect(view.bookLink(o.title)).toHaveAttribute("href", new RegExp(`^/rezerwacja/${o.id}(\\?.*)?$`));
+          await expect(view.bookLink(o.title)).toHaveAttribute("href", new RegExp(`^/dostep/${o.id}(\\?.*)?$`));
         }
         // structured data for search engines is in the document too
         await expect(p.locator('script[type="application/ld+json"]')).toHaveCount(1);

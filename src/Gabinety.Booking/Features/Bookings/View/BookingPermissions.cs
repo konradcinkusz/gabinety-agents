@@ -2,7 +2,6 @@ using Gabinety.Billing;
 using Gabinety.Booking.Features.Internal.Reviewability;
 using Gabinety.Booking.Features.Lifecycle.Cancel;
 using Gabinety.Booking.Features.Lifecycle.Dispute;
-using Gabinety.Booking.Features.Lifecycle.NoShow;
 using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
 
 namespace Gabinety.Booking.Features.Bookings.View;
@@ -16,7 +15,7 @@ public readonly record struct BookingFlags(bool CanCancel, bool CanDispute, bool
 /// <summary>
 /// The four <c>BookingView</c> flags for one caller at <c>time.GetUtcNow()</c>. Pure: no I/O, no clock of its own. Each flag asks the same rule the endpoint
 /// enforces, so the two cannot drift: the state table (<see cref="BookingStateMachine"/>), <see cref="DisputeFeature.InWindow"/>,
-/// <see cref="ReportClientNoShowFeature.InWindow"/> (no longer offered, always false) and <see cref="ReviewabilityFeature"/>. The cancel rules, and the outcome of a cancel, are in <see cref="CancelPlanner"/>.
+/// the no-show flag (not offered, always false) and <see cref="ReviewabilityFeature"/>. The cancel rules, and the outcome of a cancel, are in <see cref="CancelPlanner"/>.
 /// <para><c>CanReview</c> is an upper bound: Reputation owns "already reviewed", which Booking cannot see.</para>
 /// An admin who is not a party gets no flag; a stranger neither.
 /// </summary>
@@ -34,7 +33,7 @@ public static class BookingPermissions
             || isPractitioner && Allowed(s, BookingTrigger.PractitionerCancels, b, now) && CancelPlanner.TimeRuleAllows(b, byClient: false, now);
         // "Can open a dispute of some kind": the practitioner_no_show kind has the widest window, the other kinds' window lies inside it or ends with it.
         var canDispute = isClient && Allowed(s, BookingTrigger.ClientDisputes, b, now) && DisputeFeature.InWindow(b, "practitioner_no_show", now);
-        const bool canReportNoShow = false; // an agent has no appointment to miss (A-03); the endpoint stays, the flag does not offer it
+        const bool canReportNoShow = false; // an agent has no appointment to miss (A-03); the flag stays in the wire shape, always false
         var canReview = isClient && CanReview(b, now);
         return new(canCancel, canDispute, canReportNoShow, canReview);
     }

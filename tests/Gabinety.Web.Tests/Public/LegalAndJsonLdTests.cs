@@ -81,9 +81,9 @@ public class ProfileJsonLdTests
     [Fact]
     public void The_json_parses_and_names_the_practitioner_the_offers_and_the_links()
     {
-        var ld = Parse(ProfileJsonLd.Build(PublicSupport.Profile(), "http://localhost/gabinet/demo-anna-demowska"));
+        var ld = Parse(ProfileJsonLd.Build(PublicSupport.Profile(), "http://localhost/agent/demo-anna-demowska"));
         Assert.Equal(("https://schema.org", "ProfessionalService", "Anna Ąćęł Demowska"), (ld.GetProperty("@context").GetString(), ld.GetProperty("@type").GetString(), ld.GetProperty("name").GetString()));
-        Assert.Equal("http://localhost/gabinet/demo-anna-demowska", ld.GetProperty("url").GetString());
+        Assert.Equal("http://localhost/agent/demo-anna-demowska", ld.GetProperty("url").GetString());
         Assert.Equal(["https://demo.example/portfolio", "https://github.com/demo-anna"], ld.GetProperty("sameAs").EnumerateArray().Select(e => e.GetString()));
         var offer = ld.GetProperty("makesOffer")[0];
         Assert.Equal(("Offer", "Audyt kodu .NET", "180.00", "PLN"), (offer.GetProperty("@type").GetString(), offer.GetProperty("name").GetString(), offer.GetProperty("price").GetString(), offer.GetProperty("priceCurrency").GetString()));

@@ -21,7 +21,7 @@ public class AnonymousCookieTests
     }
 
     [Theory]
-    [InlineData("/")] [InlineData("/programisci")] [InlineData("/programisci/audyt-kodu")] [InlineData("/programisci/nie-ma")] [InlineData("/nie-ma-takiej-strony")] [InlineData("/not-found")] [InlineData("/Error")]
+    [InlineData("/")] [InlineData("/agenci")] [InlineData("/agenci/audyt-kodu")] [InlineData("/agenci/nie-ma")] [InlineData("/nie-ma-takiej-strony")] [InlineData("/not-found")] [InlineData("/Error")]
     public async Task A_public_page_sets_no_cookie_and_is_not_marked_no_store(string path)
     {
         await using var web = Web();
@@ -43,7 +43,7 @@ public class AnonymousCookieTests
     {
         await using var web = Web();
         var browser = web.NewBrowser();
-        foreach (var path in new[] { "/programisci?q=kod", "/programisci/audyt-kodu?duration=30", "/programisci?cursor=abc" })
+        foreach (var path in new[] { "/agenci?q=kod", "/agenci/audyt-kodu?duration=30", "/agenci?cursor=abc" })
         {
             var page = await browser.GetAsync(path);
             Assert.DoesNotContain(page.SetCookies, c => true);

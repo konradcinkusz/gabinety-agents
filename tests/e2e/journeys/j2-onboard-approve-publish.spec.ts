@@ -120,7 +120,7 @@ test.describe("J2 provider creates an agent, administrator approves, profile bec
       // The Directory limits 60 requests a minute per address and J1 ran just before: if the page render hit a 429 or a 5xx, load it again
       // (an error render is not cached; the profile itself is already proven public by the API read above).
       await expect(async () => {
-        const res = await page.goto(`/gabinet/${slug}`);
+        const res = await page.goto(`/agent/${slug}`);
         expect(res?.status()).toBe(200);
         await expect(view.heading(displayName)).toBeVisible({ timeout: 3_000 });
       }).toPass({ timeout: 90_000, intervals: [2_000, 5_000, 10_000] });
@@ -137,7 +137,7 @@ test.describe("J2 provider creates an agent, administrator approves, profile bec
       await list.goto(`?q=${uid}`); // a search URL is rendered per request, not served from the 5-minute page cache
       await expect(list.profileLink(displayName)).toBeVisible();
 
-      await page.goto("/gabinet-programisty");
+      await page.goto("/panel-agenta");
       await expect(page.getByText("Zatwierdzony", { exact: true })).toBeVisible(); // the provider's own panel agrees
     });
   });

@@ -1,4 +1,4 @@
-@page "/rezerwacja/{OfferingId:guid}"
+@page "/dostep/{OfferingId:guid}"
 @attribute [Authorize]
 @inject DirectoryClient Directory
 @inject BookingClient Bookings
@@ -15,7 +15,7 @@
 @if (_missing)
 {
     <p>@BookFlowText.MissingSlot</p>
-    <a class="btn btn--secondary" href="/programisci">@BookFlowText.BackToSearch</a>
+    <a class="btn btn--secondary" href="/agenci">@BookFlowText.BackToSearch</a>
 }
 else if (_unavailable)
 {
@@ -74,7 +74,7 @@ else if (_offering is not null)
             {
                 <div class="callout callout--danger" role="alert" data-testid="booking-error">
                     <p>@failure.Text</p>
-                    @if (failure.OffersProfile) {<a class="btn btn--secondary" href="@("/gabinet/" + Uri.EscapeDataString(_slug!))">@BookFlowText.ToProfile</a>}
+                    @if (failure.OffersProfile) {<a class="btn btn--secondary" href="@("/agent/" + Uri.EscapeDataString(_slug!))">@BookFlowText.ToProfile</a>}
                 </div>
             }
             <div class="form-actions">

@@ -22,13 +22,11 @@ public static class PublicSupport
 
     public static RankingRulesDto Rules => new("2026-11-v1", new DateTimeOffset(2026, 11, 13, 0, 0, 0, TimeSpan.Zero), new RankingWeightsDto(0.45, 0.25, 0.15, 0.15), new RankingConstantsDto(5, 3.8, 3, 10));
 
-    public static SlotDto Slot(int day, int hourUtc, int month = 11) => new(new DateTimeOffset(2026, month, day, hourUtc, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, month, day, hourUtc + 1, 0, 0, TimeSpan.Zero));
-
     public static WebFactory Host(Func<HttpRequestMessage, HttpResponseMessage>? directory = null, Func<HttpRequestMessage, HttpResponseMessage>? booking = null, Func<HttpRequestMessage, HttpResponseMessage>? reputation = null)
     {
         var web = new WebFactory().Configure(s => s.AddSingleton<TimeProvider>(new FixedTime(Now)));
         web.Directory.Respond = directory ?? DefaultDirectory();
-        web.Booking.Respond = booking ?? (_ => FakeBackend.Json(new SlotsDto([Slot(24, 9), Slot(24, 10), Slot(25, 13)])));
+        web.Booking.Respond = booking ?? (_ => new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
         web.Reputation.Respond = reputation ?? (_ => FakeBackend.Json(new PageDto<ReviewDto>([], null)));
         return web;
     }
@@ -36,7 +34,7 @@ public static class PublicSupport
     public static Func<HttpRequestMessage, HttpResponseMessage> DefaultDirectory(PractitionerProfileDto? profile = null) => r => r.RequestUri!.AbsolutePath switch
     {
         "/api/v1/taxonomy" => FakeBackend.Json(Sample.Taxonomy),
-        "/api/v1/sitemap" => FakeBackend.Json(new SitemapDto([new("/programisci", 6, true), new("/programisci/audyt-kodu", 6, true), new("/programisci/migracja", 2, false)],
+        "/api/v1/sitemap" => FakeBackend.Json(new SitemapDto([new("/agenci", 6, true), new("/agenci/audyt-kodu", 6, true), new("/agenci/migracja", 2, false)],
             [new("demo-anna-demowska", new DateTimeOffset(2026, 11, 20, 8, 30, 0, TimeSpan.Zero)), new("demo-bartek", new DateTimeOffset(2026, 11, 21, 8, 30, 0, TimeSpan.Zero))])),
         "/api/v1/ranking-rules" => FakeBackend.Json(Rules),
         "/api/v1/practitioners/demo-anna-demowska" => FakeBackend.Json(profile ?? Profile()),

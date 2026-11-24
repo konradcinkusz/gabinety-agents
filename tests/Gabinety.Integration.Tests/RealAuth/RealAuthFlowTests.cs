@@ -177,7 +177,7 @@ public class RealAuthFlowTests(RealAuthFixture auth, ITestOutputHelper output)
     {
         using var http = auth.Main.Client();
         // The URL the web's githubStart builds: the web origin, /oauth/callback, and its own state nonce in the query.
-        var returnUrl = Uri.EscapeDataString($"{RealAuthFixture.WebOrigin}/oauth/callback?redirect=%2Fmoje%2Frezerwacje&state=abc123");
+        var returnUrl = Uri.EscapeDataString($"{RealAuthFixture.WebOrigin}/oauth/callback?redirect=%2Fmoje%2Fdostepy&state=abc123");
 
         var start = await http.GetAsync($"api/v1/external-auth/login?provider=GitHub&returnUrl={returnUrl}");
 

@@ -78,14 +78,12 @@ Policies are defined in each service's `Program.cs:11-14`: `Authenticated` (sign
 
 | Route | Policy | Ownership / note |
 |---|---|---|
-| `GET /api/v1/practitioners/{practitionerId}/slots` | anonymous (explicit) | public |
 | `GET/PUT /api/v1/me/availability` | Authenticated | practitioner id resolved from Directory by the token's `sub` (`AvailabilityFeature.cs:52-65`); no id from the client |
 | `POST /api/v1/bookings` | Authenticated | `client = sub`; `Idempotency-Key` required, record keyed `(client, key)` (`CreateBookingFeature.cs:47-58`); `own_offering` by user id (line 68) |
 | `GET /api/v1/bookings/{id}` | Authenticated | client, practitioner or admin, else 404 (`BookingViewFeature.cs:36`); meeting URL only for a party of a `Confirmed` booking; fee/payout only practitioner and admin (`ToView`, lines 50-69) |
 | `GET /api/v1/me/bookings` | Authenticated | `ClientUserId == sub` or `PractitionerUserId == sub`; the cursor is bound to role and status and cannot leave the caller's rows (`MyBookingsFeature.cs`) |
 | `POST /api/v1/bookings/{id}/cancel` | Authenticated | client or practitioner of it, else 404 (`CancelFeature.cs:110`) |
 | `POST /api/v1/bookings/{id}/dispute` | Authenticated | client only, 404 before the body is read (`DisputeFeature.cs:46-47`) |
-| `POST /api/v1/bookings/{id}/report-client-no-show` | Authenticated | practitioner only (`ReportClientNoShowFeature.cs:104-105`) |
 | `POST /api/v1/payments/simulate` | Authenticated | **no ownership check**; only refuses when the provider is not Mock (`PaymentWebhookFeature.cs:54-70`): F-01 |
 | `POST /webhooks/payments/{provider}` | anonymous + signature | section 6 |
 | `GET /api/v1/admin/disputes`, `POST /api/v1/admin/bookings/{id}/resolve`, `GET /api/v1/admin/ledger.csv` | Admin | |

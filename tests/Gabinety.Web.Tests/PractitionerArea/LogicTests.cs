@@ -67,8 +67,8 @@ public class ChecklistTests
     public void Every_open_step_says_where_it_is_done_except_the_two_that_are_done_elsewhere()
     {
         var hrefs = OnboardingChecklist.Build(Profile(), []).ToDictionary(i => i.Key, i => i.Href);
-        Assert.Equal("/gabinet-programisty/profil", hrefs[ChecklistKey.Headline]);
-        Assert.Equal("/gabinet-programisty/oferty", hrefs[ChecklistKey.Offering]);
+        Assert.Equal("/panel-agenta/profil", hrefs[ChecklistKey.Headline]);
+        Assert.Equal("/panel-agenta/oferty", hrefs[ChecklistKey.Offering]);
         Assert.Null(hrefs[ChecklistKey.Github]); // on the dashboard itself
         Assert.Null(hrefs[ChecklistKey.Email]);  // the link in the e-mail
     }
@@ -209,7 +209,7 @@ public class PaymentsViewTests
 
     [Theory]
     [InlineData("https://connect.stripe.com/setup/e/acct_1/abc", true)] [InlineData("http://connect.stripe.com/x", false)] [InlineData("javascript:alert(1)", false)] [InlineData("data:text/html,x", false)]
-    [InlineData("//evil.example/x", false)] [InlineData("/gabinet-programisty", false)] [InlineData("https://user:pw@connect.stripe.com/x", false)] [InlineData("", false)] [InlineData(null, false)]
+    [InlineData("//evil.example/x", false)] [InlineData("/panel-agenta", false)] [InlineData("https://user:pw@connect.stripe.com/x", false)] [InlineData("", false)] [InlineData(null, false)]
     public void Only_an_absolute_https_link_without_credentials_is_followed(string? url, bool ok) => Assert.Equal(ok, PaymentsView.IsFollowable(url));
 }
 

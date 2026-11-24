@@ -167,13 +167,6 @@ sealed class CreateHost : WebApplicationFactory<Program>
         return await q(scope.ServiceProvider.GetRequiredService<BookingDbContext>());
     }
 
-    /// <summary>Mon-Fri 09:00-17:00 local for the practitioner.</summary>
-    public Task WorkWeek() => Seed(db =>
-    {
-        for (short d = 1; d <= 5; d++)
-            db.Rules.Add(new() { Id = Guid.NewGuid(), PractitionerId = Practitioner, IsoWeekday = d, StartLocal = new(9, 0), EndLocal = new(17, 0) });
-    });
-
     public Task<List<Booking>> Bookings() => Query(db => db.Bookings.AsNoTracking().Where(b => b.PractitionerId == Practitioner).ToListAsync());
 
     public static async Task<HttpResponseMessage> Post(HttpClient c, object body, string? key)

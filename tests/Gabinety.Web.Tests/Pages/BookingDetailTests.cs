@@ -8,7 +8,7 @@ namespace Gabinety.Web.Tests.Pages;
 /// <summary>The booking detail and its actions (journeys J3, J5, J6): what is shown for each state, what the cancel dialog says (F-11), and what each action sends.</summary>
 public class BookingDetailTests
 {
-    static readonly string Detail_ = $"/moje/rezerwacje/{BookingId}";
+    static readonly string Detail_ = $"/moje/dostepy/{BookingId}";
     static readonly string Client = Detail_ + "?role=client";
 
     static async Task<ClientAreaFixture> Open(BookingDetailDto? booking = null, Func<HttpRequestMessage, HttpResponseMessage>? post = null)
@@ -127,9 +127,9 @@ public class BookingDetailTests
         Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync(Client)).Status);
         f.Web.Booking.Respond = _ => FakeBackend.Problem(HttpStatusCode.Forbidden, "forbidden");
         Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync(Client)).Status);
-        Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync("/moje/rezerwacje/nie-guid")).Status);
+        Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync("/moje/dostepy/nie-guid")).Status);
         await using var visitor = await ClientAreaFixture.Visitor();
-        Assert.Equal($"/logowanie?redirect=%2Fmoje%2Frezerwacje%2F{BookingId}%3Frole%3Dclient", (await visitor.Browser.GetAsync(Client)).Location);
+        Assert.Equal($"/logowanie?redirect=%2Fmoje%2Fdostepy%2F{BookingId}%3Frole%3Dclient", (await visitor.Browser.GetAsync(Client)).Location);
     }
 
     [Theory]
@@ -245,7 +245,7 @@ public class BookingDetailTests
         await using var f = await Open(Detail(cancel: true), post: _ => FakeBackend.Json(Detail("CancelledByClient", payment: "Refunded", refunded: 25000)));
         var page = await f.Post(Client + "&action=cancel", "cancel", ("Model.Reason", "  Zmiana planów.  "));
         Assert.Equal(HttpStatusCode.Found, page.Status);
-        Assert.Equal($"/moje/rezerwacje/{BookingId}?role=client&done=cancelled", page.Location);
+        Assert.Equal($"/moje/dostepy/{BookingId}?role=client&done=cancelled", page.Location);
         var call = f.Web.Booking.Requests.Single(r => r.Method == HttpMethod.Post);
         Assert.Equal($"/api/v1/bookings/{BookingId}/cancel", call.PathAndQuery);
         Assert.Equal("Zmiana planów.", JsonDocument.Parse(call.Body!).RootElement.GetProperty("reason").GetString());
@@ -312,7 +312,7 @@ public class BookingDetailTests
         await using var f = await Open(Detail(cancel: true), post: _ => FakeBackend.Problem(HttpStatusCode.Unauthorized, "unauthenticated"));
         var page = await f.Post(Client + "&action=cancel", "cancel");
         Assert.Equal(HttpStatusCode.Found, page.Status);
-        Assert.StartsWith("/logowanie?redirect=%2Fmoje%2Frezerwacje%2F", page.Location);
+        Assert.StartsWith("/logowanie?redirect=%2Fmoje%2Fdostepy%2F", page.Location);
     }
 
     // ---- dispute (J6)
@@ -335,7 +335,7 @@ public class BookingDetailTests
     {
         await using var f = await Open(Detail(dispute: true), post: _ => FakeBackend.Json(Detail("Disputed", payment: "Succeeded")));
         var page = await f.Post(Client + "&action=dispute", "dispute", ("Model.Kind", "not_as_described"), ("Model.Text", "Agent zrobił coś innego, dane syntetyczne testu."));
-        Assert.Equal($"/moje/rezerwacje/{BookingId}?role=client&done=disputed", page.Location);
+        Assert.Equal($"/moje/dostepy/{BookingId}?role=client&done=disputed", page.Location);
         var call = f.Web.Booking.Requests.Single(r => r.Method == HttpMethod.Post);
         Assert.Equal($"/api/v1/bookings/{BookingId}/dispute", call.PathAndQuery);
         var body = JsonDocument.Parse(call.Body!).RootElement;

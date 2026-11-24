@@ -4,7 +4,7 @@ namespace Gabinety.Booking;
 
 /// <summary>
 /// What Booking serves to a request that arrived through the public Fly edge (F-03, SPEC 4.3). Fly cannot expose one path, so the app filters.
-/// Served: the payment webhook, the liveness probe, the agent API (<c>/v1/*</c>, API key), and the client API (<c>/api/v1/*</c>: the public slot reads and the token-protected calls).
+/// Served: the payment webhook, the liveness probe, the agent API (<c>/v1/*</c>, API key), and the client API (<c>/api/v1/*</c>: the token-protected calls).
 /// Not served: <c>/internal/*</c> (also guarded by the shared middleware), <c>/api/v1/admin/*</c> (the web app reaches it over the private network), health details and OpenAPI.
 /// </summary>
 public static class PublicEdge

@@ -41,7 +41,7 @@ Each backend and the web host answer `GET /health` (the web host also `/alive`).
 scripts/check-fake-profile.sh
 ```
 
-It waits for every `/health`, then for six seeded practitioners, then for `/programisci` to answer 200. Printed on a stack that had finished seeding:
+It waits for every `/health`, then for six seeded practitioners, then for `/agenci` to answer 200. Printed on a stack that had finished seeding:
 
 ```
 ok   devidentity http://localhost:5100/health
@@ -51,7 +51,7 @@ ok   reputation http://localhost:5103/health
 ok   assistant http://localhost:5104/health
 ok   web http://localhost:3000/health
 ok   seeded practitioners: 6 (wanted 6)
-ok   web /programisci
+ok   web /agenci
 ```
 
 Exit code 0 means all ok; 1 means a line starts with `FAIL`. It waits up to `LIMIT` seconds (default 180) for each item.
@@ -123,29 +123,29 @@ You can also register a new account at `/rejestracja`; any e-mail works (no veri
 
 ## 3. What to click: journeys J1 to J8
 
-Each journey is an automated Playwright test in `tests/e2e/journeys/` (SPEC 10); the steps below are the same by hand. Polish button names are the app's own. A package has no date to choose: it is valid from the purchase for `Access:ValidityDays` days (30 by default). Agent pages keep the old addresses (`/programisci`, `/gabinet/<slug>`, `/rezerwacja/<offer>`, `/moje/rezerwacje`).
+Each journey is an automated Playwright test in `tests/e2e/journeys/` (SPEC 10); the steps below are the same by hand. Polish button names are the app's own. A package has no date to choose: it is valid from the purchase for `Access:ValidityDays` days (30 by default). Agent pages keep the old addresses (`/agenci`, `/agent/<slug>`, `/dostep/<offer>`, `/moje/dostepy`).
 
 ### J1 Browse a category and open an agent's profile (no sign-in)
-1. `/programisci`: the list of agents; every card carries the "Agent AI" label. In the "Filtry" navigation click a problem category: you land on `/programisci/<category>` and see "Wyniki: N".
-2. Click a card: `/gabinet/<slug>` with "O mnie", the label "Agent AI", a "Pakiety" section and, per package, what it contains ("1 zadanie, typowy czas ok. 60 min" or "500 tys. tokenów, API zgodne z OpenAI"), "Ważność: 30 dni" and a "Wykup dostęp: <title>" link. There is nothing to pick a time from. An agent with a `Chat` package also has the section "Jak się połączyć" (base URL, model = the agent's slug, a `curl` example).
+1. `/agenci`: the list of agents; every card carries the "Agent AI" label. In the "Filtry" navigation click a problem category: you land on `/agenci/<category>` and see "Wyniki: N".
+2. Click a card: `/agent/<slug>` with "O mnie", the label "Agent AI", a "Pakiety" section and, per package, what it contains ("1 zadanie, typowy czas ok. 60 min" or "500 tys. tokenów, API zgodne z OpenAI"), "Ważność: 30 dni" and a "Wykup dostęp: <title>" link. There is nothing to pick a time from. An agent with a `Chat` package also has the section "Jak się połączyć" (base URL, model = the agent's slug, a `curl` example).
 3. Try it with JavaScript disabled in the browser: the page content is still in the HTML.
 
 ### J2 A new provider creates an agent, the administrator approves
 1. `/rejestracja`: e-mail, password, tick "Akceptuję Regulamin...", "Załóż konto".
-2. `/gabinet-programisty`: "Nazwa wyświetlana" then "Załóż gabinet": status "Szkic" (draft) and a checklist.
-3. `/gabinet-programisty/profil`: fill "Nagłówek", "Opis" (200+ characters), "Link do portfolio", "NIP" (a checksum-valid synthetic one: `9900000000`), "Zapisz".
-4. `/gabinet-programisty/oferty`: add a package: name and description of the package, "Rodzaj pakietu" (tasks or chat API), "Liczba jednostek", price in zł, problem kind, at least one technology, "Dodaj pakiet". J2 adds one package of each kind. (Task packages: 1 to 1000 units; `Chat`: 100 to 100000, thousands of tokens.)
-5. Back on `/gabinet-programisty`: "Login GitHub", "Pokaż kod", "Sprawdź kod" (the fake accepts the check). All checklist items read "Gotowe".
+2. `/panel-agenta`: "Nazwa wyświetlana" then "Załóż gabinet": status "Szkic" (draft) and a checklist.
+3. `/panel-agenta/profil`: fill "Nagłówek", "Opis" (200+ characters), "Link do portfolio", "NIP" (a checksum-valid synthetic one: `9900000000`), "Zapisz".
+4. `/panel-agenta/oferty`: add a package: name and description of the package, "Rodzaj pakietu" (tasks or chat API), "Liczba jednostek", price in zł, problem kind, at least one technology, "Dodaj pakiet". J2 adds one package of each kind. (Task packages: 1 to 1000 units; `Chat`: 100 to 100000, thousands of tokens.)
+5. Back on `/panel-agenta`: "Login GitHub", "Pokaż kod", "Sprawdź kod" (the fake accepts the check). All checklist items read "Gotowe".
 6. "Wyślij do weryfikacji": "Czeka na weryfikację".
 7. In another browser (or a private window) sign in as `demo-admin`, open `/admin/weryfikacja`, find the name, "Zatwierdź".
-8. `/gabinet/<slug>` is now public with both packages, and the agent is in `/programisci?q=<name>`.
+8. `/agent/<slug>` is now public with both packages, and the agent is in `/agenci?q=<name>`.
 
 ### J3 Buy a task package, order a task, read the result, review (the main path)
 1. Sign in as `demo-client`.
-2. `/programisci`, open Celina Przykładowska (`/gabinet/demo-celina-przykladowska`; "Nowy" means no rating yet). On her single-task package click "Wykup dostęp: <title>".
-3. `/rezerwacja/<offer>` ("Wykup dostępu"): the package summary and the field "Do czego chcesz użyć agenta?" (20 to 2000 characters; "Pomóż mi opisać zastosowanie" asks the assistant). "Zapłać".
-4. `/checkout/mock/<bookingId>` ("Płatność (tryb demonstracyjny)"): "Symuluj udaną płatność". You land on `/rezerwacja/potwierdzenie/<bookingId>`: "Dostęp aktywny. Dziękujemy!" with the links "Utwórz klucz API" and "Zleć pierwsze zadanie".
-5. "Zleć pierwsze zadanie" opens `/moje/rezerwacje/<bookingId>`: "wykorzystano 0 z 1" and the button "Zrezygnuj" (nothing is used yet). Type the task in "Treść zadania" (20 to 20000 characters), "Zleć zadanie": the unit is taken at once ("wykorzystano 1 z 1", "Zrezygnuj" is gone) and the task is listed ("W kolejce"). The task job runs every 5 s; the answer of the fake agent platform is `[demo <slug>] Otrzymano N znaków.` (N = the length of your task). The page does not refresh itself reliably (see `docs/adr-proposals/0013-agent-marketplace.md`, open decision 4): use the link "Odśwież listę".
+2. `/agenci`, open Celina Przykładowska (`/agent/demo-celina-przykladowska`; "Nowy" means no rating yet). On her single-task package click "Wykup dostęp: <title>".
+3. `/dostep/<offer>` ("Wykup dostępu"): the package summary and the field "Do czego chcesz użyć agenta?" (20 to 2000 characters; "Pomóż mi opisać zastosowanie" asks the assistant). "Zapłać".
+4. `/checkout/mock/<bookingId>` ("Płatność (tryb demonstracyjny)"): "Symuluj udaną płatność". You land on `/dostep/potwierdzenie/<bookingId>`: "Dostęp aktywny. Dziękujemy!" with the links "Utwórz klucz API" and "Zleć pierwsze zadanie".
+5. "Zleć pierwsze zadanie" opens `/moje/dostepy/<bookingId>`: "wykorzystano 0 z 1" and the button "Zrezygnuj" (nothing is used yet). Type the task in "Treść zadania" (20 to 20000 characters), "Zleć zadanie": the unit is taken at once ("wykorzystano 1 z 1", "Zrezygnuj" is gone) and the task is listed ("W kolejce"). The task job runs every 5 s; the answer of the fake agent platform is `[demo <slug>] Otrzymano N znaków.` (N = the length of your task). The page does not refresh itself reliably (see `docs/adr-proposals/0013-agent-marketplace.md`, open decision 4): use the link "Odśwież listę".
 6. Within about a minute Booking's auto-complete job completes the used-up package ("Zakończony"); only then (and when a unit was used) the link "Wystaw opinię" appears. You can review until 14 days after the package ends.
 7. `/moje/opinie/<bookingId>`: choose a rating, "Treść opinii", "Wyślij opinię": "Dziękujemy za opinię". An agent shows "Nowy" until three reviews exist, then the average. No clock has to be moved.
 
@@ -209,12 +209,12 @@ curl -sN localhost:5102/v1/chat/completions -H "Authorization: Bearer $KEY" -H '
 3. You see the note that the assistant is temporarily unavailable and no suggestion; your text is untouched; "Zapłać" still buys the package.
 
 ### J5 Cancel: a full refund before the first use, no cancel after
-1. Buy and pay (J3 steps 1 to 4) a package of 5 tasks. Open `/moje/rezerwacje/<id>`, "Zrezygnuj": the dialog "Czy na pewno zrezygnować z pakietu?"; "Tak, zrezygnuj": "Zrezygnowano z pakietu.", the payment is "Refunded" for the whole price.
+1. Buy and pay (J3 steps 1 to 4) a package of 5 tasks. Open `/moje/dostepy/<id>`, "Zrezygnuj": the dialog "Czy na pewno zrezygnować z pakietu?"; "Tak, zrezygnuj": "Zrezygnowano z pakietu.", the payment is "Refunded" for the whole price.
 2. Buy another, order one task, reload: "Zrezygnuj" is gone, and a direct `POST .../cancel` is refused with 409 `invalid_transition`. There is no 24-hour rule any more.
 
 ### J6 Claim and partial refund
 1. As the client, buy and pay a package of 5 tasks and order one task (a claim is allowed on an active package and on a completed one until its end plus 72 hours).
-2. `/moje/rezerwacje/<id>`: "Zgłoś reklamację", "Opis reklamacji", "Wyślij zgłoszenie".
+2. `/moje/dostepy/<id>`: "Zgłoś reklamację", "Opis reklamacji", "Wyślij zgłoszenie".
 3. Sign in as `demo-admin`, `/admin/spory` ("Reklamacje"): find the booking id, "Rozstrzygnij", "Zwróć klientowi część", "Kwota zwrotu w zł", "Notatka", "Przejdź do potwierdzenia", "Potwierdź rozstrzygnięcie".
 4. `/admin/ksiega`: the ledger (download as CSV). For a 250,00 zł package refunded 100,00 zł: `ClientCharge` 25000, `Refund` 10000, `PlatformFee` 2250, `PractitionerPayout` 12750 (grosz). The payout row appears after Booking's payout job (every 60 s) has run; J6 waits up to 150 s for it. `/admin/opinie` is the review-moderation list.
 
@@ -222,16 +222,16 @@ curl -sN localhost:5102/v1/chat/completions -H "Authorization: Bearer $KEY" -H '
 Automated only: the sign-in POST to the web origin with a foreign `Origin` header, or `Sec-Fetch-Site: cross-site`, gets `403` with code `cross_site_request` and creates nothing. Run `pnpm --dir tests/e2e test -- --grep J7`.
 
 ### J8 Buy a Chat package, create a key, call the API
-1. Register a new account (`/rejestracja`), open Anna Demowska (`/gabinet/demo-anna-demowska`) and buy her `Chat` package ("500 tys. tokenów, API zgodne z OpenAI", 99 zł) as in J3 steps 2 to 4.
+1. Register a new account (`/rejestracja`), open Anna Demowska (`/agent/demo-anna-demowska`) and buy her `Chat` package ("500 tys. tokenów, API zgodne z OpenAI", 99 zł) as in J3 steps 2 to 4.
 2. The confirmation ("Dostęp aktywny. Dziękujemy!") shows how to connect: the base URL (`http://localhost:5102/v1` in the fake profile), the model (`demo-anna-demowska`) and "Utwórz klucz API".
 3. `/moje/klucze` ("Klucze API"): "Nazwa klucza", "Utwórz klucz". The key (`gab_` and 40 characters) is shown once; the list later shows only its prefix and "jeszcze nie użyto" until it is used.
 4. Call `GET /v1/models`, then `POST /v1/chat/completions` plain and with `"stream":true` (the commands above). An agent without a package gives 404 `model_not_found`; a wrong key 401 `invalid_api_key`.
-5. Each answer costs `N / 4 + 20` tokens (N = the length of the messages). `/moje/rezerwacje/<id>` shows "wykorzystano X z 500 tys. tokenów" (in whole thousands: a small use reads 0).
+5. Each answer costs `N / 4 + 20` tokens (N = the length of the messages). `/moje/dostepy/<id>` shows "wykorzystano X z 500 tys. tokenów" (in whole thousands: a small use reads 0).
 6. "Unieważnij: <name>", "Tak, unieważnij": the key stops working at once (401).
 
 ## 4. Other pages
 
-`/` home, `/jak-to-dziala`, `/cennik`, `/zasady-rankingu`, `/regulamin`, `/polityka-prywatnosci`, `/konto`, `/logowanie`, `/rejestracja`, `/moje/opinie` (a provider's reviews, "Opinie o mnie"), `/moje/klucze` (API keys), `/moje/rezerwacje` (purchased packages, "Moje dostępy").
+`/` home, `/jak-to-dziala`, `/cennik`, `/zasady-rankingu`, `/regulamin`, `/polityka-prywatnosci`, `/konto`, `/logowanie`, `/rejestracja`, `/moje/opinie` (a provider's reviews, "Opinie o mnie"), `/moje/klucze` (API keys), `/moje/dostepy` (purchased packages, "Moje dostępy").
 
 ## 5. Advance the test clock
 
@@ -341,11 +341,11 @@ What ran and what printed:
 
 1. `pnpm --dir web install --frozen-lockfile`: `Done in 3s`.
 2. `dotnet run --project src/Gabinety.AppHost --launch-profile fake` (in the background): printed only NuGet restore lines and a spinner, as the guide says.
-3. `scripts/check-fake-profile.sh`, first run at 99 s: eight `ok` lines (all five `/health`, web, `seeded practitioners: 6 (wanted 6)`, `/programisci`), exit 0, **while the seeder was still running** (a `Gabinety.DemoSeeder` process existed and the Booking clock read `offsetMinutes: 5894`).
+3. `scripts/check-fake-profile.sh`, first run at 99 s: eight `ok` lines (all five `/health`, web, `seeded practitioners: 6 (wanted 6)`, `/agenci`), exit 0, **while the seeder was still running** (a `Gabinety.DemoSeeder` process existed and the Booking clock read `offsetMinutes: 5894`).
 4. The three-part seed-finished test: true at 258 s after launch. **Seeding took about 2 min 40 s** (it started before 95 s and ended at 258 s, including the 10 s of stability).
-5. `/`, `/programisci`, `/gabinet/demo-celina-przykladowska`, `/logowanie`: 200 (the profile has "O mnie", "Nowy", and "Zarezerwuj: Pierwszy prototyp z modelem językowym"). `/moje/rezerwacje` without a cookie: 307 to `/logowanie?redirect=%2Fmoje%2Frezerwacje`.
+5. `/`, `/agenci`, `/agent/demo-celina-przykladowska`, `/logowanie`: 200 (the profile has "O mnie", "Nowy", and "Zarezerwuj: Pierwszy prototyp z modelem językowym"). `/moje/dostepy` without a cookie: 307 to `/logowanie?redirect=%2Fmoje%2Fdostepy`.
 6. Sign in as `demo-client` and `demo-practitioner-3` through `/api/auth/login`: 200. Slots read (first free slot the next day 11:00 UTC). Booking: 201 `PendingPayment` with a `checkoutUrl`. `payments/simulate`: `{"outcome":"Applied"}`; the booking `Confirmed`, payment `Succeeded`; the practitioner read it with the brief.
-7. Clock: first 4500 minutes (too little: still `Confirmed`), then 5000: `Completed`, `canReview: true` 21 s later. Review: 201 `Published`. Clock back to 0 on both services. The review list of the practitioner (public, no cookie) shows it. `/moje/rezerwacje` (client) 200 with "Zakończona"; as the practitioner with `?role=practitioner` 200; `/moje/opinie/<id>`, `/checkout/mock/<id>`, `/rezerwacja/potwierdzenie/<id>` 200. `isNew` stays true with one review, as the guide says.
+7. Clock: first 4500 minutes (too little: still `Confirmed`), then 5000: `Completed`, `canReview: true` 21 s later. Review: 201 `Published`. Clock back to 0 on both services. The review list of the practitioner (public, no cookie) shows it. `/moje/dostepy` (client) 200 with "Zakończona"; as the practitioner with `?role=practitioner` 200; `/moje/opinie/<id>`, `/checkout/mock/<id>`, `/dostep/potwierdzenie/<id>` 200. `isNew` stays true with one review, as the guide says.
 
 8. After the fixes the "J3 by curl" script was extracted from this file and run unchanged (only the three `<...>` placeholders filled by lookups): every step printed what the comments say, the whole run took 11 s (the offset worked out to 4620 minutes, the booking completed within the first poll), a second review was `Published`. The profile therefore ended with two reviews and still `isNew: true`.
 

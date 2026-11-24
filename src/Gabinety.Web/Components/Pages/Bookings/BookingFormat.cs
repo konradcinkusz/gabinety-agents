@@ -75,7 +75,7 @@ public static class BookingFormat
 
     /// <summary>The link of "Wykup ponownie": the practitioner's public profile, only when the slug is known and only for a finished booking (completed or cancelled).</summary>
     public static string? RebookHref(string status, string? slug) =>
-        (status == "Completed" || IsCancelled(status)) && !string.IsNullOrWhiteSpace(slug) ? "/gabinet/" + Uri.EscapeDataString(slug.Trim()) : null;
+        (status == "Completed" || IsCancelled(status)) && !string.IsNullOrWhiteSpace(slug) ? "/agent/" + Uri.EscapeDataString(slug.Trim()) : null;
 
     public static string Role(string? raw) => raw == BookingClient.PractitionerRole ? BookingClient.PractitionerRole : BookingClient.ClientRole;
 

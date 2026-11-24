@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Waits for every service of the fake profile to answer /health 200 (SPEC 4.1, T-00.03), then for the demo seeder's dataset (T-08.02): the Directory
-# lists at least WANT_PRACTITIONERS (default 6, the approved demo practitioners) and the web app's /programisci answers 200 (the Blazor host). Exit 1 on timeout.
+# lists at least WANT_PRACTITIONERS (default 6, the approved demo practitioners) and the web app's /agenci answers 200 (the Blazor host). Exit 1 on timeout.
 set -u
 LIMIT="${LIMIT:-180}"
 declare -A URLS=(
@@ -32,9 +32,9 @@ if [ "$found" -ge "$WANT" ]; then echo "ok   seeded practitioners: $found (wante
 # seeder is busy the web host's list page can answer 500 (it reports the Directory's 429 as directory_unavailable). Retry until the seeding has calmed down.
 code=000
 for ((i = 0; i < LIMIT; i++)); do
-  code=$(curl -s -o /dev/null -w '%{http_code}' -m 10 http://localhost:3000/programisci || true)
+  code=$(curl -s -o /dev/null -w '%{http_code}' -m 10 http://localhost:3000/agenci || true)
   if [ "$code" = "200" ]; then break; fi
   sleep 1
 done
-if [ "$code" = "200" ]; then echo "ok   web /programisci"; else echo "FAIL web /programisci (last status: $code)"; fail=1; fi
+if [ "$code" = "200" ]; then echo "ok   web /agenci"; else echo "FAIL web /agenci (last status: $code)"; fail=1; fi
 exit $fail

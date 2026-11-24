@@ -15,7 +15,7 @@ public readonly record struct RateLimitRule(TimeSpan Window, int Permits);
 /// The table of CONTRACTS 10.2 as code: which endpoint group a request belongs to and the windows that group is held to. Per instance, in memory; the key is the user id
 /// when signed in, else the client address (the caller builds the partition key; see <see cref="PartitionKey"/>).
 /// <list type="table">
-/// <item><term>reads</term><description>public <c>GET</c>s: practitioners (list, profile, slots, reviews), taxonomy, sitemap, ranking rules. 120 per minute</description></item>
+/// <item><term>reads</term><description>public <c>GET</c>s: practitioners (list, profile, reviews), taxonomy, sitemap, ranking rules. 120 per minute</description></item>
 /// <item><term>bookings</term><description><c>POST /api/v1/bookings</c>. 10 per minute and 30 per day</description></item>
 /// <item><term>reviews</term><description><c>POST /api/v1/reviews</c>. 5 per hour</description></item>
 /// <item><term>webhooks</term><description>none by address (the signature decides); the 64 KB body limit is the endpoint's own</description></item>

@@ -13,7 +13,7 @@ public static class Sample
         RatingDto? rating = null, bool isNew = true, long fromPrice = 25000, int[]? durations = null) =>
         new(Guid.NewGuid(), slug, name, headline, null, badges ?? ["email", "github", "approved"], rating, isNew, new MoneyDto(fromPrice, "PLN"), ["audyt-kodu"], durations ?? [30, 60]);
 
-    public static SitemapDto Sitemap(int count = 6, bool indexable = true, string path = "/programisci") => new([new SitemapCategoryDto(path, count, indexable)]);
+    public static SitemapDto Sitemap(int count = 6, bool indexable = true, string path = "/agenci") => new([new SitemapCategoryDto(path, count, indexable)]);
 
     public static BookingViewDto Booking(string title = "Konsultacja demo", string status = "Confirmed", string practitioner = "Anna Demowska", long price = 25000) =>
         new(Guid.NewGuid(), status, new DateTimeOffset(2026, 12, 1, 12, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 12, 1, 13, 0, 0, TimeSpan.Zero), 60, title,

@@ -62,11 +62,11 @@ public class RateLimitTests
     }
 
     [Fact]
-    public async Task Everything_else_is_60_a_minute_and_reads_of_the_slots_are_public_reads_with_their_own_budget()
+    public async Task Everything_else_is_60_a_minute_and_public_reads_with_their_own_budget()
     {
         using var h = new CreateHost();
         var anon = h.ClientFor(null);
-        var slots = $"/api/v1/practitioners/{h.Practitioner}/slots?offeringId={h.Offering}&from=2026-11-17&to=2026-11-18";
+        var slots = $"/api/v1/practitioners/{h.Practitioner}"; // a public read root: the limiter counts it before routing, whatever service answers (Directory serves it; Booking only counts)
         for (var i = 0; i < 120; i++) Assert.NotEqual(HttpStatusCode.TooManyRequests, await Code(anon.GetAsync(slots)));
         Assert.Equal(HttpStatusCode.TooManyRequests, await Code(anon.GetAsync(slots))); // reads: 120, not the 60 of the rest
         var me = h.ClientFor("demo-rl-me");

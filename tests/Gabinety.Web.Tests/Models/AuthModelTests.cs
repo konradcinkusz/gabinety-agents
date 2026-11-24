@@ -96,22 +96,22 @@ public class SiteNavigationTests
     [Fact]
     public void The_primary_links_are_in_order_for_everybody_and_the_ranking_rules_are_in_the_footer()
     {
-        Assert.Equal(["/programisci", "/jak-to-dziala", "/cennik"], SiteNavigation.For(null, "/").Links.Select(i => i.Href));
+        Assert.Equal(["/agenci", "/jak-to-dziala", "/cennik"], SiteNavigation.For(null, "/").Links.Select(i => i.Href));
         Assert.Equal(["Agenci", "Jak to działa", "Cennik"], SiteNavigation.For(null, "/").Links.Select(i => i.Label));
-        Assert.Equal(["/programisci", "/jak-to-dziala", "/cennik"], SiteNavigation.For(User("User"), "/", practitioner: true).Links.Select(i => i.Href));
+        Assert.Equal(["/agenci", "/jak-to-dziala", "/cennik"], SiteNavigation.For(User("User"), "/", practitioner: true).Links.Select(i => i.Href));
         Assert.DoesNotContain(SiteNavigation.For(null, "/").Flat, i => i.Href == "/zasady-rankingu");
-        Assert.Equal(["/programisci", "/jak-to-dziala", "/cennik", "/zasady-rankingu"], SiteNavigation.Product.Select(i => i.Href));
+        Assert.Equal(["/agenci", "/jak-to-dziala", "/cennik", "/zasady-rankingu"], SiteNavigation.Product.Select(i => i.Href));
     }
 
     [Fact]
     public void The_practitioner_panel_is_for_practitioners_and_everybody_else_signed_in_is_offered_the_way_in()
     {
         var practitioner = SiteNavigation.For(User("User"), "/", practitioner: true);
-        Assert.Contains(practitioner.AccountMenu, i => i.Label == "Panel dostawcy" && i.Href == "/gabinet-programisty");
+        Assert.Contains(practitioner.AccountMenu, i => i.Label == "Panel dostawcy" && i.Href == "/panel-agenta");
         Assert.DoesNotContain(practitioner.AccountMenu, i => i.Label == "Zostań dostawcą");
 
         var client = SiteNavigation.For(User("User"), "/");
-        Assert.Contains(client.AccountMenu, i => i.Label == "Zostań dostawcą" && i.Href == "/gabinet-programisty");
+        Assert.Contains(client.AccountMenu, i => i.Label == "Zostań dostawcą" && i.Href == "/panel-agenta");
         Assert.DoesNotContain(client.AccountMenu, i => i.Label == "Panel dostawcy");
         Assert.DoesNotContain(client.Flat, i => i.Label == "Panel dostawcy");
     }
@@ -121,9 +121,9 @@ public class SiteNavigationTests
     {
         var visitor = SiteNavigation.Footer(null, practitioner: false);
         Assert.Equal(("/rejestracja", "Zostań dostawcą"), (visitor.Practitioner.Href, visitor.Practitioner.Label));
-        Assert.Equal(("/gabinet-programisty", "Zostań dostawcą"), (SiteNavigation.Footer(User("User"), false).Practitioner.Href, SiteNavigation.Footer(User("User"), false).Practitioner.Label));
+        Assert.Equal(("/panel-agenta", "Zostań dostawcą"), (SiteNavigation.Footer(User("User"), false).Practitioner.Href, SiteNavigation.Footer(User("User"), false).Practitioner.Label));
         var member = SiteNavigation.Footer(User("User"), practitioner: true).Practitioner;
-        Assert.Equal(("/gabinet-programisty", "Panel dostawcy"), (member.Href, member.Label));
+        Assert.Equal(("/panel-agenta", "Panel dostawcy"), (member.Href, member.Label));
         Assert.Equal(["/regulamin", "/polityka-prywatnosci"], visitor.Legal.Select(i => i.Href));
     }
 
@@ -146,7 +146,7 @@ public class SiteNavigationTests
         Assert.False(m.SignedIn);
         Assert.Equal(("/logowanie", "/rejestracja"), (m.SignIn!.Href, m.Register!.Href));
         Assert.Empty(m.AccountMenu);
-        Assert.DoesNotContain(m.Flat, i => i.Href is "/wyloguj" or "/konto" or "/moje/rezerwacje");
+        Assert.DoesNotContain(m.Flat, i => i.Href is "/wyloguj" or "/konto" or "/moje/dostepy");
     }
 
     [Fact]
@@ -154,8 +154,8 @@ public class SiteNavigationTests
     {
         var m = SiteNavigation.For(User("User"), "/");
         Assert.True(m.SignedIn);
-        Assert.Equal(["/programisci", "/jak-to-dziala", "/cennik"], m.Links.Select(i => i.Href));
-        Assert.Equal(["/moje/rezerwacje", "/moje/klucze", "/konto", "/gabinet-programisty", "/wyloguj"], m.AccountMenu.Select(i => i.Href));
+        Assert.Equal(["/agenci", "/jak-to-dziala", "/cennik"], m.Links.Select(i => i.Href));
+        Assert.Equal(["/moje/dostepy", "/moje/klucze", "/konto", "/panel-agenta", "/wyloguj"], m.AccountMenu.Select(i => i.Href));
         Assert.Equal("demo-client@demo.example", m.Email);
         Assert.Equal("DC", m.Initials);
         Assert.DoesNotContain(m.Flat, i => i.Href.StartsWith("/admin"));
@@ -176,8 +176,8 @@ public class SiteNavigationTests
     [Fact] public void Administration_is_not_shown_for_a_look_alike_role() => Assert.DoesNotContain(SiteNavigation.For(User("administrator", "Moderator"), "/").AccountMenu, i => i.Href.StartsWith("/admin"));
 
     [Theory]
-    [InlineData("/programisci", "/programisci", true)] [InlineData("/programisci/audyt-kodu", "/programisci", true)] [InlineData("/programisci/", "/programisci", true)] [InlineData("/PROGRAMISCI", "/programisci", true)]
-    [InlineData("/programisci-x", "/programisci", false)] [InlineData("/", "/programisci", false)] [InlineData("/admin/spory", "/admin/weryfikacja", false)]
+    [InlineData("/agenci", "/agenci", true)] [InlineData("/agenci/audyt-kodu", "/agenci", true)] [InlineData("/agenci/", "/agenci", true)] [InlineData("/AGENCI", "/agenci", true)]
+    [InlineData("/agenci-x", "/agenci", false)] [InlineData("/", "/agenci", false)] [InlineData("/admin/spory", "/admin/weryfikacja", false)]
     public void The_current_section_is_a_path_prefix_at_a_segment_boundary(string path, string href, bool current) => Assert.Equal(current, new NavItem(href, "x").IsCurrent(path));
 
     [Fact] public void Administration_is_current_on_every_admin_page() { Assert.True(SiteNavigation.Admin.IsCurrent("/admin/spory")); Assert.True(SiteNavigation.Admin.IsCurrent("/admin")); Assert.False(SiteNavigation.Admin.IsCurrent("/administracja")); }
@@ -195,10 +195,10 @@ public class TwoFactorChallengeTests
     public void A_sealed_challenge_opens_with_its_target_and_is_not_readable()
     {
         var (c, _) = Rig();
-        var sealedValue = c.Seal("challenge-secret-token", "/moje/rezerwacje?role=practitioner");
+        var sealedValue = c.Seal("challenge-secret-token", "/moje/dostepy?role=practitioner");
         Assert.DoesNotContain("challenge-secret", sealedValue);
         var pending = c.Unseal(sealedValue)!;
-        Assert.Equal(("challenge-secret-token", "/moje/rezerwacje?role=practitioner"), (pending.ChallengeToken, pending.Redirect));
+        Assert.Equal(("challenge-secret-token", "/moje/dostepy?role=practitioner"), (pending.ChallengeToken, pending.Redirect));
     }
 
     [Fact] public void A_foreign_target_is_filtered_when_sealing() { var (c, _) = Rig(); Assert.Equal("/", c.Unseal(c.Seal("t", "https://evil.example"))!.Redirect); }

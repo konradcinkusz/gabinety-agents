@@ -28,7 +28,6 @@ public class PaymentWebhookIntegrationTests : IAsyncLifetime
         host.Settings["Payments:WebhookSecret"] = Pay.Secret;
         host.CreateClient();
         await host.Services.GetRequiredService<MigrationState>().WaitForCompletionAsync(TimeSpan.FromSeconds(60));
-        await host.WorkWeek();
     }
 
     public async Task DisposeAsync() { await host.DisposeAsync(); await pg.DisposeAsync(); }

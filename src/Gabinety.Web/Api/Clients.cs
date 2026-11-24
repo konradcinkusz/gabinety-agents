@@ -37,10 +37,6 @@ public sealed partial class BookingClient(HttpClient http, VisitorAddressAccesso
 {
     public const string ClientRole = "client", PractitionerRole = "practitioner";
 
-    /// <summary>Free slots of one offering between two Warsaw dates (inclusive, CONTRACTS 4.2). Public: no bearer is sent.</summary>
-    public Task<ApiResult<SlotsDto>> SlotsAsync(Guid practitionerId, Guid offeringId, string fromDate, string toDate, CancellationToken ct = default) =>
-        GetAsync<SlotsDto>($"/api/v1/practitioners/{practitionerId}/slots?offeringId={offeringId}&from={Uri.EscapeDataString(fromDate)}&to={Uri.EscapeDataString(toDate)}", null, ct);
-
     public async Task<ApiResult<PageDto<BookingViewDto>>> MyBookingsAsync(string role, string? status, string? cursor, CancellationToken ct = default)
     {
         var parts = new List<string> { $"role={(role == PractitionerRole ? PractitionerRole : ClientRole)}" };

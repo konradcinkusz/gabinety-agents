@@ -25,7 +25,6 @@ public class CreateBookingIntegrationTests : IAsyncLifetime
         host.Settings["ConnectionStrings:bookingdb"] = cs;
         host.CreateClient(); // builds the host; the migration service runs after start
         await host.Services.GetRequiredService<MigrationState>().WaitForCompletionAsync(TimeSpan.FromSeconds(60));
-        await host.WorkWeek();
     }
 
     public async Task DisposeAsync() { await host.DisposeAsync(); await pg.DisposeAsync(); }
