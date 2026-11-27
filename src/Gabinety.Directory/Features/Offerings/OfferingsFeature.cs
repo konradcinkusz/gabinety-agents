@@ -60,7 +60,7 @@ public sealed class OfferingsFeature : IServiceFeature
         {
             db.ChangeTracker.Clear(); // a retry starts from the database, not from a half-applied attempt
             await using var tx = await db.Database.BeginTransactionAsync(ct);
-            var rows = await db.Practitioners.FromSql($"SELECT * FROM practitioners WHERE user_id = {uid} AND ({slug} IS NULL OR slug = {slug}) ORDER BY created_at, id FOR UPDATE").ToListAsync(ct);
+            var rows = await db.Practitioners.FromSql($"SELECT * FROM practitioners WHERE user_id = {uid} AND (CAST({slug} AS text) IS NULL OR slug = {slug}) ORDER BY created_at, id FOR UPDATE").ToListAsync(ct);
             if (OwnAgents.Reject(rows.Count, slug) is { } rejected) return rejected;
             var result = await body(rows[0]);
             await tx.CommitAsync(ct);
