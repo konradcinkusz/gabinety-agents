@@ -9,6 +9,10 @@ namespace Gabinety.Booking.Clients;
 /// <summary>GET /internal/v1/practitioners/by-user/{userId} (CONTRACTS 3.6).</summary>
 public sealed record DirectoryPractitioner(Guid PractitionerId, PractitionerStatus Status);
 
+/// <summary>One row of GET /internal/v1/practitioners/by-user/{userId}/agents (E-04): an agent of a provider account.</summary>
+public sealed record DirectoryAgent(Guid PractitionerId, PractitionerStatus Status, string Slug);
+sealed record DirectoryAgents(IReadOnlyList<DirectoryAgent> Items);
+
 /// <summary>GET /internal/v1/offerings/{id} (CONTRACTS 3.6).</summary>
 public sealed record DirectoryOffering(Guid OfferingId, Guid PractitionerId, string PractitionerUserId, PractitionerStatus PractitionerStatus,
     string Title, int DurationMinutes, MoneyDto Price, string? MeetingUrl, bool IsActive,
@@ -26,8 +30,14 @@ public interface IDirectoryClient
 {
     /// <summary>Null when Directory answers 404.</summary>
     Task<DirectoryOffering?> GetOfferingAsync(Guid offeringId, CancellationToken ct);
-    /// <summary>Null when the user is not a practitioner (404).</summary>
+    /// <summary>The account's first (oldest) agent. Null when the user is not a practitioner (404).</summary>
     Task<DirectoryPractitioner?> GetPractitionerByUserAsync(string userId, CancellationToken ct);
+    /// <summary>
+    /// Every agent of the provider account, oldest first (E-04); empty when the user is not a practitioner. The default answer is the one agent of
+    /// <see cref="GetPractitionerByUserAsync"/> (with no slug), for a double that knows only the older route.
+    /// </summary>
+    async Task<IReadOnlyList<DirectoryAgent>> GetPractitionerAgentsAsync(string userId, CancellationToken ct) =>
+        await GetPractitionerByUserAsync(userId, ct) is { } one ? [new DirectoryAgent(one.PractitionerId, one.Status, "")] : [];
     /// <summary>Null when the practitioner is unknown (404).</summary>
     Task<DirectoryPractitionerName?> GetPractitionerNameAsync(Guid practitionerId, CancellationToken ct);
     /// <summary>The e-mail snapshot of a practitioner's user. Null when Directory answers 404 (unknown user, or no address held yet).</summary>
@@ -50,6 +60,9 @@ public sealed class DirectoryClient(HttpClient http, string? internalKey, TimeSp
 
     public Task<DirectoryPractitioner?> GetPractitionerByUserAsync(string userId, CancellationToken ct) =>
         GetAsync<DirectoryPractitioner>($"internal/v1/practitioners/by-user/{Uri.EscapeDataString(userId)}", ct);
+
+    public async Task<IReadOnlyList<DirectoryAgent>> GetPractitionerAgentsAsync(string userId, CancellationToken ct) =>
+        (await GetAsync<DirectoryAgents>($"internal/v1/practitioners/by-user/{Uri.EscapeDataString(userId)}/agents", ct))?.Items ?? [];
 
     public Task<DirectoryPractitionerName?> GetPractitionerNameAsync(Guid practitionerId, CancellationToken ct) =>
         GetAsync<DirectoryPractitionerName>($"internal/v1/practitioners/{practitionerId}", ct);

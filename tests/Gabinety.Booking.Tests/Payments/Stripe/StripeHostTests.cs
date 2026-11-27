@@ -55,10 +55,15 @@ public sealed class StripeHostTests : IDisposable
             s.AddSingleton<IPaymentProvider>(sp => Fx.Provider(stripe, h.Clock));
         };
         var original = h.Directory.Override;
+        agents = [(h.Practitioner, h.PractitionerSlug)];
         h.Directory.Override = (r, n) => r.RequestUri!.AbsolutePath == $"/internal/v1/practitioners/by-user/{h.OwnerUserId}"
             ? FakeDirectory.Json(new { practitionerId = h.Practitioner, status = "Approved" })
-            : original!(r, n);
+            : r.RequestUri!.AbsolutePath == $"/internal/v1/practitioners/by-user/{h.OwnerUserId}/agents"
+                ? FakeDirectory.Json(new { items = agents.Select(a => new { practitionerId = a.Id, status = "Approved", slug = a.Slug }) })
+                : original!(r, n);
     }
+
+    (Guid Id, string Slug)[] agents = [];
 
     public void Dispose() => h.Dispose();
 
@@ -322,6 +327,39 @@ public sealed class StripeHostTests : IDisposable
         Assert.Equal(JsonValueKind.Null, again.GetProperty("onboardingUrl").ValueKind);
 
         Assert.Equal(HttpStatusCode.Created, (await CreateHost.Post(h.ClientFor(Client), h.Req("2026-11-18T10:00:00Z"), CreateHost.Key())).StatusCode);
+    }
+
+    [Fact]
+    public async Task With_two_agents_the_payment_account_is_per_agent_and_the_agent_parameter_picks_it()
+    {
+        var other = (Id: Guid.NewGuid(), Slug: "demo-second-agent");
+        agents = [(h.Practitioner, h.PractitionerSlug), other];
+        var c = Practitioner();
+
+        var bare = await c.GetAsync("/api/v1/me/payments/account");
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, bare.StatusCode); // two agents: which one?
+        Assert.Contains("agent", (await bare.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("errors").EnumerateObject().Select(x => x.Name));
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await c.PostAsync("/api/v1/me/payments/account/onboarding", null)).StatusCode);
+        Assert.Empty(stripe.Requests); // nothing reached the provider
+
+        var started = await c.PostAsync($"/api/v1/me/payments/account/onboarding?agent={other.Slug}", null);
+        Assert.Equal(HttpStatusCode.OK, started.StatusCode);
+        Assert.Equal("pending", (await started.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("state").GetString());
+        Assert.Equal(other.Id, (await h.Query(db => db.PaymentAccounts.AsNoTracking().SingleAsync(a => a.PractitionerId == other.Id))).PractitionerId);
+        Assert.Empty(await h.Query(db => db.PaymentAccounts.Where(a => a.PractitionerId == h.Practitioner).ToListAsync())); // the first agent has no row
+
+        string State(JsonElement e) => e.GetProperty("state").GetString()!;
+        Assert.Equal("pending", State(await (await c.GetAsync($"/api/v1/me/payments/account?agent={other.Slug}")).Content.ReadFromJsonAsync<JsonElement>()));
+        Assert.Equal("none", State(await (await c.GetAsync($"/api/v1/me/payments/account?agent={h.PractitionerSlug}")).Content.ReadFromJsonAsync<JsonElement>())); // the first agent has none
+    }
+
+    [Fact]
+    public async Task An_agent_of_another_account_is_forbidden_and_reaches_no_provider_call()
+    {
+        var r = await h.ClientFor("demo-somebody-else").PostAsync($"/api/v1/me/payments/account/onboarding?agent={h.PractitionerSlug}", null);
+        Assert.Equal(HttpStatusCode.Forbidden, r.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await Practitioner().PostAsync("/api/v1/me/payments/account/onboarding?agent=demo-not-mine", null)).StatusCode);
+        Assert.Empty(stripe.Requests);
     }
 
     [Fact]

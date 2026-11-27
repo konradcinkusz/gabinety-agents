@@ -46,6 +46,22 @@ public class DirectoryClientTests
     }
 
     [Fact]
+    public async Task The_agents_of_an_account_are_read_from_the_agents_route_and_none_is_an_empty_list()
+    {
+        var one = Guid.NewGuid(); var two = Guid.NewGuid();
+        var h = new FakeDirectory
+        {
+            Override = (r, _) => r.RequestUri!.AbsolutePath == "/internal/v1/practitioners/by-user/demo-user-7/agents"
+                ? FakeDirectory.Json(new { items = new[] { new { practitionerId = one, status = "Approved", slug = "demo-a" }, new { practitionerId = two, status = "Draft", slug = "demo-b" } } })
+                : new HttpResponseMessage(HttpStatusCode.NotFound),
+        };
+        var agents = await Make(h).GetPractitionerAgentsAsync("demo-user-7", default);
+        Assert.Equal([(one, "demo-a", PractitionerStatus.Approved), (two, "demo-b", PractitionerStatus.Draft)], agents.Select(a => (a.PractitionerId, a.Slug, a.Status)));
+        Assert.Empty(await Make(h).GetPractitionerAgentsAsync("demo-nobody", default));
+        Assert.Equal(FakeDirectory.Key, h.LastKeyHeader);
+    }
+
+    [Fact]
     public async Task A_persistent_5xx_is_retried_exactly_once_then_throws_without_the_key_in_the_message()
     {
         var h = new FakeDirectory { Override = (_, _) => new HttpResponseMessage(HttpStatusCode.InternalServerError) };

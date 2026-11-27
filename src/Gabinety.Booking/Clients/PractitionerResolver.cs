@@ -1,26 +1,49 @@
 using System.Collections.Concurrent;
-using Gabinety.Booking.Clients;
 
 namespace Gabinety.Booking.Clients;
 
-/// <summary>Maps the token's user id to the practitioner id through Directory, cached per user for 60 s. A non-practitioner is not cached.</summary>
+/// <summary>
+/// The answer of <see cref="PractitionerResolver.ResolveAsync"/>. <see cref="PractitionerId"/> is the agent the call is about; null with <see cref="Ambiguous"/> false means the user
+/// owns no such agent (not a practitioner, or the named slug is not theirs); <see cref="Ambiguous"/> means they own several and named none.
+/// </summary>
+public readonly record struct AgentResolution(Guid? PractitionerId, bool Ambiguous);
+
+/// <summary>
+/// Maps the token's user id (and optionally an agent slug) to the practitioner id through Directory. One provider account may own several agents (E-04): without a slug the user must
+/// own exactly one; with a slug it must be one of theirs. The account's agent list is cached per user for 60 s; a non-practitioner is not cached, and a slug missing from a cached
+/// list is asked about again at once, because the agent may have been created within the minute.
+/// </summary>
 public sealed class PractitionerResolver(IDirectoryClient directory, TimeProvider time)
 {
     public static readonly TimeSpan Ttl = TimeSpan.FromSeconds(60);
-    readonly ConcurrentDictionary<string, (Guid Id, DateTimeOffset At)> _cache = new();
+    readonly ConcurrentDictionary<string, (IReadOnlyList<DirectoryAgent> Agents, DateTimeOffset At)> _cache = new();
 
     /// <summary>Forgets every answer. The demo reset calls it: the Directory is reset and reseeded together with Booking, and the same demo user then has a new practitioner id.</summary>
     public void Clear() => _cache.Clear();
 
-    /// <summary>Null when the user is not a practitioner. Throws DirectoryUnavailableException when Directory cannot answer.</summary>
-    public async Task<Guid?> ResolveAsync(string userId, CancellationToken ct)
+    /// <summary>Throws DirectoryUnavailableException when Directory cannot answer.</summary>
+    public async Task<AgentResolution> ResolveAsync(string userId, string? agentSlug, CancellationToken ct)
     {
+        var slug = string.IsNullOrWhiteSpace(agentSlug) ? null : agentSlug.Trim();
         var now = time.GetUtcNow();
-        if (_cache.TryGetValue(userId, out var hit) && now - hit.At < Ttl) return hit.Id;
+        var cached = _cache.TryGetValue(userId, out var hit) && now - hit.At < Ttl;
+        var agents = cached ? hit.Agents : await Load(userId, now, ct);
+        var result = Pick(agents, slug);
+        if (result.PractitionerId is null && !result.Ambiguous && cached && slug is not null)
+            result = Pick(await Load(userId, now, ct), slug); // a new agent of this account is not in the cached list yet
+        return result;
+    }
 
-        var found = await directory.GetPractitionerByUserAsync(userId, ct);
-        if (found is null) { _cache.TryRemove(userId, out _); return null; }
-        _cache[userId] = (found.PractitionerId, now);
-        return found.PractitionerId;
+    async Task<IReadOnlyList<DirectoryAgent>> Load(string userId, DateTimeOffset now, CancellationToken ct)
+    {
+        var found = await directory.GetPractitionerAgentsAsync(userId, ct);
+        if (found.Count == 0) _cache.TryRemove(userId, out _); else _cache[userId] = (found, now);
+        return found;
+    }
+
+    static AgentResolution Pick(IReadOnlyList<DirectoryAgent> agents, string? slug)
+    {
+        if (slug is not null) return new(agents.FirstOrDefault(a => a.Slug == slug)?.PractitionerId, false);
+        return agents.Count switch { 0 => new(null, false), 1 => new(agents[0].PractitionerId, false), _ => new(null, true) };
     }
 }
