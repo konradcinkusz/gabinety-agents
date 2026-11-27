@@ -33,6 +33,8 @@ primary_region = "fra"
   # No Payments__Provider here, on purpose (security review F-01): the mock checkout page exists only in the fake profile.
   # Runtime configuration. Always-on backends over the private network (the same addresses as the Next web app):
   Backend__Directory = "http://gabinety-directory-staging.internal:8080"
+  # Also where /v1/* goes (src/Gabinety.Web/Hosting/AgentApiProxy.cs, ADR-0013): the public agent API is served under this app's address and forwarded to Booking over the private network.
+  # No new setting, secret or port: the visitor's address already travels with RateLimit__TrustedProxyKey. A streamed /v1 answer holds a connection for as long as it flows (it counts in [http_service.concurrency]).
   Backend__Booking = "http://gabinety-booking-staging.internal:8080"
   Backend__Reputation = "http://gabinety-reputation-staging.internal:8080"
   # Assistant may be stopped (min 0): .flycast goes through the proxy, which starts it.

@@ -56,6 +56,8 @@ public sealed class WebFactory : WebApplicationFactory<Program>
             {
                 services.AddHttpClient(name).ConfigurePrimaryHttpMessageHandler(() => handler);
             }
+            // The /v1 proxy has its own client (no resilience handler); in a test it also talks to the fake Booking.
+            services.AddHttpClient(Gabinety.Web.Hosting.AgentApiProxy.ClientName).ConfigurePrimaryHttpMessageHandler(() => Booking);
             // The kernel's one resilience handler stays; only the wait between attempts is removed so a failing backend does not make a test slow.
             foreach (var configure in _services) configure(services);
             services.PostConfigureAll<HttpStandardResilienceOptions>(o => { o.Retry.Delay = TimeSpan.Zero; o.Retry.UseJitter = false; o.Retry.BackoffType = Polly.DelayBackoffType.Constant; o.Retry.MaxDelay = null; });

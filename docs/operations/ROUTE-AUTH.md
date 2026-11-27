@@ -155,6 +155,7 @@ The middleware is UX, the services are the boundary: a signed-in page still call
 | Web | PAGE | `/rejestracja` | Anonymous | all | registration form (the POST is handled by the page, antiforgery) |
 | Web | PAGE | `/rejestracja/sprawdz-skrzynke` | Anonymous | all | "confirm your e-mail" state after a `202` registration |
 | Web | PAGE | `/wyloguj` | Anonymous | all | sign-out form |
+| Web | ANY | `/v1/{**path}` | Anonymous | all | ADR-0013 decision 1: the agent API of Booking under the site's address (`AgentApiProxy`). Anonymous **on this host** because the API key, not a session, authenticates and Booking checks it (401 in the OpenAI shape is Booking's). Forwards only `Authorization`, `Idempotency-Key`, `Content-Type`, `Accept`; never the session cookie; streams both ways; 2 MB body limit; skipped by the origin guard, antiforgery, cookie authentication, status-code pages and output cache (no browser involved). Booking's own table (`/v1/*`, ApiKey) is unchanged |
 | Web | GET | `/oauth/github/start` | Anonymous | all | GitHub sign-in start: state cookie `gt_oauth_state` + returnUrl from `Site:BaseUrl` (PR #118) |
 | Web | GET | `/oauth/callback` | Anonymous | all | GitHub callback carve-out (PR #118): no sign-in redirect, state checked against the cookie, code exchanged |
 | Web | PAGE | `/admin` | Admin | all | administrator landing; a signed-in non-admin gets 403 "Brak dostępu", a visitor goes to sign-in (F-10) |

@@ -13,7 +13,8 @@ namespace Gabinety.Booking.Features.AgentApi;
 /// </summary>
 public class EntitlementStore(BookingDbContext db, TimeProvider time)
 {
-    static readonly SemaphoreSlim InMemoryGate = new(1, 1);
+    /// <summary>The InMemory provider's stand-in for a row lock: one gate for every read-modify-write of a booking row in this process (also taken by <c>BookingTransitions</c> on InMemory).</summary>
+    public static readonly SemaphoreSlim InMemoryGate = new(1, 1);
 
     /// <summary>The oldest usable package of <paramref name="clientUserId"/> for the agent, of the kind, optionally of one offering; null when there is none.</summary>
     public virtual Task<BookingEntity?> FindAsync(string clientUserId, string practitionerSlug, OfferingKind kind, Guid? offeringId, CancellationToken ct)

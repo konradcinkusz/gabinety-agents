@@ -41,7 +41,13 @@ public class TasksAndKeysTests
         Assert.Equal(["W kolejce", "Gotowe"], section.QuerySelectorAll("[data-testid=task-status]").Select(s => s.TextContent)); // newest first
         Assert.Equal("Gotowy plan.", section.QuerySelector("[data-testid=task-output]")!.TextContent);
         Assert.Contains(f.Web.Booking.Requests, r => r.PathAndQuery == $"/api/v1/me/bookings/{BookingId}/tasks");
-        Assert.NotNull(page.One("meta[http-equiv=refresh]")); // a task is pending: the page reloads itself
+        // ADR-0013, owner decision 3: a pending task does not make the page reload itself (no meta refresh, which axe rejects, WCAG 2.2.1, and which never fired after the enhanced redirect), and the page
+        // no longer says it does. What it offers is the link that refreshes the list, which is a plain link to the same page.
+        Assert.Empty(page.All("meta[http-equiv=refresh]"));
+        Assert.DoesNotContain("odświeża się sam", page.Text);
+        var pending = section.QuerySelector("p[role=status]")!;
+        Assert.Equal("Zadanie jest w toku. Odśwież listę", Page.Squash(pending.TextContent));
+        Assert.StartsWith($"/moje/dostepy/{BookingId}", pending.QuerySelector("a")!.GetAttribute("href"));
     }
 
     [Fact]

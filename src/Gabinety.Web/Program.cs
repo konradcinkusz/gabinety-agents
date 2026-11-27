@@ -8,6 +8,7 @@ builder.AddServiceDefaults();         // kernel: telemetry, /health, problem det
 builder.AddWebApp();                  // components, render modes, circuit limits, backend candidates as discovery endpoints
 builder.AddWebAuthentication();       // cookie session on the host, tokens server side, deny by default
 builder.Services.AddBackendClients(); // typed clients per backend: logical names, the visitor's address, no second resilience handler
+builder.Services.AddAgentApiProxy();  // /v1/* forwarded to Booking, streamed (ADR-0013)
 
 var app = builder.Build();
 app.UseWebPipeline();                 // origin guard first, security headers, authentication, antiforgery

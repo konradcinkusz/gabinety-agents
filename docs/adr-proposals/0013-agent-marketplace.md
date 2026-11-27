@@ -1,6 +1,6 @@
 # ADR-0013 (propozycja): marketplace agentów AI zamiast konsultacji
 
-- Status: **proponowana**, do potwierdzenia przez właściciela. Pierwsze osiem decyzji to propozycje z sekcji 4 planu (`docs/agentic/PLAN.md`); sekcja „Decyzje podjęte w trakcie” opisuje to, co wykonawcy faktycznie zdecydowali w PR #2 do #5; sekcja „Otwarte decyzje właściciela” to pytania, na które kod dziś nie odpowiada.
+- Status: **proponowana**, do potwierdzenia przez właściciela. Pierwsze osiem decyzji to propozycje z sekcji 4 planu (`docs/agentic/PLAN.md`); sekcja „Decyzje podjęte w trakcie” opisuje to, co wykonawcy faktycznie zdecydowali w PR #2 do #5; sekcja „Decyzje właściciela” zbiera cztery pytania, na które kod nie odpowiadał: właściciel rozstrzygnął trzy (adres `/v1`, nieudane ostatnie zadanie po auto-zakończeniu, odświeżanie listy zadań; w jego zleceniu to punkty 1, 2 i 3), czwarta (rozłączony strumień czatu) jest otwarta. Reszta dokumentu pozostaje propozycją do potwierdzenia.
 - Data: 2026-11-24.
 - Zadanie: D-03 (5). Opis oparty na kodzie `main` po D-02 i na opisach scalonych PR #2, #3, #4 i #5. Repozytorium specyfikacji (`gabinety-tech-spec`) jest tylko do odczytu dla wykonawcy, więc propozycja leży tutaj; stałe z sekcji 9 kontraktów (np. ważność pakietu) należą do właściciela.
 - Buduje na: ADR-0009 (kod w tym repozytorium, specyfikacja w osobnym), ADR-0010 (frontend Blazor), propozycje 0011 (Stripe Connect) i 0012.
@@ -17,7 +17,7 @@ Gabinety Tech sprzedawały konsultacje z programistami (termin, spotkanie, opini
 | 2 | Rezygnacja: pełny zwrot tylko przed pierwszym użyciem | `CancelPlanner`: dozwolona w stanie `Confirmed` przy `UnitsUsed == 0`, zawsze pełny zwrot; później 409 `invalid_transition`. Reguły 24 h już nie ma (klasa `RefundPolicy` została, Booking jej nie woła). |
 | 3 | Rozliczanie czatu: suma tokenów wejścia i wyjścia, jedna stawka | z `usage.total_tokens` odpowiedzi dostawcy, po fakcie; ostatnie żądanie może przekroczyć pulę (`UnitsUsed` > `UnitsTotal`). Zakup pakietu `Chat` mnoży jednostki przez 1000. |
 | 4 | Do 5 kluczy na konto, wspólne dla wszystkich agentów | `ApiKeysFeature.MaxActive = 5`; klucz identyfikuje konto, agenta wybiera pole `model`. |
-| 5 | `/v1` w usłudze Booking | tak (`PublicEdge` przepuszcza `/v1`). **Strona go nie przekazuje**; patrz otwarta decyzja 1. |
+| 5 | `/v1` w usłudze Booking | tak (`PublicEdge` przepuszcza `/v1`), a strona przekazuje je pod swoim adresem (`AgentApiProxy`); patrz „Decyzje właściciela” 1. |
 | 6 | Jedno konto techniczne na agenta | bez zmian (`practitioner_exists`); zdjęcie ograniczenia to E-04. |
 | 7 | Wypłaty i prowizja bez zmian w profilu `fake`, do usunięcia przed prawdziwymi płatnościami | bez zmian; termin wypłaty zmieniony (niżej). Zakres usunięcia: `docs/operations/PAYMENTS-AGENTS.md`. |
 | 8 | Plakietka „Agent AI” wszędzie, gdzie widać nazwę agenta | komponent `AiBadge` na karcie, profilu, w podsumowaniu zakupu, na liście i w szczegółach dostępu; J1 sprawdza kartę i profil. |
@@ -50,7 +50,7 @@ Zapisane tu, żeby nie ginęły w opisach PR. Każdą można wycofać osobno.
 **Dane demonstracyjne i ścieżki (PR #5).**
 - Zużycie pakietów w seederze powstaje przez prawdziwe `POST /api/v1/bookings/{id}/tasks`, nie przez zapis do bazy; seeder nie rusza zegara testowego.
 - Trzy poprawki Webu znalezione przez J3 i J8: nazwy pól `created_at`/`completed_at` (lista pokazywała „Zlecone: 1 stycznia 1”), rodzaj pakietu pisany małymi literami w publicznym JSON (pakiet czatu pokazywał „500 zadań”), cofnięta próba `forceLoad`.
-- J8 nie zakłada, że `/v1` jest pod adresem strony: bierze adres z potwierdzenia zakupu i woła Booking wprost.
+- J8 nie zakładał, że `/v1` jest pod adresem strony: brał adres z potwierdzenia zakupu i wołał Booking wprost. Od decyzji 1 (niżej) wszystkie wywołania idą przez stronę, a jedno z nich jest powtórzone na Bookingu dla porównania.
 - Zużycie czatu w panelu to tysiące tokenów dzielone całkowicie, więc małe użycie to „wykorzystano 0 z 500 tys. tokenów”. To decyzja o prezentacji, nie błąd.
 - Znany wyścig na InMemory (profil `fake`): `AutoCompleteJob` i równoległa reklamacja pakietu o wyczerpanych jednostkach; na PostgreSQL chroni blokada wiersza.
 
@@ -58,33 +58,39 @@ Zapisane tu, żeby nie ginęły w opisach PR. Każdą można wycofać osobno.
 
 Pytanie z zadania: czy wdrożony host bez `Agents:Provider` ma nie startować? Sprawdzone przez zmianę `AgentsFeature` tak, by brak ustawienia poza profilem `fake` zatrzymywał start (usunięty warunek `!string.IsNullOrWhiteSpace(provider)` przy filtrze startu). Wynik: `dotnet test --filter "tier!=integration"` miał **26 porażek** w `Gabinety.Booking.Tests` (m.in. `PublicEdgeTests`, `RouteAuthTests`, `ClockApiTests`, `MockPaymentsFailClosedTests`, `SmtpWiringTests`, `AgentTaskJobTests.A_deployed_host_without_a_platform_starts...`), bo testy profilu wdrożonego uruchamiają host bez platformy. Zmianę **wycofano**. Zamiast niej konfiguracja wdrożenia wymusza ustawienia: `Agents__Provider = "Http"` i adres platformy w `booking.fly.toml`, wymagany sekret `AGENTS_UPSTREAM_API_KEY` w `secrets.map` i wiersze `required` w `config-keys.map`. Host bez tych ustawień nie zostanie wdrożony (wdrożenie odmawia placeholdera i brakującego sekretu), a przypadkowy start bez nich daje błąd przy pierwszym użyciu. Gdyby właściciel chciał twardego startu w kodzie, trzeba najpierw dać testom profilu wdrożonego atrapę platformy.
 
-## Otwarte decyzje właściciela
+## Decyzje właściciela
 
-Poniższe rekomendacje to propozycje wykonawcy, nie rozstrzygnięcia.
+Decyzje 1, 2 i 4 właściciel rozstrzygnął (opisane niżej wraz z tym, co zrobiono); decyzja 3 (rozłączony strumień czatu) jest dalej otwarta, a jej rekomendacja to propozycja wykonawcy, nie rozstrzygnięcie.
 
-### 1. Czy `/v1` ma być pod adresem strony?
+### 1. Adres `/v1`: ROZSTRZYGNIĘTE (właściciel): pod adresem strony (opcja B)
 
-Dziś `/v1` odpowiada Booking (publiczny adres aplikacji Booking, `PublicEdge`), a strona nie ma trasy `/v1`. **Ale** sekcja „Jak się połączyć” (profil agenta, potwierdzenie zakupu) poza profilem z płatnościami próbnymi podaje klientowi `Site:BaseUrl` + `/v1`, czyli adres strony. Na wdrożeniu z prawdziwymi płatnościami przykład `curl` z tej sekcji wskazywałby więc adres, który nie obsługuje `/v1`. To jedyna rozbieżność w kodzie, którą ta decyzja usuwa.
+Pytanie: sekcja „Jak się połączyć” podawała klientowi `Site:BaseUrl` + `/v1`, a strona nie miała trasy `/v1` (odpowiadał tylko Booking), więc przykład `curl` na wdrożeniu z prawdziwymi płatnościami wskazywał adres, który go nie obsługuje. Opcje z propozycji: A (osobny adres API, np. `api.<domena>`), B (strona przekazuje `/v1`), C (osobna usługa API, E-05). Proponowałem A; **właściciel wybrał B**: klient ma jeden adres.
 
-| Opcja | Co trzeba zrobić | Koszt |
-|---|---|---|
-| A. `/v1` zostaje na adresie Booking | dodać ustawienie adresu API w Web (np. `Site:ApiBaseUrl`) i używać go w `WebOptions.ApiBaseUrl`; podać klientom adres Bookinga lub własną domenę wskazującą na niego | najmniej pracy; klient widzi inny host niż strona |
-| B. `/v1` pod adresem strony | przekazywanie `/v1` z Web do Booking (w tym strumień SSE bez buforowania, nagłówek `Authorization`, limit per klucz, który dziś zależy od klucza, nie od adresu) | Web staje się częścią ścieżki API; ryzyko dla strumieni i limitów |
-| C. Osobna usługa API (E-05) | wydzielić `/v1` z Booking | najwięcej pracy; sens, gdy ruch API zacznie obciążać Booking |
+**Co zrobiono** (`src/Gabinety.Web/Hosting/AgentApiProxy.cs`, bez nowej zależności: `HttpClient` z nazwą logiczną `booking`, czyli `Backend:Booking`, strumieniowanie w obie strony; budżet zależności z ADR-0010 bez zmian):
+- trasa `ANY /v1/{**path}` przekazuje metodę, ścieżkę z zapytaniem i ciało **strumieniowo** (do 2 MB jak w Bookingu, także bez `Content-Length`; 413 w kształcie OpenAI) oraz tylko `Authorization`, `Idempotency-Key`, `Content-Type`, `Accept`. **Nie** przekazuje ciasteczek (sesja strony) ani nagłówków hop-by-hop, ani żadnych innych nagłówków klienta;
+- odpowiedź wraca **strumieniowo, bez buforowania** (każdy kawałek jest opróżniany od razu: SSE płynie na bieżąco), z kodem i nagłówkami Bookinga (`Retry-After`, `WWW-Authenticate`), bez hop-by-hop i `Set-Cookie`. Booking niedostępny: 502 `upstream_error` w kształcie OpenAI;
+- adres klienta: istniejącym mechanizmem `X-Client-Address` + `X-Edge-Key` (`BackendHeadersHandler`; Booking czyta adres przez `RateLimits.PartitionKey`, nie przez `Fly-Client-IP`). Limit per klucz bez zmian w Bookingu (liczy go Booking po `sub = apikey:{id}`);
+- nic z ciała, nagłówka `Authorization` ani treści nie trafia do logów;
+- `/v1` jest wyjęte spod filtra Origin, antiforgery, uwierzytelniania ciasteczkiem i pamięci podręcznej odpowiedzi (to klienci spoza przeglądarki, uwierzytelniani kluczem), a strony statusów są wyłączone dla jego odpowiedzi (błąd dostawcy nie zamienia się na stronę HTML). Reszta ścieżek ma potok bez zmian (testy);
+- `ROUTE-AUTH.md` i `RouteAuditTests`: jeden nowy wiersz `ANY /v1/{**path}`, Anonymous po stronie strony (klucz sprawdza Booking), jedyna trasa pod `/v1`; test pilnuje też, że antiforgery jej nie dotyczy;
+- adres w sekcji „Jak się połączyć” to zawsze `Site:BaseUrl` + `/v1` (usunięty wyjątek profilu z płatnościami próbnymi, który podawał adres Bookinga); przykłady `curl` w profilu `fake` wskazują `http://localhost:3000/v1`;
+- J8 w `tests/e2e` woła stronę (adres z potwierdzenia zakupu = `Site:BaseUrl` + `/v1`), a jedno wywołanie powtarza na Bookingu dla porównania;
+- wdrożenie: bez zmian ustawień. `web-blazor.fly.toml` już woła Booking po sieci prywatnej (`Backend__Booking = ….internal:8080`) i ma `RateLimit__TrustedProxyKey`; `check-private-topology.sh` nie wymaga zmian. Dodano komentarze (strumień zajmuje połączenie liczone w `[http_service.concurrency]`).
 
-Rekomendacja: A (z własną domeną typu `api.<domena>`), bo B zmienia profil ruchu strony, a C jest przedwczesne. Do czasu decyzji przykład `curl` na produkcji jest mylący.
+**Skutki i ryzyka.** Web jest teraz częścią ścieżki API: jego restart przerywa strumienie w toku, a długi strumień zajmuje jedno z 150 połączeń maszyny 512 MB (limit połączeń jest ustawiony pod okna przeglądarki, `docs/operations/PERFORMANCE.md`; ruch API nie był mierzony). Proxy nie ponawia żądań (ciała strumieniowego nie da się powtórzyć) i nie ma całkowitego limitu czasu odpowiedzi (jest tylko 5 s na połączenie i 15 min do nagłówków). Gdy ruch API zacznie obciążać stronę, opcja C (E-05) jest dalej otwarta. Booking nadal odpowiada na `/v1` pod własnym adresem, ale klientom podaje się adres strony.
 
-### 2. Co robić, gdy ostatnie zadanie kończy się `failed` po auto-zakończeniu pakietu?
+### 2. Ostatnie zadanie `failed` po auto-zakończeniu pakietu: ROZSTRZYGNIĘTE (właściciel): opcja B, zwrot jednostki cofa pakiet do `Confirmed`
 
-`AutoCompleteJob` przenosi pakiet `Tasks` w `Completed`, gdy `UnitsUsed >= UnitsTotal`, a wypłata dostawcy zostaje wyznaczona (`EndUtc + 72 h`, patrz wyżej). Jeśli ostatnie zadanie potem zakończy się `failed` (trzy nieudane starty), jednostka wraca, ale pakiet już jest `Completed`, więc klient ma wolną jednostkę, której nie może użyć (`POST /v1/tasks` szuka pakietów `Confirmed`).
+Pytanie: `AutoCompleteJob` przenosi pakiet `Tasks` w `Completed`, gdy `UnitsUsed >= UnitsTotal`; jeśli ostatnie zadanie potem kończy się `failed`, jednostka wraca, ale pakiet już jest `Completed`, więc klient ma wolną jednostkę, której nie może użyć. Proponowałem C (nie kończyć pakietu, dopóki są zadania `queued` lub `running`); **właściciel wybrał B**.
 
-| Opcja | Skutek |
-|---|---|
-| A. Nic nie robić | klient musi zgłosić reklamację (pakiet `Completed` do `EndUtc + 72 h`); najprostsze, ale to ręczna praca administratora |
-| B. Zwrot jednostki cofa pakiet do `Confirmed` | wymaga nowego przejścia w `BookingStateMachine` i anulowania wyznaczonej wypłaty; więcej kodu, najlepsze dla klienta |
-| C. `AutoCompleteJob` nie kończy pakietu, dopóki są zadania `queued` lub `running` | zapobiega problemowi u źródła; pakiet kończy się trochę później |
+**Co zrobiono** (`PackageReopening`, `AgentTaskJob.FailAsync`):
+- nowy wyzwalacz `BookingTrigger.UnitRefunded` i jedno nowe przejście `Completed` -> `Confirmed` w `BookingStateMachine` (test tabeli rozszerzony, wyczerpujące sprawdzenie innych par dalej przechodzi);
+- po zwrocie jednostki zadanie w tle woła `PackageReopening.TryAsync`: jedna transakcja z blokadą wiersza przez `BookingTransitions`, z regułami sprawdzanymi **pod blokadą**: pakiet `Completed` rodzaju `Tasks` z wolną jednostką, `EndUtc > teraz`, brak wiersza `Payout` (każdy stan) i wpisu `PractitionerPayout` (nowa `TransitionRequest.DbPrecondition`, sprawdzenie z bazą w transakcji). Inaczej nic się nie zmienia (wypłacono, `Disputed`/`Resolved`, minął `EndUtc`);
+- skutek: `Confirmed`, `EndedAt`, `PayoutDueAt`, `FeeMinor`, `PayoutMinor` puste i usunięty **niewypłacony** wpis `PlatformFee`. `FeeHook` zostawia wiersz księgi przy zakończeniu (nalicza prowizję i pisze `PlatformFee`), więc cofnięcie robi to samo co reklamacja: wspólna `MoneyReopening.Reopen` (wzór `ReopenMoney` z `DisputeFeature`, wydzielony i używany w obu miejscach), a hook zwalnia zajętą parę w zastępniku InMemory tylko wtedy, gdy ten pakiet ją miał. Para jest wolna dla zakupu, który naprawdę zarobi prowizję (test: po ponownym wyczerpaniu pakiet znów ma jeden wiersz `PlatformFee`);
+- wyścig z `AutoCompleteJob`: zwrot jednostki i otwarcie to dwa zatwierdzone kroki w tej kolejności; `AutoCompleteJob` sprawdza `IsDue` pod blokadą wiersza, więc albo zakończy pakiet przed zwrotem (otwarcie go cofnie), albo zobaczy wolną jednostkę i go nie zakończy. Na InMemory nie ma blokady wiersza, więc `BookingTransitions` i `EntitlementStore` dzielą jedną bramkę procesu (bez niej test wyścigu pada w kilku rundach; sprawdzone). To usuwa też znany wyścig InMemory opisany wyżej dla `AutoCompleteJob` i równoległej reklamacji (zmiana dotyczy tylko InMemory);
+- testy: `PackageReopeningTests` (InMemory: reguła na wierszu, cała ścieżka, ponowne zakończenie z prowizją, dwie jednostki, po `EndUtc`, wypłacono lub w trakcie, `Disputed`/`Resolved`/anulowany, reklamacja po zakończeniu, 40 rund wyścigu) i `PackageReopeningIntegrationTests` (`tier=integration`, PostgreSQL 17: ścieżka z prawdziwym SQL, blokada przez `Payout` i wpis wypłaty, 25 rund dwóch zadań zakończenia i nieudanego zadania naraz).
 
-Rekomendacja: C. Zmienia jeden warunek zadania w tle, nie dodaje przejść stanu i nie dotyka wypłat. Żadna ścieżka e2e dziś tego nie wywołuje (atrapa platformy nie zawodzi), więc test jeszcze nie istnieje.
+**Ograniczenia.** Zwrot jednostki i otwarcie to dwa kroki: przerwanie procesu między nimi zostawia `Completed` z wolną jednostką (jak przed zmianą; klient może zgłosić reklamację do `EndUtc + 72 h`). Nie rusza ścieżki `TasksFeature.QueueAsync` (zwrot, gdy nie da się zapisać zadania w tym samym żądaniu). Opcja C (nie kończyć pakietu przy zadaniach w toku) nie została zrobiona i nie jest potrzebna, dopóki B działa; mogłaby dojść jako dodatkowa osłona.
 
 ### 3. Rozliczanie rozłączonego strumienia czatu
 
@@ -99,22 +105,20 @@ Dziś nic nie jest naliczane, gdy klient rozłączy się przed końcem strumieni
 
 Rekomendacja: C z oznaczeniem w `UsageRecord`, że wartość jest szacunkiem, albo A, jeśli ryzyko nadużycia jest małe (pakiet jest opłacony z góry i ważny 30 dni). Decyzja zależy od tego, co platforma agentów zwraca przy zerwanym połączeniu.
 
-### 4. Odświeżanie listy zadań
+### 4. Odświeżanie listy zadań: ROZSTRZYGNIĘTE (właściciel): opcja B, bez napisu i bez meta refresh, zostaje „Odśwież listę”
 
-`BookingDetail.razor` ustawia `<meta http-equiv="refresh" content="5">`, gdy są zadania `queued` lub `running`, i pokazuje „Zadanie jest w toku. Strona odświeża się sama.” Po zleceniu zadania następuje nawigacja rozszerzona (enhanced navigation), po której meta refresh nie działa, tak samo dla adresu z fragmentem `#zadania`. Napis nie jest więc prawdą, a zadanie zostaje „W kolejce”, dopóki klient nie kliknie „Odśwież listę”. Dodatkowo axe zgłasza `meta-refresh` jako błąd krytyczny (WCAG 2.2.1), gdy strona jest w stanie „w toku”; testy J3, J5 i J6 pilnują, żeby axe oglądał stronę po odpowiedzi agenta (świadome ominięcie).
+Pytanie: `BookingDetail.razor` ustawiał `<meta http-equiv="refresh" content="5">`, gdy były zadania `queued` lub `running`, i pokazywał „Zadanie jest w toku. Strona odświeża się sama.” Po zleceniu zadania następuje nawigacja rozszerzona (enhanced navigation), po której meta refresh nie działa, tak samo dla adresu z fragmentem `#zadania`, więc napis nie był prawdą. Dodatkowo axe zgłaszał `meta-refresh` jako błąd krytyczny (WCAG 2.2.1) w stanie „w toku”. Proponowałem B teraz i C (skrypt odświeżający listę, wyłączalny przez użytkownika) później; **właściciel wybrał B**.
 
-| Opcja | Skutek |
-|---|---|
-| A. Zostawić | błąd dostępności zgłaszany przez axe przy stanie „w toku”, napis niezgodny z działaniem |
-| B. Usunąć napis „Strona odświeża się sama” i meta refresh, zostawić „Odśwież listę” | prawdziwy komunikat, brak błędu axe; klient odświeża ręcznie |
-| C. Skrypt (np. mały `enhance.js` odświeżający listę co kilka sekund, wyłączalny przez użytkownika) | zgodne z WCAG, jeśli da się to zatrzymać; strona działa bez skryptu jak dziś |
-| D. Strona interaktywna (Blazor circuit) odpytuje stan | wymaga trybu interaktywnego na tej stronie; drożej w pamięci (`docs/operations/PERFORMANCE.md`) |
+**Co zrobiono:**
+- z `BookingDetail.razor` usunięty `<meta http-equiv="refresh">`; tekst to teraz „Zadanie jest w toku.” z linkiem „Odśwież listę” (zwykły link do tej samej strony, działa bez skryptu). Strona potwierdzenia zakupu zachowuje własny meta refresh na czas oczekiwania na płatność (inna sprawa: tam nawigacja jest zwykła, a napis jest prawdziwy);
+- test strony (`TasksAndKeysTests`): brak `meta[http-equiv=refresh]` przy zadaniu w kolejce, brak napisu „odświeża się sam”, link „Odśwież listę” prowadzi na stronę dostępu;
+- e2e: J5 i J6 nie czekają już na wykonanie zadania tylko po to, by ominąć axe (axe ogląda stronę ze zleceniem „w kolejce”), J3 dodatkowo sprawdza axe zaraz po zleceniu; J3 nadal czeka na odpowiedź agenta (przez „Odśwież listę”), bo sprawdza jej treść. Komentarz w `waitForAnswer` poprawiony.
 
-Rekomendacja: B teraz (najmniejsza zmiana, napis przestaje kłamać, znika błąd axe), C później, jeśli klienci będą czekać na wyniki dłużej niż kilkadziesiąt sekund.
+**Zostaje.** Klient widzi wynik po kliknięciu „Odśwież listę”; jeśli będzie czekał na wyniki dłużej niż kilkadziesiąt sekund, opcja C (skrypt odświeżający, wyłączalny) pozostaje do zrobienia.
 
 ## Skutki
 
 - Kod i dokumenty opisują agentów AI; stare nazwy w kodzie to dług opisany w etapie E planu.
-- Otwarte decyzje 1 do 4 blokują: decyzja 1 podanie klientom adresu API na produkcji, decyzja 2 pewność rozliczeń zadań, decyzja 3 uczciwość rozliczenia czatu, decyzja 4 poprawność komunikatu w panelu.
+- Decyzje 1 (adres `/v1`), 2 (nieudane ostatnie zadanie) i 4 (odświeżanie listy) rozstrzygnięte; otwarta zostaje decyzja 3 (uczciwość rozliczenia czatu przy rozłączonym strumieniu).
 - Przed prawdziwymi płatnościami trzeba wykonać zmiany z `docs/operations/PAYMENTS-AGENTS.md` (E-03; wymaga nowej decyzji zastępującej propozycję 0011).
 - Połączenie z prawdziwą platformą agentów nie zostało sprawdzone: `HttpAgentUpstream` ma testy, ale nie działał z żadną prawdziwą platformą, a kroki GitHub Copilot BYOK są niezweryfikowane (`docs/operations/COPILOT-BYOK.md`).

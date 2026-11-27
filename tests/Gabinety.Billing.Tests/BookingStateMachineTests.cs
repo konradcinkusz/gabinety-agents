@@ -26,6 +26,7 @@ public class BookingStateMachineTests
         (S.Confirmed, T.ClientNoShowReported, Early, S.ClientNoShow),
         (S.Confirmed, T.ClientDisputes, Early, S.Disputed),
         (S.Completed, T.ClientDisputes, Early, S.Disputed), // the caller bounds it by start + 72 h
+        (S.Completed, T.UnitRefunded, Early, S.Confirmed), // owner decision 2 (ADR-0013): a refunded unit reopens a package completed by exhaustion; the caller checks the rest
         (S.Disputed, T.AdminResolves, Early, S.Resolved),
     ];
 
@@ -67,8 +68,8 @@ public class BookingStateMachineTests
         foreach (var from in terminal)
             foreach (var trigger in Enum.GetValues<T>())
                 Assert.False(BookingStateMachine.Next(from, trigger, Start, Early).Allowed);
-        // Completed accepts one thing: the client's dispute (the caller bounds it by start + 72 h, ADR proposal 0011)
-        foreach (var trigger in Enum.GetValues<T>().Where(t => t != T.ClientDisputes))
+        // Completed accepts two things: the client's dispute (the caller bounds it by start + 72 h, ADR proposal 0011) and a refunded unit (reopens the package, ADR-0013)
+        foreach (var trigger in Enum.GetValues<T>().Where(t => t != T.ClientDisputes && t != T.UnitRefunded))
             Assert.False(BookingStateMachine.Next(S.Completed, trigger, Start, Early).Allowed);
     }
 

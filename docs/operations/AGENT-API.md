@@ -105,7 +105,13 @@ Tylko właściciel (inaczej 404 `task_not_found`):
 
 Błąd (status inny niż 2xx, wyjątek, odpowiedź bez tekstu): zadanie wraca do kolejki; po **3 startach** (`Attempts`) staje się `failed`, a jednostka wraca do pakietu. Zadanie `running` dłużej niż `Agents:TaskTimeoutMinutes` (domyślnie 30) liczy się jak błąd. Platforma jest wyznaczana dopiero wtedy, gdy w kolejce jest zadanie.
 
-Znane ograniczenie: pakiet `Tasks` przechodzi w `Completed`, gdy `UnitsUsed >= UnitsTotal` (`AutoCompleteJob`, co 60 s). Jeśli ostatnie zadanie potem zakończy się `failed`, jednostka wraca, ale pakiet zostaje `Completed`. Do decyzji właściciela (ADR 0013).
+**Nieudane zadanie po auto-zakończeniu pakietu** (decyzja właściciela, ADR 0013). Pakiet `Tasks` przechodzi w `Completed`, gdy `UnitsUsed >= UnitsTotal` (`AutoCompleteJob`, co 60 s). Jeśli ostatnie zadanie potem zakończy się `failed`, jednostka wraca (`EntitlementStore.RefundUnitsAsync`), a `AgentTaskJob` **przywraca pakiet do `Confirmed`** (`PackageReopening`, wyzwalacz `UnitRefunded`), żeby klient mógł jej użyć. Robi to w jednej transakcji z blokadą wiersza (`BookingTransitions`, tak jak `AutoCompleteJob`) i **tylko gdy wszystko poniższe jest prawdą** (sprawdzane pod blokadą):
+
+- pakiet jest `Completed` (nie `Disputed`, `Resolved` ani anulowany), rodzaju `Tasks`, i ma wolną jednostkę (`UnitsUsed < UnitsTotal`);
+- ważność się nie skończyła (`EndUtc > teraz`): pakiet zakończył się wyczerpaniem jednostek, a nie upływem czasu. Po `EndUtc` status zostaje, jednostka mimo to wraca;
+- nic nie wypłacono: nie ma wiersza `Payout` (w żadnym stanie, także `Pending`) ani wpisu księgi `PractitionerPayout`.
+
+Skutek: status `Confirmed`, `EndedAt`, `PayoutDueAt`, `FeeMinor` i `PayoutMinor` puste, a **niewypłacony** wpis księgi `PlatformFee` usunięty (jak przy reklamacji: `MoneyReopening`, wzór `ReopenMoney`), co zwalnia parę klient-agent dla zakupu, który naprawdę zarobi prowizję. Gdy warunki nie są spełnione (wypłacono, reklamacja, minął `EndUtc`), pakiet zostaje, jak dziś. Jednostka wraca i pakiet otwiera się dwoma kolejnymi zatwierdzonymi krokami (zwrot, potem otwarcie); równoległy `AutoCompleteJob` albo zakończy pakiet przed zwrotem (wtedy otwarcie go cofnie), albo zobaczy wolną jednostkę i go nie zakończy (`IsDue` jest sprawdzane pod blokadą). Przerwanie procesu między krokami zostawia stan jak przed zmianą (`Completed` z wolną jednostką, droga reklamacji otwarta). Na InMemory (profil `fake`, testy) blokadę zastępuje jedna bramka procesu dla `BookingTransitions` i `EntitlementStore`. Test wyścigu: `PackageReopeningTests` (InMemory) i `PackageReopeningIntegrationTests` (PostgreSQL).
 
 Treść zadania i odpowiedź są tekstem użytkownika: są zapisane w bazie i zwracane właścicielowi, nigdy nie trafiają do logów ani komunikatów błędów. Usunięcie danych użytkownika czyści `InputText` i `OutputText`.
 
@@ -150,4 +156,16 @@ Rejestracja dostawcy (`AgentsFeature`): w profilu `fake` brak `Agents:Provider` 
 
 ## Gdzie `/v1` jest dostępne
 
-`/v1` obsługuje usługa Booking (profil `fake`: `http://localhost:5102/v1`), a `PublicEdge` przepuszcza `/v1` z internetu. Strona (`src/Gabinety.Web`) go **nie** przekazuje. Adres podawany klientowi w sekcji „Jak się połączyć” to `Site:BaseUrl` + `/v1` (w profilu z płatnościami próbnymi adres Bookinga + `/v1`). Czy `/v1` ma być pod adresem strony, jest otwartą decyzją właściciela (ADR 0013).
+Klient ma **jeden adres**: `Site:BaseUrl` + `/v1` (profil `fake`: `http://localhost:3000/v1`). API obsługuje usługa Booking, a strona (`src/Gabinety.Web`, `AgentApiProxy`) przekazuje do niej `/v1/*` (decyzja właściciela, ADR 0013). Booking nadal jest dostępny pod własnym adresem (profil `fake`: `http://localhost:5102/v1`; w produkcji `PublicEdge` przepuszcza `/v1` z internetu), ale klientom podaje się adres strony.
+
+### Co robi przekazywanie przez stronę
+
+- **Przekazuje** metodę, ścieżkę z zapytaniem i ciało **strumieniowo** (bez buforowania; do 2 MB jak w Bookingu: większe ciało to 413 `request_too_large`, także gdy nie ma `Content-Length`) oraz tylko cztery nagłówki: `Authorization`, `Idempotency-Key`, `Content-Type`, `Accept`.
+- **Nie przekazuje** ciasteczek (sesja strony nie ma znaczenia dla API, które uwierzytelnia klucz), nagłówków hop-by-hop ani żadnych innych nagłówków klienta. `Set-Cookie` z odpowiedzi też jest odrzucany.
+- **Odpowiedź** wraca strumieniowo, kawałek po kawałku (strumień SSE płynie na bieżąco), z kodem statusu i nagłówkami Bookinga (m.in. `Retry-After`, `WWW-Authenticate`) bez nagłówków hop-by-hop. Treść błędu 401/429 to JSON Bookinga, nie strona HTML.
+- **Adres klienta** idzie nagłówkami `X-Client-Address` i `X-Edge-Key` (ten sam mechanizm co przy wszystkich wywołaniach strony do usług; `RateLimit:TrustedProxyKey` musi być taki sam w Web i Bookingu). **Limit per klucz** jest bez zmian: liczy go Booking; adres służy tylko żądaniom, których nie da się przypisać do klucza.
+- **Booking niedostępny** (brak połączenia, przekroczony czas połączenia): 502 w kształcie OpenAI (`error.code = upstream_error`, `type = api_error`, stały tekst „The API service did not answer.”). Nie ma ponowień (ciała strumieniowego nie da się powtórzyć) ani przerwania po 15 s: strumień może trwać, aż skończy go dostawca albo klient.
+- **Ścieżka** nie może wyjść poza `/v1` (segmenty `.` i `..` nie są przekazywane); `/v10` nie jest API.
+- **Bez logowania** ciała, nagłówka `Authorization` i treści: w logu jest tylko metoda, status, czas i typ wyjątku.
+- **Poza ochroną przeglądarki:** `/v1` jest wyjęte spod filtra Origin (`BrowserOriginGuard`), antiforgery, uwierzytelniania ciasteczkiem, stron statusów i pamięci podręcznej odpowiedzi; to klienci spoza przeglądarki, uwierzytelniani kluczem. W tabeli tras (`ROUTE-AUTH.md`) trasa to jeden wiersz `ANY /v1/{**path}`, Anonymous po stronie strony (klucz sprawdza Booking).
+- **Sieć:** strona woła Booking po nazwie logicznej `booking` (`Backend:Booking`), przez sieć prywatną, tak jak każde inne wywołanie; wdrożenie nie wymaga zmian (`docs/operations/DEPLOY.md`).

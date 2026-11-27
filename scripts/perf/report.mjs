@@ -22,9 +22,8 @@ function load(id, row, tool, metric, pick, target, extra = "") {
 
 load("list", "GET /api/v1/practitioners (filtered, 12 items), server time, 20 clients", "scripts/perf/load.mjs", "p95 total ms", (r) => r.totalMs.p95, 300,
   `${env.approvedPractitioners} approved practitioners; the client-side total includes JSON transfer on loopback, so it is at or above the server time`);
-load("slots", "GET .../slots, 14 days", "scripts/perf/load.mjs", "p95 total ms", (r) => r.totalMs.p95, 200, "20 clients rotating over the slots URLs of the six practitioners with availability");
 load("bookings", "POST /api/v1/bookings", "scripts/perf/load.mjs", "p95 total ms", (r) => r.totalMs.p95, 500,
-  `${prep.bookingRequests} of ${prep.bookingsWanted} wanted requests prepared, 4 clients, distinct slots; the mock payment provider answers in-process, so the provider call is not part of it`);
+  `${prep.bookingRequests} of ${prep.bookingsWanted} wanted requests prepared, 4 clients, a package without a term (no startUtc); the mock payment provider answers in-process, so the provider call is not part of it`);
 
 // category TTFB: the verdict takes the worse of the unloaded and the loaded run
 const c1 = raw("category-c1"), c20 = raw("category-c20");

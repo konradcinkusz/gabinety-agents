@@ -132,6 +132,7 @@ test.describe("J3 buy a task package, order a task, see the result, review", () 
     // the task is listed at once, with the date it was ordered (not an empty one); the fake platform's answer is deterministic
     await expect(detail.tasks()).toHaveCount(1);
     await expect(detail.tasks().first()).toContainText(/Zlecone: \d{1,2} \p{L}+ 20\d\d/u);
+    await expectNoSeriousA11yViolations(page); // the list as it is right after the order (the task is usually still queued): no meta refresh any more, so axe may look at it
     await detail.waitForAnswer(answerTo(TASKS[0]!));
     await expect(detail.tasks()).toHaveCount(1);
     await expect(detail.tasks().first()).toContainText(answerTo(TASKS[0]!));

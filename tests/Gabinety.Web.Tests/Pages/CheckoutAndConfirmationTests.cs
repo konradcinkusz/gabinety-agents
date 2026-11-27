@@ -231,7 +231,7 @@ public class CheckoutAndConfirmationTests
         var page = await f.Browser.GetAsync(Confirmation);
         Assert.Equal("500 tys. tokenów", page.QuerySelectorAllText(".booking-summary dd")[2]);
         var connect = page.One("[data-testid=connect]")!;
-        Assert.EndsWith("/v1", connect.QuerySelector("[data-testid=connect-base-url]")!.TextContent);
+        Assert.Equal("http://localhost/v1", connect.QuerySelector("[data-testid=connect-base-url]")!.TextContent); // Site:BaseUrl + /v1: the site forwards /v1 (ADR-0013)
         Assert.Equal("demo-anna-demowska", connect.QuerySelector("[data-testid=connect-model]")!.TextContent);
         Assert.Empty(page.All("[data-testid=first-task]"));
         Assert.NotNull(page.One("[data-testid=create-key]"));

@@ -1,4 +1,5 @@
 using Gabinety.Billing;
+using Gabinety.Booking.Features.AgentApi;
 using Gabinety.Booking.Features.Bookings.Create;
 using Gabinety.Booking.Features.Payments;
 using Gabinety.Booking.Persistence;
@@ -32,6 +33,8 @@ public interface IBookingTransitionHook
 public sealed record TransitionRequest(Guid BookingId, BookingTrigger Trigger, DateTimeOffset Now)
 {
     public Func<BookingEntity, bool>? Precondition { get; init; }
+    /// <summary>A rule that needs the database (a row of another table), checked inside the transaction under the booking's row lock, after <see cref="Precondition"/>: false means 409. Read only.</summary>
+    public Func<BookingDbContext, BookingEntity, CancellationToken, Task<bool>>? DbPrecondition { get; init; }
     public Action<BookingTransitionContext>? Effects { get; init; }
 }
 
@@ -73,6 +76,7 @@ public sealed class BookingTransitions(BookingDbContext db, IEnumerable<IBooking
             var from = booking.Status;
             var next = BookingStateMachine.Next(from, request.Trigger, booking.StartUtc, request.Now);
             if (!next.Allowed || request.Precondition?.Invoke(booking) == false) return new(TransitionKind.Invalid, From: from);
+            if (request.DbPrecondition is { } dbRule && !await dbRule(db, booking, ct)) return new(TransitionKind.Invalid, From: from);
 
             var to = next.Next!.Value;
             booking.Status = to;
@@ -86,7 +90,14 @@ public sealed class BookingTransitions(BookingDbContext db, IEnumerable<IBooking
         }
 
         BookingTransitionResult result;
-        if (!db.Database.IsRelational()) result = await Body();
+        if (!db.Database.IsRelational())
+        {
+            // InMemory has no row lock: one gate for the read, the checks and the save, shared with EntitlementStore's InMemory path, so that a completion and a refund of a unit (ADR-0013) are never interleaved
+            // within one process (the fake profile and the tests). On PostgreSQL the FOR UPDATE above does this.
+            await EntitlementStore.InMemoryGate.WaitAsync(ct);
+            try { result = await Body(); }
+            finally { EntitlementStore.InMemoryGate.Release(); }
+        }
         else
             result = await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
             {

@@ -60,7 +60,7 @@ public static class BookingsText
         public const string TooShort = "Treść zadania musi mieć co najmniej 20 znaków.", TooLong = "Treść zadania może mieć najwyżej 20000 znaków.";
         public const string Done = "Zadanie zostało zlecone. Wynik pojawi się poniżej.";
         public const string ListTitle = "Twoje zadania", Empty = "Nie zleciłeś jeszcze żadnego zadania.", Result = "Wynik", NoResult = "Brak wyniku.";
-        public const string Created = "Zlecone: {0}", Completed = "zakończone: {0}", Refresh = "Odśwież listę", Pending = "Zadanie jest w toku. Strona odświeża się sama.";
+        public const string Created = "Zlecone: {0}", Completed = "zakończone: {0}", Refresh = "Odśwież listę", Pending = "Zadanie jest w toku.";
         public const string Unavailable = "Nie udało się wczytać zadań. Spróbuj ponownie za chwilę.", NotActive = "Zadania można zlecać tylko w aktywnym pakiecie zadań, który nie jest wyczerpany.";
         public const string Exhausted = "Ten pakiet jest wyczerpany albo nieaktywny.";
         public const string ListLabel = "Lista zadań";

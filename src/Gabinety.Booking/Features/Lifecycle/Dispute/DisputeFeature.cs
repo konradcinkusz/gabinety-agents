@@ -43,13 +43,7 @@ public sealed class DisputeFeature : IServiceFeature
     /// (the payout is due after the dispute window), so the money decision is taken again at the resolution: the amounts are cleared and the unpaid fee row is removed, which frees the pair for
     /// the booking that really earns the fee (the one deliberate delete of a ledger row, in this transaction only, never after a payout).
     /// </summary>
-    static void ReopenMoney(BookingTransitionContext c)
-    {
-        c.Booking.FeeMinor = null;
-        c.Booking.PayoutMinor = null;
-        c.Booking.PayoutDueAt = null;
-        c.Db.LedgerEntries.RemoveRange(c.Db.LedgerEntries.Where(l => l.BookingId == c.Booking.Id && l.Kind == LedgerKind.PlatformFee).ToList());
-    }
+    static void ReopenMoney(BookingTransitionContext c) => Gabinety.Booking.Features.Payouts.MoneyReopening.Reopen(c); // shared with PackageReopening (ADR-0013)
 
     static async Task<IResult> DisputeAsync(Guid id, DisputeRequest? body, ClaimsPrincipal user, BookingDbContext db, BookingTransitions transitions,
         PartyNamesLookup names, TimeProvider time, CancellationToken ct)

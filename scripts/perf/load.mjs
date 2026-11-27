@@ -3,7 +3,7 @@
 // SPEC 13 asks for p95 and p75, so this records every request and computes exact (nearest-rank) percentiles. No dependencies: node:http only.
 //   node scripts/perf/load.mjs --name N --concurrency 20 --duration 20 --warmup 3 [--urls u1,u2,...] [--requests file.json] [--out file.json]
 // GET mode: the URLs are cycled round-robin for --duration seconds (after --warmup seconds that are not counted).
-// Requests mode: a JSON array of {method, url, headers, body}, each sent exactly once, in order, by --concurrency workers (POST bookings: every body is a distinct slot).
+// Requests mode: a JSON array of {method, url, headers, body}, each sent exactly once, in order, by --concurrency workers (POST bookings: every request has its own Idempotency-Key).
 // Times: ttfb = request start to the response headers (time to first byte); total = request start to the end of the body. Milliseconds.
 import http from "node:http";
 import { readFileSync, writeFileSync } from "node:fs";

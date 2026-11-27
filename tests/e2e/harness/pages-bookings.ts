@@ -54,8 +54,8 @@ export class BookingDetailPage {
     await expect(this.page.getByText("Zadanie zostało zlecone. Wynik pojawi się poniżej.")).toBeVisible();
   }
   /**
-   * Waits until the text of an answer is on the page. The page says it refreshes itself while a task is queued or running, but a meta refresh does not fire after the enhanced redirect that
-   * follows the order, and it does not reload an address with a fragment (#zadania); what a client can always do is "Odśwież listę", so that is what this does until the answer is there.
+   * Waits until the text of an answer is on the page. The page does not reload itself (ADR-0013, owner decision 3: no meta refresh); what a client does is "Odśwież listę", so that is what this does
+   * until the answer is there.
    */
   async waitForAnswer(text: string) {
     await expect(async () => {

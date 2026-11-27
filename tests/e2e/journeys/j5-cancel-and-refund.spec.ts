@@ -4,7 +4,6 @@ import { resetAndReseed } from "../harness/demo-data";
 import { expectNoSeriousA11yViolations } from "../harness/a11y";
 import { BookingDetailPage } from "../harness/pages-bookings";
 import { bff, bookAndPay, getBooking, orderTask, publicProfile, registerDemoUser, uniqueDemoName } from "../harness/booking-support";
-import { waitForTasksDone } from "../harness/booking-api";
 
 // J5 (SPEC 10, rewritten for packages in D-02): a client cancels a package before the first use and gets the full refund (PLAN 2.5, A-03); once a unit is used the cancel button is gone,
 // and the service refuses a cancel sent by other means. There is no 24 h rule any more: before the first use the refund is always the whole price.
@@ -79,9 +78,8 @@ test.describe("J5 cancel: full refund before the first use, no cancel after", ()
     expect((await getBooking(context, b.id)).canCancel).toBe(true);
 
     await orderTask(context, b.id, "Zaproponuj etapy migracji opisanej aplikacji do nowszej wersji .NET (j5).");
-    // the page refreshes itself with a meta tag while a task is queued or running, and axe rejects that (meta-refresh, WCAG 2.2.1): look at it once the answer is there
-    await waitForTasksDone(context.request, b.id);
-    await detail.goto(b.id);
+    await detail.goto(b.id); // the task may still be queued: the page does not reload itself any more (no meta refresh), so axe sees it in that state too
+
     await expect(detail.value("Aktywny")).toBeVisible(); // ... the package is still active, with units left ...
     await expect(detail.usage()).toHaveText("wykorzystano 1 z 5");
     await expect(detail.cancelButton()).toHaveCount(0); // ... but it cannot be cancelled any more

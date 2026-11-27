@@ -1,6 +1,7 @@
 import { restoreClock } from "../harness/clock";
 import { expectNoSeriousA11yViolations } from "../harness/a11y";
-import { chat, expectOpenAiError, models, parseSse, type Completion } from "../harness/agent-api";
+import { chat, directModels, expectOpenAiError, models, parseSse, type Completion } from "../harness/agent-api";
+import { urls } from "../harness/env";
 import { expect, test } from "../harness/fixtures";
 import { reseedIfRequested, bookingIdFromUrl, getBooking, publicProfile } from "../harness/booking-api";
 import { BookingFormPage, ConfirmationPage, MockCheckoutPage, PractitionerProfilePage } from "../harness/pages-booking";
@@ -12,8 +13,8 @@ import { registerDemoUser, uniqueDemoName } from "../harness/booking-support";
  * `POST /v1/chat/completions`, plain and streamed, with that key. The use is visible in the panel. The fake agent platform answers `[demo <slug>] Otrzymano N znaków.`
  * with N the length of the message and bills `N / 4 + 20` tokens, so the answer and the bill are asserted exactly. A fresh `demo-` client keeps the journey independent of the seeded keys and packages.
  *
- * `/v1` is served by Booking, and the site does not forward it; whether `/v1` should sit under the site's own origin in production is an open owner decision, so the journey takes the
- * base URL from the confirmation page (what a client is told) and checks it is the one Booking answers on.
+ * `/v1` sits under the address of the site (ADR-0013 decision 1): the web host forwards it to Booking. The journey takes the base URL from the confirmation page (what a client is told),
+ * checks it is the site's own, and makes every call through the site: the key, the stream and the errors all pass the proxy; one call is repeated against Booking to show the answer is the same.
  */
 const SLUG = "demo-anna-demowska";
 const NAME = "Anna Demowska";
@@ -59,7 +60,7 @@ test.describe("J8 buy the Chat package, create a key, call the API", () => {
     await expect(confirmation.connectModel()).toHaveText(SLUG);
     const baseUrl = (await confirmation.connectBaseUrl().textContent())!.trim();
     expect(baseUrl).toMatch(/\/v1$/);
-    expect(baseUrl, "the address a client is told is the one Booking serves /v1 on").toBe(`${new URL(baseUrl).origin}/v1`);
+    expect(baseUrl, "the address a client is told is the site's own, plus /v1").toBe(`${urls.web}/v1`);
     await expect(confirmation.firstTaskLink()).toHaveCount(0); // a Chat package has no tasks
     await expectNoSeriousA11yViolations(page);
 
@@ -84,6 +85,8 @@ test.describe("J8 buy the Chat package, create a key, call the API", () => {
     const list = await models(key);
     expect(list.status).toBe(200);
     expect(await list.json()).toEqual({ object: "list", data: [{ id: SLUG, object: "model", owned_by: "gabinety" }] });
+    const direct = await directModels(key); // Booking itself says the same: the site adds and removes nothing
+    expect([direct.status, await direct.json()]).toEqual([200, { object: "list", data: [{ id: SLUG, object: "model", owned_by: "gabinety" }] }]);
 
     // ---- 5. POST /v1/chat/completions: an agent the client has no package of is 404 model_not_found ----
     await expectOpenAiError(await chat(key, OTHER_AGENT, "Pytanie do agenta bez pakietu."), 404, "model_not_found");

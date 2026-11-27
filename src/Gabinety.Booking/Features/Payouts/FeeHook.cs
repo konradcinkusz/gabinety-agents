@@ -37,6 +37,13 @@ public sealed class FeeHook(IConfiguration config, PlatformFeeClaims claims) : I
             claims.Release(PairKey.For(b.ClientUserId, b.PractitionerId)); // the dispute reopened the money: its unpaid PlatformFee row was removed (DisputeFeature), so the InMemory stand-in lets go too
             return;
         }
+        if (context.From == BookingStatus.Completed && context.To == BookingStatus.Confirmed)
+        {
+            // a refunded unit reopened the package (PackageReopening): its unpaid PlatformFee row was removed in this transaction. The InMemory stand-in lets the pair go only when this booking held it.
+            if (context.Db.ChangeTracker.Entries<LedgerEntry>().Any(e => e.State == EntityState.Deleted && e.Entity.BookingId == b.Id && e.Entity.Kind == LedgerKind.PlatformFee))
+                claims.Release(PairKey.For(b.ClientUserId, b.PractitionerId));
+            return;
+        }
         if (b.FeeMinor is not null) return; // computed once
         var price = Money.Pln(b.PriceMinor);
         // refund_partial: `kept` reads payment.RefundedMinor, so the refunded amount must be set BEFORE the hooks run (T-04.07c's effects do this for a
@@ -78,6 +85,22 @@ public sealed class FeeHook(IConfiguration config, PlatformFeeClaims claims) : I
             Id = id, BookingId = b.Id, Kind = LedgerKind.PlatformFee, AmountMinor = feeMinor, PairKey = pairKey, CreatedAt = context.Now,
         });
         return true;
+    }
+}
+
+/// <summary>
+/// Takes a package's money decision back, in the open transition's transaction: clears <c>fee_minor</c>, <c>payout_minor</c>, <c>payout_due_at</c> and removes the UNPAID <c>PlatformFee</c> ledger row, which
+/// frees the pair for the booking that really earns the fee. Used where a completed package goes back to being open: a dispute (<c>DisputeFeature</c>, the money is decided again at the resolution) and a
+/// refunded unit that reopens a package completed by exhaustion (<c>PackageReopening</c>). The one deliberate delete of a ledger row; the caller guarantees nothing was paid out (no payout row, no payout entry).
+/// </summary>
+public static class MoneyReopening
+{
+    public static void Reopen(BookingTransitionContext c)
+    {
+        c.Booking.FeeMinor = null;
+        c.Booking.PayoutMinor = null;
+        c.Booking.PayoutDueAt = null;
+        c.Db.LedgerEntries.RemoveRange(c.Db.LedgerEntries.Where(l => l.BookingId == c.Booking.Id && l.Kind == LedgerKind.PlatformFee).ToList());
     }
 }
 
