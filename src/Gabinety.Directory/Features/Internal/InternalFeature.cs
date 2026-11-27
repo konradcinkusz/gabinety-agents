@@ -15,6 +15,10 @@ public sealed record InternalOfferingDto(Guid OfferingId, Guid PractitionerId, s
     string Title, int DurationMinutes, MoneyDto Price, string? MeetingUrl, bool IsActive,
     OfferingKind Kind = OfferingKind.Tasks, int Units = 1, string PractitionerSlug = "");
 public sealed record InternalPractitionerDto(Guid PractitionerId, PractitionerStatus Status);
+public sealed record InternalAgentDto(Guid PractitionerId, PractitionerStatus Status, string Slug);
+
+/// <summary><c>GET /internal/v1/practitioners/by-user/{userId}/agents</c>: every agent of one provider account, oldest first (E-04).</summary>
+public sealed record InternalAgentsDto(IReadOnlyList<InternalAgentDto> Items);
 
 /// <summary><c>GET /internal/v1/practitioners/{id}</c>: what Booking shows next to a booking (ADR-0012 section 6). Display name and slug only; an erased practitioner reads <see cref="InternalFeature.ErasedName"/>.</summary>
 public sealed record InternalPractitionerNameDto(Guid PractitionerId, string DisplayName, string Slug);
@@ -39,6 +43,7 @@ public sealed class InternalFeature : IServiceFeature
         var g = endpoints.MapGroup("/internal/v1").RequireAuthorization("Internal");
         g.MapGet("offerings/{id:guid}", GetOffering);
         g.MapGet("practitioners/by-user/{userId}", GetByUser);
+        g.MapGet("practitioners/by-user/{userId}/agents", GetAgents);
         g.MapGet("practitioners/{id:guid}", GetNames);
         g.MapGet("practitioners/{userId}/contact", GetContact);
         g.MapPut("practitioners/{id:guid}/reputation", PutReputation);
@@ -60,10 +65,20 @@ public sealed class InternalFeature : IServiceFeature
             new MoneyDto(row.o.PriceMinor, row.o.Currency), row.o.MeetingUrl ?? row.MeetingUrlDefault, row.o.IsActive, row.o.Kind, row.o.Units, row.Slug));
     }
 
+    /// <summary>The account's first (oldest) agent: the answer from before E-04, kept for callers that know one agent per account. 404 for an account with none.</summary>
     static async Task<IResult> GetByUser(string userId, DirectoryDbContext db, CancellationToken ct)
     {
-        var row = await db.Practitioners.AsNoTracking().Where(p => p.UserId == userId).Select(p => new { p.Id, p.Status }).SingleOrDefaultAsync(ct);
+        var row = (await db.Practitioners.AsNoTracking().Where(p => p.UserId == userId).OrderBy(p => p.CreatedAt).ThenBy(p => p.Id).Take(1)
+            .Select(p => new { p.Id, p.Status }).ToListAsync(ct)).FirstOrDefault();
         return row is null ? Problem(404, ErrorCodes.NotFound, "Not found") : Results.Ok(new InternalPractitionerDto(row.Id, row.Status));
+    }
+
+    /// <summary>Every agent of the account, oldest first; an account with none gets an empty list (200), not 404.</summary>
+    static async Task<IResult> GetAgents(string userId, DirectoryDbContext db, CancellationToken ct)
+    {
+        var rows = await db.Practitioners.AsNoTracking().Where(p => p.UserId == userId).OrderBy(p => p.CreatedAt).ThenBy(p => p.Id)
+            .Select(p => new { p.Id, p.Status, p.Slug }).ToListAsync(ct);
+        return Results.Ok(new InternalAgentsDto(rows.Select(r => new InternalAgentDto(r.Id, r.Status, r.Slug)).ToList()));
     }
 
     static async Task<IResult> GetNames(Guid id, DirectoryDbContext db, CancellationToken ct)
@@ -75,7 +90,9 @@ public sealed class InternalFeature : IServiceFeature
     /// <summary>404 for an unknown user and for a practitioner whose address is not held yet (they have not used their profile since the snapshot exists): the caller retries later.</summary>
     static async Task<IResult> GetContact(string userId, DirectoryDbContext db, CancellationToken ct)
     {
-        var email = await db.Practitioners.AsNoTracking().Where(p => p.UserId == userId).Select(p => p.ContactEmail).SingleOrDefaultAsync(ct);
+        // the same address is copied to every agent of the account from the token; the most recently updated one wins if they differ
+        var email = (await db.Practitioners.AsNoTracking().Where(p => p.UserId == userId && p.ContactEmail != null).OrderByDescending(p => p.UpdatedAt).ThenBy(p => p.Id)
+            .Select(p => p.ContactEmail).Take(1).ToListAsync(ct)).FirstOrDefault();
         return string.IsNullOrEmpty(email) ? Problem(404, ErrorCodes.NotFound, "Not found") : Results.Ok(new InternalContactDto(email));
     }
 
@@ -124,29 +141,33 @@ public sealed class InternalFeature : IServiceFeature
     }
 
     /// <summary>
-    /// Anonymises the practitioner row and its offerings, after Booking has cancelled their future bookings with a full refund (ADR-0012): the practitioner id the
+    /// Anonymises every practitioner row of the account (E-04: one account may own several agents) and their offerings, after Booking has cancelled their future bookings with a full refund (ADR-0012): the practitioner id the
     /// call needs survives the erasure, but the clients must not be left with a booking nobody will hold. When Booking cannot finish, nothing is erased and the answer is
     /// 503, so the erasure job repeats the whole call. Idempotent: a second call finds no row for the old user id and answers 204.
     /// </summary>
     static async Task<IResult> Erase(string userId, DirectoryDbContext db, TimeProvider time, IBookingClient booking, CancellationToken ct)
     {
-        var p = await db.Practitioners.SingleOrDefaultAsync(x => x.UserId == userId, ct);
-        if (p is null) return Results.NoContent();
-        try { await booking.CancelFutureBookingsAsync(p.Id, ct); }
+        var agents = await db.Practitioners.Where(x => x.UserId == userId).OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).ToListAsync(ct);
+        if (agents.Count == 0) return Results.NoContent();
+        try { foreach (var p in agents) await booking.CancelFutureBookingsAsync(p.Id, ct); }
         catch (BookingUnavailableException)
         {
             return Results.Json(ApiProblem.Of(ErrorCodes.DependencyUnavailable, "Dependency unavailable", 503,
                 "Booking could not cancel the practitioner's future bookings yet; nothing was erased. Repeat the call.", null), statusCode: 503, contentType: "application/problem+json");
         }
 
-        p.DisplayName = ErasedName; p.Headline = ""; p.Bio = "";
-        p.GithubLogin = null; p.GithubLinked = false; p.Nip = null; p.NipValid = false; p.PortfolioUrl = null; p.MeetingUrlDefault = null; p.StatusReason = null;
-        p.GithubChallengeCode = null; p.GithubChallengeLogin = null; p.GithubChallengeExpiresAt = null; p.ContactEmail = null;
-        p.Status = PractitionerStatus.Suspended;
-        p.UserId = "erased-" + Guid.NewGuid().ToString("n");
-        p.Slug = "removed-" + Guid.NewGuid().ToString("n")[..16];
-        p.UpdatedAt = time.GetUtcNow();
-        foreach (var o in await db.Offerings.Where(x => x.PractitionerId == p.Id).ToListAsync(ct))
+        foreach (var p in agents)
+        {
+            p.DisplayName = ErasedName; p.Headline = ""; p.Bio = "";
+            p.GithubLogin = null; p.GithubLinked = false; p.Nip = null; p.NipValid = false; p.PortfolioUrl = null; p.MeetingUrlDefault = null; p.StatusReason = null;
+            p.GithubChallengeCode = null; p.GithubChallengeLogin = null; p.GithubChallengeExpiresAt = null; p.ContactEmail = null;
+            p.Status = PractitionerStatus.Suspended;
+            p.UserId = "erased-" + Guid.NewGuid().ToString("n");
+            p.Slug = "removed-" + Guid.NewGuid().ToString("n")[..16];
+            p.UpdatedAt = time.GetUtcNow();
+        }
+        var ids = agents.Select(x => x.Id).ToList();
+        foreach (var o in await db.Offerings.Where(x => ids.Contains(x.PractitionerId)).ToListAsync(ct))
         {
             o.Title = ""; o.Description = ""; o.MeetingUrl = null; o.IsActive = false;
         }

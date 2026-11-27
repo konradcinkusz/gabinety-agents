@@ -30,6 +30,8 @@ public static class ErrorCodes
         NotReviewable = "not_reviewable", InvalidInput = "invalid_input", RateLimited = "rate_limited",
         AssistantUnavailable = "assistant_unavailable", DependencyUnavailable = "dependency_unavailable",
         CrossSiteRequest = "cross_site_request",
+        /// <summary>The provider account already runs the most agents it may (<c>Directory:MaxAgentsPerProvider</c>, E-04); 422 in the shape of <see cref="TooManyOfferings"/>.</summary>
+        TooManyAgents = "too_many_agents",
         /// <summary>The practitioner has no connected payment account that can receive money yet (T-09.05, ADR proposal 0011); CONTRACTS 10.1 does not list it yet.</summary>
         PractitionerPaymentsNotReady = "practitioner_payments_not_ready";
 }

@@ -269,8 +269,7 @@ namespace Gabinety.Directory.Persistence.Migrations
                     b.HasIndex("Slug")
                         .IsUnique();
 
-                    b.HasIndex("UserId")
-                        .IsUnique();
+                    b.HasIndex("UserId");
 
                     b.HasIndex("Status", "RankingScore", "ApprovedAt", "Id")
                         .IsDescending(false, true, false, false);

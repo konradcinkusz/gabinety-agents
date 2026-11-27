@@ -28,7 +28,8 @@ Columns: **Policy** = what the code declares (checked by the test): `Anonymous`,
 | Directory | GET | `/api/v1/practitioners/{slug}` | Anonymous | all | Approved only |
 | Directory | GET | `/api/v1/sitemap` | Anonymous | all | public read |
 | Directory | GET | `/api/v1/me` | Authenticated | all | claims of the caller |
-| Directory | POST | `/api/v1/me/practitioner` | Authenticated | all | own row by `sub` |
+| Directory | POST | `/api/v1/me/practitioner` | Authenticated | all | creates a NEW agent of the caller (E-04: an account owns up to `Directory:MaxAgentsPerProvider`, else 422 `too_many_agents`); the calls below take `?agent=<slug>` (required with 2+ agents) and see only rows whose `user_id` is the caller's `sub` |
+| Directory | GET | `/api/v1/me/practitioners` | Authenticated | all | the caller's own agents, oldest first (E-04) |
 | Directory | GET | `/api/v1/me/practitioner` | Authenticated | all | |
 | Directory | PUT | `/api/v1/me/practitioner` | Authenticated | all | |
 | Directory | POST | `/api/v1/me/practitioner/submit` | Authenticated | all | |
@@ -49,7 +50,8 @@ Columns: **Policy** = what the code declares (checked by the test): `Anonymous`,
 | Directory | PUT | `/api/v1/admin/moderators/{userId}` | Admin+Role:SuperAdmin | all | |
 | Directory | DELETE | `/api/v1/admin/moderators/{userId}` | Admin+Role:SuperAdmin | all | |
 | Directory | GET | `/internal/v1/offerings/{id}` | Internal | all | callers: Booking, Reputation |
-| Directory | GET | `/internal/v1/practitioners/by-user/{userId}` | Internal | all | callers: Booking, Reputation |
+| Directory | GET | `/internal/v1/practitioners/by-user/{userId}` | Internal | all | callers: Booking, Reputation; the account's oldest agent (E-04 kept it for old callers) |
+| Directory | GET | `/internal/v1/practitioners/by-user/{userId}/agents` | Internal | all | every agent of the account, oldest first (E-04); caller: Booking |
 | Directory | GET | `/internal/v1/practitioners/{id}` | Internal | all | caller: Booking (display name and slug for the booking views, ADR-0012 section 6) |
 | Directory | GET | `/internal/v1/practitioners/{userId}/contact` | Internal | all | caller: Booking (T-03.09, notifications): the e-mail snapshot of the practitioner, `404` when none is held. Booking already holds `Internal__Keys__Directory`: no new key |
 | Directory | PUT | `/internal/v1/practitioners/{id}/reputation` | Internal | all | caller: Reputation |
