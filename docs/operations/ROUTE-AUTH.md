@@ -179,7 +179,8 @@ The middleware is UX, the services are the boundary: a signed-in page still call
 | Web | PAGE | `/bookings/{BookingId}` | Authenticated | all | where the payment provider returns the browser (Stripe Checkout success URL): redirects to the confirmation |
 | Web | PAGE | `/konto` | Authenticated | all | account: e-mail, consents, data export link, account deletion (static rendering, forms with antiforgery) |
 | Web | GET | `/konto/export` | Authenticated | all | the user's data as a no-store JSON attachment (the identity service's export, passed through) |
-| Web | PAGE | `/panel-agenta` | Authenticated | all | practitioner dashboard and onboarding, static server rendering; any signed-in account may become a practitioner (ADR-0012, "Practitioner area") |
+| Web | PAGE | `/panel-agenta` | Authenticated | all | practitioner dashboard and onboarding, static server rendering; with several agents and no `?agent=<slug>` the overview of all of them (E-04), with `?agent=` the panel of that agent (the same for `/profil`, `/oferty`, `/platnosci`); any signed-in account may become a practitioner (ADR-0012, "Practitioner area") |
+| Web | PAGE | `/panel-agenta/nowy` | Authenticated | all | adds one more agent to the signed-in provider account (E-04; 422 `too_many_agents` shown as text) |
 | Web | PAGE | `/panel-agenta/profil` | Authenticated | all | practitioner profile form |
 | Web | PAGE | `/panel-agenta/oferty` | Authenticated | all | offers: list, confirmation before disabling, re-enable, form |
 | Web | PAGE | `/panel-agenta/platnosci` | Authenticated | all | payments account status and onboarding link (PAYMENTS-GO-LIVE) |

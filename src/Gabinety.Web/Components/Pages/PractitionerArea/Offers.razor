@@ -10,7 +10,7 @@
 
 @if (LoadFailure is not null)
 {
-    <Alert Variant="AlertVariant.Danger" TestId="unavailable">@FailureText(LoadFailure) <a href="@PractitionerPaths.Offers">@PlPractitioner.Common.Retry</a></Alert>
+    <Alert Variant="AlertVariant.Danger" TestId="unavailable">@FailureText(LoadFailure) <a href="@At(PractitionerPaths.Offers)">@PlPractitioner.Common.Retry</a></Alert>
 }
 else if (_loaded)
 {
@@ -26,7 +26,7 @@ else if (_loaded)
                 <AntiforgeryToken />
                 <input type="hidden" name="id" value="@confirm.Id" />
                 <button class="btn btn--danger" type="submit">@PlPractitioner.Offers.ConfirmYes</button>
-                <a class="btn btn--ghost" href="@PractitionerPaths.Offers">@PlPractitioner.Offers.ConfirmNo</a>
+                <a class="btn btn--ghost" href="@At(PractitionerPaths.Offers)">@PlPractitioner.Offers.ConfirmNo</a>
             </form>
         </section>
     }
@@ -52,8 +52,8 @@ else if (_loaded)
                         <div class="cluster row-actions">
                             @if (o.IsActive)
                             {
-                                <a class="btn btn--secondary" href="@($"{PractitionerPaths.Offers}?edit={o.Id}")" aria-label="@($"{PlPractitioner.Offers.Edit}: {o.Title}")">@PlPractitioner.Offers.Edit</a>
-                                <a class="btn btn--ghost-danger" href="@($"{PractitionerPaths.Offers}?wylacz={o.Id}")" aria-label="@($"{PlPractitioner.Offers.Disable}: {o.Title}")">@PlPractitioner.Offers.Disable</a>
+                                <a class="btn btn--secondary" href="@At(PractitionerPaths.Offers, $"edit={o.Id}")" aria-label="@($"{PlPractitioner.Offers.Edit}: {o.Title}")">@PlPractitioner.Offers.Edit</a>
+                                <a class="btn btn--ghost-danger" href="@At(PractitionerPaths.Offers, $"wylacz={o.Id}")" aria-label="@($"{PlPractitioner.Offers.Disable}: {o.Title}")">@PlPractitioner.Offers.Disable</a>
                             }
                             else
                             {
@@ -71,7 +71,7 @@ else if (_loaded)
         <div class="cluster section">
             @if (_active < OfferForm.MaxActive)
             {
-                <a class="btn btn--primary" href="@($"{PractitionerPaths.Offers}?nowa=1")">@PlPractitioner.Offers.AddNew</a>
+                <a class="btn btn--primary" href="@At(PractitionerPaths.Offers, "nowa=1")">@PlPractitioner.Offers.AddNew</a>
             }
             else
             {
@@ -142,7 +142,7 @@ else if (_loaded)
                     </fieldset>
                     <div class="form-actions cluster">
                         <button class="btn btn--primary" type="submit" disabled="@(_editing is null && _active >= OfferForm.MaxActive)">@PlPractitioner.Common.Save</button>
-                        <a class="btn btn--ghost" href="@PractitionerPaths.Offers">@PlPractitioner.Offers.Cancel</a>
+                        <a class="btn btn--ghost" href="@At(PractitionerPaths.Offers)">@PlPractitioner.Offers.Cancel</a>
                     </div>
                     @if (_editing is null && _active >= OfferForm.MaxActive) {<p class="muted">@PlPractitioner.Offers.TooMany</p>}
                 </form>

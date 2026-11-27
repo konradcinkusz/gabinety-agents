@@ -17,6 +17,31 @@ public abstract class PractitionerPage : ComponentBase
     [Inject] protected NavigationManager Navigation { get; set; } = default!;
     [CascadingParameter] protected HttpContext HttpContext { get; set; } = default!;
 
+    string? _agent;
+
+    /// <summary>
+    /// The agent the page works on (E-04): the slug in <c>?agent=</c>. An account with one agent needs none (the page is the one from before E-04); with several, the pages without it send the
+    /// provider to the overview at <c>/panel-agenta</c>. Setting it points the Directory client at that agent.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "agent")]
+    public string? AgentSlug
+    {
+        get => _agent;
+        set { _agent = string.IsNullOrWhiteSpace(value) ? null : value.Trim(); Practitioner.Agent = _agent; }
+    }
+
+    /// <summary>True when the account has several agents and this page was opened without saying which (set by <see cref="LoadProfileAsync"/>).</summary>
+    protected bool NeedsAgent { get; private set; }
+
+    /// <summary>A path of the area with the current agent kept in it (no <c>agent</c> parameter when none was asked for, so a one-agent account keeps its addresses); <paramref name="query"/> is extra, already encoded.</summary>
+    protected string At(string path, string? query = null)
+    {
+        var parts = new List<string>(2);
+        if (!string.IsNullOrEmpty(query)) parts.Add(query);
+        if (_agent is not null) parts.Add("agent=" + Uri.EscapeDataString(_agent));
+        return parts.Count == 0 ? path : $"{path}?{string.Join('&', parts)}";
+    }
+
     /// <summary>The fields of the request's form; empty on a GET.</summary>
     protected FormValues Posted => HttpContext.Request.HasFormContentType ? new FormValues(HttpContext.Request.Form) : FormValues.Empty;
 
@@ -27,7 +52,7 @@ public abstract class PractitionerPage : ComponentBase
     protected ApiFailure? LoadFailure { get; set; }
 
     /// <summary>Goes to <paramref name="path"/>, with a flash key when there is one. Call it as the last thing a handler does.</summary>
-    protected void Done(string path, string? flash = null) => Navigation.NavigateTo(flash is null ? path : $"{path}?{FlashKey.Parameter}={flash}");
+    protected void Done(string path, string? flash = null) => Navigation.NavigateTo(At(path, flash is null ? null : $"{FlashKey.Parameter}={flash}"));
 
     /// <summary>True when the account has no practitioner profile (only set when <c>LoadProfileAsync(missingIsState: true)</c> asked for it).</summary>
     protected bool NoProfile { get; private set; }
@@ -42,8 +67,12 @@ public abstract class PractitionerPage : ComponentBase
         if (r.IsOk) { Profile = r.Value; NoProfile = false; return true; }
         switch (r.Failure!)
         {
-            case { Status: 404 } when missingIsState: NoProfile = true; break;
-            case { Status: 404 }: Navigation.NavigateTo(PractitionerPaths.Home); break;
+            case { Status: 422 } f when f.Names("agent"): // several agents, none named: the overview lets the provider choose
+                NeedsAgent = true;
+                if (!missingIsState) Navigation.NavigateTo(PractitionerPaths.Home);
+                break;
+            case { Status: 404 } when missingIsState && _agent is null: NoProfile = true; break;
+            case { Status: 404 }: Navigation.NavigateTo(PractitionerPaths.Home); break; // no agent, or not an agent of this account: the overview shows the real ones
             case { Status: 401 }: Navigation.NavigateTo(Auth.ReturnTarget.LoginUrl(Auth.ReturnTarget.Safe("/" + Navigation.ToBaseRelativePath(Navigation.Uri)))); break;
             default:
                 LoadFailure = r.Failure;

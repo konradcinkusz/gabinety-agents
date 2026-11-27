@@ -14,7 +14,68 @@
 {
     <PageTitle>@PlPractitioner.Dashboard.MetaTitle</PageTitle>
     <h1>@PlPractitioner.Title</h1>
-    <Alert Variant="AlertVariant.Danger" TestId="unavailable">@FailureText(LoadFailure) <a href="@PractitionerPaths.Home">@PlPractitioner.Common.Retry</a></Alert>
+    <Alert Variant="AlertVariant.Danger" TestId="unavailable">@FailureText(LoadFailure) <a href="@At(PractitionerPaths.Home)">@PlPractitioner.Common.Retry</a></Alert>
+}
+else if (NeedsAgent)
+{
+    @* E-04: the account has several agents and none was chosen: the overview, with the totals over all of them. *@
+    <PageTitle>@PlPractitioner.Agents.OverviewMeta</PageTitle>
+    <h1>@PlPractitioner.Agents.OverviewTitle</h1>
+    <p class="lead">@PlPractitioner.Agents.Intro</p>
+    @if (_agentsFailed)
+    {
+        <Alert Variant="AlertVariant.Danger" TestId="unavailable">@PlPractitioner.Common.Unavailable <a href="@PractitionerPaths.Home">@PlPractitioner.Common.Retry</a></Alert>
+    }
+    else
+    {
+        <ul class="stack" aria-label="@PlPractitioner.Agents.ListLabel" data-testid="agents">
+            @foreach (var a in _agents)
+            {
+                <li class="card stack" data-testid="agent" data-slug="@a.Slug">
+                    <div class="cluster cluster--between">
+                        <h2 class="offer__title">@a.DisplayName</h2>
+                        <KindBadge Label="@ProfileStatus.Label(a.Status)" Kind="@ProfileStatus.Kind(a.Status)" />
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(a.Headline)) {<p class="muted">@a.Headline</p>}
+                    <div class="cluster">
+                        <a class="btn btn--primary" href="@($"{PractitionerPaths.Home}?agent={Uri.EscapeDataString(a.Slug)}")" aria-label="@($"{PlPractitioner.Agents.OpenPanel}: {a.DisplayName}")">@PlPractitioner.Agents.OpenPanel</a>
+                        @if (a.Status == "Approved") {<a class="btn btn--secondary" href="@("/agent/" + Uri.EscapeDataString(a.Slug))" aria-label="@($"{PlPractitioner.Agents.PublicProfile}: {a.DisplayName}")">@PlPractitioner.Agents.PublicProfile</a>}
+                    </div>
+                </li>
+            }
+        </ul>
+        <section class="section stack" aria-labelledby="totals-title" data-testid="totals">
+            <h2 id="totals-title">@PlPractitioner.Agents.TotalRecent</h2>
+            @if (_recentFailed)
+            {
+                <p class="muted" data-testid="recent-failed">@PlPractitioner.Agents.RecentFailed</p>
+            }
+            else
+            {
+                <p data-testid="active-packages">@string.Format(PlPractitioner.Agents.TotalActive, _activePackages)</p>
+                @if (_recent.Count == 0)
+                {
+                    <p class="muted" data-testid="recent-empty">@PlPractitioner.Dashboard.RecentEmpty</p>
+                }
+                else
+                {
+                    <ul class="upcoming">
+                        @foreach (var b in _recent)
+                        {
+                            <li class="upcoming__row" data-booking="@b.Id">
+                                <div class="upcoming__main">
+                                    <strong>@b.OfferingTitle</strong>
+                                    <span class="muted">@BookingFormat.MetaLine(b.Practitioner.DisplayName, BookingFormat.Name(b.Client?.DisplayName), string.Format(PlPractitioner.Dashboard.Bought, PlFormat.DayLong(b.StartUtc)), BookingFormat.UsageLine(b.Kind, b.UnitsUsed, b.UnitsTotal))</span>
+                                </div>
+                                <a href="@($"/moje/dostepy/{b.Id}?role={BookingClient.PractitionerRole}")" aria-label="@($"{PlPractitioner.Dashboard.Details}: {b.OfferingTitle}")">@PlPractitioner.Dashboard.Details</a>
+                            </li>
+                        }
+                    </ul>
+                }
+            }
+        </section>
+        <p><a class="btn btn--secondary" href="@NewAgentPath" data-testid="add-agent">@PlPractitioner.Agents.AddAnother</a></p>
+    }
 }
 else if (NoProfile)
 {
@@ -51,7 +112,7 @@ else if (Profile is not null) @* Blazor renders once before an async OnInitializ
         <div class="callout callout--warning" role="status" data-testid="payments-banner">
             <h2 class="callout__title">@PlPractitioner.Dashboard.PaymentsBannerTitle</h2>
             <p>@PlPractitioner.Dashboard.PaymentsBannerBody</p>
-            <a class="btn btn--primary" href="@PractitionerPaths.Payments">@PlPractitioner.Dashboard.PaymentsBannerLink</a>
+            <a class="btn btn--primary" href="@At(PractitionerPaths.Payments)">@PlPractitioner.Dashboard.PaymentsBannerLink</a>
         </div>
     }
 
@@ -65,14 +126,14 @@ else if (Profile is not null) @* Blazor renders once before an async OnInitializ
                 <button class="btn btn--secondary" type="button" hidden data-enhance="copy" data-copy="@PublicPath" data-done="@PlPractitioner.Dashboard.Copied">@PlPractitioner.Dashboard.CopyLink</button>
             </div>
         </section>
-        @if (_next is { } next) {<p data-testid="next-step">@PlPractitioner.Dashboard.NextLabel: <a href="@next.Href">@next.Title</a>. <span class="muted">@next.Text</span></p>}
+        @if (_next is { } next) {<p data-testid="next-step">@PlPractitioner.Dashboard.NextLabel: <a href="@At(next.Href)">@next.Title</a>. <span class="muted">@next.Text</span></p>}
 
         <section class="section stack" aria-labelledby="recent-title" data-testid="recent">
             <h2 id="recent-title">@PlPractitioner.Dashboard.RecentTitle</h2>
             @if (_recentFailed)
             {
                 <div class="callout callout--warning" role="status" data-testid="recent-failed">
-                    <p>@PlPractitioner.Dashboard.RecentFailed <a href="@PractitionerPaths.Home">@PlPractitioner.Common.Retry</a></p>
+                    <p>@PlPractitioner.Dashboard.RecentFailed <a href="@At(PractitionerPaths.Home)">@PlPractitioner.Common.Retry</a></p>
                 </div>
             }
             else
@@ -113,7 +174,7 @@ else if (Profile is not null) @* Blazor renders once before an async OnInitializ
                 @foreach (var item in _checklist)
                 {
                     var isNext = Profile!.Status != "Submitted" && !item.Done && item == _checklist.First(i => !i.Done);
-                    var href = item.Key == ChecklistKey.Github ? "#github-title" : item.Href;
+                    var href = item.Key == ChecklistKey.Github ? "#github-title" : item.Href is { } h ? At(h) : null;
                     <li class="checklist__item" data-item="@item.Key" data-done="@(item.Done ? "true" : "false")">
                         <div class="cluster">
                             <strong>@item.Title</strong>
@@ -167,6 +228,8 @@ else if (Profile is not null) @* Blazor renders once before an async OnInitializ
             </form>
         }
     </section>
+
+    <p class="section"><a href="@NewAgentPath" data-testid="add-agent">@PlPractitioner.Agents.AddAnother</a></p>
 }
 
 @code {
@@ -183,7 +246,10 @@ else if (Profile is not null) @* Blazor renders once before an async OnInitializ
     IReadOnlyList<OfferingPrivateDto> _offers = [];
     IReadOnlyList<BookingViewDto> _recent = [];
     int _activePackages;
-    bool _recentFailed;
+    bool _recentFailed, _agentsFailed;
+    IReadOnlyList<PractitionerSummaryDto> _agents = [];
+
+    const string NewAgentPath = "/panel-agenta/nowy";
 
     string PublicPath => "/agent/" + Uri.EscapeDataString(Profile!.Slug);
 
@@ -193,9 +259,32 @@ else if (Profile is not null) @* Blazor renders once before an async OnInitializ
 
     protected override async Task OnInitializedAsync()
     {
-        if (!await LoadProfileAsync(missingIsState: true)) return;
+        Scheduling.Agent = AgentSlug; // E-04: the payment account is per agent
+        if (!await LoadProfileAsync(missingIsState: true))
+        {
+            if (NeedsAgent) await LoadOverviewAsync();
+            return;
+        }
         await LoadRestAsync();
         _login = Profile!.GithubLogin ?? "";
+    }
+
+    /// <summary>The overview of an account with several agents: the list, and the purchases of ALL of them (the provider-side list of Booking is per account, so it is already the sum).</summary>
+    async Task LoadOverviewAsync()
+    {
+        var agents = Practitioner.AgentsAsync();
+        var bookings = Bookings.MyBookingsAsync(BookingClient.PractitionerRole, null, null);
+        await Task.WhenAll(agents, bookings);
+        _agentsFailed = !agents.Result.IsOk;
+        _agents = agents.Result.IsOk ? agents.Result.Value! : [];
+        _recentFailed = !bookings.Result.IsOk;
+        if (bookings.Result.IsOk)
+        {
+            var items = bookings.Result.Value!.Items;
+            _activePackages = MyBookingsSchedule.Split(items, Clock.GetUtcNow()).Upcoming.Count;
+            _recent = [.. items.OrderByDescending(b => b.StartUtc).Take(5)];
+        }
+        if (_agentsFailed && HttpContext is { Response.HasStarted: false }) HttpContext.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
     }
 
     async Task LoadRestAsync()
@@ -209,7 +298,7 @@ else if (Profile is not null) @* Blazor renders once before an async OnInitializ
             _recentFailed = !bookings.Result.IsOk;
             if (bookings.Result.IsOk)
             {
-                var items = bookings.Result.Value!.Items;
+                IReadOnlyList<BookingViewDto> items = AgentSlug is null ? bookings.Result.Value!.Items : [.. bookings.Result.Value!.Items.Where(b => b.Practitioner.Slug == Profile!.Slug)]; // E-04: a chosen agent sees only its own purchases
                 _activePackages = MyBookingsSchedule.Split(items, Clock.GetUtcNow()).Upcoming.Count; // the first page of the list: the newest purchases
                 _recent = [.. items.OrderByDescending(b => b.StartUtc).Take(5)]; // a package starts when it is bought
             }
@@ -227,7 +316,7 @@ else if (Profile is not null) @* Blazor renders once before an async OnInitializ
         _name = Posted.Text("displayName");
         if (_name.Length is < 2 or > 80) { _errors["displayName"] = FieldErrors.From(new ApiFailure(422, "validation_failed", ["displayName"]), new Dictionary<string, string?>())["displayName"]; return; }
         var r = await Practitioner.CreateProfileAsync(_name);
-        if (r.IsOk) { Done(PractitionerPaths.Home, FlashKey.GabinetCreated); return; }
+        if (r.IsOk) { Navigation.NavigateTo($"{PractitionerPaths.Home}?{FlashKey.Parameter}={FlashKey.GabinetCreated}"); return; } // the account's first agent: it is the only one, so no agent parameter
         if (r.Failure!.Names("displayName")) _errors["displayName"] = FieldErrors.From(r.Failure, new Dictionary<string, string?>())["displayName"];
         else _general = r.Failure.Code == "practitioner_exists" ? PlPractitioner.Create.Exists : r.Failure.Status is 0 or 503 ? PlPractitioner.Common.Unavailable : PlPractitioner.Create.Failed;
     }

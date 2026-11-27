@@ -2,20 +2,36 @@ using Gabinety.Web.Auth;
 
 namespace Gabinety.Web.Api;
 
-/// <summary>Directory, the practitioner's own profile and offers (CONTRACTS 3.3, 3.5). Every call carries the user's bearer; the service decides who may do what.</summary>
+/// <summary>
+/// Directory, the practitioner's own profile and offers (CONTRACTS 3.3, 3.5). Every call carries the user's bearer; the service decides who may do what. One provider account may own several
+/// agents (E-04): <see cref="Agent"/> is the slug of the agent the page works on, sent as <c>?agent=</c> on every call except the creation of a new agent; null means "the account's only agent".
+/// </summary>
 public sealed class PractitionerClient(HttpClient http, VisitorAddressAccessor visitor, IAccessTokenSource tokens) : ApiClient(http, visitor)
 {
     const string Me = "/api/v1/me/practitioner";
 
-    async Task<ApiResult<T>> Get<T>(string path, CancellationToken ct) => await GetAsync<T>(path, await tokens.AccessTokenAsync(ct), ct);
+    /// <summary>The slug of the agent the calls are about (E-04); null for an account with one agent.</summary>
+    public string? Agent { get; set; }
 
-    async Task<ApiResult<T>> Write<T>(HttpMethod method, string path, object? body, CancellationToken ct) => await WriteAsync<T>(method, path, await tokens.AccessTokenAsync(ct), body, ct);
+    string Scoped(string path) => string.IsNullOrEmpty(Agent) ? path : $"{path}{(path.Contains('?') ? '&' : '?')}agent={Uri.EscapeDataString(Agent)}";
+
+    async Task<ApiResult<T>> Get<T>(string path, CancellationToken ct) => await GetAsync<T>(Scoped(path), await tokens.AccessTokenAsync(ct), ct);
+
+    async Task<ApiResult<T>> Write<T>(HttpMethod method, string path, object? body, CancellationToken ct) => await WriteAsync<T>(method, Scoped(path), await tokens.AccessTokenAsync(ct), body, ct);
 
     /// <summary>404 means the account has no practitioner profile yet.</summary>
     public Task<ApiResult<PractitionerPrivateDto>> ProfileAsync(CancellationToken ct = default) => Get<PractitionerPrivateDto>(Me, ct);
 
-    public Task<ApiResult<PractitionerPrivateDto>> CreateProfileAsync(string displayName, CancellationToken ct = default) =>
-        Write<PractitionerPrivateDto>(HttpMethod.Post, Me, new CreatePractitionerBody(displayName), ct);
+    /// <summary>Creates a NEW agent of the account (E-04: not scoped to <see cref="Agent"/>); 422 <c>too_many_agents</c> at the account's limit.</summary>
+    public async Task<ApiResult<PractitionerPrivateDto>> CreateProfileAsync(string displayName, CancellationToken ct = default) =>
+        await WriteAsync<PractitionerPrivateDto>(HttpMethod.Post, Me, await tokens.AccessTokenAsync(ct), new CreatePractitionerBody(displayName), ct);
+
+    /// <summary>The account's agents, oldest first (E-04); an empty list when it has none.</summary>
+    public async Task<ApiResult<IReadOnlyList<PractitionerSummaryDto>>> AgentsAsync(CancellationToken ct = default)
+    {
+        var r = await GetAsync<PractitionerSummariesDto>("/api/v1/me/practitioners", await tokens.AccessTokenAsync(ct), ct);
+        return r.IsOk ? ApiResult<IReadOnlyList<PractitionerSummaryDto>>.Ok(r.Value!.Items) : ApiResult<IReadOnlyList<PractitionerSummaryDto>>.Fail(r.Failure!);
+    }
 
     public Task<ApiResult<PractitionerPrivateDto>> SaveProfileAsync(UpdatePractitionerBody body, CancellationToken ct = default) => Write<PractitionerPrivateDto>(HttpMethod.Put, Me, body, ct);
 
@@ -44,11 +60,16 @@ public sealed class PractitionerClient(HttpClient http, VisitorAddressAccessor v
 /// <summary>Booking, the provider's payments account (PAYMENTS-GO-LIVE).</summary>
 public sealed class PractitionerSchedulingClient(HttpClient http, VisitorAddressAccessor visitor, IAccessTokenSource tokens) : ApiClient(http, visitor)
 {
-    async Task<ApiResult<T>> Get<T>(string path, CancellationToken ct) => await GetAsync<T>(path, await tokens.AccessTokenAsync(ct), ct);
+    /// <summary>The slug of the agent whose payment account the calls are about (E-04: the account is per agent); null for a provider with one agent.</summary>
+    public string? Agent { get; set; }
+
+    string Scoped(string path) => string.IsNullOrEmpty(Agent) ? path : $"{path}?agent={Uri.EscapeDataString(Agent)}";
+
+    async Task<ApiResult<T>> Get<T>(string path, CancellationToken ct) => await GetAsync<T>(Scoped(path), await tokens.AccessTokenAsync(ct), ct);
 
     /// <summary>404 means the payment provider has no connected accounts (the mock of the fake profile): nothing to set up.</summary>
     public Task<ApiResult<PaymentAccountDto>> PaymentAccountAsync(CancellationToken ct = default) => Get<PaymentAccountDto>("/api/v1/me/payments/account", ct);
 
     public async Task<ApiResult<PaymentOnboardingDto>> StartPaymentOnboardingAsync(CancellationToken ct = default) =>
-        await WriteAsync<PaymentOnboardingDto>(HttpMethod.Post, "/api/v1/me/payments/account/onboarding", await tokens.AccessTokenAsync(ct), null, ct);
+        await WriteAsync<PaymentOnboardingDto>(HttpMethod.Post, Scoped("/api/v1/me/payments/account/onboarding"), await tokens.AccessTokenAsync(ct), null, ct);
 }

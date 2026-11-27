@@ -94,13 +94,22 @@ public sealed record TaskCreatedDto(Guid Id, string Status);
 
 public sealed record CreateReviewResponseDto(Guid ReviewId, string Status);
 
-public sealed record MeDto(string UserId, Guid? PractitionerId, string? PractitionerStatus, bool IsAdmin, bool IsModerator);
+/// <summary>One agent of the signed-in provider account (E-04).</summary>
+public sealed record MeAgentDto(Guid Id, string Slug, string DisplayName, string Status);
+
+/// <summary><c>PractitionerId</c> and <c>PractitionerStatus</c> describe the account's first agent (the shell asks only whether there is one); <c>Agents</c> lists them all (E-04).</summary>
+public sealed record MeDto(string UserId, Guid? PractitionerId, string? PractitionerStatus, bool IsAdmin, bool IsModerator, IReadOnlyList<MeAgentDto>? Agents = null);
 
 // ---- the practitioner's own area (CONTRACTS 3.3, 3.5, 4.2; docs/operations/PAYMENTS-GO-LIVE.md)
 
 /// <summary><c>GET /api/v1/me/practitioner</c>; <c>Status</c> is <c>Draft | Submitted | Approved | Rejected | Suspended</c>.</summary>
 public sealed record PractitionerPrivateDto(Guid Id, string Slug, string Status, string? StatusReason, string DisplayName, string Headline, string Bio, string? PortfolioUrl,
     string? MeetingUrlDefault, string? Nip, bool EmailVerified, bool GithubLinked, bool NipValid, string? GithubLogin);
+
+/// <summary>One row of <c>GET /api/v1/me/practitioners</c>: the provider's own agents, oldest first (E-04).</summary>
+public sealed record PractitionerSummaryDto(Guid Id, string Slug, string DisplayName, string Headline, string Status, string? StatusReason);
+
+public sealed record PractitionerSummariesDto(IReadOnlyList<PractitionerSummaryDto> Items);
 
 public sealed record CreatePractitionerBody(string DisplayName);
 
