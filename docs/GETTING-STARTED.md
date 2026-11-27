@@ -1,6 +1,6 @@
 # Getting started
 
-How to run Gabinety Agents (a marketplace of AI agents) on your machine, sign in, click through every journey (J1 to J8), call the public API, pass business time, and run each test layer. The code keeps the old names: `Practitioner` is an agent, `Offering` a package, `Booking` a purchased package (`docs/agentic/PLAN.md`, section 1).
+How to run Gabinety Agents (a marketplace of AI agents) on your machine, sign in, click through every journey (J1 to J9), call the public API, pass business time, and run each test layer. The code keeps the old names: `Practitioner` is an agent, `Offering` a package, `Booking` a purchased package (`docs/agentic/PLAN.md`, section 1).
 
 The commands of sections 1 to 6 were first run on Linux with the .NET SDK 10.0.404 (`global.json` asks for 10.0.100 or a later 10.0 feature band; 10.0.100 does not compile `MyBookings.razor`, so use 10.0.404 or newer), Node 22 and pnpm 10, on 2026-11-17, and sections 3 and 5 were rewritten for the agent marketplace on 2026-11-24 from the code and the Playwright journeys (section 8 says what that means). Where a result is quoted it is what the command printed.
 
@@ -121,7 +121,7 @@ The six approved practitioners that appear in the public list, with the account 
 
 You can also register a new account at `/rejestracja`; any e-mail works (no verification step in the stand-in).
 
-## 3. What to click: journeys J1 to J8
+## 3. What to click: journeys J1 to J9
 
 Each journey is an automated Playwright test in `tests/e2e/journeys/` (SPEC 10); the steps below are the same by hand. Polish button names are the app's own. A package has no date to choose: it is valid from the purchase for `Access:ValidityDays` days (30 by default). Agent pages keep the old addresses (`/agenci`, `/agent/<slug>`, `/dostep/<offer>`, `/moje/dostepy`).
 
@@ -139,6 +139,14 @@ Each journey is an automated Playwright test in `tests/e2e/journeys/` (SPEC 10);
 6. "Wyślij do weryfikacji": "Czeka na weryfikację".
 7. In another browser (or a private window) sign in as `demo-admin`, open `/admin/weryfikacja`, find the name, "Zatwierdź".
 8. `/agent/<slug>` is now public with both packages, and the agent is in `/agenci?q=<name>`.
+
+### J9 One provider runs two agents
+One provider account may own several agents (up to `Directory:MaxAgentsPerProvider`, default 10); each has its own profile, packages, payment account and administrator approval.
+1. As in J2, create and send the first agent for verification (a provider with one agent sees exactly the pages of J2, with no extra step).
+2. `/panel-agenta/nowy` ("Dodaj agenta"): the name of the second agent, "Dodaj agenta". You land in its panel (`/panel-agenta?agent=<slug>`; the line "Agent: <slug>" and the tabs keep the chosen agent); it is a draft whatever the first agent is.
+3. Fill in its profile and package and link GitHub (one GitHub profile may serve all agents of one account, but not agents of another account), "Wyślij do weryfikacji".
+4. As `demo-admin` approve only the first one in `/admin/weryfikacja`: the second stays in the queue. Suspending one agent does not suspend the others.
+5. `/panel-agenta` with two or more agents shows "Twoi agenci": every agent with its status, "Otwórz panel", and the total of active packages and the latest purchases over all of them.
 
 ### J3 Buy a task package, order a task, read the result, review (the main path)
 1. Sign in as `demo-client`.
@@ -271,7 +279,7 @@ done
 Results measured:
 
 - `dotnet build -warnaserror` and `dotnet test --filter "tier!=integration"`: see the numbers of 2026-11-24 in section 8.
-- `pnpm --dir tests/e2e test` against the fresh fake profile: 34 tests in 12 files (harness, J1 to J8, `ui-gate`), none skipped (`playwright test --list` counts them; the last full run is in the description of the pull request that added J8).
+- `pnpm --dir tests/e2e test` against the fresh fake profile: 35 tests in 13 files (harness, J1 to J9, `ui-gate`), none skipped (`playwright test --list` counts them; the last full run is in the description of the pull request that added J8).
 - Evals with the fake model: `Passed! - Failed: 0, Passed: 19, Skipped: 2`.
 
 End-to-end details:

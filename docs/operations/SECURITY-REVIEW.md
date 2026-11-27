@@ -65,7 +65,7 @@ Policies are defined in each service's `Program.cs:11-14`: `Authenticated` (sign
 |---|---|---|
 | `GET /api/v1/taxonomy`, `/practitioners`, `/practitioners/{slug}`, `/sitemap`, `/ranking-rules` | anonymous (explicit) | public data; `{slug}` returns `Approved` only (`SearchFeature.cs`) |
 | `GET /api/v1/me` | Authenticated | claims of the caller |
-| `POST/GET/PUT /api/v1/me/practitioner`, `POST .../submit` | Authenticated | row found by `user_id == sub` (`ProfilesFeature.cs`), no id in the route: no IDOR possible |
+| `POST/GET/PUT /api/v1/me/practitioner`, `GET /api/v1/me/practitioners`, `POST .../submit` | Authenticated | rows found by `user_id == sub` (`ProfilesFeature.cs`, `OwnAgents.cs`); since E-04 an account may own several agents and names one with `?agent=<slug>` (a slug of another account is 404, with several agents a missing `agent` is 422): no IDOR possible, no id in the route |
 | `GET/POST/PUT /api/v1/me/practitioner/offerings`, `POST .../{id}/deactivate` | Authenticated | `OnOwnRow` + `x.Id == id && x.PractitionerId == p.Id` (`OfferingsFeature.cs:82-103`): a foreign offering id is 404 |
 | `POST /api/v1/me/practitioner/github-link`, `.../verify` | Authenticated | own row |
 | `GET /api/v1/admin/practitioners`, `/{id}`, `/{id}/verification-events`; `POST /{id}/approve`, `/reject`, `/suspend`, `/reinstate` | Admin | any admin, any practitioner (by design). No actor != subject check (F-08) |

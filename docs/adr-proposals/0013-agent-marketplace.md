@@ -134,6 +134,13 @@ Plan, decyzja 6, zakładał „jedno konto techniczne na agenta” i błąd `pra
 
 **Powiadomienia i dostępy.** `Booking.PractitionerUserId` to konto dostawcy, więc jego dostępy (wszystkich agentów) widać w jednej liście „jako dostawca”, a e-mail do powiadomień to adres z tokenu zapisany przy agentach (jeden na konto; przy różnicy wygrywa ostatnio zmieniony wiersz). Usunięcie danych konta anonimizuje wszystkich jego agentów po anulowaniu przyszłych dostępów każdego z nich.
 
+**Strona (panel dostawcy).** Wybór agenta to parametr `?agent=<slug>` (nie segment ścieżki: istniejące adresy `/panel-agenta/profil`, `/oferty`, `/platnosci` i ich testy zostają, a formularze, które wysyłają `POST` na bieżący adres, same niosą agenta). Konto z jednym agentem widzi dokładnie to, co dotąd: bez parametru, bez dodatkowego kroku i bez dodatkowego wywołania. Konto z dwoma i więcej: `/panel-agenta` bez parametru pokazuje przegląd („Twoi agenci”: lista z statusami, „Otwórz panel”, suma aktywnych pakietów i ostatnie zakupy po wszystkich agentach; lista zakupów dostawcy w Booking jest per konto, więc suma wynika z niej wprost), a strony jednego agenta bez parametru odsyłają do przeglądu. Z parametrem `?agent=` panel pokazuje wybranego agenta, a jego „ostatnie zakupy” są filtrowane do tego agenta. Nowa strona `/panel-agenta/nowy` dodaje kolejnego agenta (`too_many_agents` jako tekst). Adres powrotu płatności niesie agenta (`/practitioner/payments?agent=<slug>&return=1`).
+
+**Czego ten etap nie robi.**
+- „Moje opinie” (`/moje/opinie`) czyta opinie pierwszego (najstarszego) agenta konta, bo opiera się na `practitionerId` z `/me`; opinie pozostałych agentów nie mają jeszcze widoku w panelu. To znane ograniczenie, nie regresja (wcześniej agent był jeden).
+- Kolejka weryfikacji administratora pokazuje agentów osobno i nie mówi, że dwóch należy do jednego konta (kolejka nie ma pola konta, bo dotąd nie było potrzebne); administrator zatwierdza każdego agenta osobno, tak jak chciał opis zadania.
+- Demonstracyjne dane (`demo-practitioner-N`) zostają „jeden agent na konto”, żeby nie zmieniać zestawu sześciu agentów w katalogu; dostawcę z dwoma agentami tworzy test J9.
+
 **Zgodność wdrożenia.** Nowa trasa wewnętrzna `GET /internal/v1/practitioners/by-user/{userId}/agents`; stara `by-user/{userId}` zostaje i zwraca najstarszego agenta w tym samym kształcie. Migracja zdejmuje tylko ograniczenie, więc można ją wdrożyć przed kodem. Wdrożyć Directory przed Bookingiem.
 
 ## Skutki

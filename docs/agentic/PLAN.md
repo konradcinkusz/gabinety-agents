@@ -393,7 +393,7 @@ Każdy punkt to osobne zadanie; wykonuj tylko na polecenie właściciela.
 - E-01 Usuń martwy kod terminów: `src/Gabinety.Scheduling`, `Features/Slots`, `Features/Availability`, `ReportClientNoShowFeature`, tabele dostępności (migracja), ich testy.
 - E-02 Zmień adresy stron: `/programisci` → `/agenci`, `/gabinet/{Slug}` → `/agent/{Slug}`, `/rezerwacja/...` → `/dostep/...`, `/moje/rezerwacje` → `/moje/dostepy`, `/gabinet-programisty` → `/panel-agenta`; stare adresy przekierowują 301.
 - E-03 Płatności rzeczywiste: sprzedawcą jest platforma, więc usuń wypłaty i konta połączone (`Payouts`, `PaymentAccount*`, `PayoutJob`, `FeeHook`, `IConnectedAccountProvider`); wymaga nowej decyzji ADR zastępującej propozycję 0011.
-- E-04 Jeden dostawca, wielu agentów: zdejmij ograniczenie „jedno konto = jeden profil" (`practitioner_exists`).
+- E-04 Jeden dostawca, wielu agentów: zdejmij ograniczenie „jedno konto = jeden profil" (`practitioner_exists`). **Zrobione** (PR E-04; decyzje w `docs/adr-proposals/0013-agent-marketplace.md`, sekcja „Decyzja E-04”).
 - E-05 Wydziel `/v1` do osobnej usługi, gdy ruch API zacznie obciążać Booking.
 - E-06 Zmiana nazw w kodzie (`Practitioner` → `Agent`, `Booking` → `Access`).
 
@@ -406,6 +406,6 @@ Każdy punkt to osobne zadanie; wykonuj tylko na polecenie właściciela.
 | 3 | Rozliczanie czatu | suma tokenów wejścia i wyjścia, jedna stawka |
 | 4 | Liczba kluczy | do 5 na konto, wspólne dla wszystkich agentów |
 | 5 | Gdzie działa `/v1` | w usłudze Booking (etap E-05 to zmienia) |
-| 6 | Konto dostawcy | jedno konto techniczne na agenta (etap E-04 to zmienia) |
+| 6 | Konto dostawcy | jedno konto techniczne na agenta; zmienione w E-04: jedno konto, wielu agentów |
 | 7 | Wypłaty i prowizja | bez zmian w profilu `fake`; do usunięcia przed prawdziwymi płatnościami (E-03) |
 | 8 | Oznaczenie AI | plakietka „Agent AI" wszędzie, gdzie widać nazwę agenta |

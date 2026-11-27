@@ -1,6 +1,6 @@
 # tests/e2e: Playwright harness and journeys
 
-The harness (T-08.03a) runs Playwright against a **running fake profile**. It starts nothing itself. Journeys J1-J8 (T-08.03 to T-08.05, D-02) only add spec files under `journeys/`; `playwright.config.ts`, `harness/**` and `package.json` belong to the harness task.
+The harness (T-08.03a) runs Playwright against a **running fake profile**. It starts nothing itself. Journeys J1-J9 (T-08.03 to T-08.05, D-02, E-04) only add spec files under `journeys/`; `playwright.config.ts`, `harness/**` and `package.json` belong to the harness task.
 
 ## Run it
 
@@ -19,6 +19,7 @@ The journeys run against the Blazor Web App (`src/Gabinety.Web`), the only web h
 - **Interactive pages.** The page is HTML first and interactive only after the websocket answers `StartCircuit`; input before that is discarded without an error. Use `gotoInteractive(page, url)` (in `harness/circuit.ts`) instead of `page.goto` for a page that may be interactive (it waits only when the prerendered HTML carries a server component marker), and `watchCircuit(page)` taken **before** a click that navigates to one (`await circuit.ready()` after). Never sleep for a circuit.
 - **No browser-facing API.** The browser never calls a backend, so `signInAs`/`signInViaBff` sign the browser context in through the real form and keep the user's token for the context; `bff(ctx, ..., "/api/proxy/<service>/...")` and the booking helpers call the service directly with it (the path keeps the old `/api/proxy/<service>/` prefix, which `harness/booking-support.ts` strips). What a journey is about still goes through the UI.
 - **Sign-in** is the form post of `signInViaFormPost` (the session cookie `gt_session`); `signInViaBff` also fetches the user's token from the identity service for API set-up (`accessTokenOf`).
+- J9 (`j9-provider-two-agents.spec.ts`, E-04) is one provider account with two agents: the second is added at `/panel-agenta/nowy`, both are onboarded (the packages are per agent, the GitHub profile is shared by the account), the administrator approves only the first, and `/panel-agenta` lists both with their own status (`PractitionerArea` takes the agent's slug for the pages of one agent).
 - J8 (`j8-chat-api.spec.ts`) buys a `Chat` package, creates a key in `/moje/klucze`, and calls `GET /v1/models` and `POST /v1/chat/completions` (plain and streamed) with it through the site, which forwards `/v1` to Booking (`harness/agent-api.ts`, ADR-0013). The fake agent platform answers `[demo <slug>] Otrzymano N znaków.` and bills `N / 4 + 20` tokens, so J3 and J8 assert the answers and the bill exactly.
 - J7 (`j7-foreign-origin.spec.ts`) posts the sign-in form with a foreign `Origin` and a cross-site fetch: 403 `cross_site_request`, no session cookie; the same-origin control passes.
 
