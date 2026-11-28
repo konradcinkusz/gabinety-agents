@@ -28,16 +28,16 @@ public class ReviewsIntegrationTests
         await using var pg = new PostgreSqlBuilder("postgres:17-alpine").Build();
         await pg.StartAsync();
         using var h = await StartAsync(pg.GetConnectionString());
-        string user = "demo-user-1"; var pract = Guid.NewGuid(); var booking = h.Access.Add(user, pract);
+        string user = "demo-user-1"; var pract = Guid.NewGuid(); var access = h.Access.Add(user, pract);
         var c = h.ClientFor(user);
 
-        Assert.Equal(HttpStatusCode.Created, (await ReviewsHost.Post(c, booking)).StatusCode);
-        Assert.Equal(HttpStatusCode.Conflict, (await ReviewsHost.Post(c, booking)).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await ReviewsHost.Post(c, access)).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await ReviewsHost.Post(c, access)).StatusCode);
 
         // the same insert straight into the table: only the index can stop it
         var ex = await Assert.ThrowsAsync<DbUpdateException>(() => h.Seed(db => db.Reviews.Add(new Review
         {
-            Id = Guid.NewGuid(), AccessId = booking, AgentId = pract, ClientUserId = user, Rating = 5, Text = ReviewsHost.GoodText,
+            Id = Guid.NewGuid(), AccessId = access, AgentId = pract, ClientUserId = user, Rating = 5, Text = ReviewsHost.GoodText,
             Status = Gabinety.Contracts.Reputation.ReviewStatus.Published, CreatedAt = h.Clock.GetUtcNow(),
         })));
         Assert.Contains("ux_reviews_booking_id", ex.InnerException?.Message ?? "");

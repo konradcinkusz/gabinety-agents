@@ -167,15 +167,15 @@ public class PayoutJob(IServiceScopeFactory scopes, IPaymentProvider provider, T
         {
             return await InTransactionAsync(async db =>
             {
-                var booking = await LoadForUpdateAsync(db, id, ct); // SKIP LOCKED: null also when another instance has the row
+                var access = await LoadForUpdateAsync(db, id, ct); // SKIP LOCKED: null also when another instance has the row
                 // re-read under the lock: disputed (or anything else that is not money-complete) since the selection means no payout
-                if (booking is null || !IsMoneyComplete(booking) || booking.PayoutMinor is not > 0 || DueAt(booking) is not { } due || due > now) return null;
+                if (access is null || !IsMoneyComplete(access) || access.PayoutMinor is not > 0 || DueAt(access) is not { } due || due > now) return null;
 
                 var row = await db.Payouts.SingleOrDefaultAsync(p => p.AccessId == id, ct);
                 if (row is null)
                     db.Payouts.Add(row = new Features.Payouts.Payout
                     {
-                        Id = Guid.CreateVersion7(), AccessId = id, AgentId = booking.AgentId, AmountMinor = booking.PayoutMinor.Value,
+                        Id = Guid.CreateVersion7(), AccessId = id, AgentId = access.AgentId, AmountMinor = access.PayoutMinor.Value,
                         Status = PayoutStatus.Pending, CreatedAt = now,
                     });
                 else if (row.Status == PayoutStatus.Sent || row.AttemptCount >= maxAttempts || row.NextAttemptAt > now) return null; // done, out of attempts, backing off, or its owner is at work

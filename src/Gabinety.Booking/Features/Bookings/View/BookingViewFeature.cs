@@ -33,12 +33,12 @@ public sealed class BookingViewFeature : IServiceFeature
     {
         var sub = CallerId(user);
         if (sub is null) return Results.Unauthorized();
-        var booking = await db.Accesses.AsNoTracking().SingleOrDefaultAsync(b => b.Id == id, ct);
+        var access = await db.Accesses.AsNoTracking().SingleOrDefaultAsync(b => b.Id == id, ct);
         var admin = IsAdmin(user);
-        if (booking is null || (booking.ClientUserId != sub && booking.PractitionerUserId != sub && !admin))
+        if (access is null || (access.ClientUserId != sub && access.AgentUserId != sub && !admin))
             return PaymentWebhookFeature.Problem(ErrorCodes.NotFound, "Not found", 404); // a stranger learns nothing about whether it exists
         var payment = await db.Payments.AsNoTracking().SingleOrDefaultAsync(p => p.AccessId == id, ct);
-        return Results.Ok(ToView(booking, payment, sub, admin, time, (await names.ForAsync([booking], ct))[booking.Id]));
+        return Results.Ok(ToView(access, payment, sub, admin, time, (await names.ForAsync([access], ct))[access.Id]));
     }
 
     /// <summary>The admin's resolution note is stored in <c>status_reason</c> of a Resolved booking and is for the admin only (CONTRACTS 4.3); a cancel reason is for both parties.</summary>
@@ -52,7 +52,7 @@ public sealed class BookingViewFeature : IServiceFeature
     public static AccessView ToView(BookingEntity b, Payment? payment, string callerId, bool admin, TimeProvider? time = null, PartyNames? names = null)
     {
         var isClient = b.ClientUserId == callerId;
-        var isPractitioner = b.PractitionerUserId == callerId;
+        var isPractitioner = b.AgentUserId == callerId;
         var confirmed = b.Status == Gabinety.Billing.AccessStatus.Confirmed;
         // CONTRACTS 4.4 "after Confirmed": the practitioner sees the brief and the client name once the booking was confirmed at some point, i.e. from any
         // status but PendingPayment and Expired. Decided by status, not by confirmed_at (not every row sets it).
@@ -61,7 +61,7 @@ public sealed class BookingViewFeature : IServiceFeature
         var flags = BookingPermissions.For(b, callerId, time ?? TimeProvider.System);
         return new AccessView(
             b.Id, Enum.Parse<ContractsStatus>(b.Status.ToString()), StatusReasonFor(b, admin), b.StartUtc, b.EndUtc, b.DurationMinutes, b.PackageTitle,
-            new MoneyDto(b.PriceMinor), new AgentRef(b.AgentId, names?.PractitionerDisplayName ?? PartyNamesLookup.PractitionerFallback, names?.PractitionerSlug ?? ""),
+            new MoneyDto(b.PriceMinor), new AgentRef(b.AgentId, names?.PractitionerDisplayName ?? PartyNamesLookup.PractitionerFallback, names?.AgentSlug ?? ""),
             isPractitioner && wasConfirmed && names?.ClientDisplayName is { } clientName ? new ClientRef(clientName) : null,
             isClient || (isPractitioner && wasConfirmed) ? new BriefDto(b.BriefText, b.BriefProblemSlug, b.BriefAiAssisted) : null,
             confirmed && (isClient || isPractitioner) ? b.MeetingUrlSnapshot : null,
@@ -76,7 +76,7 @@ public sealed class BookingViewFeature : IServiceFeature
 }
 
 /// <summary>Display names for one booking; every member is optional and absent means "not known" (the view then shows its fallback).</summary>
-public sealed record PartyNames(string? PractitionerDisplayName = null, string? PractitionerSlug = null, string? ClientDisplayName = null);
+public sealed record PartyNames(string? PractitionerDisplayName = null, string? AgentSlug = null, string? ClientDisplayName = null);
 
 /// <summary>
 /// The counter-party names of bookings (ADR-0012 section 6, F-03). The practitioner's name and slug come from Directory (one call per distinct practitioner,
@@ -89,7 +89,7 @@ public sealed class PartyNamesLookup(IDirectoryClient directory)
 
     public async Task<Dictionary<Guid, PartyNames>> ForAsync(IReadOnlyCollection<BookingEntity> rows, CancellationToken ct)
     {
-        var live = rows.Where(b => !IsErased(b.PractitionerUserId)).Select(b => b.AgentId).Distinct().ToList();
+        var live = rows.Where(b => !IsErased(b.AgentUserId)).Select(b => b.AgentId).Distinct().ToList();
         var found = new Dictionary<Guid, DirectoryPractitionerName>();
         var lookups = await Task.WhenAll(live.Select(async id =>
         {
@@ -99,8 +99,8 @@ public sealed class PartyNamesLookup(IDirectoryClient directory)
         foreach (var n in lookups) if (n is not null) found[n.AgentId] = n;
 
         return rows.ToDictionary(b => b.Id, b => new PartyNames(
-            IsErased(b.PractitionerUserId) ? ErasedName : found.TryGetValue(b.AgentId, out var n) ? n.DisplayName : null,
-            IsErased(b.PractitionerUserId) ? "" : found.TryGetValue(b.AgentId, out var m) ? m.Slug : null,
+            IsErased(b.AgentUserId) ? ErasedName : found.TryGetValue(b.AgentId, out var n) ? n.DisplayName : null,
+            IsErased(b.AgentUserId) ? "" : found.TryGetValue(b.AgentId, out var m) ? m.Slug : null,
             IsErased(b.ClientUserId) ? ErasedName : b.ClientDisplayName ?? ClientFallback));
     }
 

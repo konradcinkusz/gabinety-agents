@@ -25,7 +25,7 @@ public sealed class ReputationHost : WebApplicationFactory<ReputationApp::Progra
     readonly DevIdentityHost _identity;
     readonly BookingHost _booking;
 
-    public ReputationHost(DevIdentityHost identity, BookingHost booking) { _identity = identity; _booking = booking; }
+    public ReputationHost(DevIdentityHost identity, BookingHost access) { _identity = identity; _booking = access; }
 
     protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
     {
@@ -39,8 +39,8 @@ public sealed class ReputationHost : WebApplicationFactory<ReputationApp::Progra
             s.RemoveAll(typeof(Microsoft.EntityFrameworkCore.Infrastructure.IDbContextOptionsConfiguration<ReputationDb.ReputationDbContext>));
             s.RemoveAll<ReputationDb.ReputationDbContext>();
             s.AddDbContext<ReputationDb.ReputationDbContext>(o => o.UseInMemoryDatabase(dbName));
-            s.RemoveAll<ReputationClients.IBookingClient>();
-            s.AddSingleton<ReputationClients.IBookingClient>(new ReputationClients.BookingClient(_booking.CreateDefaultClient(), BookingHost.Key, retryDelay: TimeSpan.Zero));
+            s.RemoveAll<ReputationClients.IAccessClient>();
+            s.AddSingleton<ReputationClients.IAccessClient>(new ReputationClients.AccessClient(_booking.CreateDefaultClient(), BookingHost.Key, retryDelay: TimeSpan.Zero));
             s.PostConfigure<RateLimiterOptions>(o => o.GlobalLimiter = null);
             s.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o => o.BackchannelHttpHandler = _identity.Server.CreateHandler());
         });
@@ -123,10 +123,10 @@ public sealed class ReputationWorld : IAsyncDisposable
     public static ReputationSeedStep Step() => new();
 
     /// <summary>What a visitor reads: the practitioner's published reviews through the public API.</summary>
-    public async Task<List<JsonElement>> PublishedFor(Guid practitionerId)
+    public async Task<List<JsonElement>> PublishedFor(Guid agentId)
     {
         using var http = Reputation.CreateClient();
-        var page = await http.GetFromJsonAsync<JsonElement>($"/api/v1/practitioners/{practitionerId}/reviews?limit=20");
+        var page = await http.GetFromJsonAsync<JsonElement>($"/api/v1/practitioners/{agentId}/reviews?limit=20");
         return page.GetProperty("items").EnumerateArray().Select(i => i.Clone()).ToList();
     }
 

@@ -7,10 +7,10 @@ public class BookingClientTests
 {
     static readonly Guid Access = Guid.NewGuid();
 
-    static (BookingClient Client, FakeBooking Handler) Make()
+    static (AccessClient Client, FakeBooking Handler) Make()
     {
         var handler = new FakeBooking();
-        return (new BookingClient(new HttpClient(handler) { BaseAddress = new Uri(FakeBooking.BaseUrl + "/") }, FakeBooking.Key, TimeSpan.Zero), handler);
+        return (new AccessClient(new HttpClient(handler) { BaseAddress = new Uri(FakeBooking.BaseUrl + "/") }, FakeBooking.Key, TimeSpan.Zero), handler);
     }
 
     [Fact]
@@ -51,7 +51,7 @@ public class BookingClientTests
         var (client, h) = Make();
         h.Down = true;
 
-        var ex = await Assert.ThrowsAsync<BookingUnavailableException>(() => client.GetReviewabilityAsync(Access, default));
+        var ex = await Assert.ThrowsAsync<AccessUnavailableException>(() => client.GetReviewabilityAsync(Access, default));
 
         Assert.Equal(2, h.Calls);
         Assert.DoesNotContain(FakeBooking.Key, ex.Message);
@@ -63,7 +63,7 @@ public class BookingClientTests
     {
         var (client, h) = Make();
         h.Override = (_, _) => new HttpResponseMessage(HttpStatusCode.Unauthorized);
-        await Assert.ThrowsAsync<BookingUnavailableException>(() => client.GetReviewabilityAsync(Access, default));
+        await Assert.ThrowsAsync<AccessUnavailableException>(() => client.GetReviewabilityAsync(Access, default));
         Assert.Equal(1, h.Calls);
     }
 
@@ -71,9 +71,9 @@ public class BookingClientTests
     public async Task A_slow_answer_is_cut_at_the_timeout_and_counts_as_unavailable()
     {
         var slow = new SlowHandler();
-        var c = new BookingClient(new HttpClient(slow) { BaseAddress = new Uri(FakeBooking.BaseUrl + "/") }, FakeBooking.Key, TimeSpan.Zero, TimeSpan.FromMilliseconds(50));
+        var c = new AccessClient(new HttpClient(slow) { BaseAddress = new Uri(FakeBooking.BaseUrl + "/") }, FakeBooking.Key, TimeSpan.Zero, TimeSpan.FromMilliseconds(50));
 
-        await Assert.ThrowsAsync<BookingUnavailableException>(() => c.GetReviewabilityAsync(Access, default));
+        await Assert.ThrowsAsync<AccessUnavailableException>(() => c.GetReviewabilityAsync(Access, default));
 
         Assert.Equal(2, slow.Calls);
     }

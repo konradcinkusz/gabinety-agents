@@ -25,10 +25,10 @@ public sealed class DemoResetFeature : IServiceFeature
         endpoints.MapPost("/internal/v1/demo/reset", ResetAsync).RequireAuthorization("Internal");
     }
 
-    static async Task<IResult> ResetAsync(BookingDbContext db, PractitionerResolver practitioners, CancellationToken ct)
+    static async Task<IResult> ResetAsync(BookingDbContext db, PractitionerResolver agents, CancellationToken ct)
     {
         // StartsWith translates to a case-sensitive prefix match on PostgreSQL (LIKE) and on the in-memory provider (ordinal).
-        var bookings = await db.Accesses.Where(b => b.ClientUserId.StartsWith(Ns) || b.PractitionerUserId.StartsWith(Ns)).ToListAsync(ct);
+        var bookings = await db.Accesses.Where(b => b.ClientUserId.StartsWith(Ns) || b.AgentUserId.StartsWith(Ns)).ToListAsync(ct);
         var ids = bookings.Select(b => b.Id).ToList();
         var payments = await db.Payments.Where(p => ids.Contains(p.AccessId)).ToListAsync(ct);
         var ledger = await db.LedgerEntries.Where(l => ids.Contains(l.AccessId)).ToListAsync(ct);
@@ -47,7 +47,7 @@ public sealed class DemoResetFeature : IServiceFeature
         db.RemoveRange(tasks);
         db.RemoveRange(bookings);
         await db.SaveChangesAsync(ct); // one unit of work: all or nothing
-        practitioners.Clear(); // the practitioner ids it cached belong to a Directory that is being reset too
+        agents.Clear(); // the practitioner ids it cached belong to a Directory that is being reset too
 
         return Results.Ok(new
         {

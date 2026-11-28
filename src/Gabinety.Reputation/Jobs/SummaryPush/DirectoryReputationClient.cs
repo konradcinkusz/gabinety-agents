@@ -13,7 +13,7 @@ public enum PushResult { Accepted, NotFound, Failed }
 public interface IDirectoryReputationClient
 {
     /// <summary>Never throws except on cancellation.</summary>
-    Task<PushResult> PushAsync(Guid practitionerId, ReputationPush body, CancellationToken ct);
+    Task<PushResult> PushAsync(Guid agentId, ReputationPush body, CancellationToken ct);
 }
 
 /// <summary>
@@ -29,7 +29,7 @@ public sealed class DirectoryReputationClient(HttpClient http, string? internalK
     readonly TimeSpan _timeout = timeout ?? CallTimeout;
     readonly Func<TimeSpan, CancellationToken, Task> _delay = delay ?? Task.Delay;
 
-    public async Task<PushResult> PushAsync(Guid practitionerId, ReputationPush body, CancellationToken ct)
+    public async Task<PushResult> PushAsync(Guid agentId, ReputationPush body, CancellationToken ct)
     {
         for (var attempt = 1; attempt <= MaxAttempts; attempt++)
         {
@@ -37,7 +37,7 @@ public sealed class DirectoryReputationClient(HttpClient http, string? internalK
             string failure;
             try
             {
-                using var request = new HttpRequestMessage(HttpMethod.Put, $"internal/v1/practitioners/{practitionerId}/reputation") { Content = JsonContent.Create(body) };
+                using var request = new HttpRequestMessage(HttpMethod.Put, $"internal/v1/practitioners/{agentId}/reputation") { Content = JsonContent.Create(body) };
                 if (!string.IsNullOrEmpty(internalKey)) request.Headers.Add("X-Internal-Key", internalKey);
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 cts.CancelAfter(_timeout);
@@ -48,7 +48,7 @@ public sealed class DirectoryReputationClient(HttpClient http, string? internalK
                 failure = $"status {code}";
                 if (code < 500 && response.StatusCode is not (HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests))
                 {
-                    log.LogWarning("SummaryPush refused for practitioner {PractitionerId}: {Failure}; not retried", practitionerId, failure); // 400/401: a retry cannot help
+                    log.LogWarning("SummaryPush refused for practitioner {PractitionerId}: {Failure}; not retried", agentId, failure); // 400/401: a retry cannot help
                     return PushResult.Failed;
                 }
             }
@@ -56,7 +56,7 @@ public sealed class DirectoryReputationClient(HttpClient http, string? internalK
             {
                 failure = ex.GetType().Name; // never the message: it can carry the URL
             }
-            log.LogWarning("SummaryPush attempt {Attempt} of {Max} failed for practitioner {PractitionerId}: {Failure}", attempt, MaxAttempts, practitionerId, failure);
+            log.LogWarning("SummaryPush attempt {Attempt} of {Max} failed for practitioner {PractitionerId}: {Failure}", attempt, MaxAttempts, agentId, failure);
             if (attempt < MaxAttempts) await _delay(Backoff[attempt - 1], ct);
         }
         return PushResult.Failed;

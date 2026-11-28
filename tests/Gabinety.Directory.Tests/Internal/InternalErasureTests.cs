@@ -35,8 +35,8 @@ public class InternalErasureTests(InternalFactory f) : IClassFixture<InternalFac
         Assert.Null(a.StatusReason);
         Assert.Null(a.GithubChallengeCode); Assert.Null(a.GithubChallengeLogin); Assert.Null(a.GithubChallengeExpiresAt);
 
-        var offerings = await f.OfferingsOf(p.Id);
-        var off = Assert.Single(offerings);
+        var packages = await f.OfferingsOf(p.Id);
+        var off = Assert.Single(packages);
         Assert.False(off.IsActive);
         Assert.Equal("", off.Title); Assert.Equal("", off.Description); Assert.Null(off.MeetingUrl);
 

@@ -54,7 +54,7 @@ public sealed record ConnectedAccountStatus(string AccountId, ConnectedAccountSt
 /// </summary>
 public interface IConnectedAccountProvider
 {
-    Task<string> CreateAccountAsync(Guid practitionerId, CancellationToken ct);
+    Task<string> CreateAccountAsync(Guid agentId, CancellationToken ct);
     Task<string> CreateOnboardingLinkAsync(string accountId, string returnUrl, string refreshUrl, CancellationToken ct);
     Task<ConnectedAccountStatus> GetAccountStatusAsync(string accountId, CancellationToken ct);
 }

@@ -30,7 +30,7 @@ public class ReviewabilityApiTests
         var end = endUtc ?? h.Clock.GetUtcNow().AddDays(-1);
         await h.Seed(db => db.Accesses.Add(new BookingEntity
         {
-            Id = id, ClientUserId = "demo-client-rev", AgentId = h.Agent, PractitionerUserId = "demo-practitioner-user",
+            Id = id, ClientUserId = "demo-client-rev", AgentId = h.Agent, AgentUserId = "demo-practitioner-user",
             PackageId = h.Package, PackageTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 12345,
             StartUtc = end.AddHours(-1), EndUtc = end, Status = status, BriefText = "demo-brief-SECRET-TEXT",
             IdempotencyKey = Guid.NewGuid(), CreatedAt = end.AddDays(-2), EndedAt = endedAt, DisputeResolution = resolution, UnitsTotal = 10, UnitsUsed = unitsUsed,

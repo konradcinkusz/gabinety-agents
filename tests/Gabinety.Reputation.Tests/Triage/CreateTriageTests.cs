@@ -25,10 +25,10 @@ public class CreateTriageTests
     public async Task A_hold_answer_makes_the_review_Held_with_the_reason_from_the_answer(TriageReason reason, string code)
     {
         using var h = new TriageHost();
-        var (user, pract, booking) = h.NewBooking();
+        var (user, pract, access) = h.NewBooking();
         h.Assistant.Answer = (_, _) => Hold(reason);
 
-        var (status, body) = await Created(await h.Post(user, booking, rating: 2));
+        var (status, body) = await Created(await h.Post(user, access, rating: 2));
 
         Assert.Equal(HttpStatusCode.Created, status);
         Assert.Equal("Held", body.GetProperty("status").GetString());
@@ -45,10 +45,10 @@ public class CreateTriageTests
     public async Task A_none_answer_publishes_and_the_summary_moves_with_it()
     {
         using var h = new TriageHost();
-        var (user, pract, booking) = h.NewBooking();
+        var (user, pract, access) = h.NewBooking();
         h.Assistant.Answer = (_, _) => None;
 
-        var (status, body) = await Created(await h.Post(user, booking, rating: 4));
+        var (status, body) = await Created(await h.Post(user, access, rating: 4));
 
         Assert.Equal(HttpStatusCode.Created, status);
         Assert.Equal("Published", body.GetProperty("status").GetString());
@@ -63,10 +63,10 @@ public class CreateTriageTests
     public async Task With_the_assistant_down_the_review_is_published_and_flagged_unavailable()
     {
         using var h = new TriageHost();
-        var (user, pract, booking) = h.NewBooking();
+        var (user, pract, access) = h.NewBooking();
         h.Assistant.Answer = (_, _) => Down;
 
-        var (status, body) = await Created(await h.Post(user, booking, rating: 5));
+        var (status, body) = await Created(await h.Post(user, access, rating: 5));
 
         Assert.Equal(HttpStatusCode.Created, status);
         Assert.Equal("Published", body.GetProperty("status").GetString());
@@ -80,10 +80,10 @@ public class CreateTriageTests
     public async Task A_client_that_throws_is_the_same_as_an_outage_and_nothing_is_logged_from_it()
     {
         using var h = new TriageHost();
-        var (user, pract, booking) = h.NewBooking();
+        var (user, pract, access) = h.NewBooking();
         h.Assistant.Answer = (_, t) => throw new HttpRequestException($"{t} {FakeAssistantHandler.Key} {FakeAssistantHandler.BaseUrl}");
 
-        var r = await h.Post(user, booking);
+        var r = await h.Post(user, access);
 
         Assert.Equal(HttpStatusCode.Created, r.StatusCode);
         Assert.Equal(TriageFlag.Unavailable, Assert.Single(await h.ReviewsOf(pract)).TriageFlag);
@@ -94,9 +94,9 @@ public class CreateTriageTests
     public async Task A_review_that_fails_the_rules_is_Held_and_never_reaches_the_assistant()
     {
         using var h = new TriageHost();
-        var (user, pract, booking) = h.NewBooking();
+        var (user, pract, access) = h.NewBooking();
 
-        var r = await h.Post(user, booking, text: "Synthetyczna opinia, kontakt: demo@example.invalid lub +48 600 100 200, polecam.");
+        var r = await h.Post(user, access, text: "Synthetyczna opinia, kontakt: demo@example.invalid lub +48 600 100 200, polecam.");
 
         Assert.Equal(HttpStatusCode.Created, r.StatusCode);
         Assert.Empty(h.Assistant.Calls);
@@ -109,15 +109,15 @@ public class CreateTriageTests
     public async Task Requests_that_end_before_the_publication_decision_never_reach_the_assistant()
     {
         using var h = new TriageHost();
-        var (user, pract, booking) = h.NewBooking();
+        var (user, pract, access) = h.NewBooking();
         var notReviewable = h.Access.Add(user, pract, reviewable: false);
 
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await h.Post(user, booking, text: "za krótko")).StatusCode);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await h.Post(user, access, text: "za krótko")).StatusCode);
         Assert.Equal(HttpStatusCode.UnprocessableEntity, (await h.Post(user, notReviewable)).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await h.Post("demo-other", booking)).StatusCode);
-        Assert.Equal(HttpStatusCode.Created, (await h.Post(user, booking)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await h.Post("demo-other", access)).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await h.Post(user, access)).StatusCode);
         var calls = h.Assistant.Calls.Count;
-        Assert.Equal(HttpStatusCode.Conflict, (await h.Post(user, booking)).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await h.Post(user, access)).StatusCode);
 
         Assert.Equal(1, calls);                         // only the one that passed everything
         Assert.Equal(calls, h.Assistant.Calls.Count);   // the 409 did not ask again
@@ -127,7 +127,7 @@ public class CreateTriageTests
     public async Task The_assistant_is_called_before_the_review_is_written_with_the_rating_and_the_trimmed_text()
     {
         using var h = new TriageHost();
-        var (user, pract, booking) = h.NewBooking();
+        var (user, pract, access) = h.NewBooking();
         var rowsWhenAsked = -1;
         h.Assistant.Answer = (_, _) =>
         {
@@ -135,7 +135,7 @@ public class CreateTriageTests
             return None;
         };
 
-        await h.Post(user, booking, rating: 3, text: "   " + TriageHost.GoodText + "  ");
+        await h.Post(user, access, rating: 3, text: "   " + TriageHost.GoodText + "  ");
 
         Assert.Equal(0, rowsWhenAsked);
         Assert.Equal((3, TriageHost.GoodText), Assert.Single(h.Assistant.Calls));
@@ -147,9 +147,9 @@ public class CreateTriageTests
         using var h = new TriageHost();
         foreach (var answer in new[] { None, Hold(TriageReason.Abuse), Down })
         {
-            var (user, _, booking) = h.NewBooking();
+            var (user, _, access) = h.NewBooking();
             h.Assistant.Answer = (_, _) => answer;
-            await h.Post(user, booking);
+            await h.Post(user, access);
         }
 
         Assert.Contains(h.Logs.Lines, l => l.Contains("created for practitioner")); // the path does log, so the check can fail

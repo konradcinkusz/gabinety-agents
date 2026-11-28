@@ -33,7 +33,7 @@ public sealed partial class DirectoryClient(HttpClient http, VisitorAddressAcces
 }
 
 /// <summary>Booking, for the signed-in user: the bearer is read from the caller's scope (<see cref="IAccessTokenSource"/>) and handed to the handler through the request.</summary>
-public sealed partial class BookingClient(HttpClient http, VisitorAddressAccessor visitor, IAccessTokenSource tokens) : ApiClient(http, visitor)
+public sealed partial class AccessClient(HttpClient http, VisitorAddressAccessor visitor, IAccessTokenSource tokens) : ApiClient(http, visitor)
 {
     public const string ClientRole = "client", PractitionerRole = "practitioner";
 
@@ -49,8 +49,8 @@ public sealed partial class BookingClient(HttpClient http, VisitorAddressAccesso
 /// <summary>Reputation, public reads.</summary>
 public sealed partial class ReputationClient(HttpClient http, VisitorAddressAccessor visitor) : ApiClient(http, visitor)
 {
-    public Task<ApiResult<PageDto<ReviewDto>>> ReviewsAsync(Guid practitionerId, string? cursor = null, CancellationToken ct = default) =>
-        GetAsync<PageDto<ReviewDto>>($"/api/v1/practitioners/{practitionerId}/reviews" + (string.IsNullOrEmpty(cursor) ? "" : "?cursor=" + Uri.EscapeDataString(cursor)), null, ct);
+    public Task<ApiResult<PageDto<ReviewDto>>> ReviewsAsync(Guid agentId, string? cursor = null, CancellationToken ct = default) =>
+        GetAsync<PageDto<ReviewDto>>($"/api/v1/practitioners/{agentId}/reviews" + (string.IsNullOrEmpty(cursor) ? "" : "?cursor=" + Uri.EscapeDataString(cursor)), null, ct);
 }
 
 /// <summary>Assistant. The page keys off the gateway state (<see cref="AssistantStatusDto.State"/>), not off the health verdict: a working login that shows as unavailable is the recorded failure.</summary>

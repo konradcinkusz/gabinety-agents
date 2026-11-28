@@ -27,7 +27,7 @@ public sealed class FutureBookingCanceller(IServiceScopeFactory scopes, TimeProv
     /// <summary>The <c>status_reason</c> of a booking cancelled by suspension or erasure. A code, never user text.</summary>
     public const string Reason = "practitioner_suspended";
 
-    public async Task<CancelFutureBookingsResult> CancelAsync(Guid practitionerId, CancellationToken ct)
+    public async Task<CancelFutureBookingsResult> CancelAsync(Guid agentId, CancellationToken ct)
     {
         var now = time.GetUtcNow();
         List<(Guid Id, AccessStatus Status)> open;
@@ -35,7 +35,7 @@ public sealed class FutureBookingCanceller(IServiceScopeFactory scopes, TimeProv
         {
             var db = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
             open = (await db.Accesses.AsNoTracking()
-                    .Where(b => b.AgentId == practitionerId && ((b.Status == AccessStatus.Confirmed && b.StartUtc > now) || b.Status == AccessStatus.PendingPayment))
+                    .Where(b => b.AgentId == agentId && ((b.Status == AccessStatus.Confirmed && b.StartUtc > now) || b.Status == AccessStatus.PendingPayment))
                     .OrderBy(b => b.StartUtc).ThenBy(b => b.Id).Select(b => new { b.Id, b.Status }).ToListAsync(ct))
                 .Select(b => (b.Id, b.Status)).ToList();
         }
@@ -57,7 +57,7 @@ public sealed class FutureBookingCanceller(IServiceScopeFactory scopes, TimeProv
             }
         }
         if (cancelled + expired + failed > 0)
-            log.LogInformation("Suspension of practitioner {PractitionerId}: cancelled {Cancelled}, expired {Expired} hold(s), failed {Failed}", practitionerId, cancelled, expired, failed);
+            log.LogInformation("Suspension of practitioner {PractitionerId}: cancelled {Cancelled}, expired {Expired} hold(s), failed {Failed}", agentId, cancelled, expired, failed);
         return new CancelFutureBookingsResult(cancelled, expired, failed);
     }
 
@@ -76,13 +76,13 @@ public sealed class FutureBookingCanceller(IServiceScopeFactory scopes, TimeProv
         var transitions = scope.ServiceProvider.GetRequiredService<BookingTransitions>();
         var refunds = scope.ServiceProvider.GetRequiredService<RefundCoordinator>();
 
-        var booking = await db.Accesses.AsNoTracking().SingleOrDefaultAsync(b => b.Id == id, ct);
-        if (booking is null || booking.Status != AccessStatus.Confirmed || booking.StartUtc <= now) return Outcome.Skipped;
+        var access = await db.Accesses.AsNoTracking().SingleOrDefaultAsync(b => b.Id == id, ct);
+        if (access is null || access.Status != AccessStatus.Confirmed || access.StartUtc <= now) return Outcome.Skipped;
         var payment = await db.Payments.AsNoTracking().SingleOrDefaultAsync(p => p.AccessId == id, ct);
         if (payment is null) return Outcome.Failed;
 
         // the amount is what the policy says for a practitioner cancel (all of the price), not a number of this feature
-        var refund = RefundPolicy.Settle(MoneyEvent.PractitionerCancelled, Money.Pln(booking.PriceMinor), rateBps: 0, pairAlreadyCharged: true).Refund.Minor;
+        var refund = RefundPolicy.Settle(MoneyEvent.PractitionerCancelled, Money.Pln(access.PriceMinor), rateBps: 0, pairAlreadyCharged: true).Refund.Minor;
         RefundTicket? ticket = null;
         if (refund > 0 && payment.RefundedMinor < payment.AmountMinor) // a refund the provider already holds is not asked for twice
             ticket = await refunds.RequestAsync(id, payment, Math.Min(refund, payment.AmountMinor - payment.RefundedMinor), RefundReason.PractitionerCancelled, ct);

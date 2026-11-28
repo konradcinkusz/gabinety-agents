@@ -50,7 +50,7 @@ public sealed class ChatCompletionsFeature : IServiceFeature
         ILogger log, Stopwatch clock, CancellationToken ct)
     {
         UpstreamResult result;
-        try { result = await upstream.CompleteAsync(package.PractitionerSlug, body, ct); }
+        try { result = await upstream.CompleteAsync(package.AgentSlug, body, ct); }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
             LogOutcome(log, package, 0, 502, clock, ex.GetType().Name);
@@ -80,7 +80,7 @@ public sealed class ChatCompletionsFeature : IServiceFeature
 
         long tokens = 0;
         string? failure = null;
-        try { tokens = await upstream.StreamAsync(package.PractitionerSlug, body, response.Body, ct); }
+        try { tokens = await upstream.StreamAsync(package.AgentSlug, body, response.Body, ct); }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { failure = "ClientDisconnected"; }
         catch (Exception ex) { failure = ex.GetType().Name; }
         finally
@@ -121,5 +121,5 @@ public sealed class ChatCompletionsFeature : IServiceFeature
 
     static void LogOutcome(ILogger log, BookingEntity package, long tokens, int status, Stopwatch clock, string? failure) =>
         log.LogInformation("Chat completion for package {BookingId} agent {AgentSlug}: {Tokens} tokens, status {Status}, {ElapsedMs} ms, failure {Failure}",
-            package.Id, package.PractitionerSlug, tokens, status, clock.ElapsedMilliseconds, failure ?? "none");
+            package.Id, package.AgentSlug, tokens, status, clock.ElapsedMilliseconds, failure ?? "none");
 }

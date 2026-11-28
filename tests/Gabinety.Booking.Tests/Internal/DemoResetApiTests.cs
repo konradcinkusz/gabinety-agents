@@ -43,7 +43,7 @@ public class DemoResetApiTests
         var id = Guid.NewGuid();
         db.Accesses.Add(new BookingEntity
         {
-            Id = id, ClientUserId = clientUser, AgentId = h.Agent, PractitionerUserId = practitionerUser,
+            Id = id, ClientUserId = clientUser, AgentId = h.Agent, AgentUserId = practitionerUser,
             PackageId = h.Package, PackageTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 10000,
             StartUtc = now.AddDays(2), EndUtc = now.AddDays(2).AddHours(1), Status = AccessStatus.Confirmed, BriefText = "demo-brief",
             IdempotencyKey = key, CreatedAt = now,

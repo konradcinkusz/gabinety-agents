@@ -26,7 +26,7 @@ public sealed record SeedOptions(string DirectoryUrl, string DirectoryKey, strin
         var directory = FirstUrl(Need("Backend:Directory"));
         var key = Need("Internal:Keys:Directory");
         var authority = Need("Identity:Authority").TrimEnd('/');
-        var booking = FirstUrl(c["Backend:Booking"] ?? ""); // optional: without it the Booking step says so and is skipped
+        var access = FirstUrl(c["Backend:Booking"] ?? ""); // optional: without it the Booking step says so and is skipped
         var bookingKey = c["Internal:Keys:Booking"]?.Trim() ?? "";
         var reputation = FirstUrl(c["Backend:Reputation"] ?? ""); // optional: without it the Reputation step says so and is skipped
         var reputationKey = c["Internal:Keys:Reputation"]?.Trim() ?? "";
@@ -34,7 +34,7 @@ public sealed record SeedOptions(string DirectoryUrl, string DirectoryKey, strin
         if (c["Seed:Factor"] is { Length: > 0 } f && (!int.TryParse(f, out factor) || factor is < 1 or > 1000)) missing.Add("Seed:Factor (an integer from 1 to 1000)");
         if (missing.Count > 0) throw new SeedException("missing configuration: " + string.Join(", ", missing)); // names of keys, never values
         return new SeedOptions(directory, key, authority, c["Identity:DemoPassword"] is { Length: > 0 } p ? p : DevIdentityPassword)
-            { Factor = factor, BookingUrl = booking, BookingKey = bookingKey, ReputationUrl = reputation, ReputationKey = reputationKey };
+            { Factor = factor, BookingUrl = access, BookingKey = bookingKey, ReputationUrl = reputation, ReputationKey = reputationKey };
     }
 
     /// <summary>The web app's Backend:* values are candidate lists; the seeder takes the first.</summary>

@@ -156,8 +156,8 @@ public sealed class RealAuthProductTests(RealAuthFixture auth, ITestOutputHelper
         // Directory's erasure first asks Booking to cancel the practitioner's future bookings (ADR-0012): here it reaches the Booking host in process, with Booking's key.
         using var directory = new Service<DirectoryApp::Program>(auth.Main.Url, Key, s =>
         {
-            s.RemoveAll<IBookingClient>();
-            s.AddSingleton<IBookingClient>(_ => new BookingClient(_booking.CreateClient(), Key));
+            s.RemoveAll<IAccessClient>();
+            s.AddSingleton<IAccessClient>(_ => new AccessClient(_booking.CreateClient(), Key));
         });
         using var asUser = Client(directory, user.AccessToken);
         Assert.True((await asUser.PostAsJsonAsync("/api/v1/me/practitioner", new { displayName = "Demo Erased Person" })).IsSuccessStatusCode);
@@ -190,11 +190,11 @@ public sealed class RealAuthProductTests(RealAuthFixture auth, ITestOutputHelper
     [Fact]
     public async Task The_hooks_refuse_a_call_without_the_internal_key()
     {
-        using var booking = _booking.CreateClient();
+        using var access = _booking.CreateClient();
         using var reputation = _reputation.CreateClient();
         using var directory = _directory.CreateClient();
 
-        Assert.Equal(HttpStatusCode.Unauthorized, (await booking.DeleteAsync("/internal/v1/subjects/someone")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await access.DeleteAsync("/internal/v1/subjects/someone")).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await reputation.DeleteAsync("/internal/v1/subjects/someone")).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await directory.DeleteAsync("/internal/v1/subjects/someone")).StatusCode);
     }

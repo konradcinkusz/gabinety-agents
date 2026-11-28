@@ -38,9 +38,9 @@ public sealed class SearchFeature : IServiceFeature
         var s = SearchQuery.Parse(ctx.Request.Query);
         if (s.Error is { } e) return PublicJson.Invalid(ctx, e.Field, e.Message);
 
-        var offerings = s.Filter.Apply(db.Packages);
+        var packages = s.Filter.Apply(db.Packages);
         var q = db.Agents.AsNoTracking()
-            .Where(p => p.Status == AgentStatus.Approved && offerings.Any(o => o.AgentId == p.Id));
+            .Where(p => p.Status == AgentStatus.Approved && packages.Any(o => o.AgentId == p.Id));
         if (s.Q is { } text)
         {
             var needle = text.ToLowerInvariant(); // Contains escapes % and _ itself on both providers: the user's text is always literal
@@ -57,14 +57,14 @@ public sealed class SearchFeature : IServiceFeature
 
         var ids = page.Select(p => p.Id).ToList();
         var all = ids.Count == 0 ? [] : await db.Packages.AsNoTracking().Where(o => ids.Contains(o.AgentId) && o.IsActive).ToListAsync(ct); // one query for the page
-        var byPractitioner = all.ToLookup(o => o.AgentId);
+        var byAgent = all.ToLookup(o => o.AgentId);
 
-        var items = page.Select(p => Card(p, byPractitioner[p.Id].ToList(), s.Filter)).ToList();
+        var items = page.Select(p => Card(p, byAgent[p.Id].ToList(), s.Filter)).ToList();
         var next = rows.Count > s.Limit ? new Cursor(page[^1].RankingScore, page[^1].ApprovedAt ?? DateTimeOffset.MinValue, page[^1].Id).Encode() : null;
         return PublicJson.Respond(ctx, new Page<AgentCard>(items, next), "public, max-age=60");
     }
 
-    static AgentCard Card(Agent p, List<Package> active, OfferingFilter? filter)
+    static AgentCard Card(Agent p, List<Package> active, PackageFilter? filter)
     {
         var pool = filter is null ? active : active.Where(filter.Matches).ToList();
         var rating = Display.Rating(p.RatingCount, (double)p.RatingAvg);
@@ -86,9 +86,9 @@ public sealed class SearchFeature : IServiceFeature
         var p = await db.Agents.AsNoTracking().SingleOrDefaultAsync(x => x.Slug == slug && x.Status == AgentStatus.Approved, ct);
         if (p is null) return PublicJson.NotFound(ctx);
         var active = await db.Packages.AsNoTracking().Where(o => o.AgentId == p.Id && o.IsActive).OrderBy(o => o.CreatedAt).ThenBy(o => o.Id).ToListAsync(ct);
-        var offerings = active.Select(o => new Gabinety.Contracts.Directory.Package(o.Id, o.Title, o.Description, o.DurationMinutes, new MoneyDto(o.PriceMinor, o.Currency),
+        var packages = active.Select(o => new Gabinety.Contracts.Directory.Package(o.Id, o.Title, o.Description, o.DurationMinutes, new MoneyDto(o.PriceMinor, o.Currency),
             o.ProblemSlug, o.TechSlugs.ToList(), o.Kind, o.Units)).ToList();
-        var body = ProfileWire.Of(new AgentProfile(Card(p, active, null), p.Bio, p.PortfolioUrl, offerings, p.CompletedCount, p.ApprovedAt ?? p.CreatedAt));
+        var body = ProfileWire.Of(new AgentProfile(Card(p, active, null), p.Bio, p.PortfolioUrl, packages, p.CompletedCount, p.ApprovedAt ?? p.CreatedAt));
         return PublicJson.Respond(ctx, body, "public, max-age=300, stale-while-revalidate=3600", etag: true);
     }
 

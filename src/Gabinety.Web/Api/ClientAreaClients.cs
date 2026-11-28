@@ -4,7 +4,7 @@ using Gabinety.Web.Auth;
 namespace Gabinety.Web.Api;
 
 /// <summary>The rest of the booking calls of a signed-in client or practitioner (CONTRACTS 4; the list is in <c>Clients.cs</c>). Texts of users (the brief, a reason, a dispute) are bodies only: never a URL, a header or a log line.</summary>
-public sealed partial class BookingClient
+public sealed partial class AccessClient
 {
     /// <summary>SPEC 5.1: the booking write calls the payment provider (10 s), so it gets 12 s; a retry is off for a POST, the idempotency key makes the browser's own retry safe.</summary>
     public static readonly TimeSpan CreateBudget = TimeSpan.FromSeconds(12);
@@ -34,7 +34,7 @@ public sealed partial class BookingClient
 /// <summary>
 /// The client's own API keys and the tasks of a package (docs/agentic/PLAN.md B-01, B-05). The text of a task and the name of a key are bodies only: never a URL, a header or a log line.
 /// </summary>
-public sealed partial class BookingClient
+public sealed partial class AccessClient
 {
     public async Task<ApiResult<IReadOnlyList<ApiKeyDto>>> ApiKeysAsync(CancellationToken ct = default) =>
         await GetAsync<IReadOnlyList<ApiKeyDto>>("/api/v1/me/api-keys", await tokens.AccessTokenAsync(ct), ct);
@@ -85,8 +85,8 @@ public sealed class ReviewsClient(HttpClient http, VisitorAddressAccessor visito
     public async Task<ApiResult<Unit>> ReplyAsync(Guid reviewId, string text, CancellationToken ct = default) =>
         await PostAsync<Unit>($"/api/v1/reviews/{reviewId:D}/reply", new { text = text.Trim() }, await tokens.AccessTokenAsync(ct), ct);
 
-    public Task<ApiResult<PageDto<ReviewDto>>> ListAsync(Guid practitionerId, string? cursor, CancellationToken ct = default) =>
-        GetAsync<PageDto<ReviewDto>>($"/api/v1/practitioners/{practitionerId:D}/reviews?limit=20" + (string.IsNullOrEmpty(cursor) ? "" : "&cursor=" + Uri.EscapeDataString(cursor)), null, ct);
+    public Task<ApiResult<PageDto<ReviewDto>>> ListAsync(Guid agentId, string? cursor, CancellationToken ct = default) =>
+        GetAsync<PageDto<ReviewDto>>($"/api/v1/practitioners/{agentId:D}/reviews?limit=20" + (string.IsNullOrEmpty(cursor) ? "" : "&cursor=" + Uri.EscapeDataString(cursor)), null, ct);
 }
 
 /// <summary><c>GET /api/v1/me</c> of the Directory: who the signed-in user is and whether they have a practitioner profile.</summary>

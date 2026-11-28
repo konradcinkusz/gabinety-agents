@@ -76,11 +76,11 @@ public sealed class SummaryPushJob(IServiceScopeFactory scopes, IDirectoryReputa
     }
 
     /// <summary>Touches only <c>pushed_version</c>, and only upwards, so a concurrent change of count, sum or version is never overwritten.</summary>
-    async Task MarkPushedAsync(Guid practitionerId, long version, CancellationToken ct)
+    async Task MarkPushedAsync(Guid agentId, long version, CancellationToken ct)
     {
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ReputationDbContext>();
-        var row = await db.RatingSummaries.SingleOrDefaultAsync(x => x.AgentId == practitionerId, ct);
+        var row = await db.RatingSummaries.SingleOrDefaultAsync(x => x.AgentId == agentId, ct);
         if (row is null || row.PushedVersion >= version) return;
         row.PushedVersion = version;
         await db.SaveChangesAsync(ct);

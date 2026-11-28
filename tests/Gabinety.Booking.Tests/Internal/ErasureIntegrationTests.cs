@@ -52,12 +52,12 @@ public class ErasureIntegrationTests : IAsyncLifetime
         Assert.All(rows, x => { Assert.Equal(shared, x.IdempotencyKey); Assert.Equal("[usunięto]", x.BriefText); Assert.Equal(ErasureApiTests.Token(x.ClientUserId == ErasureApiTests.Token(a) ? a : b), x.ClientUserId); });
         var records = await db.IdempotencyRecords.AsNoTracking().Where(r => r.IdempotencyKey == shared).ToListAsync();
         Assert.Equal(new[] { ErasureApiTests.Token(a), ErasureApiTests.Token(b) }.Order().ToArray(), records.Select(r => r.ClientUserId).Order().ToArray());
-        Assert.Equal(0, await db.Accesses.CountAsync(x => x.ClientUserId == a || x.ClientUserId == b || x.PractitionerUserId == a || x.PractitionerUserId == b));
+        Assert.Equal(0, await db.Accesses.CountAsync(x => x.ClientUserId == a || x.ClientUserId == b || x.AgentUserId == a || x.AgentUserId == b));
 
         // the index still guards: a second row of the same (token, key) is refused
         db.Accesses.Add(new Gabinety.Booking.Features.Bookings.Entities.Access
         {
-            Id = Guid.NewGuid(), ClientUserId = ErasureApiTests.Token(a), AgentId = Guid.NewGuid(), PractitionerUserId = practitionerUser, PackageId = host.Package, PackageTitle = "demo-offering",
+            Id = Guid.NewGuid(), ClientUserId = ErasureApiTests.Token(a), AgentId = Guid.NewGuid(), AgentUserId = practitionerUser, PackageId = host.Package, PackageTitle = "demo-offering",
             DurationMinutes = 60, PriceMinor = 1, StartUtc = host.Clock.GetUtcNow().AddDays(5), EndUtc = host.Clock.GetUtcNow().AddDays(5).AddHours(1), Status = AccessStatus.Confirmed,
             BriefText = "x", IdempotencyKey = shared, CreatedAt = host.Clock.GetUtcNow(),
         });
@@ -73,7 +73,7 @@ public class ErasureIntegrationTests : IAsyncLifetime
             for (var i = 0; i < 1203; i++)
                 db.Accesses.Add(new Gabinety.Booking.Features.Bookings.Entities.Access
                 {
-                    Id = Guid.NewGuid(), ClientUserId = u, AgentId = Guid.NewGuid(), PractitionerUserId = p, PackageId = host.Package, PackageTitle = "demo-offering",
+                    Id = Guid.NewGuid(), ClientUserId = u, AgentId = Guid.NewGuid(), AgentUserId = p, PackageId = host.Package, PackageTitle = "demo-offering",
                     DurationMinutes = 60, PriceMinor = 1, StartUtc = host.Clock.GetUtcNow().AddDays(1), EndUtc = host.Clock.GetUtcNow().AddDays(1).AddHours(1),
                     Status = AccessStatus.Completed, BriefText = "demo-brief", IdempotencyKey = Guid.NewGuid(), CreatedAt = host.Clock.GetUtcNow(),
                 });

@@ -41,7 +41,7 @@ public class InternalFactory : VerificationFactory
         return o;
     });
 
-    public Task<List<Package>> OfferingsOf(Guid practitionerId) => Db(db => db.Packages.AsNoTracking().Where(o => o.AgentId == practitionerId).ToListAsync());
+    public Task<List<Package>> OfferingsOf(Guid agentId) => Db(db => db.Packages.AsNoTracking().Where(o => o.AgentId == agentId).ToListAsync());
 }
 
 public static class Ik

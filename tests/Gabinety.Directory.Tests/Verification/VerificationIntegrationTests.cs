@@ -81,7 +81,7 @@ public class VerificationIntegrationTests
         string? cursor = null;
         do
         {
-            var page = (await c.GetFromJsonAsync<AdminPractitionerPage>("/api/v1/admin/practitioners?limit=5" + (cursor is null ? "" : "&cursor=" + Uri.EscapeDataString(cursor)), J))!;
+            var page = (await c.GetFromJsonAsync<AdminAgentPage>("/api/v1/admin/practitioners?limit=5" + (cursor is null ? "" : "&cursor=" + Uri.EscapeDataString(cursor)), J))!;
             got.AddRange(page.Items.Select(r => r.Id)); cursor = page.NextCursor;
         } while (cursor is not null);
         Assert.Equal(expected.OrderBy(e => e.At).ThenBy(e => e.Id).Select(e => e.Id), got);

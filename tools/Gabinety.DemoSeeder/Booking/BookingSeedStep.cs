@@ -74,13 +74,13 @@ public sealed class BookingSeedStep : ISeedStep
     public static DemoOffering Pick(SeededPractitioner seeded, PackagePick pick)
     {
         var demo = DemoCatalog.Agents.Single(p => p.UserName == seeded.Key);
-        var offering = pick switch
+        var package = pick switch
         {
             PackagePick.SingleTask => demo.Packages.FirstOrDefault(o => o.Kind == DemoKind.Tasks && o.Units == 1),
             PackagePick.TaskPack => demo.Packages.FirstOrDefault(o => o.Kind == DemoKind.Tasks && o.Units > 1),
             _ => demo.Packages.FirstOrDefault(o => o.Kind == DemoKind.Chat),
         };
-        return offering ?? throw new SeedException($"booking: {seeded.Key} has no {pick} package in the catalog");
+        return package ?? throw new SeedException($"booking: {seeded.Key} has no {pick} package in the catalog");
     }
 
     async Task<(Work Work, bool Created)> BuildAsync(SeedContext context, BookingApi api, DemoBooking plan, List<SeededPractitioner> approved, List<DemoUser> clients,
@@ -89,8 +89,8 @@ public sealed class BookingSeedStep : ISeedStep
         DemoNames.Require(plan.Key);
         var seeded = approved[plan.Agent % approved.Count];
         var client = clients[plan.Client % clients.Count];
-        var offering = Pick(seeded, plan.Package);
-        var offeringId = seeded.Packages.TryGetValue(offering.Title, out var id) ? id : throw new SeedException($"booking: {seeded.Key} has no offering '{plan.Package}' in the Directory");
+        var package = Pick(seeded, plan.Package);
+        var offeringId = seeded.Packages.TryGetValue(package.Title, out var id) ? id : throw new SeedException($"booking: {seeded.Key} has no offering '{plan.Package}' in the Directory");
 
         if (known.TryGetValue(plan.Key, out var existing))
         {

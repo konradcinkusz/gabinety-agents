@@ -74,10 +74,10 @@ public static class ReviewModerator
         return result;
     }
 
-    static Task ApplySummaryAsync(ReputationDbContext db, Guid practitionerId, int rating, ReviewStatus from, ReviewStatus to, CancellationToken ct)
+    static Task ApplySummaryAsync(ReputationDbContext db, Guid agentId, int rating, ReviewStatus from, ReviewStatus to, CancellationToken ct)
     {
-        if (to == ReviewStatus.Published) return RatingSummaryStore.ApplyAsync(db, practitionerId, 1, rating, ct);
-        if (from == ReviewStatus.Published) return RatingSummaryStore.ApplyAsync(db, practitionerId, -1, -rating, ct);
+        if (to == ReviewStatus.Published) return RatingSummaryStore.ApplyAsync(db, agentId, 1, rating, ct);
+        if (from == ReviewStatus.Published) return RatingSummaryStore.ApplyAsync(db, agentId, -1, -rating, ct);
         return Task.CompletedTask;
     }
 

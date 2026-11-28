@@ -48,7 +48,7 @@ public class SearchFactory : VerificationFactory
     }
 
     /// <summary>Adds a practitioner with its offerings. Status Approved by default; ApprovedAt counts up from Epoch unless set.</summary>
-    public Task<Agent> Seed(AgentStatus status = AgentStatus.Approved, Action<Agent>? configure = null, params Spec[] offerings) => Db(async db =>
+    public Task<Agent> Seed(AgentStatus status = AgentStatus.Approved, Action<Agent>? configure = null, params Spec[] packages) => Db(async db =>
     {
         var n = Guid.NewGuid().ToString("n");
         var k = Interlocked.Increment(ref _n);
@@ -60,7 +60,7 @@ public class SearchFactory : VerificationFactory
         };
         configure?.Invoke(p);
         db.Agents.Add(p);
-        foreach (var (s, i) in offerings.Select((s, i) => (s, i)))
+        foreach (var (s, i) in packages.Select((s, i) => (s, i)))
             db.Packages.Add(new Gabinety.Directory.Features.Offerings.Package
             {
                 Id = Guid.NewGuid(), AgentId = p.Id, Title = "Demo offering", Description = "d", DurationMinutes = (short)s.Duration, PriceMinor = s.Price,
@@ -70,8 +70,8 @@ public class SearchFactory : VerificationFactory
         return p;
     });
 
-    public Task<Agent> Approved(Action<Agent>? configure = null, params Spec[] offerings) =>
-        Seed(AgentStatus.Approved, configure, offerings.Length == 0 ? [new Spec()] : offerings);
+    public Task<Agent> Approved(Action<Agent>? configure = null, params Spec[] packages) =>
+        Seed(AgentStatus.Approved, configure, packages.Length == 0 ? [new Spec()] : packages);
 }
 
 public static class Sk

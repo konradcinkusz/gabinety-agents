@@ -66,7 +66,7 @@ public class InternalPushTests(InternalFactory f) : IClassFixture<InternalFactor
         var r = await Ik.PutStats(f.Internal(), p.Id, 20, 1, 0, 10, 7);
         Assert.Equal(HttpStatusCode.NoContent, r.StatusCode);
         var a = await f.Load(p.Id);
-        Assert.Equal((20, 1, 0, 10, 7L), (a.CompletedCount, a.PractitionerCancelCount, a.NoShowUpheldCount, a.OpenSlots14d, a.StatsVersion));
+        Assert.Equal((20, 1, 0, 10, 7L), (a.CompletedCount, a.AgentCancelCount, a.NoShowUpheldCount, a.OpenSlots14d, a.StatsVersion));
         Assert.Equal(0.25m, a.ProfileCompleteness); // headline 0.15 + open slots 0.10 (CONTRACTS 3.5); the seeded row had no stored completeness
         var expected = Math.Round((decimal)Ranker.Score(new RankingInput(0, 0, 20, 1, 0, (double)a.ProfileCompleteness, 10)), 2, MidpointRounding.AwayFromZero);
         Assert.Equal(expected, a.RankingScore);
@@ -83,8 +83,8 @@ public class InternalPushTests(InternalFactory f) : IClassFixture<InternalFactor
         var before = await f.Load(p.Id);
         Assert.Equal(HttpStatusCode.NoContent, (await Ik.PutStats(f.Internal(), p.Id, 0, 9, 9, 0, version)).StatusCode);
         var after = await f.Load(p.Id);
-        Assert.Equal((before.CompletedCount, before.PractitionerCancelCount, before.NoShowUpheldCount, before.OpenSlots14d, before.StatsVersion, before.RankingScore, before.ProfileCompleteness),
-            (after.CompletedCount, after.PractitionerCancelCount, after.NoShowUpheldCount, after.OpenSlots14d, after.StatsVersion, after.RankingScore, after.ProfileCompleteness));
+        Assert.Equal((before.CompletedCount, before.AgentCancelCount, before.NoShowUpheldCount, before.OpenSlots14d, before.StatsVersion, before.RankingScore, before.ProfileCompleteness),
+            (after.CompletedCount, after.AgentCancelCount, after.NoShowUpheldCount, after.OpenSlots14d, after.StatsVersion, after.RankingScore, after.ProfileCompleteness));
     }
 
     [Fact]

@@ -30,7 +30,7 @@ public sealed partial class SuspiciousPairsFeature : IServiceFeature
     public void Map(IEndpointRouteBuilder endpoints) =>
         endpoints.MapGet("/api/v1/admin/suspicious-pairs", ListAsync).RequireAuthorization("Admin");
 
-    static async Task<IResult> ListAsync(int? limit, string? cursor, ReputationDbContext db, IPairCountsClient booking, CancellationToken ct)
+    static async Task<IResult> ListAsync(int? limit, string? cursor, ReputationDbContext db, IPairCountsClient access, CancellationToken ct)
     {
         var errors = new Dictionary<string, string[]>();
         if (limit is < 1) errors["limit"] = ["The limit is at least 1."];
@@ -44,7 +44,7 @@ public sealed partial class SuspiciousPairsFeature : IServiceFeature
         {
             for (var scanned = 0; scanned < MaxScanPages; scanned++)
             {
-                var page = await booking.GetAsync(MinBookings, next, take, ct);
+                var page = await access.GetAsync(MinBookings, next, take, ct);
                 next = page.NextCursor;
                 items.AddRange(await MatchAsync(page.Items.Take(take).Where(p => p.Accesses >= MinBookings).ToList(), db, ct));
                 if (items.Count > 0 || next is null) break;
@@ -62,9 +62,9 @@ public sealed partial class SuspiciousPairsFeature : IServiceFeature
     {
         if (pairs.Count == 0) return [];
         var clients = pairs.Select(p => p.ClientUserId).Distinct().ToList();
-        var practitioners = pairs.Select(p => p.AgentId).Distinct().ToList();
+        var agents = pairs.Select(p => p.AgentId).Distinct().ToList();
         var rows = await db.Reviews.AsNoTracking()
-            .Where(r => r.Status != ReviewStatus.Rejected && clients.Contains(r.ClientUserId) && practitioners.Contains(r.AgentId))
+            .Where(r => r.Status != ReviewStatus.Rejected && clients.Contains(r.ClientUserId) && agents.Contains(r.AgentId))
             .Select(r => new { r.ClientUserId, r.AgentId, r.Rating })
             .ToListAsync(ct);
         var byPair = rows.GroupBy(r => (r.ClientUserId, r.AgentId)).ToDictionary(g => g.Key, g => (Count: g.Count(), AllFive: g.All(r => r.Rating == FiveStars)));

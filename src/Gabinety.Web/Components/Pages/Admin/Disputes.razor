@@ -38,7 +38,7 @@
                         <dt>@PlAdmin.Disputes.Offer</dt><dd>@(b?.PackageTitle ?? PlAdmin.Disputes.BookingUnreadable)</dd>
                         <dt>@PlAdmin.Disputes.Client</dt><dd><span title="@d.ClientUserId">@string.Format(PlAdmin.Common.ClientRef, AdminFormat.ShortRef(d.ClientUserId))</span></dd>
                         <dt>@PlAdmin.Disputes.Agent</dt>
-                        <dd><span title="@d.PractitionerUserId">@(card.PractitionerName ?? string.Format(PlAdmin.Common.AgentRef, AdminFormat.ShortRef(d.PractitionerUserId)))</span></dd>
+                        <dd><span title="@d.AgentUserId">@(card.PractitionerName ?? string.Format(PlAdmin.Common.AgentRef, AdminFormat.ShortRef(d.AgentUserId)))</span></dd>
                         @if (b is not null)
                         {
                             <dt>@PlAdmin.Disputes.Price</dt><dd class="num">@AdminFormat.Pln(b.Price.AmountMinor)</dd>

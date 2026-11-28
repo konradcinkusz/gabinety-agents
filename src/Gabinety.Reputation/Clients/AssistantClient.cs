@@ -66,7 +66,7 @@ public static class TriageWire
 
 /// <summary>
 /// Typed client for the Assistant triage (ADR-0007, SPEC 5.1 Reputation -> Assistant: 25 s, no retry). Built outside the shared resilience pipeline, like
-/// <see cref="BookingClient"/>, so the budget is exactly this one. No retry here: SPEC 5.1 says none, and the job's own bounded attempts with backoff
+/// <see cref="AccessClient"/>, so the budget is exactly this one. No retry here: SPEC 5.1 says none, and the job's own bounded attempts with backoff
 /// (a later run) are the retry. The review text travels only in the request body; no message, result or log carries it, the URL or the key.
 /// </summary>
 public sealed class AssistantClient(HttpClient http, string? internalKey, TimeSpan? timeout = null) : IAssistantClient

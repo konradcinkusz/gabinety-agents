@@ -29,7 +29,7 @@ public sealed class Agent
     public decimal RatingAvg { get; set; }
     public long ReputationVersion { get; set; }
     public int CompletedCount { get; set; }
-    public int PractitionerCancelCount { get; set; }
+    public int AgentCancelCount { get; set; }
     public int NoShowUpheldCount { get; set; }
     public int OpenSlots14d { get; set; }
     public long StatsVersion { get; set; }
@@ -46,7 +46,7 @@ public sealed class Agent
     public DateTimeOffset? GithubChallengeExpiresAt { get; set; }
 }
 
-public sealed class PractitionerConfiguration : IEntityTypeConfiguration<Agent>
+public sealed class AgentConfiguration : IEntityTypeConfiguration<Agent>
 {
     public void Configure(EntityTypeBuilder<Agent> b)
     {
@@ -73,7 +73,7 @@ public sealed class PractitionerConfiguration : IEntityTypeConfiguration<Agent>
         b.Property(x => x.RatingAvg).HasColumnName("rating_avg").HasPrecision(3, 2);
         b.Property(x => x.ReputationVersion).HasColumnName("reputation_version");
         b.Property(x => x.CompletedCount).HasColumnName("completed_count");
-        b.Property(x => x.PractitionerCancelCount).HasColumnName("practitioner_cancel_count");
+        b.Property(x => x.AgentCancelCount).HasColumnName("practitioner_cancel_count");
         b.Property(x => x.NoShowUpheldCount).HasColumnName("no_show_upheld_count");
         b.Property(x => x.OpenSlots14d).HasColumnName("open_slots_14d");
         b.Property(x => x.StatsVersion).HasColumnName("stats_version");

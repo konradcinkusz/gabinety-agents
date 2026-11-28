@@ -42,7 +42,7 @@ public class MyBookingsIntegrationTests : IAsyncLifetime
             foreach (var id in ids)
                 db.Accesses.Add(new BookingEntity
                 {
-                    Id = id, ClientUserId = client, AgentId = Guid.NewGuid(), PractitionerUserId = "demo-p", PackageId = host.Package, PackageTitle = "demo-offering",
+                    Id = id, ClientUserId = client, AgentId = Guid.NewGuid(), AgentUserId = "demo-p", PackageId = host.Package, PackageTitle = "demo-offering",
                     DurationMinutes = 60, PriceMinor = 10000, StartUtc = start, EndUtc = start.AddHours(1), Status = AccessStatus.Expired, BriefText = "demo-brief",
                     IdempotencyKey = Guid.NewGuid(), CreatedAt = host.Clock.GetUtcNow(),
                 });

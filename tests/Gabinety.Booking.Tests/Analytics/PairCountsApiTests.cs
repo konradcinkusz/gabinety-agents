@@ -46,7 +46,7 @@ public class PairCountsApiTests
                     });
                 db.Accesses.Add(new BookingEntity
                 {
-                    Id = id, ClientUserId = client, AgentId = practitioner, PractitionerUserId = "demo-practitioner-user",
+                    Id = id, ClientUserId = client, AgentId = practitioner, AgentUserId = "demo-practitioner-user",
                     PackageId = h.Package, PackageTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 12345,
                     StartUtc = start, EndUtc = start.AddHours(1), Status = status, BriefText = "demo-brief-SECRET-TEXT",
                     IdempotencyKey = Guid.NewGuid(), CreatedAt = start.AddDays(-2),

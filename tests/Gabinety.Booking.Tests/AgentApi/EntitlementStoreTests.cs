@@ -47,8 +47,8 @@ public class EntitlementStoreTests
     {
         await using var h = new CreateHost();
         var wanted = Guid.NewGuid();
-        await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, total: 3, offering: Guid.NewGuid(), created: TimeSpan.FromMinutes(1));
-        var id = await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, total: 3, offering: wanted, created: TimeSpan.FromMinutes(2));
+        await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, total: 3, package: Guid.NewGuid(), created: TimeSpan.FromMinutes(1));
+        var id = await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, total: 3, package: wanted, created: TimeSpan.FromMinutes(2));
         Assert.Equal(id, (await InStore(h, s => s.FindAsync(Me, Slug, PackageKind.Tasks, wanted, default)))!.Id);
         Assert.Null(await InStore(h, s => s.FindAsync(Me, Slug, PackageKind.Tasks, Guid.NewGuid(), default)));
     }

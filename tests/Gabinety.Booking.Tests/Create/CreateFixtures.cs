@@ -70,7 +70,7 @@ sealed class CreateHost : WebApplicationFactory<Program>
     public bool Active = true;
     public string? MeetingUrl;
     public Action<IServiceCollection>? Configure;
-    public string PractitionerName = "Demo Practitioner", PractitionerSlug = "demo-practitioner";
+    public string PractitionerName = "Demo Practitioner", AgentSlug = "demo-practitioner";
     /// <summary>The <c>name</c> claim the tokens carry (authservice puts the e-mail there); null: no such claim.</summary>
     public string? NameClaim;
     public bool DirectoryDown;
@@ -96,11 +96,11 @@ sealed class CreateHost : WebApplicationFactory<Program>
             {
                 offeringId = Package, practitionerId = Agent, practitionerUserId = OwnerUserId, practitionerStatus = Status,
                 title = Title, durationMinutes = Minutes, price = new { amountMinor = PriceMinor, currency = "PLN" },
-                meetingUrl = MeetingUrl, isActive = Active, kind = Kind, units = Units, practitionerSlug = PractitionerSlug,
+                meetingUrl = MeetingUrl, isActive = Active, kind = Kind, units = Units, practitionerSlug = AgentSlug,
             })
             : r.RequestUri!.AbsolutePath == $"/internal/v1/practitioners/{Agent}"
                 ? (DirectoryDown ? new HttpResponseMessage(System.Net.HttpStatusCode.ServiceUnavailable)
-                    : FakeDirectory.Json(new { practitionerId = Agent, displayName = PractitionerName, slug = PractitionerSlug }))
+                    : FakeDirectory.Json(new { practitionerId = Agent, displayName = PractitionerName, slug = AgentSlug }))
             : new HttpResponseMessage(System.Net.HttpStatusCode.NotFound);
     }
 
@@ -177,9 +177,9 @@ sealed class CreateHost : WebApplicationFactory<Program>
     }
 
     /// <summary>The body of a purchase; <c>start</c> is only sent when a test asks for it (the server ignores it).</summary>
-    public object Req(string? start = null, string? text = null, Guid? offering = null) => new
+    public object Req(string? start = null, string? text = null, Guid? package = null) => new
     {
-        offeringId = offering ?? Package, startUtc = start,
+        offeringId = package ?? Package, startUtc = start,
         brief = new { text = text ?? "demo-brief: I need help with a first review of my plan", problemSlug = (string?)null, aiAssisted = false },
     };
 

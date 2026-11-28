@@ -40,9 +40,9 @@ public class NotificationFeatureTests
         const string address = "demo-secret-person@demo.invalid";
         using var t = new NotificationHost(services: s => s.AddSingleton<IEmailSender, LogEmailSender>()); // the real default, over the test resolver
         t.Contacts.Addresses["demo-client"] = address;
-        var booking = await t.AddBooking();
-        var n = t.Add(booking.Id, NotificationKind.BookingConfirmed, "demo-client");
-        var mail = NotificationTemplates.Render(NotificationKind.BookingConfirmed, "http://localhost:3000", booking.Id, booking.StartUtc);
+        var access = await t.AddBooking();
+        var n = t.Add(access.Id, NotificationKind.BookingConfirmed, "demo-client");
+        var mail = NotificationTemplates.Render(NotificationKind.BookingConfirmed, "http://localhost:3000", access.Id, access.StartUtc);
 
         Assert.Equal(1, await t.Run());
 
@@ -66,8 +66,8 @@ public class NotificationFeatureTests
         using var t = new NotificationHost();
         t.Sender.AlwaysFail = true;
         t.Contacts.Addresses["demo-client"] = address;
-        var booking = await t.AddBooking();
-        t.Add(booking.Id, NotificationKind.Cancelled, "demo-client");
+        var access = await t.AddBooking();
+        t.Add(access.Id, NotificationKind.Cancelled, "demo-client");
         await t.Run();
         var everything = string.Join('\n', t.Host.Logs.Lines);
         Assert.DoesNotContain(address, everything);

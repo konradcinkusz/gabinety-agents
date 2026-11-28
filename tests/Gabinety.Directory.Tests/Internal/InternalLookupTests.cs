@@ -18,7 +18,7 @@ public class InternalLookupTests(InternalFactory f) : IClassFixture<InternalFact
         var body = (await r.Content.ReadFromJsonAsync<OfferingLookup>(Ik.J))!;
         Assert.Equal(o.Id, body.PackageId);
         Assert.Equal(p.Id, body.AgentId);
-        Assert.Equal(p.UserId, body.PractitionerUserId);
+        Assert.Equal(p.UserId, body.AgentUserId);
         Assert.Equal(AgentStatus.Approved, body.AgentStatus);
         Assert.Equal("Demo review", body.Title);
         Assert.Equal(30, body.DurationMinutes);
@@ -90,6 +90,6 @@ public class InternalLookupTests(InternalFactory f) : IClassFixture<InternalFact
         Assert.Equal(HttpStatusCode.Unauthorized, (await f.CreateClient().GetAsync($"/internal/v1/practitioners/{Guid.NewGuid()}")).StatusCode);
 
     // The shapes Booking's DirectoryClient reads (src/Gabinety.Booking/Clients/DirectoryClient.cs).
-    sealed record OfferingLookup([property: JsonPropertyName("offeringId")] Guid PackageId, [property: JsonPropertyName("practitionerId")] Guid AgentId, string PractitionerUserId, [property: JsonPropertyName("practitionerStatus")] AgentStatus AgentStatus,
+    sealed record OfferingLookup([property: JsonPropertyName("offeringId")] Guid PackageId, [property: JsonPropertyName("practitionerId")] Guid AgentId, [property: JsonPropertyName("practitionerUserId")] string AgentUserId, [property: JsonPropertyName("practitionerStatus")] AgentStatus AgentStatus,
         string Title, int DurationMinutes, MoneyDto Price, string? MeetingUrl, bool IsActive);
 }

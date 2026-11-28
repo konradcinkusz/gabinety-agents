@@ -25,16 +25,16 @@ public sealed class FakeEmail : IEmailVerifiedLookup
 }
 
 /// <summary>The Booking double of the suspension and erasure cascade: records the calls, can fail, and can look at the world at the moment of the call.</summary>
-public sealed class FakeBooking : Gabinety.Directory.Clients.IBookingClient
+public sealed class FakeBooking : Gabinety.Directory.Clients.IAccessClient
 {
     public readonly List<Guid> Calls = [];
     public bool Down;
     public Func<Guid, Task>? AtCall;
-    public async Task CancelFutureBookingsAsync(Guid practitionerId, CancellationToken ct)
+    public async Task CancelFutureAccessesAsync(Guid agentId, CancellationToken ct)
     {
-        lock (Calls) Calls.Add(practitionerId);
-        if (AtCall is not null) await AtCall(practitionerId);
-        if (Down) throw new Gabinety.Directory.Clients.BookingUnavailableException();
+        lock (Calls) Calls.Add(agentId);
+        if (AtCall is not null) await AtCall(agentId);
+        if (Down) throw new Gabinety.Directory.Clients.AccessUnavailableException();
     }
 }
 
@@ -70,7 +70,7 @@ public class ProfileFactory : WebApplicationFactory<Program>
         builder.ConfigureTestServices(s =>
         {
             s.AddSingleton<IEmailVerifiedLookup>(Email);
-            s.AddSingleton<Gabinety.Directory.Clients.IBookingClient>(Access);
+            s.AddSingleton<Gabinety.Directory.Clients.IAccessClient>(Access);
             s.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o =>
             {
                 var cfg = new OpenIdConnectConfiguration { Issuer = Issuer };

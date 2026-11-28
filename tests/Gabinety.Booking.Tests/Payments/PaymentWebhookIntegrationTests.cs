@@ -80,10 +80,10 @@ public class PaymentWebhookIntegrationTests : IAsyncLifetime
             var outcomes = (await Task.WhenAll(rs.Select(Outcome))).Order().ToArray();
             Assert.True(outcomes.SequenceEqual(["Applied", "Ignored"]), $"round {round}: {string.Join(",", outcomes)}");
             await using var db = Db();
-            var booking = await db.Accesses.SingleAsync(b => b.Id == id);
+            var access = await db.Accesses.SingleAsync(b => b.Id == id);
             var charges = await db.LedgerEntries.CountAsync(l => l.AccessId == id && l.Kind == LedgerKind.ClientCharge);
-            Assert.Equal(booking.Status == AccessStatus.Confirmed ? 1 : 0, charges);
-            Assert.Contains(booking.Status, new[] { AccessStatus.Confirmed, AccessStatus.Expired });
+            Assert.Equal(access.Status == AccessStatus.Confirmed ? 1 : 0, charges);
+            Assert.Contains(access.Status, new[] { AccessStatus.Confirmed, AccessStatus.Expired });
         }
     }
 

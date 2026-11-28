@@ -29,7 +29,7 @@ public class MyBookingsApiTests
         {
             db.Accesses.Add(new BookingEntity
             {
-                Id = id.Value, ClientUserId = clientOverride ?? w.Client, AgentId = h.Agent, PractitionerUserId = practitionerOverride ?? w.Agent,
+                Id = id.Value, ClientUserId = clientOverride ?? w.Client, AgentId = h.Agent, AgentUserId = practitionerOverride ?? w.Agent,
                 PackageId = h.Package, PackageTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 10000, StartUtc = start, EndUtc = start + H,
                 Status = status, BriefText = "demo-brief: private words of the client", IdempotencyKey = Guid.NewGuid(), CreatedAt = h.Clock.GetUtcNow(),
                 MeetingUrlSnapshot = status == AccessStatus.Confirmed ? "https://meet.demo.invalid/secret-room" : null,

@@ -44,11 +44,11 @@ public class CreateBookingApiTests
         var b = Assert.Single(await h.Accesses());
         Assert.Equal(id, b.Id);
         Assert.Equal(AccessStatus.PendingPayment, b.Status);
-        Assert.Equal((Client, "demo-practitioner-user", h.Package), (b.ClientUserId, b.PractitionerUserId, b.PackageId));
+        Assert.Equal((Client, "demo-practitioner-user", h.Package), (b.ClientUserId, b.AgentUserId, b.PackageId));
         Assert.Equal(("demo-offering", (short)60, 10000L), (b.PackageTitle, b.DurationMinutes, b.PriceMinor));
         Assert.Equal(h.Clock.GetUtcNow(), b.StartUtc);                 // valid from the purchase, not from a slot
         Assert.Equal(TimeSpan.FromDays(30), b.EndUtc - b.StartUtc);   // Access:ValidityDays default
-        Assert.Equal((PackageKind.Tasks, 1L, 0L, "demo-practitioner"), (b.Kind, b.UnitsTotal, b.UnitsUsed, b.PractitionerSlug));
+        Assert.Equal((PackageKind.Tasks, 1L, 0L, "demo-practitioner"), (b.Kind, b.UnitsTotal, b.UnitsUsed, b.AgentSlug));
         Assert.Equal(new DateTimeOffset(2026, 11, 16, 12, 10, 0, TimeSpan.Zero), b.HoldExpiresAt);
         Assert.Equal(Guid.Parse(key), b.IdempotencyKey);
 
@@ -84,7 +84,7 @@ public class CreateBookingApiTests
         h.Kind = "Tasks"; h.Units = 7;
         Assert.Equal(HttpStatusCode.Created, (await CreateHost.Post(c, h.Req(), CreateHost.Key())).StatusCode);
         var tasks = (await h.Accesses()).Single(b => b.Kind == PackageKind.Tasks);
-        Assert.Equal((7L, "demo-practitioner"), (tasks.UnitsTotal, tasks.PractitionerSlug));
+        Assert.Equal((7L, "demo-practitioner"), (tasks.UnitsTotal, tasks.AgentSlug));
     }
 
     [Fact]
@@ -158,7 +158,7 @@ public class CreateBookingApiTests
     {
         await using var h = await Host();
         var c = h.ClientFor(Client);
-        await Problem(await CreateHost.Post(c, h.Req(offering: Guid.NewGuid()), CreateHost.Key()), HttpStatusCode.NotFound, "not_found");
+        await Problem(await CreateHost.Post(c, h.Req(package: Guid.NewGuid()), CreateHost.Key()), HttpStatusCode.NotFound, "not_found");
         h.Directory.Down = true;
         await Problem(await CreateHost.Post(c, h.Req(), CreateHost.Key()), HttpStatusCode.ServiceUnavailable, "dependency_unavailable");
     }
@@ -268,7 +268,7 @@ public class CreateBookingApiTests
     {
         await using var h = await Host();
         var c = h.ClientFor(Client);
-        await Problem(await CreateHost.Post(c, h.Req(offering: Guid.Empty), CreateHost.Key()), (HttpStatusCode)422, "validation_failed");
+        await Problem(await CreateHost.Post(c, h.Req(package: Guid.Empty), CreateHost.Key()), (HttpStatusCode)422, "validation_failed");
         await Problem(await CreateHost.Post(c, new { offeringId = h.Package, startUtc = CreateHost.Tuesday10 }, CreateHost.Key()), (HttpStatusCode)422, "validation_failed");
         Assert.Empty(await h.Accesses());
     }

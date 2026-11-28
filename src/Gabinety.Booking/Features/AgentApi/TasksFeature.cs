@@ -85,7 +85,7 @@ public sealed class TasksFeature : IServiceFeature
         var now = time.GetUtcNow();
         var task = new AgentTask
         {
-            Id = Guid.NewGuid(), AccessId = package.Id, ClientUserId = package.ClientUserId, PractitionerSlug = package.PractitionerSlug, PackageId = package.PackageId,
+            Id = Guid.NewGuid(), AccessId = package.Id, ClientUserId = package.ClientUserId, AgentSlug = package.AgentSlug, PackageId = package.PackageId,
             Status = AgentTaskStatus.Queued, InputText = input, CreatedAt = now,
         };
         db.AgentTasks.Add(task);
@@ -96,7 +96,7 @@ public sealed class TasksFeature : IServiceFeature
             await entitlements.RefundUnitsAsync(package.Id, 1, CancellationToken.None);
             throw;
         }
-        log.LogInformation("Task {TaskId} queued for package {BookingId} agent {AgentSlug}", task.Id, package.Id, package.PractitionerSlug);
+        log.LogInformation("Task {TaskId} queued for package {BookingId} agent {AgentSlug}", task.Id, package.Id, package.AgentSlug);
         return task;
     }
 

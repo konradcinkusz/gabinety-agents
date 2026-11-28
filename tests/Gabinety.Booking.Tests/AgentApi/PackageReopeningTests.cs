@@ -32,7 +32,7 @@ static class Reopen
     /// <summary>A confirmed <c>Tasks</c> package of <paramref name="total"/> units with every unit ordered through the real endpoint (so each has a queued task and a used unit).</summary>
     public static async Task<(Guid Package, List<Guid> Tasks)> Ordered(CreateHost h, string client, string slug, Guid offer, long total = 1, TimeSpan? validFor = null)
     {
-        var package = await AgentApiFx.Package(h, client, slug, PackageKind.Tasks, total, offering: offer, validFor: validFor);
+        var package = await AgentApiFx.Package(h, client, slug, PackageKind.Tasks, total, package: offer, validFor: validFor);
         var tasks = new List<Guid>();
         for (var i = 0; i < total; i++)
             tasks.Add((await (await h.ClientFor(client).PostAsJsonAsync($"/api/v1/bookings/{package}/tasks", new { input = Input })).Body()).GetProperty("id").GetGuid());
@@ -206,9 +206,9 @@ public class PackageReopeningTests
     public async Task A_package_in_a_claim_or_cancelled_keeps_its_status_and_gets_its_unit_back(AccessStatus status)
     {
         await using var h = Reopen.Host();
-        var package = await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, total: 1, used: 1, status: status, offering: Offer);
+        var package = await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, total: 1, used: 1, status: status, package: Offer);
         var task = Guid.NewGuid();
-        await h.Seed(db => db.AgentTasks.Add(new AgentTask { Id = task, AccessId = package, ClientUserId = Me, PractitionerSlug = Slug, PackageId = Offer, Status = AgentTaskStatus.Queued, InputText = Reopen.Input, CreatedAt = h.Clock.GetUtcNow() }));
+        await h.Seed(db => db.AgentTasks.Add(new AgentTask { Id = task, AccessId = package, ClientUserId = Me, AgentSlug = Slug, PackageId = Offer, Status = AgentTaskStatus.Queued, InputText = Reopen.Input, CreatedAt = h.Clock.GetUtcNow() }));
         await Reopen.FailAll(h, Me);
         var b = await Life.Row(h, package);
         Assert.Equal((status, 0L), (b.Status, b.UnitsUsed));
@@ -236,12 +236,12 @@ public class PackageReopeningTests
         for (var round = 0; round < 40; round++)
         {
             var client = AgentApiFx.NewUser();
-            var package = await AgentApiFx.Package(h, client, Slug, PackageKind.Tasks, total: 1, used: 1, offering: Offer);
+            var package = await AgentApiFx.Package(h, client, Slug, PackageKind.Tasks, total: 1, used: 1, package: Offer);
             var now = h.Clock.GetUtcNow();
             // a task on its last start that has already timed out: the next run counts it as failed (Attempts = 3, Running for more than the timeout)
             await h.Seed(db => db.AgentTasks.Add(new AgentTask
             {
-                Id = Guid.NewGuid(), AccessId = package, ClientUserId = client, PractitionerSlug = Slug, PackageId = Offer, Status = AgentTaskStatus.Running, InputText = Reopen.Input,
+                Id = Guid.NewGuid(), AccessId = package, ClientUserId = client, AgentSlug = Slug, PackageId = Offer, Status = AgentTaskStatus.Running, InputText = Reopen.Input,
                 Attempts = 3, CreatedAt = now.AddHours(-2), StartedAt = now.AddHours(-1),
             }));
 

@@ -66,10 +66,10 @@ public class SmtpMailpitIntegrationTests
         host.Settings["Notifications:Smtp:User"] = "demo-smtp-user";
         host.Settings["Notifications:Smtp:Password"] = SmtpPassword;
         host.Settings["Notifications:Smtp:FromAddress"] = "powiadomienia@demo.invalid";
-        var offering = host.Directory.Override!;
+        var package = host.Directory.Override!;
         host.Directory.Override = (r, n) => r.RequestUri!.AbsolutePath == $"/internal/v1/practitioners/{host.OwnerUserId}/contact"
             ? FakeDirectory.Json(new { email = PractitionerAddress })
-            : offering(r, n);
+            : package(r, n);
         Assert.IsType<SmtpEmailSender>(host.Services.GetRequiredService<IEmailSender>());
         Assert.IsType<ContactResolver>(host.Services.GetRequiredService<IContactResolver>());
 

@@ -27,7 +27,7 @@ public class StatsPushCalculationTests : IDisposable
         await StatsFx.Seed(h, status, kind: status == AccessStatus.Disputed ? "practitioner_no_show" : null);
         var s = await StatsFx.StatsOf(h);
         Assert.Equal(completed, s.CompletedCount);
-        Assert.Equal(cancelled, s.PractitionerCancelCount);
+        Assert.Equal(cancelled, s.AgentCancelCount);
         Assert.Equal(0, s.NoShowUpheldCount);
     }
 
@@ -44,7 +44,7 @@ public class StatsPushCalculationTests : IDisposable
         var s = await StatsFx.StatsOf(h);
         Assert.Equal(completed, s.CompletedCount);
         Assert.Equal(upheld, s.NoShowUpheldCount);
-        Assert.Equal(0, s.PractitionerCancelCount);
+        Assert.Equal(0, s.AgentCancelCount);
     }
 
     [Fact]
@@ -53,12 +53,12 @@ public class StatsPushCalculationTests : IDisposable
         // ADR-0012: an administrator's action must not lower the reliability of a practitioner who is later reinstated (a deviation from the CONTRACTS 8.1 text)
         var cascade = await StatsFx.Seed(h, AccessStatus.CancelledByPractitioner);
         await h.Seed(db => db.Accesses.Single(b => b.Id == cascade).StatusReason = Gabinety.Booking.Features.Internal.PractitionerCancellation.FutureBookingCanceller.Reason);
-        Assert.Equal(0, (await StatsFx.StatsOf(h)).PractitionerCancelCount);
+        Assert.Equal(0, (await StatsFx.StatsOf(h)).AgentCancelCount);
 
         var voluntary = await StatsFx.Seed(h, AccessStatus.CancelledByPractitioner);
         await h.Seed(db => db.Accesses.Single(b => b.Id == voluntary).StatusReason = "Choroba, przepraszam");
         await StatsFx.Seed(h, AccessStatus.CancelledByPractitioner); // no reason at all
-        Assert.Equal(2, (await StatsFx.StatsOf(h)).PractitionerCancelCount);
+        Assert.Equal(2, (await StatsFx.StatsOf(h)).AgentCancelCount);
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public class StatsPushCalculationTests : IDisposable
         using var other = Life.Host(new RecordingProvider());
         await StatsFx.Seed(other, AccessStatus.Completed);
         var s = await StatsFx.StatsOf(h);
-        Assert.Equal((2, 1, 1), (s.CompletedCount, s.PractitionerCancelCount, s.NoShowUpheldCount));
+        Assert.Equal((2, 1, 1), (s.CompletedCount, s.AgentCancelCount, s.NoShowUpheldCount));
     }
 
     [Fact]

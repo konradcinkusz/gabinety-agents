@@ -18,12 +18,12 @@ public sealed record CancelOutcome(long RefundMinor, long PaidMinor)
         dto is { Refund: { } refund } && refund.AmountMinor >= 0 && refund.AmountMinor <= price.AmountMinor ? new CancelOutcome(refund.AmountMinor, price.AmountMinor) : null;
 
     /// <summary>A client who would get nothing back is warned (danger); every other sentence only informs.</summary>
-    public static bool Warns(CancelOutcome? outcome, string role) => role != BookingClient.PractitionerRole && outcome is { IsNone: true };
+    public static bool Warns(CancelOutcome? outcome, string role) => role != AccessClient.PractitionerRole && outcome is { IsNone: true };
 
     /// <summary>The sentence of the cancel dialog: the outcome when the booking carries one, else the general rule of the role.</summary>
     public static string Sentence(CancelOutcome? outcome, string role)
     {
-        if (role == BookingClient.PractitionerRole)
+        if (role == AccessClient.PractitionerRole)
             return outcome is null ? BookingsText.Cancel.PractitionerRule : string.Format(BookingsText.Cancel.PractitionerOutcome, Money.Pln(outcome.RefundMinor));
         return outcome switch
         {

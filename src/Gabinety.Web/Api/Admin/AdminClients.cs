@@ -25,7 +25,7 @@ public sealed partial class DirectoryClient
         parts.Where(p => !string.IsNullOrEmpty(p.Value)).ToList() is { Count: > 0 } kept ? "?" + string.Join('&', kept.Select(p => $"{p.Name}={Uri.EscapeDataString(p.Value!)}")) : "";
 }
 
-public sealed partial class BookingClient
+public sealed partial class AccessClient
 {
     public Task<ApiResult<PageDto<AdminDisputeDto>>> AdminDisputesAsync(string? token, string status, string? cursor, int limit, CancellationToken ct = default) =>
         GetAsync<PageDto<AdminDisputeDto>>("/api/v1/admin/disputes" + DirectoryClient.Query(("status", status), ("limit", limit.ToString(CultureInfo.InvariantCulture)), ("cursor", cursor)), token, ct);
@@ -97,8 +97,8 @@ public static class LedgerCsv
     public static LedgerRowDto? TryParseRow(string line)
     {
         var c = line.Split(',');
-        return c.Length == 5 && Guid.TryParse(c[0], out var booking) && c[1].Length is > 0 and <= 40 && long.TryParse(c[2], NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var amount)
+        return c.Length == 5 && Guid.TryParse(c[0], out var access) && c[1].Length is > 0 and <= 40 && long.TryParse(c[2], NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var amount)
             && c[3].Length is > 0 and <= 8 && DateTimeOffset.TryParse(c[4], CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var at)
-            ? new LedgerRowDto(booking, c[1], amount, c[3], at) : null;
+            ? new LedgerRowDto(access, c[1], amount, c[3], at) : null;
     }
 }

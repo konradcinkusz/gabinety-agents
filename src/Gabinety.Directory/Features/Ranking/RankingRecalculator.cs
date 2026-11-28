@@ -14,7 +14,7 @@ public static class RankingRecalculator
     public static bool Recompute(Agent p)
     {
         if (p.Status != AgentStatus.Approved) return false;
-        p.RankingScore = (decimal)Ranker.Score(new RankingInput(p.RatingCount, (double)p.RatingAvg, p.CompletedCount, p.PractitionerCancelCount,
+        p.RankingScore = (decimal)Ranker.Score(new RankingInput(p.RatingCount, (double)p.RatingAvg, p.CompletedCount, p.AgentCancelCount,
             p.NoShowUpheldCount, (double)p.ProfileCompleteness, p.OpenSlots14d));
         p.RankingVersion = RankingRules.Version;
         return true;

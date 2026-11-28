@@ -37,7 +37,7 @@ public class ProfilePageTests
     [Fact]
     public async Task The_book_button_is_Wykup_dostep_and_never_waits_for_a_slot_C01()
     {
-        await using var web = PublicSupport.Host(booking: FakeBackend.Throw(new HttpRequestException("down")));
+        await using var web = PublicSupport.Host(access: FakeBackend.Throw(new HttpRequestException("down")));
         var page = await Get(web);
         var book = page.All("ul.offerings > li")[1].QuerySelector("a.btn--primary")!;
         Assert.Equal("Wykup dostęp", book.TextContent); Assert.Equal("Wykup dostęp: Krótka konsultacja", book.GetAttribute("aria-label"));
@@ -49,7 +49,7 @@ public class ProfilePageTests
     [Fact]
     public async Task Each_package_shows_its_units_and_validity_and_a_chat_package_the_openai_line_C01()
     {
-        await using var web = PublicSupport.Host(PublicSupport.DefaultDirectory(PublicSupport.Profile(offerings:
+        await using var web = PublicSupport.Host(PublicSupport.DefaultDirectory(PublicSupport.Profile(packages:
         [
             new(PublicSupport.OfferA, "Plan migracji", "Plan", 30, new MoneyDto(18000, "PLN"), "audyt-kodu", ["dotnet"], "Tasks", 10),
             new(PublicSupport.OfferB, "Dostęp do API czatu", "Czat", 30, new MoneyDto(9900, "PLN"), "audyt-kodu", [], "Chat", 500),
@@ -64,7 +64,7 @@ public class ProfilePageTests
     public async Task The_kind_is_read_as_the_public_profile_writes_it_in_lower_case()
     {
         // the Directory's public JSON writes the kind camelCased ("tasks", "chat"); the page must not show a chat package as "500 zadań"
-        await using var web = PublicSupport.Host(PublicSupport.DefaultDirectory(PublicSupport.Profile(offerings:
+        await using var web = PublicSupport.Host(PublicSupport.DefaultDirectory(PublicSupport.Profile(packages:
         [
             new(PublicSupport.OfferA, "Plan migracji", "Plan", 30, new MoneyDto(18000, "PLN"), "audyt-kodu", ["dotnet"], "tasks", 10),
             new(PublicSupport.OfferB, "Dostęp do API czatu", "Czat", 30, new MoneyDto(9900, "PLN"), "audyt-kodu", [], "chat", 500),
@@ -138,7 +138,7 @@ public class ProfilePageTests
         Assert.Equal("Zobacz pakiety", aside.QuerySelector("a")!.TextContent);
         Assert.Contains("Płatność z góry, pełny zwrot do pierwszego użycia pakietu", aside.TextContent);
 
-        await using var none = PublicSupport.Host(PublicSupport.DefaultDirectory(PublicSupport.Profile(offerings: [])));
+        await using var none = PublicSupport.Host(PublicSupport.DefaultDirectory(PublicSupport.Profile(packages: [])));
         Assert.Null((await Get(none)).One("aside.summary"));
     }
 
@@ -160,7 +160,7 @@ public class ProfilePageTests
     [Fact]
     public async Task F16_a_profile_with_no_packages_says_so_and_the_booking_service_is_not_asked()
     {
-        await using var none = PublicSupport.Host(PublicSupport.DefaultDirectory(PublicSupport.Profile(offerings: [])));
+        await using var none = PublicSupport.Host(PublicSupport.DefaultDirectory(PublicSupport.Profile(packages: [])));
         var noOffers = await Get(none);
         Assert.Equal("Ten agent nie ma teraz aktywnych pakietów.", noOffers.TextOf("[data-testid=no-offerings]"));
         Assert.Empty(none.Access.Requests);

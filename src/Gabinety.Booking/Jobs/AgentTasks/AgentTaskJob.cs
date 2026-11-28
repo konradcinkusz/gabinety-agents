@@ -95,11 +95,11 @@ public class AgentTaskJob(IServiceScopeFactory scopes, TimeProvider time, IConfi
             var task = await db.AgentTasks.AsNoTracking().SingleAsync(t => t.Id == id, ct);
             var body = new JsonObject
             {
-                ["model"] = task.PractitionerSlug, ["stream"] = false,
+                ["model"] = task.AgentSlug, ["stream"] = false,
                 ["messages"] = new JsonArray(new JsonObject { ["role"] = "user", ["content"] = task.InputText }),
                 ["metadata"] = new JsonObject { ["gabinety_offering_id"] = task.PackageId.ToString(), ["gabinety_task_id"] = task.Id.ToString() },
             };
-            var result = await scope.ServiceProvider.GetRequiredService<IAgentUpstream>().CompleteAsync(task.PractitionerSlug, body, ct);
+            var result = await scope.ServiceProvider.GetRequiredService<IAgentUpstream>().CompleteAsync(task.AgentSlug, body, ct);
             if (result.StatusCode is >= 200 and < 300) output = AnswerOf(result.Json);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)

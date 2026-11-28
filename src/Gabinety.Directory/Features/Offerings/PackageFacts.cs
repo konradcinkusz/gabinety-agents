@@ -5,12 +5,12 @@ using Microsoft.EntityFrameworkCore;
 namespace Gabinety.Directory.Features.Offerings;
 
 /// <summary>The real count behind the submit checklist item `offering`. A singleton (IChecklistFacts is one) that opens its own scope per call.</summary>
-public sealed class OfferingFacts(IServiceScopeFactory scopes) : IChecklistFacts
+public sealed class PackageFacts(IServiceScopeFactory scopes) : IChecklistFacts
 {
-    public async Task<int> ActiveOfferingCountAsync(Guid practitionerId, CancellationToken ct)
+    public async Task<int> ActivePackageCountAsync(Guid agentId, CancellationToken ct)
     {
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<DirectoryDbContext>();
-        return await db.Set<Package>().CountAsync(o => o.AgentId == practitionerId && o.IsActive, ct);
+        return await db.Set<Package>().CountAsync(o => o.AgentId == agentId && o.IsActive, ct);
     }
 }

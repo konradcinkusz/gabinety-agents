@@ -43,10 +43,10 @@ public partial class StripeSpecConformanceTests
             .On(HttpMethod.Post, "/v1/refunds", Fx.Load("response.refund")).On(HttpMethod.Post, "/v1/transfers", Fx.Load("response.transfer"))
             .On(HttpMethod.Post, "/v1/accounts", Fx.Load("response.account.created")).On(HttpMethod.Post, "/v1/account_links", Fx.Load("response.account_link"));
         var p = Fx.Provider(h);
-        var booking = Guid.NewGuid();
-        await p.CreateCheckoutAsync(new CheckoutRequest(booking, 5000, "PLN", "demo", "https://demo.invalid/b"), default);
+        var access = Guid.NewGuid();
+        await p.CreateCheckoutAsync(new CheckoutRequest(access, 5000, "PLN", "demo", "https://demo.invalid/b"), default);
         await p.RefundAsync(new RefundRequest(Fx.SessionId, 100, "k1"), default);
-        await p.PayoutAsync(new PayoutRequest(Guid.NewGuid(), 100, "PLN", "k2", "acct_1", Fx.SessionId, booking), default);
+        await p.PayoutAsync(new PayoutRequest(Guid.NewGuid(), 100, "PLN", "k2", "acct_1", Fx.SessionId, access), default);
         await p.CreateAccountAsync(Guid.NewGuid(), default);
         await p.CreateOnboardingLinkAsync("acct_1", "https://x.invalid/r", "https://x.invalid/f", default);
 

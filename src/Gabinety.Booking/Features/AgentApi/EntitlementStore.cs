@@ -42,8 +42,8 @@ public class EntitlementStore(BookingDbContext db, TimeProvider time)
     {
         var now = time.GetUtcNow();
         return await db.Accesses.AsNoTracking()
-            .Where(b => b.ClientUserId == clientUserId && b.Kind == kind && b.Status == AccessStatus.Confirmed && b.EndUtc > now && b.UnitsUsed < b.UnitsTotal && b.PractitionerSlug != "")
-            .Select(b => b.PractitionerSlug).Distinct().OrderBy(s => s).ToListAsync(ct);
+            .Where(b => b.ClientUserId == clientUserId && b.Kind == kind && b.Status == AccessStatus.Confirmed && b.EndUtc > now && b.UnitsUsed < b.UnitsTotal && b.AgentSlug != "")
+            .Select(b => b.AgentSlug).Distinct().OrderBy(s => s).ToListAsync(ct);
     }
 
     /// <summary>Adds <paramref name="units"/> to <c>UnitsUsed</c> atomically. May go past <c>UnitsTotal</c>: chat is settled after the fact.</summary>
@@ -103,7 +103,7 @@ public class EntitlementStore(BookingDbContext db, TimeProvider time)
 
     IQueryable<BookingEntity> Candidates(string clientUserId, string practitionerSlug, PackageKind kind, Guid? offeringId)
     {
-        var q = db.Accesses.AsNoTracking().Where(b => b.ClientUserId == clientUserId && b.PractitionerSlug == practitionerSlug && b.Kind == kind);
+        var q = db.Accesses.AsNoTracking().Where(b => b.ClientUserId == clientUserId && b.AgentSlug == practitionerSlug && b.Kind == kind);
         return offeringId is { } o ? q.Where(b => b.PackageId == o) : q;
     }
 

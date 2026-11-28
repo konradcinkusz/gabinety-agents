@@ -16,13 +16,13 @@ sealed class RecordingReputationClient : IDirectoryReputationClient
     public Func<Guid, bool> Throw = _ => false;
     public Func<Guid, Task>? OnPush;
 
-    public async Task<PushResult> PushAsync(Guid practitionerId, ReputationPush body, CancellationToken ct)
+    public async Task<PushResult> PushAsync(Guid agentId, ReputationPush body, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        if (Throw(practitionerId)) throw new InvalidOperationException("boom");
-        lock (Pushes) Pushes.Add((practitionerId, body));
-        if (OnPush != null) await OnPush(practitionerId);
-        return Result(practitionerId);
+        if (Throw(agentId)) throw new InvalidOperationException("boom");
+        lock (Pushes) Pushes.Add((agentId, body));
+        if (OnPush != null) await OnPush(agentId);
+        return Result(agentId);
     }
 
     public List<ReputationPush> For(Guid id) { lock (Pushes) return Pushes.Where(p => p.Agent == id).Select(p => p.Body).ToList(); }

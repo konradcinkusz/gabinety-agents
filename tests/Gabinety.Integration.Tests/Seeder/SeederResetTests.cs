@@ -34,7 +34,7 @@ public class SeederResetTests
     {
         db.Accesses.Add(new()
         {
-            Id = Guid.NewGuid(), ClientUserId = "real-client", AgentId = Guid.NewGuid(), PractitionerUserId = "real-practitioner", PackageId = Guid.NewGuid(),
+            Id = Guid.NewGuid(), ClientUserId = "real-client", AgentId = Guid.NewGuid(), AgentUserId = "real-practitioner", PackageId = Guid.NewGuid(),
             PackageTitle = "real", DurationMinutes = 60, PriceMinor = 10000, StartUtc = DateTimeOffset.UtcNow.AddDays(4), EndUtc = DateTimeOffset.UtcNow.AddDays(4).AddHours(1),
             Status = Gabinety.Billing.AccessStatus.Confirmed, BriefText = "real", IdempotencyKey = Guid.NewGuid(), CreatedAt = DateTimeOffset.UtcNow,
         });

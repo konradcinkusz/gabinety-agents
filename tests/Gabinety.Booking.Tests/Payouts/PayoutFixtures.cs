@@ -24,7 +24,7 @@ static class Fee
         {
             db.Accesses.Add(new BookingEntity
             {
-                Id = id, ClientUserId = client, AgentId = practitioner, PractitionerUserId = "demo-practitioner-user", PackageId = h.Package,
+                Id = id, ClientUserId = client, AgentId = practitioner, AgentUserId = "demo-practitioner-user", PackageId = h.Package,
                 PackageTitle = h.Title, DurationMinutes = 60, PriceMinor = price, StartUtc = start, EndUtc = start.AddHours(1), Status = status,
                 BriefText = "demo-brief: a first review of my plan", IdempotencyKey = Guid.NewGuid(), CreatedAt = h.Clock.GetUtcNow(),
                 DisputeResolution = resolution,

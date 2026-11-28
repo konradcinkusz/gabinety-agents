@@ -6,7 +6,7 @@ namespace Gabinety.Web.Api;
 /// What the admin pages call: the three typed clients with the administrator's bearer, read once per call from the caller's scope (<see cref="IAccessTokenSource"/>: the request's scope in a static
 /// page). Nobody signed in is a 401 without a call to a backend. It adds no authorization of its own: the page is behind the Admin policy and every service checks the role again (403).
 /// </summary>
-public sealed class AdminApi(DirectoryClient directory, BookingClient booking, ReputationClient reputation, IAccessTokenSource tokens)
+public sealed class AdminApi(DirectoryClient directory, AccessClient access, ReputationClient reputation, IAccessTokenSource tokens)
 {
     static readonly ApiFailure Unauthenticated = new(401, "unauthorized");
 
@@ -23,16 +23,16 @@ public sealed class AdminApi(DirectoryClient directory, BookingClient booking, R
 
     // ---- disputes and the ledger (Booking)
     public Task<ApiResult<PageDto<AdminDisputeDto>>> Disputes(string status, string? cursor, int limit, CancellationToken ct = default) =>
-        With(t => booking.AdminDisputesAsync(t, status, cursor, limit, ct), ct);
-    public Task<ApiResult<AdminBookingDto>> Access(Guid id, CancellationToken ct = default) => With(t => booking.AdminBookingAsync(t, id, ct), ct);
+        With(t => access.AdminDisputesAsync(t, status, cursor, limit, ct), ct);
+    public Task<ApiResult<AdminBookingDto>> Access(Guid id, CancellationToken ct = default) => With(t => access.AdminBookingAsync(t, id, ct), ct);
     public Task<ApiResult<Unit>> Resolve(Guid bookingId, string resolution, long? refundMinor, string note, CancellationToken ct = default) =>
-        With(t => booking.AdminResolveAsync(t, bookingId, resolution, refundMinor, note, ct), ct);
+        With(t => access.AdminResolveAsync(t, bookingId, resolution, refundMinor, note, ct), ct);
     public Task<ApiResult<LedgerPreviewDto>> LedgerPreview(string from, string to, int max, CancellationToken ct = default) =>
-        With(t => booking.AdminLedgerPreviewAsync(t, from, to, max, ct), ct);
+        With(t => access.AdminLedgerPreviewAsync(t, from, to, max, ct), ct);
 
     /// <summary>The ledger export, still open: the caller (the download endpoint) passes the body on and disposes it. A failure carries the status and code only.</summary>
     public async Task<(ApiStream? Stream, ApiFailure? Failure)> LedgerCsv(string from, string to, CancellationToken ct = default) =>
-        await tokens.AccessTokenAsync(ct) is { Length: > 0 } token ? await booking.AdminLedgerCsvAsync(token, from, to, ct) : (null, Unauthenticated);
+        await tokens.AccessTokenAsync(ct) is { Length: > 0 } token ? await access.AdminLedgerCsvAsync(token, from, to, ct) : (null, Unauthenticated);
 
     // ---- reviews and suspicious pairs (Reputation)
     public Task<ApiResult<PageDto<AdminReviewDto>>> Reviews(string status, string? cursor, int limit, CancellationToken ct = default) =>

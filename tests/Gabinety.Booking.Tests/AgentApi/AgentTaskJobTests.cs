@@ -27,7 +27,7 @@ public class AgentTaskJobTests
 
     async Task<(Guid Package, Guid Task)> Order(CreateHost h, string input = SecretInput, long total = 5)
     {
-        var package = await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, total, offering: Offer);
+        var package = await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, total, package: Offer);
         var id = (await (await h.ClientFor(Me).PostAsJsonAsync($"/api/v1/bookings/{package}/tasks", new { input })).Body()).GetProperty("id").GetGuid();
         return (package, id);
     }
@@ -136,7 +136,7 @@ public class AgentTaskJobTests
     {
         var spy = new SpyUpstream();
         await using var h = Host(spy);
-        var package = await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, 20, offering: Offer);
+        var package = await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, 20, package: Offer);
         var ids = new List<Guid>();
         for (var i = 0; i < 7; i++)
         {
@@ -156,14 +156,14 @@ public class AgentTaskJobTests
     {
         var spy = new SpyUpstream();
         await using var h = Host(spy);
-        var package = await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, 5, used: 2, offering: Offer);
+        var package = await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, 5, used: 2, package: Offer);
         var now = h.Clock.GetUtcNow();
         Guid stuck = Guid.NewGuid(), recent = Guid.NewGuid();
         await h.Seed(db =>
         {
             AgentTask Make(Guid id, DateTimeOffset started, int attempts) => new()
             {
-                Id = id, AccessId = package, ClientUserId = Me, PractitionerSlug = Slug, PackageId = Offer, Status = AgentTaskStatus.Running, InputText = SecretInput,
+                Id = id, AccessId = package, ClientUserId = Me, AgentSlug = Slug, PackageId = Offer, Status = AgentTaskStatus.Running, InputText = SecretInput,
                 Attempts = attempts, CreatedAt = started, StartedAt = started,
             };
             db.AgentTasks.Add(Make(stuck, now.AddMinutes(-31), 3));  // out of attempts: Failed
@@ -182,12 +182,12 @@ public class AgentTaskJobTests
     {
         var spy = new SpyUpstream();
         await using var h = Host(spy);
-        var package = await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, 5, used: 1, offering: Offer);
+        var package = await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, 5, used: 1, package: Offer);
         var now = h.Clock.GetUtcNow();
         var id = Guid.NewGuid();
         await h.Seed(db => db.AgentTasks.Add(new AgentTask
         {
-            Id = id, AccessId = package, ClientUserId = Me, PractitionerSlug = Slug, PackageId = Offer, Status = AgentTaskStatus.Running, InputText = SecretInput,
+            Id = id, AccessId = package, ClientUserId = Me, AgentSlug = Slug, PackageId = Offer, Status = AgentTaskStatus.Running, InputText = SecretInput,
             Attempts = 1, CreatedAt = now.AddHours(-1), StartedAt = now.AddHours(-1),
         }));
         await Run(h, Me);
@@ -202,12 +202,12 @@ public class AgentTaskJobTests
         var spy = new SpyUpstream();
         await using var h = Host(spy);
         h.Settings["Agents:TaskTimeoutMinutes"] = "5";
-        var package = await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, 5, used: 1, offering: Offer);
+        var package = await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, 5, used: 1, package: Offer);
         var now = h.Clock.GetUtcNow();
         var id = Guid.NewGuid();
         await h.Seed(db => db.AgentTasks.Add(new AgentTask
         {
-            Id = id, AccessId = package, ClientUserId = Me, PractitionerSlug = Slug, PackageId = Offer, Status = AgentTaskStatus.Running, InputText = SecretInput,
+            Id = id, AccessId = package, ClientUserId = Me, AgentSlug = Slug, PackageId = Offer, Status = AgentTaskStatus.Running, InputText = SecretInput,
             Attempts = 3, CreatedAt = now.AddMinutes(-6), StartedAt = now.AddMinutes(-6),
         }));
         await Run(h, Me);
@@ -220,11 +220,11 @@ public class AgentTaskJobTests
         await using var h = new CreateHost().AsDeployed(); // Agents:Provider is not set and the fake platform is refused there (AgentsFeature)
         h.Settings["Jobs:Enabled"] = "false";
         await Run(h, Me); // no task: nothing needs the platform, so the job stays quiet
-        var package = await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, 5, used: 1, offering: Offer);
+        var package = await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, 5, used: 1, package: Offer);
         var id = Guid.NewGuid();
         await h.Seed(db => db.AgentTasks.Add(new AgentTask
         {
-            Id = id, AccessId = package, ClientUserId = Me, PractitionerSlug = Slug, PackageId = Offer, Status = AgentTaskStatus.Queued, InputText = SecretInput, CreatedAt = h.Clock.GetUtcNow(),
+            Id = id, AccessId = package, ClientUserId = Me, AgentSlug = Slug, PackageId = Offer, Status = AgentTaskStatus.Queued, InputText = SecretInput, CreatedAt = h.Clock.GetUtcNow(),
         }));
         await Assert.ThrowsAsync<InvalidOperationException>(() => Run(h, Me));
         var t = await TaskFx.Task(h, id);
@@ -239,7 +239,7 @@ public class AgentTaskJobTests
         var spy = new SpyUpstream { Answer = () => new UpstreamResult(200, Answer(SecretAnswer), 30) };
         await using var h = Host(spy);
         var (key, _) = await AgentApiFx.MakeKey(h, Me);
-        var package = await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, 10, offering: Offer);
+        var package = await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, 10, package: Offer);
 
         // by key and by browser, succeeding
         await AgentApiFx.ApiClient(h, key).PostAsync("/v1/tasks", TaskFx.Json(TaskFx.Body(Slug, Offer, SecretInput)));

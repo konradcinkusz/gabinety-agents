@@ -1,6 +1,6 @@
 @page "/moje/dostepy"
 @attribute [Authorize]
-@inject BookingClient Accesses
+@inject AccessClient Accesses
 @inject MeClient Me
 @inject TimeProvider Clock
 @inject NavigationManager Navigation
@@ -15,9 +15,9 @@
 {
     <nav class="tabs" aria-label="@BookingsText.TabsLabel">
         <ul>
-            @foreach (var r in new[] { BookingClient.ClientRole, BookingClient.PractitionerRole })
+            @foreach (var r in new[] { AccessClient.ClientRole, AccessClient.PractitionerRole })
             {
-                <li><a class="tabs__link" href="@Href(r, _status, null)" aria-current="@(r == _role ? "page" : null)">@(r == BookingClient.ClientRole ? Pl.Accesses.Client : Pl.Accesses.Agent)</a></li>
+                <li><a class="tabs__link" href="@Href(r, _status, null)" aria-current="@(r == _role ? "page" : null)">@(r == AccessClient.ClientRole ? Pl.Accesses.Client : Pl.Accesses.Agent)</a></li>
             }
         </ul>
     </nav>
@@ -49,9 +49,9 @@ else if (_page is { Items.Count: 0 })
 {
     <div class="empty-state" data-testid="bookings-empty">
         <h2>@BookingsText.EmptyTitle</h2>
-        <p>@(_status != "" ? BookingsText.EmptyFiltered : _role == BookingClient.ClientRole ? BookingsText.EmptyClient : BookingsText.EmptyPractitioner)</p>
+        <p>@(_status != "" ? BookingsText.EmptyFiltered : _role == AccessClient.ClientRole ? BookingsText.EmptyClient : BookingsText.EmptyPractitioner)</p>
         @if (_status != "") {<a class="btn btn--secondary" href="@Href(_role, "", null)">@BookingsText.ShowAll</a>}
-        else if (_role == BookingClient.ClientRole) {<a class="btn btn--primary" href="/agenci">@BookingsText.FindPractitioner</a>}
+        else if (_role == AccessClient.ClientRole) {<a class="btn btn--primary" href="/agenci">@BookingsText.FindPractitioner</a>}
     </div>
 }
 else if (_page is not null)
@@ -69,8 +69,8 @@ else if (_page is not null)
                             <span class="num booking-row__price">@Money.Pln(b.Price.AmountMinor)</span>
                         </div>
                         <p class="muted" data-testid="booking-party">
-                            @BookingFormat.Name(_role == BookingClient.ClientRole ? b.Agent.DisplayName : b.Client?.DisplayName)
-                            @if (_role == BookingClient.ClientRole) {<AiBadge />}
+                            @BookingFormat.Name(_role == AccessClient.ClientRole ? b.Agent.DisplayName : b.Client?.DisplayName)
+                            @if (_role == AccessClient.ClientRole) {<AiBadge />}
                         </p>
                         <UsageBar Kind="@b.Kind" Used="b.UnitsUsed" Total="b.UnitsTotal" />
                         <p class="muted" data-testid="booking-valid-until">@string.Format(Pl.Accesses.ValidUntil, BookingFormat.ValidUntil(b.EndUtc))</p>
@@ -94,7 +94,7 @@ else if (_page is not null)
 
     sealed record Section(string Id, string Title, IReadOnlyList<(BookingViewDto B, bool Lead)> Rows);
 
-    string _role = BookingClient.ClientRole, _status = "";
+    string _role = AccessClient.ClientRole, _status = "";
     string? _cursor;
     PageDto<BookingViewDto>? _page;
     ApiFailure? _failure;

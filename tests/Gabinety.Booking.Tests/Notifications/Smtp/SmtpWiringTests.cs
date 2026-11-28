@@ -116,8 +116,8 @@ public class SmtpWiringTests
     {
         using var t = new NotificationHost(setup: h => Smtp(h, null), keepSender: true);
         t.Contacts.Addresses["demo-client"] = "demo-degraded@demo.invalid";
-        var booking = await t.AddBooking();
-        var n = t.Add(booking.Id, NotificationKind.BookingConfirmed, "demo-client");
+        var access = await t.AddBooking();
+        var n = t.Add(access.Id, NotificationKind.BookingConfirmed, "demo-client");
         Assert.Equal(1, await t.Run());
         Assert.NotNull((await t.Row(n.Id)).SentAt);
         Assert.DoesNotContain("demo-degraded", string.Join('\n', t.Host.Logs.Lines));
@@ -129,8 +129,8 @@ public class SmtpWiringTests
         using var server = new FakeSmtpServer { RejectRcpt = "demo-person" };
         using var t = new NotificationHost(setup: h => Smtp(h, server), keepSender: true);
         t.Contacts.Addresses["demo-client"] = "demo-person@demo.invalid";
-        var booking = await t.AddBooking();
-        var n = t.Add(booking.Id, NotificationKind.BookingConfirmed, "demo-client");
+        var access = await t.AddBooking();
+        var n = t.Add(access.Id, NotificationKind.BookingConfirmed, "demo-client");
 
         Assert.Equal(0, await t.Run()); // the provider refuses: counted as a failed attempt
         var after1 = await t.Row(n.Id);
@@ -158,14 +158,14 @@ public class SmtpWiringTests
         using var server = new FakeSmtpServer();
         using var t = new NotificationHost(setup: h => { Smtp(h, server); h.Settings["Site:BaseUrl"] = "https://gabinety.demo.invalid"; }, keepSender: true);
         t.Contacts.Addresses["demo-client"] = "demo-person@demo.invalid";
-        var booking = await t.AddBooking(edit: b => b.BriefText = "MARKER-BRIEF-ZAŻÓŁĆ");
-        t.Add(booking.Id, NotificationKind.Reminder24h, "demo-client");
+        var access = await t.AddBooking(edit: b => b.BriefText = "MARKER-BRIEF-ZAŻÓŁĆ");
+        t.Add(access.Id, NotificationKind.Reminder24h, "demo-client");
         Assert.Equal(1, await t.Run());
 
         using var ms = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(Assert.Single(server.Mails).Data));
         var parsed = MimeKit.MimeMessage.Load(ms);
         Assert.Equal("Przypomnienie: konsultacja już jutro", parsed.Subject);
-        Assert.Contains($"https://gabinety.demo.invalid/moje/dostepy/{booking.Id}", parsed.TextBody);
+        Assert.Contains($"https://gabinety.demo.invalid/moje/dostepy/{access.Id}", parsed.TextBody);
         Assert.DoesNotContain("MARKER-BRIEF", parsed.TextBody + parsed.HtmlBody);
     }
 }

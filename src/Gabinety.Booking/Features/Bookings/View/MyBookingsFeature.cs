@@ -56,7 +56,7 @@ public sealed class MyBookingsFeature : IServiceFeature
         if (errors.Count > 0) return PaymentWebhookFeature.Problem(ErrorCodes.ValidationFailed, "Validation failed", 400, null, errors);
 
         var asClient = role == "client";
-        var q = db.Accesses.AsNoTracking().Where(b => asClient ? b.ClientUserId == sub : b.PractitionerUserId == sub);
+        var q = db.Accesses.AsNoTracking().Where(b => asClient ? b.ClientUserId == sub : b.AgentUserId == sub);
         if (statusFilter is { } s) q = q.Where(b => b.Status == s);
         if (after is { } p) q = q.Where(b => b.StartUtc < p.Start || (b.StartUtc == p.Start && b.Id.CompareTo(p.Id) < 0));
 

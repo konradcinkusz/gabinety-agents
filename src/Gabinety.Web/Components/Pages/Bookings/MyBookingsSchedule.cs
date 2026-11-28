@@ -14,7 +14,7 @@ public static class MyBookingsSchedule
     /// <summary>Only a package that is still running is active: awaiting payment or confirmed, and its validity (<c>EndUtc</c>) not over. Anything else (completed, cancelled, expired, in a complaint) is past.</summary>
     static readonly string[] Pending = ["PendingPayment", "Confirmed"];
 
-    public static bool IsUpcoming(BookingViewDto booking, DateTimeOffset now) => booking.EndUtc > now && Pending.Contains(booking.Status);
+    public static bool IsUpcoming(BookingViewDto access, DateTimeOffset now) => access.EndUtc > now && Pending.Contains(access.Status);
 
     /// <summary>Active: the one that expires first, first. Everything else: the most recently ended first.</summary>
     public static (List<BookingViewDto> Upcoming, List<BookingViewDto> Past) Split(IEnumerable<BookingViewDto> items, DateTimeOffset now)

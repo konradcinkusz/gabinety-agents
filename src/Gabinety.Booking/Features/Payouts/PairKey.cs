@@ -13,9 +13,9 @@ public static class PairKey
 {
     public const int MaxLength = 80;
 
-    public static string For(string clientUserId, Guid practitionerId)
+    public static string For(string clientUserId, Guid agentId)
     {
-        var spec = $"{clientUserId}:{practitionerId}";
+        var spec = $"{clientUserId}:{agentId}";
         return spec.Length <= MaxLength ? spec : "h:" + Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(spec)));
     }
 }

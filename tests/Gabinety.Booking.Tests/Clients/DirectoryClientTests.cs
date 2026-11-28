@@ -12,23 +12,23 @@ public class DirectoryClientTests
     [Fact]
     public async Task GetOffering_returns_a_typed_result_and_sends_the_internal_key()
     {
-        var offering = Guid.NewGuid();
+        var package = Guid.NewGuid();
         var practitioner = Guid.NewGuid();
         var h = new FakeDirectory
         {
-            Override = (r, _) => r.RequestUri!.AbsolutePath == $"/internal/v1/offerings/{offering}"
+            Override = (r, _) => r.RequestUri!.AbsolutePath == $"/internal/v1/offerings/{package}"
                 ? FakeDirectory.Json(new
                 {
-                    offeringId = offering, practitionerId = practitioner, practitionerUserId = "demo-user-7", practitionerStatus = "Approved",
+                    offeringId = package, practitionerId = practitioner, practitionerUserId = "demo-user-7", practitionerStatus = "Approved",
                     title = "demo-offering", durationMinutes = 60, price = new { amountMinor = 15000, currency = "PLN" },
                     meetingUrl = "https://meet.demo.invalid/x", isActive = true,
                 })
                 : new HttpResponseMessage(HttpStatusCode.NotFound),
         };
-        var o = await Make(h).GetOfferingAsync(offering, default);
+        var o = await Make(h).GetOfferingAsync(package, default);
         Assert.NotNull(o);
         Assert.Equal(practitioner, o.AgentId);
-        Assert.Equal("demo-user-7", o.PractitionerUserId);
+        Assert.Equal("demo-user-7", o.AgentUserId);
         Assert.Equal(AgentStatus.Approved, o.AgentStatus);
         Assert.Equal(60, o.DurationMinutes);
         Assert.Equal(15000, o.Price.AmountMinor);

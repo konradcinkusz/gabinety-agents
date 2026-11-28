@@ -48,7 +48,7 @@ public class PartyNamesTests
         // unique parties: the in-memory database is shared by the hosts of one test process and the list shows 12 rows a page
         var client = "demo-client-" + Guid.NewGuid().ToString("n");
         var practitioner = "demo-practitioner-" + Guid.NewGuid().ToString("n");
-        await h.Seed(db => { var b = db.Accesses.Single(x => x.Id == id); b.ClientDisplayName = "Klient D."; b.ClientUserId = client; b.PractitionerUserId = practitioner; });
+        await h.Seed(db => { var b = db.Accesses.Single(x => x.Id == id); b.ClientDisplayName = "Klient D."; b.ClientUserId = client; b.AgentUserId = practitioner; });
 
         var asClient = await Get(h.ClientFor(client), $"/api/v1/bookings/{id}");
         Assert.Equal("Demo Practitioner", asClient.GetProperty("practitioner").GetProperty("displayName").GetString());
@@ -94,7 +94,7 @@ public class PartyNamesTests
         var id = await Life.Seed(h, AccessStatus.Confirmed, H24 * 3);
         var clientToken = ErasureFeature.Token(Life.Client);
         var practitionerToken = ErasureFeature.Token(Life.Agent);
-        await h.Seed(db => { var b = db.Accesses.Single(x => x.Id == id); b.ClientUserId = clientToken; b.ClientDisplayName = null; b.PractitionerUserId = practitionerToken; });
+        await h.Seed(db => { var b = db.Accesses.Single(x => x.Id == id); b.ClientUserId = clientToken; b.ClientDisplayName = null; b.AgentUserId = practitionerToken; });
 
         var asClient = await Get(h.ClientFor(clientToken), $"/api/v1/bookings/{id}");
         Assert.Equal("Usunięty użytkownik", asClient.GetProperty("practitioner").GetProperty("displayName").GetString());
@@ -105,7 +105,7 @@ public class PartyNamesTests
     [Fact]
     public void Erasing_the_client_clears_the_snapshot()
     {
-        var b = new BookingEntity { ClientUserId = "demo-u", ClientDisplayName = "Klient D.", PractitionerUserId = "demo-p" };
+        var b = new BookingEntity { ClientUserId = "demo-u", ClientDisplayName = "Klient D.", AgentUserId = "demo-p" };
         var method = typeof(ErasureFeature).GetMethod("Anonymise", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
         method.Invoke(null, [b, "demo-u", ErasureFeature.Token("demo-u")]);
         Assert.Null(b.ClientDisplayName);
@@ -202,7 +202,7 @@ public class DisputeWindowTests
     [InlineData(73 * 3600 + 1, false)]
     public void canDispute_is_true_for_a_Completed_booking_until_end_plus_72h(int offsetSeconds, bool expected)
     {
-        var b = new BookingEntity { ClientUserId = "demo-client", PractitionerUserId = "demo-practitioner", Status = AccessStatus.Completed, StartUtc = Start, EndUtc = Start + H, EndedAt = Start + H };
+        var b = new BookingEntity { ClientUserId = "demo-client", AgentUserId = "demo-practitioner", Status = AccessStatus.Completed, StartUtc = Start, EndUtc = Start + H, EndedAt = Start + H };
         var now = Start + TimeSpan.FromSeconds(offsetSeconds);
         Assert.Equal(expected, BookingPermissions.For(b, "demo-client", new Clock(now)).CanDispute);
         Assert.False(BookingPermissions.For(b, "demo-practitioner", new Clock(now)).CanDispute);

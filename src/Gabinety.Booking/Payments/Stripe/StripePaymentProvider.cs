@@ -30,13 +30,13 @@ internal sealed class StripePaymentProvider(StripeApi api, string webhookSecret,
     {
         if (!string.Equals(request.Currency, "PLN", StringComparison.OrdinalIgnoreCase)) throw new ArgumentException("Only PLN is supported.", nameof(request));
         if (request.AmountMinor <= 0) throw new ArgumentOutOfRangeException(nameof(request), "The amount must be positive.");
-        var booking = request.AccessId.ToString("D");
+        var access = request.AccessId.ToString("D");
         var name = request.Description.Length > MaxProductNameLength ? request.Description[..MaxProductNameLength] : request.Description;
         var form = new StripeForm()
             .Add("mode", "payment")
             .Add("success_url", request.SuccessUrl)
             .Add("cancel_url", request.SuccessUrl)
-            .Add("client_reference_id", booking)
+            .Add("client_reference_id", access)
             .Add("locale", "pl")
             .Add("expires_at", (time.GetUtcNow() + SessionLife).ToUnixTimeSeconds())
             .Add("allowed_payment_method_types[0]", "card")
@@ -45,9 +45,9 @@ internal sealed class StripePaymentProvider(StripeApi api, string webhookSecret,
             .Add("line_items[0][price_data][currency]", "pln")
             .Add("line_items[0][price_data][unit_amount]", request.AmountMinor)
             .Add("line_items[0][price_data][product_data][name]", name)
-            .Add("metadata[booking_id]", booking)
+            .Add("metadata[booking_id]", access)
             .Add("payment_intent_data[transfer_group]", TransferGroup(request.AccessId))
-            .Add("payment_intent_data[metadata][booking_id]", booking);
+            .Add("payment_intent_data[metadata][booking_id]", access);
         var session = await api.PostAsync("/v1/checkout/sessions", form, $"checkout:{request.AccessId:N}", ct);
         var id = Required(session, "id");
         return new CheckoutResult(id, Required(session, "url"));
@@ -76,7 +76,7 @@ internal sealed class StripePaymentProvider(StripeApi api, string webhookSecret,
         if (string.IsNullOrEmpty(request.ProviderPaymentId)) throw new InvalidOperationException("The payout has no payment to be paid from.");
         if (!string.Equals(request.Currency, "PLN", StringComparison.OrdinalIgnoreCase)) throw new ArgumentException("Only PLN is supported.", nameof(request));
         var charge = await ChargeOfAsync(request.ProviderPaymentId, ct) ?? throw new InvalidOperationException("The payment has no charge to pay from.");
-        var group = request.AccessId is { } booking ? TransferGroup(booking) : $"practitioner_{request.AgentId:N}";
+        var group = request.AccessId is { } access ? TransferGroup(access) : $"practitioner_{request.AgentId:N}";
         return new PayoutResult(await PostTransferAsync(request.DestinationAccountId, charge, request.AmountMinor, group, request.ProviderPaymentId, request.IdempotencyKey, ct));
     }
 
@@ -98,7 +98,7 @@ internal sealed class StripePaymentProvider(StripeApi api, string webhookSecret,
 
     // --- connected accounts (Express) ---
 
-    public async Task<string> CreateAccountAsync(Guid practitionerId, CancellationToken ct)
+    public async Task<string> CreateAccountAsync(Guid agentId, CancellationToken ct)
     {
         var form = new StripeForm()
             .Add("controller[stripe_dashboard][type]", "express")
@@ -107,8 +107,8 @@ internal sealed class StripePaymentProvider(StripeApi api, string webhookSecret,
             .Add("controller[requirement_collection]", "stripe")
             .Add("country", "PL")
             .Add("capabilities[transfers][requested]", true)
-            .Add("metadata[practitioner_id]", practitionerId.ToString("D"));
-        return Required(await api.PostAsync("/v1/accounts", form, $"account:{practitionerId:N}", ct), "id");
+            .Add("metadata[practitioner_id]", agentId.ToString("D"));
+        return Required(await api.PostAsync("/v1/accounts", form, $"account:{agentId:N}", ct), "id");
     }
 
     public async Task<string> CreateOnboardingLinkAsync(string accountId, string returnUrl, string refreshUrl, CancellationToken ct)

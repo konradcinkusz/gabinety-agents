@@ -103,8 +103,8 @@ public class VerificationFactory : OfferingFactory
         return p;
     });
 
-    public Task<List<VerificationEvent>> Events(Guid practitionerId) =>
-        Db(db => db.VerificationEvents.AsNoTracking().Where(e => e.AgentId == practitionerId).OrderBy(e => e.At).ToListAsync());
+    public Task<List<VerificationEvent>> Events(Guid agentId) =>
+        Db(db => db.VerificationEvents.AsNoTracking().Where(e => e.AgentId == agentId).OrderBy(e => e.At).ToListAsync());
 
     public Task<Agent> Load(Guid id) => Db(db => db.Agents.AsNoTracking().SingleAsync(p => p.Id == id));
 }

@@ -48,10 +48,10 @@ public class RecipientAddressTests
                 Host.Settings["Notifications:Smtp:Password"] = SmtpPassword;
                 Host.Settings["Notifications:Smtp:FromAddress"] = "powiadomienia@demo.invalid";
             }
-            var offering = Host.Directory.Override!;
+            var package = Host.Directory.Override!;
             Host.Directory.Override = (r, n) =>
             {
-                if (r.RequestUri!.AbsolutePath != $"/internal/v1/practitioners/{Host.OwnerUserId}/contact") return offering(r, n);
+                if (r.RequestUri!.AbsolutePath != $"/internal/v1/practitioners/{Host.OwnerUserId}/contact") return package(r, n);
                 Interlocked.Increment(ref ContactCalls);
                 return PractitionerEmail is null ? new HttpResponseMessage(HttpStatusCode.NotFound) : FakeDirectory.Json(new { email = PractitionerEmail });
             };
@@ -67,7 +67,7 @@ public class RecipientAddressTests
             return id;
         }
 
-        public Task<List<Notification>> Rows(Guid booking) => Host.Query(db => db.Notifications.AsNoTracking().Where(n => n.AccessId == booking).ToListAsync());
+        public Task<List<Notification>> Rows(Guid access) => Host.Query(db => db.Notifications.AsNoTracking().Where(n => n.AccessId == access).ToListAsync());
         public void Dispose() { Host.Dispose(); Smtp.Dispose(); }
     }
 

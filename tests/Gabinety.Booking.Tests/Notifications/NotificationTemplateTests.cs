@@ -48,8 +48,8 @@ public class NotificationTemplateTests
     public async Task A_trailing_slash_of_Site_BaseUrl_is_trimmed_in_every_link_the_dispatcher_sends()
     {
         using var t = new NotificationHost(setup: h => h.Settings["Site:BaseUrl"] = "https://site.demo.invalid/");
-        var booking = await t.AddBooking();
-        foreach (var kind in Enum.GetValues<NotificationKind>()) t.Add(booking.Id, kind, "demo-client");
+        var access = await t.AddBooking();
+        foreach (var kind in Enum.GetValues<NotificationKind>()) t.Add(access.Id, kind, "demo-client");
         Assert.Equal(Enum.GetValues<NotificationKind>().Length, await t.Run());
         foreach (var m in t.Sender.Sent)
             foreach (var link in LinksIn(m.TextBody).Concat(LinksIn(m.HtmlBody)))
@@ -64,7 +64,7 @@ public class NotificationTemplateTests
     {
         const string marker = "MARKER-BRIEF-7f3a91";
         using var t = new NotificationHost();
-        var booking = await t.AddBooking(edit: b =>
+        var access = await t.AddBooking(edit: b =>
         {
             b.BriefText = marker + " moje dane osobowe";
             b.PackageTitle = marker + "-title";
@@ -73,7 +73,7 @@ public class NotificationTemplateTests
             b.StatusReason = marker + "-reason";
             b.MeetingUrlSnapshot = "https://meet.demo.invalid/" + marker;
         });
-        foreach (var kind in Enum.GetValues<NotificationKind>()) t.Add(booking.Id, kind, "demo-client");
+        foreach (var kind in Enum.GetValues<NotificationKind>()) t.Add(access.Id, kind, "demo-client");
 
         Assert.Equal(Enum.GetValues<NotificationKind>().Length, await t.Run());
         Assert.Equal(Enum.GetValues<NotificationKind>().Length, t.Sender.Sent.Count);

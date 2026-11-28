@@ -100,14 +100,14 @@ sealed class ReplyHost : WebApplicationFactory<Program>
 
     protected override void Dispose(bool disposing) { if (disposing) _rsa.Dispose(); base.Dispose(disposing); }
 
-    public async Task<Guid> SeedReview(Guid practitionerId, Gabinety.Contracts.Reputation.ReviewStatus status = Gabinety.Contracts.Reputation.ReviewStatus.Published, string? reply = null)
+    public async Task<Guid> SeedReview(Guid agentId, Gabinety.Contracts.Reputation.ReviewStatus status = Gabinety.Contracts.Reputation.ReviewStatus.Published, string? reply = null)
     {
         var id = Guid.NewGuid();
         using var scope = Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ReputationDbContext>();
         db.Reviews.Add(new Review
         {
-            Id = id, AccessId = Guid.NewGuid(), AgentId = practitionerId, ClientUserId = "demo-reviewer", Rating = 5,
+            Id = id, AccessId = Guid.NewGuid(), AgentId = agentId, ClientUserId = "demo-reviewer", Rating = 5,
             Text = "Synthetyczna opinia o długości powyżej dwudziestu znaków.", Status = status,
             CreatedAt = Clock.GetUtcNow(), PublishedAt = status == Gabinety.Contracts.Reputation.ReviewStatus.Published ? Clock.GetUtcNow() : null,
             ReplyText = reply, RepliedAt = reply is null ? null : Clock.GetUtcNow(),

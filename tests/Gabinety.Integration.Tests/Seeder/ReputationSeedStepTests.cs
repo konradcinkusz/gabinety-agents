@@ -58,10 +58,10 @@ public class ReputationSeedStepTests(ReputationSeedFixture fx) : IClassFixture<R
         Assert.Equal(3, reviews.Count);
         foreach (var (key, practitionerKey, rating) in Expected)
         {
-            var booking = completed[key];
-            var review = Assert.Single(reviews, r => r.AccessId == booking.Id);
-            Assert.Equal(booking.ClientUserId, review.ClientUserId);
-            Assert.Equal(booking.AgentId, review.AgentId);
+            var access = completed[key];
+            var review = Assert.Single(reviews, r => r.AccessId == access.Id);
+            Assert.Equal(access.ClientUserId, review.ClientUserId);
+            Assert.Equal(access.AgentId, review.AgentId);
             Assert.Equal(_w.Context.Agents[practitionerKey].Id, review.AgentId);
             Assert.Equal(rating, review.Rating);
             Assert.Equal("Published", review.Status);

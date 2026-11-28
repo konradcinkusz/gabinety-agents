@@ -41,7 +41,7 @@ public sealed class StatsPushJob(IServiceScopeFactory scopes, IDirectoryStatsCli
                 var version = _lastVersion = Math.Max(time.GetUtcNow().ToUnixTimeMilliseconds(), _lastVersion + 1);
                 try
                 {
-                    if (!await client.PushAsync(id, new BookingStatsPush(stats.CompletedCount, stats.PractitionerCancelCount, stats.NoShowUpheldCount, stats.OpenSlots14d, version), ct))
+                    if (!await client.PushAsync(id, new AccessStatsPush(stats.CompletedCount, stats.AgentCancelCount, stats.NoShowUpheldCount, stats.OpenSlots14d, version), ct))
                     {
                         log.LogWarning("StatsPush gave up on practitioner {PractitionerId} until the next cycle", id);
                         continue;

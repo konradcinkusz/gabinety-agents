@@ -11,10 +11,10 @@ namespace Gabinety.Booking.Notifications;
 public interface INotificationWriter
 {
     /// <summary>Adds the row to the context without saving. False (and no row) when the same (booking, kind, user) is already tracked in this context.</summary>
-    bool Schedule(BookingEntity booking, NotificationKind kind, string toUserId, DateTimeOffset dueAt);
+    bool Schedule(BookingEntity access, NotificationKind kind, string toUserId, DateTimeOffset dueAt);
 
     /// <summary>As <see cref="Schedule"/> but also false when the row is already saved: use it when a transition may run for a booking that was scheduled before.</summary>
-    Task<bool> ScheduleAsync(BookingEntity booking, NotificationKind kind, string toUserId, DateTimeOffset dueAt, CancellationToken ct);
+    Task<bool> ScheduleAsync(BookingEntity access, NotificationKind kind, string toUserId, DateTimeOffset dueAt, CancellationToken ct);
 
     /// <summary>Removes the unsent rows (saved or just scheduled) of the named kinds for the booking, without saving. Sent rows stay. Returns the number removed.</summary>
     Task<int> CancelUnsentAsync(Guid bookingId, IReadOnlyCollection<NotificationKind> kinds, CancellationToken ct);
@@ -22,20 +22,20 @@ public interface INotificationWriter
 
 public sealed class NotificationWriter(BookingDbContext db) : INotificationWriter
 {
-    public bool Schedule(BookingEntity booking, NotificationKind kind, string toUserId, DateTimeOffset dueAt)
+    public bool Schedule(BookingEntity access, NotificationKind kind, string toUserId, DateTimeOffset dueAt)
     {
-        var id = booking.Id;
+        var id = access.Id;
         if (db.Notifications.Local.Any(n => n.AccessId == id && n.Kind == kind && n.ToUserId == toUserId)) return false;
         db.Notifications.Add(new Notification { Id = Guid.NewGuid(), AccessId = id, Kind = kind, ToUserId = toUserId, DueAt = dueAt });
         return true;
     }
 
-    public async Task<bool> ScheduleAsync(BookingEntity booking, NotificationKind kind, string toUserId, DateTimeOffset dueAt, CancellationToken ct)
+    public async Task<bool> ScheduleAsync(BookingEntity access, NotificationKind kind, string toUserId, DateTimeOffset dueAt, CancellationToken ct)
     {
-        var id = booking.Id;
+        var id = access.Id;
         if (db.Notifications.Local.Any(n => n.AccessId == id && n.Kind == kind && n.ToUserId == toUserId)) return false;
         if (await db.Notifications.AnyAsync(n => n.AccessId == id && n.Kind == kind && n.ToUserId == toUserId, ct)) return false;
-        return Schedule(booking, kind, toUserId, dueAt);
+        return Schedule(access, kind, toUserId, dueAt);
     }
 
     public async Task<int> CancelUnsentAsync(Guid bookingId, IReadOnlyCollection<NotificationKind> kinds, CancellationToken ct)

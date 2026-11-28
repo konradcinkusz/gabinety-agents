@@ -31,7 +31,7 @@ public sealed class CreateReviewFeature : IServiceFeature
     public void Map(IEndpointRouteBuilder endpoints) =>
         endpoints.MapPost("/api/v1/reviews", HandleAsync).RequireAuthorization("Authenticated");
 
-    static async Task<IResult> HandleAsync(CreateReviewRequest? req, ClaimsPrincipal user, ReputationDbContext db, IBookingClient booking,
+    static async Task<IResult> HandleAsync(CreateReviewRequest? req, ClaimsPrincipal user, ReputationDbContext db, IAccessClient access,
         IAssistantClient assistant, PublicationDecider decider, SummaryPushSignal pushSignal, TimeProvider time, ILogger<CreateReviewFeature> log, CancellationToken ct)
     {
         var sub = user.FindFirst("sub")?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -46,8 +46,8 @@ public sealed class CreateReviewFeature : IServiceFeature
         if (errors.Count > 0) return Problem(ErrorCodes.ValidationFailed, "Validation failed", 422, errors);
 
         ReviewabilityDtoView? view;
-        try { view = await booking.GetReviewabilityAsync(req.AccessId, ct) is { } r ? new(r.Reviewable, r.ClientUserId, r.AgentId) : null; }
-        catch (BookingUnavailableException)
+        try { view = await access.GetReviewabilityAsync(req.AccessId, ct) is { } r ? new(r.Reviewable, r.ClientUserId, r.AgentId) : null; }
+        catch (AccessUnavailableException)
         {
             return Problem(ErrorCodes.DependencyUnavailable, "Dependency unavailable", 503, null, "A required service is temporarily unavailable.");
         }

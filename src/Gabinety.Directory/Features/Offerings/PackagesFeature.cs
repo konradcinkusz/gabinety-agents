@@ -11,7 +11,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace Gabinety.Directory.Features.Offerings;
 
 /// <summary>/api/v1/me/practitioner/offerings: list, create, replace, deactivate (CONTRACTS 3.3). Every call runs on one of the caller's own practitioner rows: the one named by <c>?agent=</c> (E-04), or the only one.</summary>
-public sealed class OfferingsFeature : IServiceFeature
+public sealed class PackagesFeature : IServiceFeature
 {
     const string Route = "/api/v1/me/practitioner/offerings";
     const int MaxActive = 5, MaxTechs = 4;
@@ -21,7 +21,7 @@ public sealed class OfferingsFeature : IServiceFeature
     {
         builder.Services.TryAddSingleton(TimeProvider.System);
         // Added after (or before) ProfilesFeature: its registration is a TryAdd, so this one is the last or the only one either way.
-        builder.Services.AddSingleton<IChecklistFacts, OfferingFacts>();
+        builder.Services.AddSingleton<IChecklistFacts, PackageFacts>();
     }
 
     public void Map(IEndpointRouteBuilder endpoints)

@@ -11,10 +11,10 @@ public class CheckoutAndConfirmationTests
     static readonly string Checkout = $"/checkout/mock/{AccessId}";
     static readonly string Confirmation = $"/dostep/potwierdzenie/{AccessId}";
 
-    static async Task<ClientAreaFixture> Fake(BookingDetailDto? booking = null, Action<WebFactory>? configure = null)
+    static async Task<ClientAreaFixture> Fake(BookingDetailDto? access = null, Action<WebFactory>? configure = null)
     {
         var f = await ClientAreaFixture.SignedIn(w => { w.With("GABINETY_FAKE", "1"); configure?.Invoke(w); });
-        f.Web.Access.Respond = r => r.RequestUri!.AbsolutePath.EndsWith("/payments/simulate") ? FakeBackend.Json(new { outcome = "PaymentSucceeded" }) : FakeBackend.Json(booking ?? Pending());
+        f.Web.Access.Respond = r => r.RequestUri!.AbsolutePath.EndsWith("/payments/simulate") ? FakeBackend.Json(new { outcome = "PaymentSucceeded" }) : FakeBackend.Json(access ?? Pending());
         return f;
     }
 
@@ -202,7 +202,7 @@ public class CheckoutAndConfirmationTests
 
     // ---- confirmation
 
-    static Task<ClientAreaFixture> Open(BookingDetailDto booking) => ClientAreaFixture.SignedIn(w => { }).ContinueWith(t => { t.Result.Web.Access.Respond = _ => FakeBackend.Json(booking); return t.Result; });
+    static Task<ClientAreaFixture> Open(BookingDetailDto access) => ClientAreaFixture.SignedIn(w => { }).ContinueWith(t => { t.Result.Web.Access.Respond = _ => FakeBackend.Json(access); return t.Result; });
 
     [Fact]
     public async Task A_confirmed_booking_says_so_in_the_exact_words_with_the_summary_the_name_the_state_and_the_ways_on()

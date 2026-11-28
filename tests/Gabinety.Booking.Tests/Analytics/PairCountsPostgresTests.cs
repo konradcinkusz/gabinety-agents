@@ -53,7 +53,7 @@ public sealed class PairCountsPostgresFixture : IAsyncLifetime
                     });
                 db.Accesses.Add(new BookingEntity
                 {
-                    Id = id, ClientUserId = client, AgentId = practitioner, PractitionerUserId = "demo-practitioner-user",
+                    Id = id, ClientUserId = client, AgentId = practitioner, AgentUserId = "demo-practitioner-user",
                     PackageId = Host.Package, PackageTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 12345,
                     StartUtc = start, EndUtc = start.AddHours(1), Status = status, BriefText = "demo-brief",
                     IdempotencyKey = Guid.NewGuid(), CreatedAt = start.AddDays(-2),

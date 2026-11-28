@@ -7,11 +7,11 @@ using Gabinety.Directory.Features.Offerings;
 namespace Gabinety.Directory.Features.Search;
 
 /// <summary>One active offering must satisfy every given filter at once (CONTRACTS 3.2).</summary>
-public sealed record OfferingFilter(string? Problem, string? Tech, int? Duration, long? MaxPriceMinor)
+public sealed record PackageFilter(string? Problem, string? Tech, int? Duration, long? MaxPriceMinor)
 {
-    public IQueryable<Package> Apply(IQueryable<Package> offerings)
+    public IQueryable<Package> Apply(IQueryable<Package> packages)
     {
-        var q = offerings.Where(o => o.IsActive);
+        var q = packages.Where(o => o.IsActive);
         if (Problem is { } p) q = q.Where(o => o.ProblemSlug == p);
         if (Tech is { } t) q = q.Where(o => o.TechSlugs.Contains(t)); // `@>`/ANY on text[] in Npgsql, a list on InMemory
         if (Duration is { } d) { var dm = (short)d; q = q.Where(o => o.DurationMinutes == dm); }
@@ -51,7 +51,7 @@ public sealed class SearchQuery
     public const int DefaultLimit = 12, MaxLimit = 24, MaxQ = 60;
     static readonly Regex Slug = new("^[a-z0-9]+(-[a-z0-9]+)*$", RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100));
 
-    public OfferingFilter Filter { get; private set; } = new(null, null, null, null);
+    public PackageFilter Filter { get; private set; } = new(null, null, null, null);
     public string? Q { get; private set; }
     public Cursor? After { get; private set; }
     public int Limit { get; private set; } = DefaultLimit;
@@ -103,7 +103,7 @@ public sealed class SearchQuery
             if (!Cursor.TryDecode(cursor, out var c)) { s.Fail("cursor", "not a cursor of this list"); return s; }
             s.After = c;
         }
-        s.Filter = new OfferingFilter(problem, tech, duration, max);
+        s.Filter = new PackageFilter(problem, tech, duration, max);
         return s;
     }
 

@@ -25,7 +25,7 @@ public sealed class Package
     public DateTimeOffset CreatedAt { get; set; }
 }
 
-public sealed class OfferingConfiguration : IEntityTypeConfiguration<Package>
+public sealed class PackageConfiguration : IEntityTypeConfiguration<Package>
 {
     public void Configure(EntityTypeBuilder<Package> b)
     {

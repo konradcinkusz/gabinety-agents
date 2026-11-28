@@ -34,7 +34,7 @@ static class Life
         {
             db.Accesses.Add(new BookingEntity
             {
-                Id = id, ClientUserId = Client, AgentId = h.Agent, PractitionerUserId = h.OwnerUserId, PackageId = h.Package,
+                Id = id, ClientUserId = Client, AgentId = h.Agent, AgentUserId = h.OwnerUserId, PackageId = h.Package,
                 PackageTitle = h.Title, DurationMinutes = 60, PriceMinor = h.PriceMinor, StartUtc = start, EndUtc = start + (duration ?? TimeSpan.FromHours(1)),
                 Status = status, UnitsTotal = unitsTotal, UnitsUsed = unitsUsed, BriefText = "demo-brief: a first review of my plan", IdempotencyKey = Guid.NewGuid(), CreatedAt = h.Clock.GetUtcNow(),
                 MeetingUrlSnapshot = status == AccessStatus.Confirmed ? "https://meet.demo.invalid/room-1" : null,

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Gabinety.Booking.Features.Internal.PractitionerCancellation;
 using Gabinety.Booking.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -6,7 +7,7 @@ using AccessStatus = Gabinety.Billing.AccessStatus;
 namespace Gabinety.Booking.Jobs.StatsPush;
 
 /// <summary>The four values Directory keeps per practitioner (CONTRACTS 3.6).</summary>
-public sealed record BookingStats(int CompletedCount, int PractitionerCancelCount, int NoShowUpheldCount, int OpenSlots14d);
+public sealed record BookingStats(int CompletedCount, [property: JsonPropertyName("practitionerCancelCount")] int AgentCancelCount, int NoShowUpheldCount, int OpenSlots14d);
 
 /// <summary>
 /// Computes <see cref="BookingStats"/> for every practitioner that has bookings.

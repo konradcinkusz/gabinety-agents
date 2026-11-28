@@ -56,8 +56,8 @@ public static class BookingFormat
     /// <summary>The other party's name when the API sent one, else a neutral label.</summary>
     public static string OtherParty(BookingViewDto b, string role)
     {
-        var name = (role == BookingClient.ClientRole ? b.Agent.DisplayName : b.Client?.DisplayName)?.Trim();
-        return string.IsNullOrEmpty(name) ? (role == BookingClient.ClientRole ? Pl.Accesses.PartyPractitioner : Pl.Accesses.PartyClient) : name;
+        var name = (role == AccessClient.ClientRole ? b.Agent.DisplayName : b.Client?.DisplayName)?.Trim();
+        return string.IsNullOrEmpty(name) ? (role == AccessClient.ClientRole ? Pl.Accesses.PartyPractitioner : Pl.Accesses.PartyClient) : name;
     }
 
     /// <summary>What to tell the user about a failed call, from its code (never from the server's title or detail).</summary>
@@ -77,7 +77,7 @@ public static class BookingFormat
     public static string? RebookHref(string status, string? slug) =>
         (status == "Completed" || IsCancelled(status)) && !string.IsNullOrWhiteSpace(slug) ? "/agent/" + Uri.EscapeDataString(slug.Trim()) : null;
 
-    public static string Role(string? raw) => raw == BookingClient.PractitionerRole ? BookingClient.PractitionerRole : BookingClient.ClientRole;
+    public static string Role(string? raw) => raw == AccessClient.PractitionerRole ? AccessClient.PractitionerRole : AccessClient.ClientRole;
 
     public static string StatusFilter(string? raw) => raw is not null && Pl.Accesses.Statuses.ContainsKey(raw) ? raw : "";
 }

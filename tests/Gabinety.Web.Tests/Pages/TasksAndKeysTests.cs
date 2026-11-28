@@ -15,13 +15,13 @@ public class TasksAndKeysTests
     const string PlainKey = "gab_DEMOKEYDEMOKEYDEMOKEYDEMOKEYDEMOKEY0123";
     static readonly Guid KeyId = Guid.Parse("018f0000-0000-7000-8000-0000000000d1");
 
-    static async Task<ClientAreaFixture> OpenDetail(BookingDetailDto booking, IReadOnlyList<AgentTaskDto>? tasks = null, Func<HttpRequestMessage, HttpResponseMessage>? post = null)
+    static async Task<ClientAreaFixture> OpenDetail(BookingDetailDto access, IReadOnlyList<AgentTaskDto>? tasks = null, Func<HttpRequestMessage, HttpResponseMessage>? post = null)
     {
         var f = await ClientAreaFixture.SignedIn();
         f.Web.Access.Respond = r =>
             r.Method == HttpMethod.Post && post is not null ? post(r)
             : r.RequestUri!.AbsolutePath.EndsWith("/tasks") ? FakeBackend.Json(tasks ?? [])
-            : FakeBackend.Json(booking);
+            : FakeBackend.Json(access);
         return f;
     }
 

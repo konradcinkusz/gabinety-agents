@@ -271,13 +271,13 @@ public class BookingSeedStepFailureTests
         {
             db.Accesses.Add(new()
             {
-                Id = Guid.NewGuid(), ClientUserId = "demo-reset-client", AgentId = Guid.NewGuid(), PractitionerUserId = "someone-else", PackageId = Guid.NewGuid(),
+                Id = Guid.NewGuid(), ClientUserId = "demo-reset-client", AgentId = Guid.NewGuid(), AgentUserId = "someone-else", PackageId = Guid.NewGuid(),
                 PackageTitle = "demo", DurationMinutes = 60, PriceMinor = 10000, StartUtc = DateTimeOffset.UtcNow.AddDays(3), EndUtc = DateTimeOffset.UtcNow.AddDays(3).AddHours(1),
                 Status = AccessStatus.Confirmed, BriefText = "demo", IdempotencyKey = Guid.NewGuid(), CreatedAt = DateTimeOffset.UtcNow,
             });
             db.Accesses.Add(new()
             {
-                Id = Guid.NewGuid(), ClientUserId = "real-client", AgentId = Guid.NewGuid(), PractitionerUserId = "real-practitioner", PackageId = Guid.NewGuid(),
+                Id = Guid.NewGuid(), ClientUserId = "real-client", AgentId = Guid.NewGuid(), AgentUserId = "real-practitioner", PackageId = Guid.NewGuid(),
                 PackageTitle = "real", DurationMinutes = 60, PriceMinor = 10000, StartUtc = DateTimeOffset.UtcNow.AddDays(4), EndUtc = DateTimeOffset.UtcNow.AddDays(4).AddHours(1),
                 Status = AccessStatus.Confirmed, BriefText = "real", IdempotencyKey = Guid.NewGuid(), CreatedAt = DateTimeOffset.UtcNow,
             });

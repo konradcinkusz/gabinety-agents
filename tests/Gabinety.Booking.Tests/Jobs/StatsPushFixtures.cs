@@ -11,17 +11,17 @@ namespace Gabinety.Booking.Tests;
 /// <summary>Stands in for <see cref="IDirectoryStatsClient"/>: records every push; <see cref="Result"/> is the answer, <see cref="Throw"/> simulates a client bug.</summary>
 sealed class RecordingStatsClient : IDirectoryStatsClient
 {
-    public readonly List<(Guid Agent, BookingStatsPush Body)> Pushes = new();
+    public readonly List<(Guid Agent, AccessStatsPush Body)> Pushes = new();
     public bool Result = true, Throw;
 
-    public Task<bool> PushAsync(Guid practitionerId, BookingStatsPush body, CancellationToken ct)
+    public Task<bool> PushAsync(Guid agentId, AccessStatsPush body, CancellationToken ct)
     {
         if (Throw) throw new InvalidOperationException("boom");
-        lock (Pushes) Pushes.Add((practitionerId, body));
+        lock (Pushes) Pushes.Add((agentId, body));
         return Task.FromResult(Result);
     }
 
-    public List<BookingStatsPush> For(Guid id) { lock (Pushes) return Pushes.Where(p => p.Agent == id).Select(p => p.Body).ToList(); }
+    public List<AccessStatsPush> For(Guid id) { lock (Pushes) return Pushes.Where(p => p.Agent == id).Select(p => p.Body).ToList(); }
 }
 
 /// <summary>Counting handler for the client tests: <see cref="Answer"/> maps the call number (from 1) to a response; nothing sleeps.</summary>

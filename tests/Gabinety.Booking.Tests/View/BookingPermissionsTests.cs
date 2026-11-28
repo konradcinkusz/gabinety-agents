@@ -15,7 +15,7 @@ public class BookingPermissionsTests
 
     static BookingEntity Row(AccessStatus status, TimeSpan? duration = null, string? resolution = null, DateTimeOffset? endedAt = null, long unitsUsed = 0) => new()
     {
-        Id = Guid.NewGuid(), ClientUserId = Client, PractitionerUserId = Agent, StartUtc = Start, EndUtc = Start + (duration ?? H),
+        Id = Guid.NewGuid(), ClientUserId = Client, AgentUserId = Agent, StartUtc = Start, EndUtc = Start + (duration ?? H),
         Status = status, DisputeResolution = resolution, EndedAt = endedAt, UnitsTotal = 10, UnitsUsed = unitsUsed,
     };
 

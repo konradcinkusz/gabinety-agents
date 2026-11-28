@@ -13,10 +13,10 @@ public class ClientAreaClientTests
 {
     sealed class Token(string? value) : IAccessTokenSource { public Task<string?> AccessTokenAsync(CancellationToken ct = default) => Task.FromResult(value); }
 
-    static (BookingClient Client, FakeBackend Backend) Accesses(string? token = "tok")
+    static (AccessClient Client, FakeBackend Backend) Accesses(string? token = "tok")
     {
         var backend = new FakeBackend();
-        return (new BookingClient(new HttpClient(backend) { BaseAddress = new Uri("http://booking.test") }, new VisitorAddressAccessor(new HttpContextAccessor()), new Token(token)), backend);
+        return (new AccessClient(new HttpClient(backend) { BaseAddress = new Uri("http://booking.test") }, new VisitorAddressAccessor(new HttpContextAccessor()), new Token(token)), backend);
     }
 
     static readonly Guid Id = Guid.Parse("018f0000-0000-7000-8000-0000000000b1");
@@ -43,14 +43,14 @@ public class ClientAreaClientTests
         var (client, backend) = Accesses();
         backend.Respond = _ => FakeBackend.Json(new CreateBookingResponseDto(Id, "PendingPayment", DateTimeOffset.UtcNow, "/checkout/mock/x"), HttpStatusCode.Created);
         var key = Guid.NewGuid();
-        var offering = Guid.NewGuid();
-        var result = await client.CreateAsync(key, new CreateBookingRequestDto(offering, new BriefDto("Opis problemu demo, syntetyczny.", "audyt-kodu", true)));
+        var package = Guid.NewGuid();
+        var result = await client.CreateAsync(key, new CreateBookingRequestDto(package, new BriefDto("Opis problemu demo, syntetyczny.", "audyt-kodu", true)));
         Assert.True(result.IsOk);
         Assert.Equal("/checkout/mock/x", result.Value!.CheckoutUrl);
         var sent = Assert.Single(backend.Requests);
         Assert.Equal((HttpMethod.Post, "/api/v1/bookings"), (sent.Method, sent.PathAndQuery));
         using var body = JsonDocument.Parse(sent.Body!);
-        Assert.Equal(offering.ToString(), body.RootElement.GetProperty("offeringId").GetString());
+        Assert.Equal(package.ToString(), body.RootElement.GetProperty("offeringId").GetString());
         Assert.True(body.RootElement.GetProperty("brief").GetProperty("aiAssisted").GetBoolean());
         Assert.Equal(["offeringId", "brief"], body.RootElement.EnumerateObject().Select(p => p.Name)); // camelCase, nothing extra
     }
@@ -182,7 +182,7 @@ public class ClientAreaClientTests
     [Fact]
     public void The_slow_calls_ask_for_their_budget_on_the_request_and_nothing_else_does()
     {
-        Assert.Equal(TimeSpan.FromSeconds(12), BookingClient.CreateBudget);
+        Assert.Equal(TimeSpan.FromSeconds(12), AccessClient.CreateBudget);
         Assert.Equal(TimeSpan.FromSeconds(35), BriefAssistantClient.Budget);
         Assert.True(BriefAssistantClient.Budget <= ApiResilience.MaxBudget);
     }
@@ -194,7 +194,7 @@ public class ClientAreaClientTests
         var backend = new FakeBackend { Respond = r => { seen.Add((r.RequestUri!.AbsolutePath, r.Options.TryGetValue(RequestContext.Timeout, out var t) ? t : null)); return FakeBackend.Json(new { }, HttpStatusCode.OK); } };
         var http = new HttpClient(backend) { BaseAddress = new Uri("http://b.test") };
         var visitor = new VisitorAddressAccessor(new HttpContextAccessor());
-        var bookings = new BookingClient(http, visitor, new Token("t"));
+        var bookings = new AccessClient(http, visitor, new Token("t"));
         await bookings.CreateAsync(Guid.NewGuid(), new CreateBookingRequestDto(Guid.NewGuid(), new BriefDto("x", null, false)));
         await bookings.CancelAsync(Id, null);
         await bookings.GetAsync(Id);
@@ -213,7 +213,7 @@ public class ClientAreaClientTests
         // The clients are built over the handler chains the host really uses (service discovery, the one resilience handler, the fake as the primary handler).
         var handlers = web.Services.GetRequiredService<IHttpMessageHandlerFactory>();
         var visitor = new VisitorAddressAccessor(new HttpContextAccessor());
-        var bookings = new BookingClient(new HttpClient(handlers.CreateHandler(Backend.Access)) { BaseAddress = new Uri(Backend.BaseAddress(Backend.Access)) }, visitor, new Token("t"));
+        var bookings = new AccessClient(new HttpClient(handlers.CreateHandler(Backend.Access)) { BaseAddress = new Uri(Backend.BaseAddress(Backend.Access)) }, visitor, new Token("t"));
         var reviews = new ReviewsClient(new HttpClient(handlers.CreateHandler(Backend.Reputation)) { BaseAddress = new Uri(Backend.BaseAddress(Backend.Reputation)) }, visitor, new Token("t"));
 
         // A write with no budget is cut at the 5 s of a read; the one that asked for its budget is not.

@@ -35,16 +35,16 @@ public sealed class DemoResetFeature : IServiceFeature
     static async Task<IResult> ResetAsync(DirectoryDbContext db, CancellationToken ct)
     {
         // StartsWith is a case-sensitive prefix match on PostgreSQL (LIKE) and on the in-memory provider (ordinal).
-        var practitioners = await db.Agents.Where(p => p.Slug.StartsWith(Ns)).ToListAsync(ct);
-        var ids = practitioners.Select(p => p.Id).ToList();
+        var agents = await db.Agents.Where(p => p.Slug.StartsWith(Ns)).ToListAsync(ct);
+        var ids = agents.Select(p => p.Id).ToList();
         var events = await db.VerificationEvents.Where(e => ids.Contains(e.AgentId)).ToListAsync(ct);
-        var offerings = await db.Packages.Where(o => ids.Contains(o.AgentId)).ToListAsync(ct);
+        var packages = await db.Packages.Where(o => ids.Contains(o.AgentId)).ToListAsync(ct);
 
         db.RemoveRange(events);
-        db.RemoveRange(offerings);
-        db.RemoveRange(practitioners);
+        db.RemoveRange(packages);
+        db.RemoveRange(agents);
         await db.SaveChangesAsync(ct); // one unit of work: all or nothing; EF orders the deletes children first
 
-        return Results.Ok(new { practitioners = practitioners.Count, offerings = offerings.Count, verificationEvents = events.Count });
+        return Results.Ok(new { practitioners = agents.Count, offerings = packages.Count, verificationEvents = events.Count });
     }
 }

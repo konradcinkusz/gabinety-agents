@@ -44,12 +44,12 @@ public sealed class ReputationSeedStep : ISeedStep
         foreach (var review in ReputationPlan.All)
         {
             DemoNames.Require(review.Key);
-            if (!completed.TryGetValue(review.BookingKey, out var booking))
+            if (!completed.TryGetValue(review.BookingKey, out var access))
             {
                 context.Log.Info($"reputation: {review.Key} skipped, {review.BookingKey} is not a used package");
                 continue;
             }
-            var (outcome, status) = await reputation.CreateReviewAsync(booking.Client, booking.Id, review.Rating, review.Text, ct);
+            var (outcome, status) = await reputation.CreateReviewAsync(access.Client, access.Id, review.Rating, review.Text, ct);
             switch (outcome)
             {
                 case ReviewOutcome.Created:

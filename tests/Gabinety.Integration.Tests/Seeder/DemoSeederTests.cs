@@ -49,9 +49,9 @@ public class DemoSeederTests(SeederFixture fx) : IClassFixture<SeederFixture>
         var all = await fx.Db(db => (from o in db.Packages.AsNoTracking()
                                     join p in db.Agents.AsNoTracking() on o.AgentId equals p.Id
                                     select new { o.ProblemSlug, o.TechSlugs, p.Status }).ToListAsync());
-        var offerings = all.Where(x => x.Status.ToString() == "Approved").ToList();
-        Assert.True(offerings.Select(o => o.ProblemSlug).Distinct().Count() >= 3);
-        Assert.All(offerings, o => { Assert.Contains(o.ProblemSlug, known); Assert.All(o.TechSlugs, t => Assert.Contains(t, known)); });
+        var packages = all.Where(x => x.Status.ToString() == "Approved").ToList();
+        Assert.True(packages.Select(o => o.ProblemSlug).Distinct().Count() >= 3);
+        Assert.All(packages, o => { Assert.Contains(o.ProblemSlug, known); Assert.All(o.TechSlugs, t => Assert.Contains(t, known)); });
     }
 
     [Fact]

@@ -1,7 +1,7 @@
 @page "/moje/dostepy/{BookingId:guid}"
 @attribute [Authorize]
 @using Gabinety.Web.Components.Pages.Shared
-@inject BookingClient Accesses
+@inject AccessClient Accesses
 @inject NavigationManager Navigation
 @inject TimeProvider Clock
 @* Static server rendering. Every action is driven ONLY by the server's can* flags: the windows are never recomputed here. An action opens as a state of the page (?action=), shown as a
@@ -45,9 +45,9 @@ else if (_booking is { } b)
                 <p class="callout callout--info" data-testid="booking-head">@refundLine</p>
             }
             <dl class="dl">
-                @if (BookingFormat.Name(_role == BookingClient.ClientRole ? b.Agent.DisplayName : b.Client?.DisplayName) is { } party)
+                @if (BookingFormat.Name(_role == AccessClient.ClientRole ? b.Agent.DisplayName : b.Client?.DisplayName) is { } party)
                 {
-                    <dt>@(_role == BookingClient.ClientRole ? BookingsText.PartyPractitioner : BookingsText.PartyClient)</dt><dd>@party @if (_role == BookingClient.ClientRole) {<AiBadge />}</dd>
+                    <dt>@(_role == AccessClient.ClientRole ? BookingsText.PartyPractitioner : BookingsText.PartyClient)</dt><dd>@party @if (_role == AccessClient.ClientRole) {<AiBadge />}</dd>
                 }
                 <dt>@BookingsText.Detail.Units</dt><dd data-testid="detail-units">@BookingFormat.UnitsLine(b.Kind, b.UnitsTotal)</dd>
                 <dt>@BookingsText.Detail.Usage</dt><dd><UsageBar Kind="@b.Kind" Used="b.UnitsUsed" Total="b.UnitsTotal" /></dd>
@@ -67,7 +67,7 @@ else if (_booking is { } b)
         @if (b.Brief is { } brief)
         {
             <section class="card" aria-labelledby="brief-title">
-                <h2 id="brief-title">@(_role == BookingClient.ClientRole ? BookingsText.Detail.BriefOwn : BookingsText.Detail.Brief)</h2>
+                <h2 id="brief-title">@(_role == AccessClient.ClientRole ? BookingsText.Detail.BriefOwn : BookingsText.Detail.Brief)</h2>
                 <p class="brief">@brief.Text</p>
             </section>
         }
@@ -117,7 +117,7 @@ else if (_booking is { } b)
         {
             <div class="form-actions">
                 @if (b.CanReview && b.Status != "Completed") {<a class="btn btn--primary" href="@($"/moje/opinie/{b.Id}")">@BookingsText.Review</a>}
-                @if (_role == BookingClient.ClientRole && BookingFormat.RebookHref(b.Status, b.Agent.Slug) is { } rebook) {<a class="btn btn--secondary" href="@rebook">@BookingsText.Detail.Rebook</a>}
+                @if (_role == AccessClient.ClientRole && BookingFormat.RebookHref(b.Status, b.Agent.Slug) is { } rebook) {<a class="btn btn--secondary" href="@rebook">@BookingsText.Detail.Rebook</a>}
                 @if (b.CanCancel || b.CanDispute)
                 {
                     @* a GET form: the buttons open the action without a script and without a state change (a link would not be a button) *@
@@ -129,7 +129,7 @@ else if (_booking is { } b)
                 }
             </div>
         }
-        @if (b.Kind != "Chat" && _role == BookingClient.ClientRole)
+        @if (b.Kind != "Chat" && _role == AccessClient.ClientRole)
         {
             <section class="card stack" aria-labelledby="tasks-title" id="zadania" data-testid="tasks">
                 <h2 id="tasks-title">@BookingsText.Tasks.Title</h2>
@@ -207,7 +207,7 @@ else if (_booking is { } b)
     BookingDetailDto? _booking;
     ApiFailure? _failure, _actionFailure;
     CancelOutcome? _outcome;
-    string _role = BookingClient.ClientRole;
+    string _role = AccessClient.ClientRole;
     string? _textError, _reasonError, _taskError;
     IReadOnlyList<AgentTaskDto> _tasks = [];
     bool _tasksFailed;
@@ -244,7 +244,7 @@ else if (_booking is { } b)
         {
             _booking = result.Value;
             _outcome = CancelOutcome.From(_booking!.CancelOutcome, _booking.Price);
-            if (_booking.Kind != "Chat" && _role == BookingClient.ClientRole) await LoadTasksAsync();
+            if (_booking.Kind != "Chat" && _role == AccessClient.ClientRole) await LoadTasksAsync();
             return;
         }
         if (result.Failure!.IsUnauthenticated) { SignIn(); return; }

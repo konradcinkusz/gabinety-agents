@@ -60,10 +60,10 @@ sealed class FakeBooking : HttpMessageHandler
     public string? LastKeyHeader;
     public string? LastPath;
 
-    public Guid Add(string clientUserId, Guid practitionerId, bool reviewable = true)
+    public Guid Add(string clientUserId, Guid agentId, bool reviewable = true)
     {
         var id = Guid.NewGuid();
-        Accesses[id] = (reviewable, clientUserId, practitionerId);
+        Accesses[id] = (reviewable, clientUserId, agentId);
         return id;
     }
 
@@ -119,8 +119,8 @@ sealed class ReviewsHost : WebApplicationFactory<Program>
         foreach (var (k, v) in Settings) builder.UseSetting(k, v);
         builder.ConfigureServices(s =>
         {
-            s.RemoveAll<IBookingClient>();
-            s.AddSingleton<IBookingClient>(new BookingClient(
+            s.RemoveAll<IAccessClient>();
+            s.AddSingleton<IAccessClient>(new AccessClient(
                 new HttpClient(Access) { BaseAddress = new Uri(FakeBooking.BaseUrl) }, FakeBooking.Key, retryDelay: TimeSpan.Zero));
             s.RemoveAll<IDirectoryReputationClient>();
             s.AddSingleton<IDirectoryReputationClient>(Directory);
@@ -152,8 +152,8 @@ sealed class ReviewsHost : WebApplicationFactory<Program>
         return await q(scope.ServiceProvider.GetRequiredService<ReputationDbContext>());
     }
 
-    public Task<List<Review>> ReviewsOf(Guid practitionerId) => Query(db => db.Reviews.AsNoTracking().Where(r => r.AgentId == practitionerId).ToListAsync());
-    public Task<RatingSummary?> SummaryOf(Guid practitionerId) => Query(db => db.RatingSummaries.AsNoTracking().SingleOrDefaultAsync(s => s.AgentId == practitionerId));
+    public Task<List<Review>> ReviewsOf(Guid agentId) => Query(db => db.Reviews.AsNoTracking().Where(r => r.AgentId == agentId).ToListAsync());
+    public Task<RatingSummary?> SummaryOf(Guid agentId) => Query(db => db.RatingSummaries.AsNoTracking().SingleOrDefaultAsync(s => s.AgentId == agentId));
 
     public static Task<HttpResponseMessage> Post(HttpClient c, Guid bookingId, int rating = 5, string? text = null) =>
         c.PostAsJsonAsync("/api/v1/reviews", new { bookingId, rating, text = text ?? GoodText });

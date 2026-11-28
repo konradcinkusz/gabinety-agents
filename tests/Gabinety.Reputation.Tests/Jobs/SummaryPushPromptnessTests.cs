@@ -27,9 +27,9 @@ public class SummaryPushPromptnessTests
         using var h = new ReviewsHost();
         var user = "demo-" + Guid.NewGuid().ToString("N")[..12];
         var pract = Guid.NewGuid();
-        var booking = h.Access.Add(user, pract);
+        var access = h.Access.Add(user, pract);
 
-        var created = await ReviewsHost.Post(h.ClientFor(user), booking, rating: 4);
+        var created = await ReviewsHost.Post(h.ClientFor(user), access, rating: 4);
         Assert.Equal(System.Net.HttpStatusCode.Created, created.StatusCode);
 
         var push = Assert.Single(await WaitForPushes(h, pract, 1));
@@ -43,9 +43,9 @@ public class SummaryPushPromptnessTests
         using var h = new ReviewsHost();
         var user = "demo-" + Guid.NewGuid().ToString("N")[..12];
         var pract = Guid.NewGuid();
-        var booking = h.Access.Add(user, pract);
+        var access = h.Access.Add(user, pract);
 
-        await ReviewsHost.Post(h.ClientFor(user), booking, rating: 4, text: "Kontakt: demo.osoba@example.invalid, napiszcie do mnie w sprawie spotkania.");
+        await ReviewsHost.Post(h.ClientFor(user), access, rating: 4, text: "Kontakt: demo.osoba@example.invalid, napiszcie do mnie w sprawie spotkania.");
         await Task.Delay(300);
 
         Assert.Empty(h.Directory.For(pract));

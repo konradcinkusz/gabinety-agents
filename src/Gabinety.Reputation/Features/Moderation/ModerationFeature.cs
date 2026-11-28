@@ -50,13 +50,13 @@ public sealed class ModerationFeature : IServiceFeature
         var actor = user.FindFirst("sub")?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (actor is null) return Results.Unauthorized();
 
-        var (outcome, practitionerId, status) = await ReviewModerator.ApplyAsync(db, id, action, actor, note, time.GetUtcNow(), ct);
+        var (outcome, agentId, status) = await ReviewModerator.ApplyAsync(db, id, action, actor, note, time.GetUtcNow(), ct);
         switch (outcome)
         {
             case ModerationOutcome.NotFound: return Problem(404, ErrorCodes.NotFound, "Not found");
             case ModerationOutcome.InvalidTransition: return Problem(409, ErrorCodes.InvalidTransition, "Invalid transition");
         }
-        log.LogInformation("Review {ReviewId} of practitioner {PractitionerId} moved to {Status} by {Actor}", id, practitionerId, status, actor); // ids and a status only
+        log.LogInformation("Review {ReviewId} of practitioner {PractitionerId} moved to {Status} by {Actor}", id, agentId, status, actor); // ids and a status only
         return Results.NoContent();
     }
 

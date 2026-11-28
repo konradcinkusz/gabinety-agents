@@ -24,7 +24,7 @@ public static class BookingPermissions
     public static BookingFlags For(BookingEntity b, string callerId, TimeProvider time)
     {
         var isClient = b.ClientUserId == callerId;
-        var isPractitioner = b.PractitionerUserId == callerId;
+        var isPractitioner = b.AgentUserId == callerId;
         if (!isClient && !isPractitioner) return BookingFlags.None;
         var now = time.GetUtcNow();
         var s = b.Status;

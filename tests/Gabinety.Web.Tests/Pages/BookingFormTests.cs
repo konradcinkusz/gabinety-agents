@@ -14,10 +14,10 @@ public class BookingFormTests
     static HttpResponseMessage Created(string url = "/checkout/mock/018f0000-0000-7000-8000-0000000000c1") =>
         FakeBackend.Json(new CreateBookingResponseDto(NewBooking, "PendingPayment", DateTimeOffset.UtcNow.AddMinutes(10), url), HttpStatusCode.Created);
 
-    static async Task<ClientAreaFixture> Open(Func<HttpRequestMessage, HttpResponseMessage>? booking = null, Func<HttpRequestMessage, HttpResponseMessage>? assistant = null)
+    static async Task<ClientAreaFixture> Open(Func<HttpRequestMessage, HttpResponseMessage>? access = null, Func<HttpRequestMessage, HttpResponseMessage>? assistant = null)
     {
         var f = await ClientAreaFixture.SignedIn();
-        f.Web.Access.Respond = booking ?? (_ => Created());
+        f.Web.Access.Respond = access ?? (_ => Created());
         f.Web.Assistant.Respond = assistant ?? (_ => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
         return f;
     }
@@ -187,7 +187,7 @@ public class BookingFormTests
     [Fact]
     public async Task A_stripe_checkout_url_is_followed_as_it_is_and_the_page_flow_does_not_assume_the_mock()
     {
-        await using var f = await Open(booking: _ => Created("https://checkout.stripe.com/c/pay/cs_test_demo#fid"));
+        await using var f = await Open(access: _ => Created("https://checkout.stripe.com/c/pay/cs_test_demo#fid"));
         var page = await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", Brief));
         Assert.Equal(HttpStatusCode.Found, page.Status);
         Assert.Equal("https://checkout.stripe.com/c/pay/cs_test_demo#fid", page.Location);
@@ -197,7 +197,7 @@ public class BookingFormTests
     [InlineData("http://evil.example/pay")] [InlineData("//evil.example/pay")] [InlineData("javascript:alert(1)")] [InlineData("")]
     public async Task A_checkout_url_that_is_not_the_site_or_an_https_page_is_refused_and_the_visitor_stays_with_a_message(string url)
     {
-        await using var f = await Open(booking: _ => Created(url));
+        await using var f = await Open(access: _ => Created(url));
         var page = await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", Brief));
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Null(page.Location);
@@ -218,7 +218,7 @@ public class BookingFormTests
     [InlineData(400, "validation_failed", "Nie udało się wykupić dostępu. Sprawdź dane i spróbuj ponownie.", false)]
     public async Task A_refusal_of_the_service_is_an_alert_in_our_words_with_the_way_back_to_the_profile_when_it_helps(int status, string code, string text, bool profile)
     {
-        await using var f = await Open(booking: _ => FakeBackend.Problem((HttpStatusCode)status, code));
+        await using var f = await Open(access: _ => FakeBackend.Problem((HttpStatusCode)status, code));
         var page = await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", Brief));
         var alert = page.One("[data-testid=booking-error]")!;
         Assert.Equal("alert", alert.GetAttribute("role"));
@@ -232,7 +232,7 @@ public class BookingFormTests
     [Fact]
     public async Task A_backend_that_does_not_answer_is_the_unavailable_text_and_no_retry_of_the_write_happens_by_itself()
     {
-        await using var f = await Open(booking: FakeBackend.Throw(new HttpRequestException("down")));
+        await using var f = await Open(access: FakeBackend.Throw(new HttpRequestException("down")));
         var page = await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", Brief));
         Assert.Contains("nie zostaniesz obciążony dwa razy", page.TextOf("[data-testid=booking-error]"));
         Assert.Equal(1, f.Web.Access.Calls); // SPEC 5 rule 8: a write is never retried by the client
@@ -241,7 +241,7 @@ public class BookingFormTests
     [Fact]
     public async Task A_401_goes_to_sign_in_and_comes_back_to_this_slot()
     {
-        await using var f = await Open(booking: _ => FakeBackend.Problem(HttpStatusCode.Unauthorized, "unauthenticated"));
+        await using var f = await Open(access: _ => FakeBackend.Problem(HttpStatusCode.Unauthorized, "unauthenticated"));
         var page = await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", Brief));
         Assert.Equal(HttpStatusCode.Found, page.Status);
         Assert.StartsWith("/logowanie?redirect=%2Fdostep%2F", page.Location);
@@ -252,7 +252,7 @@ public class BookingFormTests
     [Fact]
     public async Task A_retry_of_the_same_request_reuses_the_key_and_a_changed_brief_gets_a_new_one()
     {
-        await using var f = await Open(booking: _ => FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable"));
+        await using var f = await Open(access: _ => FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable"));
         var keys = new List<string>();
         f.Web.Access.Respond = r => { keys.Add(r.Headers.GetValues("Idempotency-Key").Single()); return FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable"); };
 
@@ -369,7 +369,7 @@ public class BookingFormTests
     public async Task The_brief_is_never_written_to_a_log_whatever_happens()
     {
         var userText = "Znacznik opisu brief reszta opisu problemu";
-        await using var f = await Open(booking: _ => FakeBackend.Problem(HttpStatusCode.UnprocessableEntity, "slot_taken"), assistant: _ => Suggestion(summary: "Znacznik podpowiedzi asystenta"));
+        await using var f = await Open(access: _ => FakeBackend.Problem(HttpStatusCode.UnprocessableEntity, "slot_taken"), assistant: _ => Suggestion(summary: "Znacznik podpowiedzi asystenta"));
         await f.Post(BookingUrl, "booking", Intent("assist"), ("Model.Brief", userText));
         await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", userText));
         f.Web.Access.Respond = FakeBackend.Throw(new HttpRequestException("boom"));

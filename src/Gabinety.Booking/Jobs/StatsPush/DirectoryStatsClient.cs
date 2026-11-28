@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using System.Net;
 using System.Net.Http.Json;
 using Gabinety.ServiceDefaults;
@@ -5,12 +6,12 @@ using Gabinety.ServiceDefaults;
 namespace Gabinety.Booking.Jobs.StatsPush;
 
 /// <summary>Body of <c>PUT /internal/v1/practitioners/{id}/booking-stats</c> (CONTRACTS 3.6). A version not greater than the stored one is ignored by Directory.</summary>
-public sealed record BookingStatsPush(int CompletedCount, int PractitionerCancelCount, int NoShowUpheldCount, int OpenSlots14d, long Version);
+public sealed record AccessStatsPush(int CompletedCount, [property: JsonPropertyName("practitionerCancelCount")] int AgentCancelCount, int NoShowUpheldCount, int OpenSlots14d, long Version);
 
 public interface IDirectoryStatsClient
 {
     /// <summary>True when Directory accepted the push (any 2xx). False after the retries are spent or on a refusal; never throws except on cancellation.</summary>
-    Task<bool> PushAsync(Guid practitionerId, BookingStatsPush body, CancellationToken ct);
+    Task<bool> PushAsync(Guid agentId, AccessStatsPush body, CancellationToken ct);
 }
 
 /// <summary>
@@ -26,7 +27,7 @@ public sealed class DirectoryStatsClient(HttpClient http, string? internalKey, I
     readonly TimeSpan _timeout = timeout ?? CallTimeout;
     readonly Func<TimeSpan, CancellationToken, Task> _delay = delay ?? Task.Delay;
 
-    public async Task<bool> PushAsync(Guid practitionerId, BookingStatsPush body, CancellationToken ct)
+    public async Task<bool> PushAsync(Guid agentId, AccessStatsPush body, CancellationToken ct)
     {
         for (var attempt = 1; attempt <= MaxAttempts; attempt++)
         {
@@ -34,7 +35,7 @@ public sealed class DirectoryStatsClient(HttpClient http, string? internalKey, I
             string failure;
             try
             {
-                using var request = new HttpRequestMessage(HttpMethod.Put, $"internal/v1/practitioners/{practitionerId}/booking-stats") { Content = JsonContent.Create(body) };
+                using var request = new HttpRequestMessage(HttpMethod.Put, $"internal/v1/practitioners/{agentId}/booking-stats") { Content = JsonContent.Create(body) };
                 if (!string.IsNullOrEmpty(internalKey)) request.Headers.Add("X-Internal-Key", internalKey);
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 cts.CancelAfter(_timeout);
@@ -44,7 +45,7 @@ public sealed class DirectoryStatsClient(HttpClient http, string? internalKey, I
                 failure = $"status {code}";
                 if (code < 500 && response.StatusCode is not (HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests))
                 {
-                    log.LogWarning("StatsPush refused for practitioner {PractitionerId}: {Failure}; not retried", practitionerId, failure); // 400/401/404: a retry cannot help
+                    log.LogWarning("StatsPush refused for practitioner {PractitionerId}: {Failure}; not retried", agentId, failure); // 400/401/404: a retry cannot help
                     return false;
                 }
             }
@@ -52,7 +53,7 @@ public sealed class DirectoryStatsClient(HttpClient http, string? internalKey, I
             {
                 failure = ex.GetType().Name; // never the message: it can carry the URL
             }
-            log.LogWarning("StatsPush attempt {Attempt} of {Max} failed for practitioner {PractitionerId}: {Failure}", attempt, MaxAttempts, practitionerId, failure);
+            log.LogWarning("StatsPush attempt {Attempt} of {Max} failed for practitioner {PractitionerId}: {Failure}", attempt, MaxAttempts, agentId, failure);
             if (attempt < MaxAttempts) await _delay(Backoff[attempt - 1], ct);
         }
         return false;

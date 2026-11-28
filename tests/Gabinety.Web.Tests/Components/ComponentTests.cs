@@ -186,7 +186,7 @@ public class MyBookingsTests : BunitContext
         _auth = AddAuthorization();
         _auth.SetAuthorized("demo-client@demo.example");
         var http = new HttpClient(_booking) { BaseAddress = new Uri("http://booking.test") };
-        Services.AddSingleton(new BookingClient(http, new VisitorAddressAccessor(new HttpContextAccessor()), new Token("tok")));
+        Services.AddSingleton(new AccessClient(http, new VisitorAddressAccessor(new HttpContextAccessor()), new Token("tok")));
         _me.Respond = _ => FakeBackend.Json(new MeDto("demo-client", Guid.NewGuid(), "Approved", false, false)); // a practitioner too: the role tabs show
         Services.AddSingleton(new MeClient(new HttpClient(_me) { BaseAddress = new Uri("http://directory.test") }, new VisitorAddressAccessor(new HttpContextAccessor()), new Token("tok")));
         Services.AddSingleton<TimeProvider>(_clock);
@@ -266,7 +266,7 @@ public class MyBookingsTests : BunitContext
         // BLAZOR-WEB-APP section 7, trap 2: a message handler lives in its own DI scope and cannot see the scope's services, so the token travels on the request.
         string? seen = "not called";
         var probe = new Probe(r => seen = r.Options.TryGetValue(RequestContext.AccessToken, out var t) ? t : null);
-        Services.AddSingleton(new BookingClient(new HttpClient(probe) { BaseAddress = new Uri("http://booking.test") }, new VisitorAddressAccessor(new HttpContextAccessor()), new Token("tok-from-this-scope")));
+        Services.AddSingleton(new AccessClient(new HttpClient(probe) { BaseAddress = new Uri("http://booking.test") }, new VisitorAddressAccessor(new HttpContextAccessor()), new Token("tok-from-this-scope")));
         Open();
         Assert.Equal("tok-from-this-scope", seen);
     }

@@ -14,15 +14,15 @@ public class AdminDisputesTests
     {
         var host = await AdminHost.StartAsync();
         var dispute = AdminHost.Dispute(AccessId);
-        var practitionerId = Guid.NewGuid();
+        var agentId = Guid.NewGuid();
         host.Web.Access.Respond = r => (r.Method.Method, r.RequestUri!.AbsolutePath) switch
         {
             ("GET", "/api/v1/admin/disputes") => AdminHost.Paged(dispute),
-            ("GET", var p) when p == $"/api/v1/bookings/{AccessId}" => bookingReadable ? FakeBackend.Json(AdminHost.BookingOf(AccessId, price, practitionerName: practitionerName, practitionerId: practitionerId)) : FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable"),
+            ("GET", var p) when p == $"/api/v1/bookings/{AccessId}" => bookingReadable ? FakeBackend.Json(AdminHost.BookingOf(AccessId, price, practitionerName: practitionerName, agentId: agentId)) : FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable"),
             ("POST", var p) when p == $"/api/v1/admin/bookings/{AccessId}/resolve" => AdminHost.NoContent(),
             _ => new HttpResponseMessage(HttpStatusCode.NotFound),
         };
-        host.Web.Directory.Respond = r => r.RequestUri!.AbsolutePath == $"/api/v1/admin/practitioners/{practitionerId}" ? FakeBackend.Json(AdminHost.DetailOf(practitionerId, "Anna Demowska")) : new HttpResponseMessage(HttpStatusCode.NotFound);
+        host.Web.Directory.Respond = r => r.RequestUri!.AbsolutePath == $"/api/v1/admin/practitioners/{agentId}" ? FakeBackend.Json(AdminHost.DetailOf(agentId, "Anna Demowska")) : new HttpResponseMessage(HttpStatusCode.NotFound);
         return (host, dispute);
     }
 

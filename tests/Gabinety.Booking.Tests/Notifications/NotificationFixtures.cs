@@ -76,7 +76,7 @@ sealed class NotificationHost : IDisposable
     {
         var b = new BookingEntity
         {
-            Id = id ?? Guid.NewGuid(), ClientUserId = "demo-client", PractitionerUserId = "demo-practitioner", AgentId = Guid.NewGuid(), PackageId = Guid.NewGuid(),
+            Id = id ?? Guid.NewGuid(), ClientUserId = "demo-client", AgentUserId = "demo-practitioner", AgentId = Guid.NewGuid(), PackageId = Guid.NewGuid(),
             PackageTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 10000, StartUtc = Now.AddDays(2), EndUtc = Now.AddDays(2).AddHours(1),
             Status = AccessStatus.Confirmed, IdempotencyKey = Guid.NewGuid(), CreatedAt = Now,
         };

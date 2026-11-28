@@ -68,25 +68,25 @@ public sealed class BookingTransitions(BookingDbContext db, IEnumerable<IBooking
         async Task<BookingTransitionResult> Body()
         {
             db.ChangeTracker.Clear(); // a retry starts from the database
-            var booking = db.Database.IsNpgsql()
+            var access = db.Database.IsNpgsql()
                 ? await db.Accesses.FromSql($"SELECT * FROM bookings WHERE id = {request.AccessId} FOR UPDATE").SingleOrDefaultAsync(ct)
                 : await db.Accesses.SingleOrDefaultAsync(b => b.Id == request.AccessId, ct);
-            if (booking is null) return new(TransitionKind.NotFound);
+            if (access is null) return new(TransitionKind.NotFound);
 
-            var from = booking.Status;
-            var next = AccessStateMachine.Next(from, request.Trigger, booking.StartUtc, request.Now);
-            if (!next.Allowed || request.Precondition?.Invoke(booking) == false) return new(TransitionKind.Invalid, From: from);
-            if (request.DbPrecondition is { } dbRule && !await dbRule(db, booking, ct)) return new(TransitionKind.Invalid, From: from);
+            var from = access.Status;
+            var next = AccessStateMachine.Next(from, request.Trigger, access.StartUtc, request.Now);
+            if (!next.Allowed || request.Precondition?.Invoke(access) == false) return new(TransitionKind.Invalid, From: from);
+            if (request.DbPrecondition is { } dbRule && !await dbRule(db, access, ct)) return new(TransitionKind.Invalid, From: from);
 
             var to = next.Next!.Value;
-            booking.Status = to;
-            StampCancellation(booking, to, request.Now);
-            var payment = await db.Payments.SingleOrDefaultAsync(p => p.AccessId == booking.Id, ct);
-            var context = new BookingTransitionContext(db, booking, payment, from, to, request.Trigger, request.Now);
+            access.Status = to;
+            StampCancellation(access, to, request.Now);
+            var payment = await db.Payments.SingleOrDefaultAsync(p => p.AccessId == access.Id, ct);
+            var context = new BookingTransitionContext(db, access, payment, from, to, request.Trigger, request.Now);
             request.Effects?.Invoke(context);
             foreach (var hook in hooks) await hook.OnTransitionAsync(context, ct);
             await db.SaveChangesAsync(ct);
-            return new(TransitionKind.Applied, booking, payment, from);
+            return new(TransitionKind.Applied, access, payment, from);
         }
 
         BookingTransitionResult result;

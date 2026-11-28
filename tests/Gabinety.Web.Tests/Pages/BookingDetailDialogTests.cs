@@ -10,10 +10,10 @@ public class BookingDetailDialogTests
     static readonly string Detail_ = $"/moje/dostepy/{AccessId}";
     static readonly string Client = Detail_ + "?role=client";
 
-    static async Task<ClientAreaFixture> Open(BookingDetailDto booking)
+    static async Task<ClientAreaFixture> Open(BookingDetailDto access)
     {
         var f = await ClientAreaFixture.SignedIn();
-        f.Web.Access.Respond = _ => FakeBackend.Json(booking);
+        f.Web.Access.Respond = _ => FakeBackend.Json(access);
         return f;
     }
 

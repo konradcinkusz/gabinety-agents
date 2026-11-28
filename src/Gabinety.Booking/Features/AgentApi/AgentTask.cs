@@ -14,7 +14,7 @@ public sealed class AgentTask
     public Guid Id { get; set; }
     public Guid AccessId { get; set; }
     public string ClientUserId { get; set; } = "";
-    public string PractitionerSlug { get; set; } = "";
+    public string AgentSlug { get; set; } = "";
     public Guid PackageId { get; set; }
     public AgentTaskStatus Status { get; set; }
     public string InputText { get; set; } = "";
@@ -35,7 +35,7 @@ sealed class AgentTaskConfiguration : IEntityTypeConfiguration<AgentTask>
         b.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
         b.Property(x => x.AccessId).HasColumnName("booking_id");
         b.Property(x => x.ClientUserId).HasColumnName("client_user_id").HasMaxLength(64);
-        b.Property(x => x.PractitionerSlug).HasColumnName("practitioner_slug").HasMaxLength(60);
+        b.Property(x => x.AgentSlug).HasColumnName("practitioner_slug").HasMaxLength(60);
         b.Property(x => x.PackageId).HasColumnName("offering_id");
         b.Property(x => x.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(10);
         b.Property(x => x.InputText).HasColumnName("input_text").HasMaxLength(20000);

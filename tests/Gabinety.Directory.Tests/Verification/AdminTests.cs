@@ -255,7 +255,7 @@ public class AdminListTests(VerificationFactory f) : IClassFixture<VerificationF
     const string Url = "/api/v1/admin/practitioners";
     HttpClient Admin => f.As("demo-admin", "Admin");
 
-    async Task<AdminPractitionerPage> Page(string query) => (await Admin.GetFromJsonAsync<AdminPractitionerPage>(Url + query, J))!;
+    async Task<AdminAgentPage> Page(string query) => (await Admin.GetFromJsonAsync<AdminAgentPage>(Url + query, J))!;
 
     /// <summary>Submitted practitioners with a Submitted event each; many share one timestamp so the id decides.</summary>
     async Task<List<Guid>> SeedSubmitted(int n, int daysBack)
@@ -276,14 +276,14 @@ public class AdminListTests(VerificationFactory f) : IClassFixture<VerificationF
         return ids;
     }
 
-    static DateTimeOffset Key(AdminPractitionerRow r) => r.SubmittedAt ?? r.CreatedAt;
+    static DateTimeOffset Key(AdminAgentRow r) => r.SubmittedAt ?? r.CreatedAt;
 
     [Fact]
     public async Task Default_is_Submitted_oldest_first_with_the_contract_row_and_paging_has_no_gaps_or_duplicates()
     {
         var mine = await SeedSubmitted(30, 4000);
         await f.Seed(AgentStatus.Approved); // must not appear in the default list
-        var all = new List<AdminPractitionerRow>();
+        var all = new List<AdminAgentRow>();
         string? cursor = null;
         var pages = 0;
         do

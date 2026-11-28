@@ -23,7 +23,7 @@ public sealed class ProfilesFeature : IServiceFeature
         builder.Services.TryAddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<INipValidator, NipChecksumValidator>();
         builder.Services.AddSingleton<IContactDetailDetector, ContactDetailDetector>();
-        builder.Services.TryAddSingleton<IChecklistFacts, NoOfferingsYet>(); // the offerings feature registers the real one; whichever feature is added first, it wins
+        builder.Services.TryAddSingleton<IChecklistFacts, NoPackagesYet>(); // the offerings feature registers the real one; whichever feature is added first, it wins
 #pragma warning disable EXTEXP0001 // the kernel adds the standard resilience handler (with retries) to every client; this one must not retry
         builder.Services.AddHttpClient<IEmailVerifiedLookup, HttpEmailVerifiedLookup>(c => c.Timeout = HttpEmailVerifiedLookup.Timeout)
             .RemoveAllResilienceHandlers();
@@ -176,7 +176,7 @@ public sealed class ProfilesFeature : IServiceFeature
 
         var nipChanged = nip != p.Nip;
         if (nipChanged && p.Status == AgentStatus.Approved &&
-            PractitionerStateMachine.TryTransition(p.Status, PractitionerTrigger.NipChanged, out var next))
+            AgentStateMachine.TryTransition(p.Status, AgentTrigger.NipChanged, out var next))
         {
             p.Status = next;
             Verification.VerificationEvents.Record(db, p.Id, Verification.VerificationEventKind.NipChanged, uid, null, time);
@@ -185,7 +185,7 @@ public sealed class ProfilesFeature : IServiceFeature
         p.Nip = nip; p.NipValid = nip is not null; // a stored NIP has passed the checksum
         Snapshot(p, user);
         p.ProfileCompleteness = ProfileCompleteness.Compute(headline.Length > 0, bio.Length >= 200,
-            await facts.ActiveOfferingCountAsync(p.Id, ct) > 0, p.GithubLinked, portfolio is not null, p.NipValid, p.OpenSlots14d > 0);
+            await facts.ActivePackageCountAsync(p.Id, ct) > 0, p.GithubLinked, portfolio is not null, p.NipValid, p.OpenSlots14d > 0);
         Ranking.RankingRecalculator.Recompute(p);
         p.UpdatedAt = time.GetUtcNow();
         await db.SaveChangesAsync(ct);
@@ -198,13 +198,13 @@ public sealed class ProfilesFeature : IServiceFeature
         if (UserId(user) is not { } uid) return Results.Unauthorized();
         var (p, rejected) = await OwnAgents.FindAsync(db, uid, agent, ct);
         if (p is null) return rejected!;
-        if (!PractitionerStateMachine.TryTransition(p.Status, PractitionerTrigger.Submit, out var next))
+        if (!AgentStateMachine.TryTransition(p.Status, AgentTrigger.Submit, out var next))
             return Problem(409, ErrorCodes.InvalidTransition, "Invalid transition");
 
         var unmet = new List<string>();
         if (p.Headline.Length == 0) unmet.Add("headline");
         if (p.Bio.Length < 200) unmet.Add("bio");
-        if (await facts.ActiveOfferingCountAsync(p.Id, ct) < 1) unmet.Add("offering");
+        if (await facts.ActivePackageCountAsync(p.Id, ct) < 1) unmet.Add("offering");
         if (!p.GithubLinked) unmet.Add("github_linked");
         if (!p.NipValid) unmet.Add("nip_valid");
         if (p.PortfolioUrl is null) unmet.Add("portfolioUrl");

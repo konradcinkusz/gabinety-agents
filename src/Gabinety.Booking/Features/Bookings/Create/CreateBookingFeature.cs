@@ -59,32 +59,32 @@ public sealed class CreateBookingFeature : IServiceFeature
             return Replay(seen, hash, now);
 
         // 3. the offering
-        DirectoryOffering? offering;
-        try { offering = await directory.GetOfferingAsync(req.PackageId, ct); }
+        DirectoryOffering? package;
+        try { package = await directory.GetOfferingAsync(req.PackageId, ct); }
         catch (DirectoryUnavailableException)
         {
             return Problem(ErrorCodes.DependencyUnavailable, "Dependency unavailable", 503, null, "A required service is temporarily unavailable.");
         }
-        if (offering is null) return Problem(ErrorCodes.NotFound, "Not found", 404);
-        if (offering.PractitionerUserId == sub) return Problem(ErrorCodes.OwnPackage, "Own offering", 422);
-        if (offering.AgentStatus != AgentStatus.Approved) return Problem(ErrorCodes.AgentNotBookable, "Practitioner not bookable", 422);
-        if (!offering.IsActive) return Problem(ErrorCodes.PackageInactive, "Offering inactive", 422);
+        if (package is null) return Problem(ErrorCodes.NotFound, "Not found", 404);
+        if (package.AgentUserId == sub) return Problem(ErrorCodes.OwnPackage, "Own offering", 422);
+        if (package.AgentStatus != AgentStatus.Approved) return Problem(ErrorCodes.AgentNotBookable, "Practitioner not bookable", 422);
+        if (!package.IsActive) return Problem(ErrorCodes.PackageInactive, "Offering inactive", 422);
         // A real provider pays the practitioner into a connected account: without a ready one the booking would be charged and could never be paid out (T-09.05). Mock needs none.
         if (payments.RequiresPractitionerAccount
-            && !await db.PaymentAccounts.AsNoTracking().AnyAsync(a => a.AgentId == offering.AgentId && a.Provider == payments.Name && a.Ready, ct))
+            && !await db.PaymentAccounts.AsNoTracking().AnyAsync(a => a.AgentId == package.AgentId && a.Provider == payments.Name && a.Ready, ct))
             return Problem(ErrorCodes.AgentPaymentsNotReady, "Practitioner payments not ready", 422);
 
         // The provider call (a network call with a real vendor, SPEC 5.1: 10 s) happens BEFORE the transaction, with a
         // pre-allocated booking id, so no database lock is held across it. A request that then fails (a replay won the race) leaves an unused
         // checkout at the provider: a real adapter must make checkouts expire by themselves (the hold is 10 minutes).
         var bookingId = Guid.CreateVersion7();
-        var checkout = await payments.CreateCheckoutAsync(new CheckoutRequest(bookingId, offering.Price.AmountMinor, offering.Price.Currency,
-            offering.Title, $"{SiteUrl.From(config)}/bookings/{bookingId}"), ct);
+        var checkout = await payments.CreateCheckoutAsync(new CheckoutRequest(bookingId, package.Price.AmountMinor, package.Price.Currency,
+            package.Title, $"{SiteUrl.From(config)}/bookings/{bookingId}"), ct);
 
         var holdUntil = now.AddMinutes(config.GetValue("Booking:HoldMinutes", 10));
         // A package is valid from the purchase for Access:ValidityDays (CONTRACTS section 9 constant, the owner's). Chat counts tokens: the offering holds thousands.
         var validUntil = now.AddDays(config.GetValue("Access:ValidityDays", 30));
-        var unitsTotal = offering.Kind == PackageKind.Chat ? offering.Units * 1000L : offering.Units;
+        var unitsTotal = package.Kind == PackageKind.Chat ? package.Units * 1000L : package.Units;
 
         try
         {
@@ -99,23 +99,23 @@ public sealed class CreateBookingFeature : IServiceFeature
                 db.Accesses.Add(new BookingEntity
                 {
                     Id = bookingId, ClientUserId = sub, ClientEmail = UserEmail.From(user), ClientDisplayName = clientName,
-                    AgentId = offering.AgentId, PractitionerUserId = offering.PractitionerUserId,
-                    PackageId = offering.PackageId, PackageTitle = offering.Title, DurationMinutes = (short)offering.DurationMinutes,
-                    PriceMinor = offering.Price.AmountMinor, StartUtc = now, EndUtc = validUntil, Kind = offering.Kind, UnitsTotal = unitsTotal, UnitsUsed = 0,
-                    PractitionerSlug = offering.PractitionerSlug, Status = AccessStateMachine.Create(),
+                    AgentId = package.AgentId, AgentUserId = package.AgentUserId,
+                    PackageId = package.PackageId, PackageTitle = package.Title, DurationMinutes = (short)package.DurationMinutes,
+                    PriceMinor = package.Price.AmountMinor, StartUtc = now, EndUtc = validUntil, Kind = package.Kind, UnitsTotal = unitsTotal, UnitsUsed = 0,
+                    AgentSlug = package.AgentSlug, Status = AccessStateMachine.Create(),
                     BriefText = text, BriefProblemSlug = req.Brief.ProblemSlug, BriefAiAssisted = req.Brief.AiAssisted,
                     HoldExpiresAt = holdUntil, IdempotencyKey = key, CreatedAt = now,
                 });
                 db.Payments.Add(new Payment
                 {
                     Id = Guid.CreateVersion7(), AccessId = bookingId, Provider = payments.Name, ProviderPaymentId = checkout.ProviderPaymentId,
-                    AmountMinor = offering.Price.AmountMinor, Status = PaymentStatus.Created, RefundedMinor = 0, CreatedAt = now, UpdatedAt = now,
+                    AmountMinor = package.Price.AmountMinor, Status = PaymentStatus.Created, RefundedMinor = 0, CreatedAt = now, UpdatedAt = now,
                 });
                 db.IdempotencyRecords.Add(new IdempotencyRecord
                     { ClientUserId = sub, IdempotencyKey = key, RequestHash = hash, ResponseStatus = 201, ResponseBody = body, CreatedAt = now });
                 await db.SaveChangesAsync(ct);
 
-                log.LogInformation("Booking {BookingId} created for practitioner {PractitionerId}", bookingId, offering.AgentId);
+                log.LogInformation("Booking {BookingId} created for practitioner {PractitionerId}", bookingId, package.AgentId);
                 http.Response.Headers.Location = $"/api/v1/bookings/{bookingId}";
                 return Results.Text(body, "application/json", Encoding.UTF8, 201);
             }, ct);

@@ -70,24 +70,24 @@ public class CompletenessTests
 
 public class StateMachineTests
 {
-    static readonly HashSet<(AgentStatus, PractitionerTrigger, AgentStatus)> Legal =
+    static readonly HashSet<(AgentStatus, AgentTrigger, AgentStatus)> Legal =
     [
-        (AgentStatus.Draft, PractitionerTrigger.Submit, AgentStatus.Submitted),
-        (AgentStatus.Rejected, PractitionerTrigger.Submit, AgentStatus.Submitted),
-        (AgentStatus.Submitted, PractitionerTrigger.Approve, AgentStatus.Approved),
-        (AgentStatus.Submitted, PractitionerTrigger.Reject, AgentStatus.Rejected),
-        (AgentStatus.Approved, PractitionerTrigger.Suspend, AgentStatus.Suspended),
-        (AgentStatus.Suspended, PractitionerTrigger.Reinstate, AgentStatus.Approved),
-        (AgentStatus.Approved, PractitionerTrigger.NipChanged, AgentStatus.Submitted),
+        (AgentStatus.Draft, AgentTrigger.Submit, AgentStatus.Submitted),
+        (AgentStatus.Rejected, AgentTrigger.Submit, AgentStatus.Submitted),
+        (AgentStatus.Submitted, AgentTrigger.Approve, AgentStatus.Approved),
+        (AgentStatus.Submitted, AgentTrigger.Reject, AgentStatus.Rejected),
+        (AgentStatus.Approved, AgentTrigger.Suspend, AgentStatus.Suspended),
+        (AgentStatus.Suspended, AgentTrigger.Reinstate, AgentStatus.Approved),
+        (AgentStatus.Approved, AgentTrigger.NipChanged, AgentStatus.Submitted),
     ];
 
     [Fact]
     public void Every_status_times_trigger_is_legal_exactly_when_in_the_table()
     {
         foreach (var s in Enum.GetValues<AgentStatus>())
-            foreach (var t in Enum.GetValues<PractitionerTrigger>())
+            foreach (var t in Enum.GetValues<AgentTrigger>())
             {
-                var ok = PractitionerStateMachine.TryTransition(s, t, out var to);
+                var ok = AgentStateMachine.TryTransition(s, t, out var to);
                 var expected = Legal.SingleOrDefault(l => l.Item1 == s && l.Item2 == t);
                 Assert.Equal(expected != default, ok);
                 if (ok) Assert.Equal(expected.Item3, to);
@@ -95,6 +95,6 @@ public class StateMachineTests
     }
 
     [Fact] public void Only_the_seven_pairs_exist() =>
-        Assert.Equal(Legal.Count, Enum.GetValues<AgentStatus>().SelectMany(s => Enum.GetValues<PractitionerTrigger>()
-            .Where(t => PractitionerStateMachine.TryTransition(s, t, out _))).Count());
+        Assert.Equal(Legal.Count, Enum.GetValues<AgentStatus>().SelectMany(s => Enum.GetValues<AgentTrigger>()
+            .Where(t => AgentStateMachine.TryTransition(s, t, out _))).Count());
 }

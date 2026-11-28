@@ -63,8 +63,8 @@ sealed class TriageHost : WebApplicationFactory<Program>
         builder.UseSetting("Identity:Audience", Audience);
         builder.ConfigureServices(s =>
         {
-            s.RemoveAll<IBookingClient>();
-            s.AddSingleton<IBookingClient>(new BookingClient(new HttpClient(Access) { BaseAddress = new Uri(FakeBooking.BaseUrl) }, FakeBooking.Key, retryDelay: TimeSpan.Zero));
+            s.RemoveAll<IAccessClient>();
+            s.AddSingleton<IAccessClient>(new AccessClient(new HttpClient(Access) { BaseAddress = new Uri(FakeBooking.BaseUrl) }, FakeBooking.Key, retryDelay: TimeSpan.Zero));
             s.RemoveAll<IAssistantClient>();
             s.AddSingleton<IAssistantClient>(Assistant);
             s.RemoveAll<TimeProvider>();
@@ -102,6 +102,6 @@ sealed class TriageHost : WebApplicationFactory<Program>
         return (user, pract, Access.Add(user, pract));
     }
 
-    public Task<HttpResponseMessage> Post(string user, Guid booking, int rating = 5, string? text = null) =>
-        ClientFor(user).PostAsJsonAsync("/api/v1/reviews", new { bookingId = booking, rating, text = text ?? GoodText });
+    public Task<HttpResponseMessage> Post(string user, Guid access, int rating = 5, string? text = null) =>
+        ClientFor(user).PostAsJsonAsync("/api/v1/reviews", new { bookingId = access, rating, text = text ?? GoodText });
 }

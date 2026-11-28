@@ -19,7 +19,7 @@ public static class ApiResilience
         services.AddTransient<BackendHeadersHandler>();
         services.AddScoped<VisitorAddressAccessor>();
         Add<DirectoryClient>(services, Backend.Directory);
-        Add<BookingClient>(services, Backend.Access);
+        Add<AccessClient>(services, Backend.Access);
         Add<ReputationClient>(services, Backend.Reputation);
         Add<AssistantClient>(services, Backend.Assistant); // status read (5 s) and the brief suggestion, which asks for its 35 s per request (SPEC 5.1)
         Add<BriefAssistantClient>(services, Backend.Assistant);   // the brief suggestion (35 s)

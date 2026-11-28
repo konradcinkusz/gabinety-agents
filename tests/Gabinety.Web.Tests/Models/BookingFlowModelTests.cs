@@ -66,11 +66,11 @@ public class BookingFlowModelTests
     [Fact]
     public void The_key_is_kept_for_the_same_body_and_replaced_when_the_body_differs()
     {
-        var offering = Guid.NewGuid();
-        var first = BookingAttempt.Fingerprint(offering, "Opis problemu z integracją", null, false);
+        var package = Guid.NewGuid();
+        var first = BookingAttempt.Fingerprint(package, "Opis problemu z integracją", null, false);
         var key = Guid.NewGuid();
         Assert.Equal(key, BookingAttempt.KeyFor(key.ToString(), first, first, () => throw new InvalidOperationException("must reuse")));
-        var edited = BookingAttempt.Fingerprint(offering, "Inny opis problemu z integracją", null, false);
+        var edited = BookingAttempt.Fingerprint(package, "Inny opis problemu z integracją", null, false);
         Assert.NotEqual(first, edited);
         var fresh = Guid.NewGuid();
         Assert.Equal(fresh, BookingAttempt.KeyFor(key.ToString(), first, edited, () => fresh)); // same key with another body would be a 409

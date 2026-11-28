@@ -99,11 +99,11 @@ public class PackageReopeningIntegrationTests : IAsyncLifetime
         for (var round = 0; round < 25; round++)
         {
             var client = AgentApiFx.NewUser();
-            var package = await AgentApiFx.Package(host, client, Slug, PackageKind.Tasks, total: 1, used: 1, offering: Offer);
+            var package = await AgentApiFx.Package(host, client, Slug, PackageKind.Tasks, total: 1, used: 1, package: Offer);
             var now = host.Clock.GetUtcNow();
             await host.Seed(db => db.AgentTasks.Add(new AgentTask
             {
-                Id = Guid.NewGuid(), AccessId = package, ClientUserId = client, PractitionerSlug = Slug, PackageId = Offer, Status = AgentTaskStatus.Running, InputText = Reopen.Input,
+                Id = Guid.NewGuid(), AccessId = package, ClientUserId = client, AgentSlug = Slug, PackageId = Offer, Status = AgentTaskStatus.Running, InputText = Reopen.Input,
                 Attempts = 3, CreatedAt = now.AddHours(-2), StartedAt = now.AddHours(-1), // on its last start and past the timeout: this run fails it
             }));
 

@@ -4,11 +4,11 @@ using System.Text.Json;
 namespace Gabinety.Directory.Features.Profiles;
 
 /// <summary>Facts owned by later tasks (offerings, GitHub linking). Only offerings are reported here; the implementation returns 0 until T-03.0x.</summary>
-public interface IChecklistFacts { Task<int> ActiveOfferingCountAsync(Guid practitionerId, CancellationToken ct); }
+public interface IChecklistFacts { Task<int> ActivePackageCountAsync(Guid agentId, CancellationToken ct); }
 
-public sealed class NoOfferingsYet : IChecklistFacts
+public sealed class NoPackagesYet : IChecklistFacts
 {
-    public Task<int> ActiveOfferingCountAsync(Guid practitionerId, CancellationToken ct) => Task.FromResult(0);
+    public Task<int> ActivePackageCountAsync(Guid agentId, CancellationToken ct) => Task.FromResult(0);
 }
 
 /// <summary>Whether authservice has confirmed the caller's e-mail. Never throws: any failure means "not verified".</summary>

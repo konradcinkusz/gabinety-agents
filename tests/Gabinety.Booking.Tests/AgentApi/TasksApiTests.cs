@@ -35,7 +35,7 @@ static class TaskFx
 
     public static StringContent Json(object o) => new(JsonSerializer.Serialize(o), Encoding.UTF8, "application/json");
 
-    public static object Body(string slug, Guid offering, string? input = null) => new { model = slug, offering_id = offering, input = input ?? Input };
+    public static object Body(string slug, Guid package, string? input = null) => new { model = slug, offering_id = package, input = input ?? Input };
 
     public static Task<AgentTask> Task(CreateHost h, Guid id) => h.Query(db => db.AgentTasks.AsNoTracking().SingleAsync(t => t.Id == id));
 }
@@ -45,8 +45,8 @@ public class TasksApiTests
     readonly string Me = AgentApiFx.NewUser(), Other = AgentApiFx.NewUser(), Slug = "demo-agent-" + Guid.NewGuid().ToString("N")[..8];
     readonly Guid Offer = Guid.NewGuid();
 
-    Task<Guid> TasksPackage(CreateHost h, string? client = null, long total = 5, long used = 0, AccessStatus status = AccessStatus.Confirmed, TimeSpan? validFor = null, Guid? offering = null) =>
-        AgentApiFx.Package(h, client ?? Me, Slug, PackageKind.Tasks, total, used, status, validFor, offering: offering ?? Offer);
+    Task<Guid> TasksPackage(CreateHost h, string? client = null, long total = 5, long used = 0, AccessStatus status = AccessStatus.Confirmed, TimeSpan? validFor = null, Guid? package = null) =>
+        AgentApiFx.Package(h, client ?? Me, Slug, PackageKind.Tasks, total, used, status, validFor, package: package ?? Offer);
 
     static async Task<JsonElement> Error(HttpResponseMessage r) => JsonDocument.Parse(await r.Content.ReadAsStringAsync()).RootElement.GetProperty("error");
 
@@ -66,7 +66,7 @@ public class TasksApiTests
         var j = JsonDocument.Parse(await r.Content.ReadAsStringAsync()).RootElement;
         Assert.Equal("queued", j.GetProperty("status").GetString());
         var task = await TaskFx.Task(h, j.GetProperty("id").GetGuid());
-        Assert.Equal((package, Me, Slug, Offer, AgentTaskStatus.Queued, TaskFx.Input, 0), (task.AccessId, task.ClientUserId, task.PractitionerSlug, task.PackageId, task.Status, task.InputText, task.Attempts));
+        Assert.Equal((package, Me, Slug, Offer, AgentTaskStatus.Queued, TaskFx.Input, 0), (task.AccessId, task.ClientUserId, task.AgentSlug, task.PackageId, task.Status, task.InputText, task.Attempts));
         Assert.Equal(1, await Used(h, package));
         var usage = Assert.Single(await h.Query(db => db.UsageRecords.AsNoTracking().Where(u => u.AccessId == package).ToListAsync()));
         Assert.Equal((1L, keyId, PackageKind.Tasks), (usage.Units, usage.ApiKeyId, usage.Kind));
@@ -107,15 +107,15 @@ public class TasksApiTests
         await using var h = new CreateHost();
         var (key, _) = await AgentApiFx.MakeKey(h, Me);
         var api = AgentApiFx.ApiClient(h, key);
-        async Task<HttpResponseMessage> Post(Guid offering) => await api.PostAsync("/v1/tasks", TaskFx.Json(TaskFx.Body(Slug, offering)));
+        async Task<HttpResponseMessage> Post(Guid package) => await api.PostAsync("/v1/tasks", TaskFx.Json(TaskFx.Body(Slug, package)));
 
         var none = await Post(Offer);
         Assert.Equal(HttpStatusCode.NotFound, none.StatusCode);
         Assert.Equal("model_not_found", (await Error(none)).GetProperty("code").GetString());
 
-        await AgentApiFx.Package(h, Me, Slug, PackageKind.Chat, offering: Offer); // a Chat package is not a Tasks package
+        await AgentApiFx.Package(h, Me, Slug, PackageKind.Chat, package: Offer); // a Chat package is not a Tasks package
         await TasksPackage(h, Other);                                              // someone else's
-        await TasksPackage(h, validFor: TimeSpan.Zero, offering: Guid.NewGuid());  // expired
+        await TasksPackage(h, validFor: TimeSpan.Zero, package: Guid.NewGuid());  // expired
         Assert.Equal(HttpStatusCode.NotFound, (await Post(Offer)).StatusCode);
 
         await TasksPackage(h, total: 2, used: 2);
@@ -221,9 +221,9 @@ public class TasksApiTests
         Assert.Equal("validation_failed", (await short_.Body()).GetProperty("code").GetString());
 
         var chat = await AgentApiFx.Package(h, Me, Slug, PackageKind.Chat);
-        var used = await TasksPackage(h, total: 1, used: 1, offering: Guid.NewGuid());
-        var expired = await TasksPackage(h, validFor: TimeSpan.Zero, offering: Guid.NewGuid());
-        var pending = await TasksPackage(h, status: AccessStatus.PendingPayment, offering: Guid.NewGuid());
+        var used = await TasksPackage(h, total: 1, used: 1, package: Guid.NewGuid());
+        var expired = await TasksPackage(h, validFor: TimeSpan.Zero, package: Guid.NewGuid());
+        var pending = await TasksPackage(h, status: AccessStatus.PendingPayment, package: Guid.NewGuid());
         foreach (var id in new[] { chat, used, expired, pending })
         {
             var r = await me.PostAsJsonAsync($"/api/v1/bookings/{id}/tasks", new { input = TaskFx.Input });
@@ -240,8 +240,8 @@ public class TasksApiTests
     {
         await using var h = ErasureApiTests.NewHost();
         var user = ErasureApiTests.NewUser("client");
-        var package = await AgentApiFx.Package(h, user, Slug, PackageKind.Tasks, 5, offering: Offer);
-        var other = await AgentApiFx.Package(h, Other, Slug, PackageKind.Tasks, 5, offering: Offer);
+        var package = await AgentApiFx.Package(h, user, Slug, PackageKind.Tasks, 5, package: Offer);
+        var other = await AgentApiFx.Package(h, Other, Slug, PackageKind.Tasks, 5, package: Offer);
         var mine = (await (await h.ClientFor(user).PostAsJsonAsync($"/api/v1/bookings/{package}/tasks", new { input = TaskFx.Input })).Body()).GetProperty("id").GetGuid();
         var theirs = (await (await h.ClientFor(Other).PostAsJsonAsync($"/api/v1/bookings/{other}/tasks", new { input = TaskFx.Input })).Body()).GetProperty("id").GetGuid();
         await h.Seed(db => { var t = db.AgentTasks.Single(x => x.Id == mine); t.Status = AgentTaskStatus.Succeeded; t.OutputText = "demo-answer"; });
@@ -269,7 +269,7 @@ public class TasksApiTests
                 s.AddDbContext<BookingDbContext>(o => o.UseInMemoryDatabase(dbName));
             };
         });
-        var package = await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, 5, offering: Offer);
+        var package = await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, 5, package: Offer);
         var task = (await (await h.ClientFor(Me).PostAsJsonAsync($"/api/v1/bookings/{package}/tasks", new { input = TaskFx.Input })).Body()).GetProperty("id").GetGuid();
 
         var r = await ClockApiTests.PostRaw(h, "/internal/v1/demo/reset", "{}", ClockApiTests.InternalKey);

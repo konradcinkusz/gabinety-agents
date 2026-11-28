@@ -15,7 +15,7 @@ public sealed record AdminVerificationEventDto(Guid Id, string Kind, string Acto
 
 public sealed record AdminVerificationEventsDto(IReadOnlyList<AdminVerificationEventDto> Items);
 
-public sealed record AdminDisputeDto([property: JsonPropertyName("bookingId")] Guid AccessId, string ClientUserId, string PractitionerUserId, string? Kind, string? Text, DateTimeOffset? OpenedAt, DateTimeOffset? ResolvedAt,
+public sealed record AdminDisputeDto([property: JsonPropertyName("bookingId")] Guid AccessId, string ClientUserId, [property: JsonPropertyName("practitionerUserId")] string AgentUserId, string? Kind, string? Text, DateTimeOffset? OpenedAt, DateTimeOffset? ResolvedAt,
     string? Resolution, string? Note);
 
 /// <summary>The part of <c>BookingView</c> (CONTRACTS 4.4) a dispute card shows: what was booked, for how much, the payment. The party names are empty until Directory can look them up (the booking feature says so).</summary>

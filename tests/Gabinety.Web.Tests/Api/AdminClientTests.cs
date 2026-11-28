@@ -53,7 +53,7 @@ public class AdminClientTests : IClassFixture<WebFactory>
     [Fact]
     public async Task A_dispute_page_and_the_resolve_call_use_the_services_wire_names()
     {
-        var (client, scope) = Get<BookingClient>(); using var _ = scope;
+        var (client, scope) = Get<AccessClient>(); using var _ = scope;
         _web.Access.Respond = r => r.Method == HttpMethod.Post
             ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{\"anything\":1}") }
             : FakeBackend.Raw($$"""{"items":[{"bookingId":"{{Id}}","clientUserId":"u-1","practitionerUserId":"u-2","kind":"not_as_described","text":"T","openedAt":"2026-11-24T12:00:09.1234567Z","resolvedAt":null,"resolution":null,"note":null}],"nextCursor":null}""");
@@ -116,7 +116,7 @@ public class AdminClientTests : IClassFixture<WebFactory>
     [Fact]
     public async Task The_ledger_preview_stops_reading_at_the_limit_and_skips_what_is_not_a_row()
     {
-        var (client, scope) = Get<BookingClient>(); using var _ = scope;
+        var (client, scope) = Get<AccessClient>(); using var _ = scope;
         var csv = "booking_id,kind,amount_minor,currency,created_at\n" + string.Join("", Enumerable.Range(0, 5).Select(i => $"0b9e1d2c-0000-0000-0000-{i:D12},Refund,{100 + i},PLN,2026-12-01T10:00:00Z\n")) + "garbage line\n";
         _web.Access.Respond = _ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(csv) };
         var preview = await client.AdminLedgerPreviewAsync("tok", "2026-12-01", "2026-12-31", 3);

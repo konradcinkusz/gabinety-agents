@@ -9,7 +9,7 @@ namespace Gabinety.Booking.Tests;
 public class StatsPushClientTests
 {
     static readonly Guid Id = Guid.NewGuid();
-    static readonly BookingStatsPush Body = new(3, 1, 2, 40, 1_700_000_000_000);
+    static readonly AccessStatsPush Body = new(3, 1, 2, 40, 1_700_000_000_000);
     readonly CountingHandler handler = new();
     readonly List<TimeSpan> delays = new();
     readonly LogSink sink = new();

@@ -2,7 +2,7 @@
 @attribute [Authorize]
 @using Gabinety.Web.Components.Pages.Bookings
 @using Gabinety.Web.Components.Pages.Shared
-@inject BookingClient Accesses
+@inject AccessClient Accesses
 @inject NavigationManager Navigation
 @* Static server rendering with plain form posts and antiforgery. A key is created by a POST and shown in THAT response, once: it is not in a URL, not in a redirect and not in the list (which has the prefix only).
    Revoking opens a confirmation (?revoke=<id>), the same pattern as the other client actions. The name of a key is the user's text: sent as a body, never logged. *@

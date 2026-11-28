@@ -20,7 +20,7 @@ public sealed record ResolveRequest(string? Resolution, long? RefundMinor, strin
 
 /// <summary>One row of the admin list. <see cref="Text"/> and <see cref="Note"/> are user and admin free text: this list is the only response that carries them, and nothing logs them.</summary>
 public sealed record AdminDisputeItem(
-    [property: JsonPropertyName("bookingId")] Guid AccessId, string ClientUserId, string PractitionerUserId, string? Kind, string? Text,
+    [property: JsonPropertyName("bookingId")] Guid AccessId, string ClientUserId, [property: JsonPropertyName("practitionerUserId")] string AgentUserId, string? Kind, string? Text,
     [property: JsonConverter(typeof(UtcInstantNullableConverter))] DateTimeOffset? OpenedAt,
     [property: JsonConverter(typeof(UtcInstantNullableConverter))] DateTimeOffset? ResolvedAt,
     string? Resolution, string? Note);
@@ -72,7 +72,7 @@ public sealed class AdminDisputesFeature : IServiceFeature
             .Select(b => new
             {
                 Key = resolved ? (b.ResolvedAt ?? b.DisputeOpenedAt ?? b.CreatedAt) : (b.DisputeOpenedAt ?? b.CreatedAt),
-                Item = new AdminDisputeItem(b.Id, b.ClientUserId, b.PractitionerUserId, b.DisputeKind, b.DisputeText, b.DisputeOpenedAt, b.ResolvedAt,
+                Item = new AdminDisputeItem(b.Id, b.ClientUserId, b.AgentUserId, b.DisputeKind, b.DisputeText, b.DisputeOpenedAt, b.ResolvedAt,
                     b.DisputeResolution, resolved ? b.StatusReason : null),
             });
         if (cursor is not null) q = q.Where(x => x.Key < at || (x.Key == at && x.Item.AccessId.CompareTo(id) < 0));
@@ -107,18 +107,18 @@ public sealed class AdminDisputesFeature : IServiceFeature
         var sub = user.FindFirst("sub")?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (sub is null) return Results.Unauthorized();
 
-        var booking = await db.Accesses.AsNoTracking().SingleOrDefaultAsync(b => b.Id == id, ct);
-        if (booking is null) return PaymentWebhookFeature.Problem(ErrorCodes.NotFound, "Not found", 404);
+        var access = await db.Accesses.AsNoTracking().SingleOrDefaultAsync(b => b.Id == id, ct);
+        if (access is null) return PaymentWebhookFeature.Problem(ErrorCodes.NotFound, "Not found", 404);
 
-        var errors = Validate(body, booking.PriceMinor);
+        var errors = Validate(body, access.PriceMinor);
         if (errors.Count > 0) return PaymentWebhookFeature.Problem(ErrorCodes.ValidationFailed, "Validation failed", 400, null, errors);
         var resolution = body!.Resolution!;
         var note = body.Note!.Trim();
 
         // The state table decides under the lock; this read only avoids calling the provider for a booking that cannot be resolved.
-        if (booking.Status != AccessStatus.Disputed) return PaymentWebhookFeature.Problem(ErrorCodes.InvalidTransition, "Invalid transition", 409);
+        if (access.Status != AccessStatus.Disputed) return PaymentWebhookFeature.Problem(ErrorCodes.InvalidTransition, "Invalid transition", 409);
 
-        var refund = resolution switch { "refund_full" => booking.PriceMinor, "refund_partial" => body.RefundMinor!.Value, _ => 0L };
+        var refund = resolution switch { "refund_full" => access.PriceMinor, "refund_partial" => body.RefundMinor!.Value, _ => 0L };
         RefundTicket? ticket = null;
         if (refund > 0)
         {

@@ -15,9 +15,9 @@ public sealed record DirectoryAgent([property: JsonPropertyName("practitionerId"
 sealed record DirectoryAgents(IReadOnlyList<DirectoryAgent> Items);
 
 /// <summary>GET /internal/v1/offerings/{id} (CONTRACTS 3.6).</summary>
-public sealed record DirectoryOffering([property: JsonPropertyName("offeringId")] Guid PackageId, [property: JsonPropertyName("practitionerId")] Guid AgentId, string PractitionerUserId, [property: JsonPropertyName("practitionerStatus")] AgentStatus AgentStatus,
+public sealed record DirectoryOffering([property: JsonPropertyName("offeringId")] Guid PackageId, [property: JsonPropertyName("practitionerId")] Guid AgentId, [property: JsonPropertyName("practitionerUserId")] string AgentUserId, [property: JsonPropertyName("practitionerStatus")] AgentStatus AgentStatus,
     string Title, int DurationMinutes, MoneyDto Price, string? MeetingUrl, bool IsActive,
-    PackageKind Kind = PackageKind.Tasks, int Units = 1, string PractitionerSlug = "");
+    PackageKind Kind = PackageKind.Tasks, int Units = 1, [property: JsonPropertyName("practitionerSlug")] string AgentSlug = "");
 
 /// <summary>GET /internal/v1/practitioners/{id}: display name and slug for the booking views (ADR-0012 section 6).</summary>
 public sealed record DirectoryPractitionerName([property: JsonPropertyName("practitionerId")] Guid AgentId, string DisplayName, string Slug);
@@ -40,7 +40,7 @@ public interface IDirectoryClient
     async Task<IReadOnlyList<DirectoryAgent>> GetPractitionerAgentsAsync(string userId, CancellationToken ct) =>
         await GetPractitionerByUserAsync(userId, ct) is { } one ? [new DirectoryAgent(one.AgentId, one.Status, "")] : [];
     /// <summary>Null when the practitioner is unknown (404).</summary>
-    Task<DirectoryPractitionerName?> GetPractitionerNameAsync(Guid practitionerId, CancellationToken ct);
+    Task<DirectoryPractitionerName?> GetPractitionerNameAsync(Guid agentId, CancellationToken ct);
     /// <summary>The e-mail snapshot of a practitioner's user. Null when Directory answers 404 (unknown user, or no address held yet).</summary>
     Task<DirectoryContact?> GetPractitionerContactAsync(string userId, CancellationToken ct);
     /// <summary>One probe of /alive, no retry; false on any failure or non-200.</summary>
@@ -65,8 +65,8 @@ public sealed class DirectoryClient(HttpClient http, string? internalKey, TimeSp
     public async Task<IReadOnlyList<DirectoryAgent>> GetPractitionerAgentsAsync(string userId, CancellationToken ct) =>
         (await GetAsync<DirectoryAgents>($"internal/v1/practitioners/by-user/{Uri.EscapeDataString(userId)}/agents", ct))?.Items ?? [];
 
-    public Task<DirectoryPractitionerName?> GetPractitionerNameAsync(Guid practitionerId, CancellationToken ct) =>
-        GetAsync<DirectoryPractitionerName>($"internal/v1/practitioners/{practitionerId}", ct);
+    public Task<DirectoryPractitionerName?> GetPractitionerNameAsync(Guid agentId, CancellationToken ct) =>
+        GetAsync<DirectoryPractitionerName>($"internal/v1/practitioners/{agentId}", ct);
     public Task<DirectoryContact?> GetPractitionerContactAsync(string userId, CancellationToken ct) =>
         GetAsync<DirectoryContact>($"internal/v1/practitioners/{Uri.EscapeDataString(userId)}/contact", ct);
 

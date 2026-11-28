@@ -62,7 +62,7 @@ public sealed class ErasureFeature : IServiceFeature
         // Rows leave the filter as they are updated, so each pass takes the next batch and the loop ends when none is left.
         while (true)
         {
-            var batch = await db.Accesses.Where(b => b.ClientUserId == userId || b.PractitionerUserId == userId).OrderBy(b => b.Id).Take(BatchSize).ToListAsync(ct);
+            var batch = await db.Accesses.Where(b => b.ClientUserId == userId || b.AgentUserId == userId).OrderBy(b => b.Id).Take(BatchSize).ToListAsync(ct);
             if (batch.Count == 0) break;
 
             var clientRows = batch.Where(b => b.ClientUserId == userId).ToDictionary(b => b.Id, b => b.AgentId);
@@ -117,9 +117,9 @@ public sealed class ErasureFeature : IServiceFeature
         b.DisputeText = null;
         b.StatusReason = null;
         if (b.ClientUserId == userId) { b.ClientUserId = token; b.ClientEmail = null; b.ClientDisplayName = null; } // the e-mail and the name snapshots are the client's own
-        if (b.PractitionerUserId == userId)
+        if (b.AgentUserId == userId)
         {   // the practitioner's own data: a personal meeting link and the offering title; a client's erasure must not touch them
-            b.PractitionerUserId = token;
+            b.AgentUserId = token;
             b.MeetingUrlSnapshot = null;
             b.PackageTitle = ErasedBrief;
         }

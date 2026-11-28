@@ -40,7 +40,7 @@ public sealed class NotificationSchedulingHook(INotificationWriter writer) : IBo
     {
         var b = c.Access;
         await writer.ScheduleAsync(b, NotificationKind.BookingConfirmed, b.ClientUserId, c.Now, ct);
-        await writer.ScheduleAsync(b, NotificationKind.BookingConfirmed, b.PractitionerUserId, c.Now, ct);
+        await writer.ScheduleAsync(b, NotificationKind.BookingConfirmed, b.AgentUserId, c.Now, ct);
 
         // No reminders (A-03): a package starts at the purchase, so there is no date to remind of. The kinds stay in the enum for old rows.
 

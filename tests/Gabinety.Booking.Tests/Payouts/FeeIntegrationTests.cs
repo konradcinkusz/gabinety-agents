@@ -95,16 +95,16 @@ public class FeeIntegrationTests : IAsyncLifetime
     public async Task The_payouts_table_exists_and_booking_id_is_unique()
     {
         await using var db = Db();
-        var booking = Guid.NewGuid();
-        db.Payouts.Add(new Payout { Id = Guid.NewGuid(), AccessId = booking, AgentId = Guid.NewGuid(), AmountMinor = 21250, Status = PayoutStatus.Pending, CreatedAt = DateTimeOffset.UnixEpoch });
+        var access = Guid.NewGuid();
+        db.Payouts.Add(new Payout { Id = Guid.NewGuid(), AccessId = access, AgentId = Guid.NewGuid(), AmountMinor = 21250, Status = PayoutStatus.Pending, CreatedAt = DateTimeOffset.UnixEpoch });
         await db.SaveChangesAsync();
 
         await using var db2 = Db();
-        db2.Payouts.Add(new Payout { Id = Guid.NewGuid(), AccessId = booking, AgentId = Guid.NewGuid(), AmountMinor = 1, Status = PayoutStatus.Pending, CreatedAt = DateTimeOffset.UnixEpoch });
+        db2.Payouts.Add(new Payout { Id = Guid.NewGuid(), AccessId = access, AgentId = Guid.NewGuid(), AmountMinor = 1, Status = PayoutStatus.Pending, CreatedAt = DateTimeOffset.UnixEpoch });
         var ex = await Assert.ThrowsAsync<DbUpdateException>(() => db2.SaveChangesAsync());
         Assert.Equal(PostgresErrorCodes.UniqueViolation, Assert.IsType<PostgresException>(ex.InnerException).SqlState);
 
         await using var check = Db();
-        Assert.Equal("Pending", (await check.Database.SqlQuery<string>($"select status as \"Value\" from payouts where booking_id = {booking}").ToListAsync()).Single());
+        Assert.Equal("Pending", (await check.Database.SqlQuery<string>($"select status as \"Value\" from payouts where booking_id = {access}").ToListAsync()).Single());
     }
 }

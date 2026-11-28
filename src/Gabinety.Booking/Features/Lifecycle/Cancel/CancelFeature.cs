@@ -32,8 +32,8 @@ public sealed class CancelFeature : IServiceFeature
         var sub = user.FindFirst("sub")?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (sub is null) return Results.Unauthorized();
 
-        var booking = await db.Accesses.AsNoTracking().SingleOrDefaultAsync(b => b.Id == id, ct);
-        if (booking is null || (booking.ClientUserId != sub && booking.PractitionerUserId != sub))
+        var access = await db.Accesses.AsNoTracking().SingleOrDefaultAsync(b => b.Id == id, ct);
+        if (access is null || (access.ClientUserId != sub && access.AgentUserId != sub))
             return PaymentWebhookFeature.Problem(ErrorCodes.NotFound, "Not found", 404); // a stranger learns nothing about whether it exists
 
         var reason = body?.Reason?.Trim();
@@ -42,12 +42,12 @@ public sealed class CancelFeature : IServiceFeature
                 new() { ["reason"] = [$"The reason is at most {MaxReasonLength} characters."] });
         if (string.IsNullOrEmpty(reason)) reason = null;
 
-        var byClient = booking.ClientUserId == sub;
+        var byClient = access.ClientUserId == sub;
         var trigger = CancelPlanner.TriggerFor(byClient);
         var now = time.GetUtcNow();
         Func<BookingEntity, bool> precondition = b => CancelPlanner.TimeRuleAllows(b, byClient, now);
 
-        var plan = CancelPlanner.Plan(booking, byClient, now); // the same call that builds `cancelOutcome` in the booking view
+        var plan = CancelPlanner.Plan(access, byClient, now); // the same call that builds `cancelOutcome` in the booking view
         if (plan is null) return PaymentWebhookFeature.Problem(ErrorCodes.InvalidTransition, "Invalid transition", 409);
 
         RefundTicket? ticket = null;

@@ -15,10 +15,10 @@ public class DemoCatalogHonestyTests
     {
         var mine = ReputationPlan.All.Where(r =>
         {
-            var booking = BookingPlan.All.Single(b => b.Key == r.BookingKey);
-            Assert.Equal(BookingTarget.Completed, booking.Target);
-            Assert.True(booking.Tasks > 0, $"{booking.Key} is reviewed, so a task must be ordered on it (a review needs UnitsUsed above 0)");
-            return Approved[booking.Agent % Approved.Length].Number == p.Number;
+            var access = BookingPlan.All.Single(b => b.Key == r.BookingKey);
+            Assert.Equal(BookingTarget.Completed, access.Target);
+            Assert.True(access.Tasks > 0, $"{access.Key} is reviewed, so a task must be ordered on it (a review needs UnitsUsed above 0)");
+            return Approved[access.Agent % Approved.Length].Number == p.Number;
         }).ToList();
         return (mine.Count, mine.Sum(r => r.Rating));
     }
@@ -87,10 +87,10 @@ public class DemoCatalogHonestyTests
         foreach (var b in BookingPlan.All)
         {
             var agent = Approved[b.Agent % Approved.Length];
-            var offering = BookingSeedStep.Pick(new SeededPractitioner(agent.UserName, "u", Guid.Empty, agent.Slug), b.Package);
-            Assert.Contains(offering, agent.Packages);
+            var package = BookingSeedStep.Pick(new SeededPractitioner(agent.UserName, "u", Guid.Empty, agent.Slug), b.Package);
+            Assert.Contains(package, agent.Packages);
             if (b.Package == PackagePick.Chat) Assert.Equal(0, b.Tasks);
-            else Assert.InRange(b.Tasks, 0, offering.Units);
+            else Assert.InRange(b.Tasks, 0, package.Units);
         }
     }
 }

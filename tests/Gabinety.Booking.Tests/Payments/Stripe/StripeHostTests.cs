@@ -55,7 +55,7 @@ public sealed class StripeHostTests : IDisposable
             s.AddSingleton<IPaymentProvider>(sp => Fx.Provider(stripe, h.Clock));
         };
         var original = h.Directory.Override;
-        agents = [(h.Agent, h.PractitionerSlug)];
+        agents = [(h.Agent, h.AgentSlug)];
         h.Directory.Override = (r, n) => r.RequestUri!.AbsolutePath == $"/internal/v1/practitioners/by-user/{h.OwnerUserId}"
             ? FakeDirectory.Json(new { practitionerId = h.Agent, status = "Approved" })
             : r.RequestUri!.AbsolutePath == $"/internal/v1/practitioners/by-user/{h.OwnerUserId}/agents"
@@ -333,7 +333,7 @@ public sealed class StripeHostTests : IDisposable
     public async Task With_two_agents_the_payment_account_is_per_agent_and_the_agent_parameter_picks_it()
     {
         var other = (Id: Guid.NewGuid(), Slug: "demo-second-agent");
-        agents = [(h.Agent, h.PractitionerSlug), other];
+        agents = [(h.Agent, h.AgentSlug), other];
         var c = Agent();
 
         var bare = await c.GetAsync("/api/v1/me/payments/account");
@@ -350,13 +350,13 @@ public sealed class StripeHostTests : IDisposable
 
         string State(JsonElement e) => e.GetProperty("state").GetString()!;
         Assert.Equal("pending", State(await (await c.GetAsync($"/api/v1/me/payments/account?agent={other.Slug}")).Content.ReadFromJsonAsync<JsonElement>()));
-        Assert.Equal("none", State(await (await c.GetAsync($"/api/v1/me/payments/account?agent={h.PractitionerSlug}")).Content.ReadFromJsonAsync<JsonElement>())); // the first agent has none
+        Assert.Equal("none", State(await (await c.GetAsync($"/api/v1/me/payments/account?agent={h.AgentSlug}")).Content.ReadFromJsonAsync<JsonElement>())); // the first agent has none
     }
 
     [Fact]
     public async Task An_agent_of_another_account_is_forbidden_and_reaches_no_provider_call()
     {
-        var r = await h.ClientFor("demo-somebody-else").PostAsync($"/api/v1/me/payments/account/onboarding?agent={h.PractitionerSlug}", null);
+        var r = await h.ClientFor("demo-somebody-else").PostAsync($"/api/v1/me/payments/account/onboarding?agent={h.AgentSlug}", null);
         Assert.Equal(HttpStatusCode.Forbidden, r.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await Agent().PostAsync("/api/v1/me/payments/account/onboarding?agent=demo-not-mine", null)).StatusCode);
         Assert.Empty(stripe.Requests);

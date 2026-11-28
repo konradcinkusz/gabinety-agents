@@ -48,7 +48,7 @@ public class ErasureApiTests
         {
             db.Accesses.Add(new BookingEntity
             {
-                Id = id, ClientUserId = client, AgentId = pid, PractitionerUserId = practitionerUser, PackageId = h.Package, PackageTitle = "demo-offering",
+                Id = id, ClientUserId = client, AgentId = pid, AgentUserId = practitionerUser, PackageId = h.Package, PackageTitle = "demo-offering",
                 DurationMinutes = 60, PriceMinor = 12345, StartUtc = start, EndUtc = start.AddHours(1), Status = status,
                 StatusReason = withTexts ? SecretReason : null, BriefText = SecretBrief, BriefProblemSlug = "demo-problem", BriefAiAssisted = true, MeetingUrlSnapshot = MeetingUrl,
                 DisputeKind = withTexts ? "other" : null, DisputeText = withTexts ? SecretDispute : null, FeeMinor = 1851, PayoutMinor = 10494,
@@ -67,7 +67,7 @@ public class ErasureApiTests
     static Task<BookingEntity> Row(CreateHost h, Guid id) => h.Query(db => db.Accesses.AsNoTracking().SingleAsync(b => b.Id == id));
 
     static Task<(int Accesses, int Records)> RowsMatching(CreateHost h, string userId) => h.Query(async db =>
-        (await db.Accesses.CountAsync(b => b.ClientUserId == userId || b.PractitionerUserId == userId),
+        (await db.Accesses.CountAsync(b => b.ClientUserId == userId || b.AgentUserId == userId),
          await db.IdempotencyRecords.CountAsync(r => r.ClientUserId == userId)));
 
     /// <summary>Every money row of a booking as one string (a record of lists would compare by reference).</summary>
@@ -91,10 +91,10 @@ public class ErasureApiTests
         var c = await Row(h, asClient);
         Assert.Equal((ErasureFeature.ErasedBrief, null, null), (c.BriefText, c.StatusReason, c.DisputeText));
         Assert.Equal("[usunięto]", c.BriefText);
-        Assert.Equal((Token(user), other), (c.ClientUserId, c.PractitionerUserId));
+        Assert.Equal((Token(user), other), (c.ClientUserId, c.AgentUserId));
         var p = await Row(h, asPractitioner);
         Assert.Equal(("[usunięto]", null, null), (p.BriefText, p.StatusReason, p.DisputeText));
-        Assert.Equal((other, Token(user)), (p.ClientUserId, p.PractitionerUserId));
+        Assert.Equal((other, Token(user)), (p.ClientUserId, p.AgentUserId));
         foreach (var b in new[] { c, p })
         {   // not personal, and the facts of the booking stay
             Assert.Equal(("demo-problem", true, 12345L), (b.BriefProblemSlug, b.BriefAiAssisted, b.PriceMinor));
@@ -144,7 +144,7 @@ public class ErasureApiTests
         Assert.Equivalent(untouchedBefore, await Row(h, theirs), strict: true);
         Assert.Equal(SecretBrief, (await Row(h, theirs)).BriefText);
         var s = await Row(h, shared);
-        Assert.Equal((h.OwnerUserId, "[usunięto]"), (s.PractitionerUserId, s.BriefText)); // the practitioner's own side is untouched
+        Assert.Equal((h.OwnerUserId, "[usunięto]"), (s.AgentUserId, s.BriefText)); // the practitioner's own side is untouched
 
         var res = await h.ClientFor(h.OwnerUserId).GetAsync($"/api/v1/bookings/{shared}");
         Assert.Equal(HttpStatusCode.OK, res.StatusCode);
@@ -183,7 +183,7 @@ public class ErasureApiTests
             for (var i = 0; i < n; i++)
                 db.Accesses.Add(new BookingEntity
                 {
-                    Id = Guid.NewGuid(), ClientUserId = user, AgentId = Guid.NewGuid(), PractitionerUserId = other, PackageId = h.Package, PackageTitle = "demo-offering",
+                    Id = Guid.NewGuid(), ClientUserId = user, AgentId = Guid.NewGuid(), AgentUserId = other, PackageId = h.Package, PackageTitle = "demo-offering",
                     DurationMinutes = 60, PriceMinor = 100, StartUtc = h.Clock.GetUtcNow().AddDays(1), EndUtc = h.Clock.GetUtcNow().AddDays(1).AddHours(1),
                     Status = AccessStatus.Completed, BriefText = SecretBrief, IdempotencyKey = Guid.NewGuid(), CreatedAt = h.Clock.GetUtcNow(),
                 });
@@ -204,7 +204,7 @@ public class ErasureApiTests
 
         var b = await Row(h, id);
         Assert.Equal((null, ErasureFeature.ErasedBrief, "[usunięto]"), (b.MeetingUrlSnapshot, b.PackageTitle, b.PackageTitle));
-        Assert.Equal((client, Token(prac), "[usunięto]"), (b.ClientUserId, b.PractitionerUserId, b.BriefText)); // the client's id stays; the brief is erased in both roles (task rule)
+        Assert.Equal((client, Token(prac), "[usunięto]"), (b.ClientUserId, b.AgentUserId, b.BriefText)); // the client's id stays; the brief is erased in both roles (task rule)
         var res = await h.ClientFor(client).GetAsync($"/api/v1/bookings/{id}");
         Assert.Equal(HttpStatusCode.OK, res.StatusCode);
         Assert.DoesNotContain("personal-room", await res.Content.ReadAsStringAsync());
@@ -220,7 +220,7 @@ public class ErasureApiTests
         await Erase(h, client);
 
         var b = await Row(h, id);
-        Assert.Equal((MeetingUrl, "demo-offering", prac), (b.MeetingUrlSnapshot, b.PackageTitle, b.PractitionerUserId));
+        Assert.Equal((MeetingUrl, "demo-offering", prac), (b.MeetingUrlSnapshot, b.PackageTitle, b.AgentUserId));
     }
 
     [Theory]

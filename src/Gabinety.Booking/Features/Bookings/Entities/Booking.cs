@@ -18,7 +18,7 @@ public sealed class Access
     /// </summary>
     public string? ClientEmail { get; set; }
     public Guid AgentId { get; set; }
-    public string PractitionerUserId { get; set; } = "";
+    public string AgentUserId { get; set; } = "";
     public Guid PackageId { get; set; }
     public string PackageTitle { get; set; } = "";
     public short DurationMinutes { get; set; }
@@ -32,7 +32,7 @@ public sealed class Access
     public long UnitsTotal { get; set; }
     public long UnitsUsed { get; set; }
     /// <summary>The agent's slug, copied from the offering when the package was bought.</summary>
-    public string PractitionerSlug { get; set; } = "";
+    public string AgentSlug { get; set; } = "";
     public AccessStatus Status { get; set; }
     public string? StatusReason { get; set; }
     public string BriefText { get; set; } = "";
@@ -68,7 +68,7 @@ sealed class BookingConfiguration : IEntityTypeConfiguration<Access>
         b.Property(x => x.ClientDisplayName).HasColumnName("client_display_name").HasMaxLength(60);
         b.Property(x => x.ClientEmail).HasColumnName("client_email").HasMaxLength(254);
         b.Property(x => x.AgentId).HasColumnName("practitioner_id");
-        b.Property(x => x.PractitionerUserId).HasColumnName("practitioner_user_id").HasMaxLength(64);
+        b.Property(x => x.AgentUserId).HasColumnName("practitioner_user_id").HasMaxLength(64);
         b.Property(x => x.PackageId).HasColumnName("offering_id");
         b.Property(x => x.PackageTitle).HasColumnName("offering_title").HasMaxLength(120);
         b.Property(x => x.DurationMinutes).HasColumnName("duration_minutes");
@@ -78,7 +78,7 @@ sealed class BookingConfiguration : IEntityTypeConfiguration<Access>
         b.Property(x => x.Kind).HasColumnName("kind").HasConversion<string>().HasMaxLength(10).HasDefaultValue(PackageKind.Tasks);
         b.Property(x => x.UnitsTotal).HasColumnName("units_total");
         b.Property(x => x.UnitsUsed).HasColumnName("units_used").HasDefaultValue(0L);
-        b.Property(x => x.PractitionerSlug).HasColumnName("practitioner_slug").HasMaxLength(60).IsRequired().HasDefaultValue("");
+        b.Property(x => x.AgentSlug).HasColumnName("practitioner_slug").HasMaxLength(60).IsRequired().HasDefaultValue("");
         b.Property(x => x.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(30);
         b.Property(x => x.StatusReason).HasColumnName("status_reason").HasMaxLength(500);
         b.Property(x => x.BriefText).HasColumnName("brief_text").HasMaxLength(2000);
