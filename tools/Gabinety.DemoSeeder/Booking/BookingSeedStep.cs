@@ -22,14 +22,14 @@ public sealed class BookingSeedStep : ISeedStep
 
     public async Task<int> ResetAsync(SeedContext context, CancellationToken ct)
     {
-        if (context.Options.BookingUrl.Length == 0) return -1;
+        if (context.Options.AccessUrl.Length == 0) return -1;
         if (context.Options.BookingKey.Length == 0) throw new SeedException("booking: Internal:Keys:Booking is not configured");
         return await new BookingApi(context.Http.For(SeedService.Access), context.Options, context.Time).ResetAsync(ct);
     }
 
     public async Task RunAsync(SeedContext context, CancellationToken ct)
     {
-        if (context.Options.BookingUrl.Length == 0) { context.Log.Info("booking: skipped (Backend:Booking is not configured)"); return; }
+        if (context.Options.AccessUrl.Length == 0) { context.Log.Info("booking: skipped (Backend:Booking is not configured)"); return; }
         if (context.Options.BookingKey.Length == 0) throw new SeedException("booking: Internal:Keys:Booking is not configured");
         var api = new BookingApi(context.Http.For(SeedService.Access), context.Options, context.Time);
         var approved = context.Agents.Values.Where(p => p.Status == "Approved" && p.Packages.Count > 0).OrderBy(p => p.Key, StringComparer.Ordinal).ToList();

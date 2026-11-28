@@ -28,7 +28,7 @@ sealed class FakePairCounts : IPairCountsClient
     public Task<Page<PairCountDto>> GetAsync(int minAccesses, string? cursor, int limit, CancellationToken ct)
     {
         Calls.Add((minAccesses, cursor, limit));
-        if (Unavailable) throw new BookingUnavailableForAnalyticsException();
+        if (Unavailable) throw new AccessUnavailableForAnalyticsException();
         var index = cursor is null ? 0 : int.Parse(cursor[1..]);
         return Task.FromResult(Pages[index]);
     }

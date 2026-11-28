@@ -28,7 +28,7 @@ public class BookingFormTests
     public async Task A_visitor_is_sent_to_sign_in_and_comes_back_to_the_same_slot_and_nothing_is_asked_of_the_backends()
     {
         await using var f = await ClientAreaFixture.Visitor();
-        var page = await f.Browser.GetAsync(BookingUrl);
+        var page = await f.Browser.GetAsync(AccessUrl);
         Assert.Equal(HttpStatusCode.Found, page.Status);
         Assert.StartsWith("/logowanie?redirect=%2Fdostep%2F", page.Location);
         Assert.Contains("gabinet%3Ddemo-anna-demowska", page.Location);
@@ -39,7 +39,7 @@ public class BookingFormTests
     public async Task The_form_has_the_hooks_the_journeys_use_and_a_summary_with_the_agent_the_package_and_the_price()
     {
         await using var f = await Open();
-        var page = await f.Browser.GetAsync(BookingUrl);
+        var page = await f.Browser.GetAsync(AccessUrl);
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Equal(["Wykup dostępu"], page.All("h1").Select(h => h.TextContent));
         Assert.Equal("Do czego chcesz użyć agenta?", page.One("label[for=brief]")!.TextContent);
@@ -60,7 +60,7 @@ public class BookingFormTests
     public async Task The_summary_comes_before_the_form_in_the_dom_so_on_the_phone_it_stays_above_the_pay_button()
     {
         await using var f = await Open();
-        var html = (await f.Browser.GetAsync(BookingUrl)).Html;
+        var html = (await f.Browser.GetAsync(AccessUrl)).Html;
         Assert.True(html.IndexOf("booking-layout__summary", StringComparison.Ordinal) < html.IndexOf("booking-layout__form", StringComparison.Ordinal));
         Assert.Contains("min-width: 56rem", File.ReadAllText(Path.Combine(Repo.Web, "Components", "Pages", "Booking", "BookingFormPage.razor.css"))); // the two columns of DESIGN-CONTRACT 3.5
     }
@@ -69,7 +69,7 @@ public class BookingFormTests
     public async Task The_backend_is_asked_for_the_profile_of_the_slug_and_nothing_else_for_a_get()
     {
         await using var f = await Open();
-        await f.Browser.GetAsync(BookingUrl);
+        await f.Browser.GetAsync(AccessUrl);
         Assert.Equal(["/api/v1/practitioners/demo-anna-demowska"], f.Web.Directory.Requests.Where(r => r.PathAndQuery != "/api/v1/me").Select(r => r.PathAndQuery));
         Assert.Empty(f.Web.Access.Requests);
         Assert.Empty(f.Web.Assistant.Requests);
@@ -91,7 +91,7 @@ public class BookingFormTests
     public async Task The_form_has_no_slot_or_time_input_and_an_old_link_with_start_still_works()
     {
         await using var f = await Open();
-        var page = await f.Browser.GetAsync(BookingUrl + "&start=2026-12-08T11:00:00Z");
+        var page = await f.Browser.GetAsync(AccessUrl + "&start=2026-12-08T11:00:00Z");
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Empty(page.All("input[type=datetime-local], input[name*=start i], input[name*=slot i], .slot, .slot-days"));
         Assert.DoesNotContain("Termin", page.All("dt").Select(d => d.TextContent));
@@ -113,9 +113,9 @@ public class BookingFormTests
     {
         await using var f = await Open();
         f.Web.Directory.Respond = FakeBackend.Throw(new HttpRequestException("down"));
-        var page = await f.Browser.GetAsync(BookingUrl);
+        var page = await f.Browser.GetAsync(AccessUrl);
         Assert.Equal("alert", page.One("[data-testid=unavailable]")!.GetAttribute("role"));
-        Assert.Equal(BookingUrl, page.One("[data-testid=unavailable] a")!.GetAttribute("href"));
+        Assert.Equal(AccessUrl, page.One("[data-testid=unavailable] a")!.GetAttribute("href"));
         Assert.Equal("Wykup dostępu", page.TextOf("h1"));
         Assert.Empty(page.All("form"));
     }
@@ -126,7 +126,7 @@ public class BookingFormTests
     public async Task A_short_brief_is_one_summary_one_inline_error_linked_to_the_field_and_the_backend_is_not_asked()
     {
         await using var f = await Open();
-        var page = await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", "za krótki"));
+        var page = await f.Post(AccessUrl, "booking", Intent("pay"), ("Model.Brief", "za krótki"));
         Assert.Equal(HttpStatusCode.OK, page.Status);
         var summary = page.One(".form-summary")!;
         Assert.Equal("alert", summary.GetAttribute("role"));
@@ -148,7 +148,7 @@ public class BookingFormTests
     public async Task A_brief_that_is_too_long_says_which_side_is_wrong()
     {
         await using var f = await Open();
-        var page = await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", new string('a', 2001)));
+        var page = await f.Post(AccessUrl, "booking", Intent("pay"), ("Model.Brief", new string('a', 2001)));
         Assert.Equal("Opis może mieć najwyżej 2000 znaków.", page.TextOf(".form-summary a"));
         Assert.Empty(f.Web.Access.Requests);
     }
@@ -159,7 +159,7 @@ public class BookingFormTests
     public async Task Pay_sends_one_request_with_a_key_no_start_and_the_trimmed_brief_then_redirects_to_the_checkout_of_the_booking()
     {
         await using var f = await Open();
-        var page = await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", $"  {Brief}  "));
+        var page = await f.Post(AccessUrl, "booking", Intent("pay"), ("Model.Brief", $"  {Brief}  "));
         Assert.Equal(HttpStatusCode.Found, page.Status);
         Assert.Equal($"/checkout/mock/{NewBooking}", page.Location);
         var request = Assert.Single(f.Web.Access.Requests);
@@ -180,7 +180,7 @@ public class BookingFormTests
         await using var f = await Open();
         var seen = new List<string?>();
         f.Web.Access.Respond = r => { seen.Add(r.Headers.TryGetValues("Idempotency-Key", out var v) ? v.Single() : null); return Created(); };
-        await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", Brief));
+        await f.Post(AccessUrl, "booking", Intent("pay"), ("Model.Brief", Brief));
         Assert.True(Guid.TryParse(Assert.Single(seen), out var key) && key != Guid.Empty);
     }
 
@@ -188,7 +188,7 @@ public class BookingFormTests
     public async Task A_stripe_checkout_url_is_followed_as_it_is_and_the_page_flow_does_not_assume_the_mock()
     {
         await using var f = await Open(access: _ => Created("https://checkout.stripe.com/c/pay/cs_test_demo#fid"));
-        var page = await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", Brief));
+        var page = await f.Post(AccessUrl, "booking", Intent("pay"), ("Model.Brief", Brief));
         Assert.Equal(HttpStatusCode.Found, page.Status);
         Assert.Equal("https://checkout.stripe.com/c/pay/cs_test_demo#fid", page.Location);
     }
@@ -198,7 +198,7 @@ public class BookingFormTests
     public async Task A_checkout_url_that_is_not_the_site_or_an_https_page_is_refused_and_the_visitor_stays_with_a_message(string url)
     {
         await using var f = await Open(access: _ => Created(url));
-        var page = await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", Brief));
+        var page = await f.Post(AccessUrl, "booking", Intent("pay"), ("Model.Brief", Brief));
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Null(page.Location);
         Assert.Equal("alert", page.One("[data-testid=booking-error]")!.GetAttribute("role"));
@@ -219,7 +219,7 @@ public class BookingFormTests
     public async Task A_refusal_of_the_service_is_an_alert_in_our_words_with_the_way_back_to_the_profile_when_it_helps(int status, string code, string text, bool profile)
     {
         await using var f = await Open(access: _ => FakeBackend.Problem((HttpStatusCode)status, code));
-        var page = await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", Brief));
+        var page = await f.Post(AccessUrl, "booking", Intent("pay"), ("Model.Brief", Brief));
         var alert = page.One("[data-testid=booking-error]")!;
         Assert.Equal("alert", alert.GetAttribute("role"));
         Assert.Equal(text, alert.QuerySelector("p")!.TextContent);
@@ -233,7 +233,7 @@ public class BookingFormTests
     public async Task A_backend_that_does_not_answer_is_the_unavailable_text_and_no_retry_of_the_write_happens_by_itself()
     {
         await using var f = await Open(access: FakeBackend.Throw(new HttpRequestException("down")));
-        var page = await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", Brief));
+        var page = await f.Post(AccessUrl, "booking", Intent("pay"), ("Model.Brief", Brief));
         Assert.Contains("nie zostaniesz obciążony dwa razy", page.TextOf("[data-testid=booking-error]"));
         Assert.Equal(1, f.Web.Access.Calls); // SPEC 5 rule 8: a write is never retried by the client
     }
@@ -242,7 +242,7 @@ public class BookingFormTests
     public async Task A_401_goes_to_sign_in_and_comes_back_to_this_slot()
     {
         await using var f = await Open(access: _ => FakeBackend.Problem(HttpStatusCode.Unauthorized, "unauthenticated"));
-        var page = await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", Brief));
+        var page = await f.Post(AccessUrl, "booking", Intent("pay"), ("Model.Brief", Brief));
         Assert.Equal(HttpStatusCode.Found, page.Status);
         Assert.StartsWith("/logowanie?redirect=%2Fdostep%2F", page.Location);
     }
@@ -256,7 +256,7 @@ public class BookingFormTests
         var keys = new List<string>();
         f.Web.Access.Respond = r => { keys.Add(r.Headers.GetValues("Idempotency-Key").Single()); return FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable"); };
 
-        var first = await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", Brief));
+        var first = await f.Post(AccessUrl, "booking", Intent("pay"), ("Model.Brief", Brief));
         var key = first.One("input[name='Model.AttemptKey']")!.GetAttribute("value")!;
         var fingerprint = first.One("input[name='Model.AttemptFingerprint']")!.GetAttribute("value")!;
         Assert.Equal(keys[0], key);
@@ -272,7 +272,7 @@ public class BookingFormTests
     }
 
     static async Task PostAgain(ClientAreaFixture f, string key, string fingerprint, string brief) =>
-        await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", brief), ("Model.AttemptKey", key), ("Model.AttemptFingerprint", fingerprint));
+        await f.Post(AccessUrl, "booking", Intent("pay"), ("Model.Brief", brief), ("Model.AttemptKey", key), ("Model.AttemptFingerprint", fingerprint));
 
     // ---- the assistant (J4)
 
@@ -283,7 +283,7 @@ public class BookingFormTests
     public async Task An_assistant_that_is_down_leaves_the_plain_note_no_suggestion_and_the_brief_untouched_J4()
     {
         await using var f = await Open(assistant: _ => FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "assistant_unavailable"));
-        var page = await f.Post(BookingUrl, "booking", Intent("assist"), ("Model.Brief", Brief + " [[unavailable]]"));
+        var page = await f.Post(AccessUrl, "booking", Intent("assist"), ("Model.Brief", Brief + " [[unavailable]]"));
         Assert.Equal("Asystent jest chwilowo niedostępny. Opisz zastosowanie samodzielnie i wykup dostęp.", page.TextOf(".assist .callout"));
         Assert.Empty(page.All("[data-testid=proposal]"));
         Assert.DoesNotContain("Sugerowana kategoria", page.Text);
@@ -298,7 +298,7 @@ public class BookingFormTests
     public async Task Other_assistant_failures_have_their_own_note(int status, string code, string text)
     {
         await using var f = await Open(assistant: _ => FakeBackend.Problem((HttpStatusCode)status, code));
-        var page = await f.Post(BookingUrl, "booking", Intent("assist"), ("Model.Brief", Brief));
+        var page = await f.Post(AccessUrl, "booking", Intent("assist"), ("Model.Brief", Brief));
         Assert.Equal(text, page.TextOf(".assist .callout"));
     }
 
@@ -306,7 +306,7 @@ public class BookingFormTests
     public async Task A_brief_that_is_too_short_for_the_assistant_says_why_and_the_assistant_is_not_called()
     {
         await using var f = await Open(assistant: _ => Suggestion());
-        var page = await f.Post(BookingUrl, "booking", Intent("assist"), ("Model.Brief", "krótko"));
+        var page = await f.Post(AccessUrl, "booking", Intent("assist"), ("Model.Brief", "krótko"));
         Assert.Equal("Najpierw opisz zastosowanie w co najmniej 20 znakach, wtedy asystent będzie mógł pomóc.", page.TextOf(".assist .callout"));
         Assert.Empty(f.Web.Assistant.Requests);
     }
@@ -315,7 +315,7 @@ public class BookingFormTests
     public async Task A_suggestion_is_shown_as_an_editable_proposal_with_its_category_and_questions_and_nothing_is_added_to_the_brief()
     {
         await using var f = await Open(assistant: _ => Suggestion());
-        var page = await f.Post(BookingUrl, "booking", Intent("assist"), ("Model.Brief", Brief));
+        var page = await f.Post(AccessUrl, "booking", Intent("assist"), ("Model.Brief", Brief));
         var proposal = page.One("[data-testid=proposal]")!;
         Assert.Equal("Propozycja opisu (możesz ją edytować)", proposal.QuerySelector("label")!.TextContent);
         Assert.Equal("Prototyp z modelem językowym: zakres, koszty, ryzyka.", proposal.QuerySelector("textarea")!.TextContent);
@@ -341,14 +341,14 @@ public class BookingFormTests
     public async Task Applying_the_proposal_appends_the_edited_text_and_the_booking_is_then_ai_assisted_with_the_problem_slug()
     {
         await using var f = await Open(assistant: _ => Suggestion());
-        var applied = await f.Post(BookingUrl, "booking", Intent("apply"), ("Model.Brief", Brief), ("Model.Proposal", "  Moja poprawiona wersja propozycji.  "), ("Model.SuggestedSlug", "audyt-kodu"));
+        var applied = await f.Post(AccessUrl, "booking", Intent("apply"), ("Model.Brief", Brief), ("Model.Proposal", "  Moja poprawiona wersja propozycji.  "), ("Model.SuggestedSlug", "audyt-kodu"));
         Assert.Contains("Propozycja została dodana do opisu.", applied.Text);
         Assert.Equal(Brief + "\n\nMoja poprawiona wersja propozycji.", applied.One("#brief")!.TextContent.Replace("\r\n", "\n"));
         Assert.Empty(applied.All("[data-testid=proposal]"));
         Assert.Equal("audyt-kodu", applied.One("input[name='Model.AppliedSlug']")!.GetAttribute("value"));
 
         // the next post (pay) carries the applied slug
-        await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", Brief + "\n\nMoja poprawiona wersja propozycji."), ("Model.AppliedSlug", "audyt-kodu"));
+        await f.Post(AccessUrl, "booking", Intent("pay"), ("Model.Brief", Brief + "\n\nMoja poprawiona wersja propozycji."), ("Model.AppliedSlug", "audyt-kodu"));
         using var body = JsonDocument.Parse(f.Web.Access.Requests.Single().Body!);
         Assert.True(body.RootElement.GetProperty("brief").GetProperty("aiAssisted").GetBoolean());
         Assert.Equal("audyt-kodu", body.RootElement.GetProperty("brief").GetProperty("problemSlug").GetString());
@@ -358,7 +358,7 @@ public class BookingFormTests
     public async Task An_empty_proposal_adds_nothing()
     {
         await using var f = await Open();
-        var page = await f.Post(BookingUrl, "booking", Intent("apply"), ("Model.Brief", Brief), ("Model.Proposal", "   "), ("Model.SuggestedSlug", "audyt-kodu"));
+        var page = await f.Post(AccessUrl, "booking", Intent("apply"), ("Model.Brief", Brief), ("Model.Proposal", "   "), ("Model.SuggestedSlug", "audyt-kodu"));
         Assert.Equal(Brief, page.One("#brief")!.TextContent);
         Assert.DoesNotContain("Propozycja została dodana", page.Text);
     }
@@ -370,10 +370,10 @@ public class BookingFormTests
     {
         var userText = "Znacznik opisu brief reszta opisu problemu";
         await using var f = await Open(access: _ => FakeBackend.Problem(HttpStatusCode.UnprocessableEntity, "slot_taken"), assistant: _ => Suggestion(summary: "Znacznik podpowiedzi asystenta"));
-        await f.Post(BookingUrl, "booking", Intent("assist"), ("Model.Brief", userText));
-        await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", userText));
+        await f.Post(AccessUrl, "booking", Intent("assist"), ("Model.Brief", userText));
+        await f.Post(AccessUrl, "booking", Intent("pay"), ("Model.Brief", userText));
         f.Web.Access.Respond = FakeBackend.Throw(new HttpRequestException("boom"));
-        await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", userText));
+        await f.Post(AccessUrl, "booking", Intent("pay"), ("Model.Brief", userText));
         Assert.NotEmpty(f.Logs.Lines);
         Assert.DoesNotContain(f.Logs.Lines, l => l.Contains("Znacznik opisu", StringComparison.Ordinal) || l.Contains("Znacznik podpowiedzi", StringComparison.Ordinal));
     }
@@ -382,7 +382,7 @@ public class BookingFormTests
     public async Task A_post_without_the_antiforgery_token_is_refused()
     {
         await using var f = await Open();
-        var request = new HttpRequestMessage(HttpMethod.Post, BookingUrl) { Content = new FormUrlEncodedContent([new("_handler", "booking"), new("Model.Intent", "pay"), new("Model.Brief", Brief)]) };
+        var request = new HttpRequestMessage(HttpMethod.Post, AccessUrl) { Content = new FormUrlEncodedContent([new("_handler", "booking"), new("Model.Intent", "pay"), new("Model.Brief", Brief)]) };
         var page = await f.Browser.SendAsync(request);
         Assert.True((int)page.Status is 400 or 403 or 404, $"{(int)page.Status}");
         Assert.Empty(f.Web.Access.Requests);

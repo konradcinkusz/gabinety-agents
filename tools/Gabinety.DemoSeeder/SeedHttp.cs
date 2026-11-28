@@ -23,7 +23,7 @@ public sealed class ConfiguredSeedHttp(SeedOptions options) : ISeedHttp
         {
             SeedService.Directory => options.DirectoryUrl,
             SeedService.Identity => options.IdentityAuthority,
-            SeedService.Access => options.BookingUrl,
+            SeedService.Access => options.AccessUrl,
             SeedService.Reputation => options.ReputationUrl,
             _ => throw new SeedException($"no endpoint is configured for {service} yet"),
         };

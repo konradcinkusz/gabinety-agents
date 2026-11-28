@@ -6,7 +6,7 @@ namespace Gabinety.DemoSeeder;
 public sealed record SeedOptions(string DirectoryUrl, string DirectoryKey, string IdentityAuthority, string DemoPassword)
 {
     /// <summary>Booking (T-08.01b): <c>Backend:Booking</c> and <c>Internal:Keys:Booking</c>. Init-only so the four-argument constructor of the skeleton stays as it is.</summary>
-    public string BookingUrl { get; init; } = "";
+    public string AccessUrl { get; init; } = "";
     public string BookingKey { get; init; } = "";
 
     /// <summary>Reputation (T-08.01c): <c>Backend:Reputation</c> and <c>Internal:Keys:Reputation</c>.</summary>
@@ -34,7 +34,7 @@ public sealed record SeedOptions(string DirectoryUrl, string DirectoryKey, strin
         if (c["Seed:Factor"] is { Length: > 0 } f && (!int.TryParse(f, out factor) || factor is < 1 or > 1000)) missing.Add("Seed:Factor (an integer from 1 to 1000)");
         if (missing.Count > 0) throw new SeedException("missing configuration: " + string.Join(", ", missing)); // names of keys, never values
         return new SeedOptions(directory, key, authority, c["Identity:DemoPassword"] is { Length: > 0 } p ? p : DevIdentityPassword)
-            { Factor = factor, BookingUrl = access, BookingKey = bookingKey, ReputationUrl = reputation, ReputationKey = reputationKey };
+            { Factor = factor, AccessUrl = access, BookingKey = bookingKey, ReputationUrl = reputation, ReputationKey = reputationKey };
     }
 
     /// <summary>The web app's Backend:* values are candidate lists; the seeder takes the first.</summary>

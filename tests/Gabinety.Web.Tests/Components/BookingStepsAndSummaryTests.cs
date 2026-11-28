@@ -45,7 +45,7 @@ public class BookingFormUx020Tests
     public async Task The_form_shows_the_first_step_the_hold_notice_and_the_refund_rule_and_no_time()
     {
         await using var f = await ClientAreaFixture.SignedIn();
-        var page = await f.Browser.GetAsync(BookingUrl);
+        var page = await f.Browser.GetAsync(AccessUrl);
         Assert.Equal("Pakiet", page.One("nav[aria-label='Kroki wykupu'] [aria-current=step] .booking-steps__name")!.TextContent.Trim());
         Assert.Empty(page.All(".booking-summary a"));
         var notice = page.One(".booking-summary .callout--info")!.TextContent;

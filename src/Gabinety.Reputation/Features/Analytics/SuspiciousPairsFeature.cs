@@ -21,7 +21,7 @@ namespace Gabinety.Reputation.Features.Analytics;
 /// </summary>
 public sealed partial class SuspiciousPairsFeature : IServiceFeature
 {
-    public const int MinBookings = 3, DefaultLimit = 20, MaxLimit = 50, MaxScanPages = 5, FiveStars = 5;
+    public const int MinAccesses = 3, DefaultLimit = 20, MaxLimit = 50, MaxScanPages = 5, FiveStars = 5;
 
     [GeneratedRegex("^[A-Za-z0-9_.-]{1,512}$")] private static partial Regex CursorShape();
 
@@ -44,13 +44,13 @@ public sealed partial class SuspiciousPairsFeature : IServiceFeature
         {
             for (var scanned = 0; scanned < MaxScanPages; scanned++)
             {
-                var page = await access.GetAsync(MinBookings, next, take, ct);
+                var page = await access.GetAsync(MinAccesses, next, take, ct);
                 next = page.NextCursor;
-                items.AddRange(await MatchAsync(page.Items.Take(take).Where(p => p.Accesses >= MinBookings).ToList(), db, ct));
+                items.AddRange(await MatchAsync(page.Items.Take(take).Where(p => p.Accesses >= MinAccesses).ToList(), db, ct));
                 if (items.Count > 0 || next is null) break;
             }
         }
-        catch (BookingUnavailableForAnalyticsException)
+        catch (AccessUnavailableForAnalyticsException)
         {
             return Problem(503, ErrorCodes.DependencyUnavailable, "Dependency unavailable");
         }

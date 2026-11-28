@@ -6,7 +6,7 @@ using Gabinety.ServiceDefaults;
 namespace Gabinety.Reputation.Features.Analytics;
 
 /// <summary>Booking did not answer in budget or answered something unusable. The message never carries the URL, the key or the body.</summary>
-public sealed class BookingUnavailableForAnalyticsException(Exception? inner = null) : Exception("Booking is unavailable.", inner);
+public sealed class AccessUnavailableForAnalyticsException(Exception? inner = null) : Exception("Booking is unavailable.", inner);
 
 public interface IPairCountsClient
 {
@@ -29,12 +29,12 @@ public sealed class PairCountsClient(HttpClient http, string? internalKey, TimeS
         try
         {
             using var response = await http.SendAsync(request, HttpCompletionOption.ResponseContentRead, cts.Token);
-            if (!response.IsSuccessStatusCode) throw new BookingUnavailableForAnalyticsException();
-            return await response.Content.ReadFromJsonAsync<Page<PairCountDto>>(cts.Token) ?? throw new BookingUnavailableForAnalyticsException();
+            if (!response.IsSuccessStatusCode) throw new AccessUnavailableForAnalyticsException();
+            return await response.Content.ReadFromJsonAsync<Page<PairCountDto>>(cts.Token) ?? throw new AccessUnavailableForAnalyticsException();
         }
         catch (Exception ex) when ((ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or InvalidOperationException) && !ct.IsCancellationRequested)
         {
-            throw new BookingUnavailableForAnalyticsException(ex);
+            throw new AccessUnavailableForAnalyticsException(ex);
         }
     }
 }

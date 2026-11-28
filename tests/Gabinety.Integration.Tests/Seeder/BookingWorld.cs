@@ -141,7 +141,7 @@ public sealed class BookingWorld : IAsyncDisposable
         Directory = new DirectoryHost(Identity);
         Access = new BookingHost(Identity, Directory);
         Options = new SeedOptions("http://localhost", DirectoryHost.Key, DirectoryHost.Authority, SeedOptions.DevIdentityPassword)
-            { BookingUrl = "http://localhost", BookingKey = BookingHost.Key };
+            { AccessUrl = "http://localhost", BookingKey = BookingHost.Key };
         Http = new WorldSeedHttp(Identity, Directory, Access, Calls);
     }
 

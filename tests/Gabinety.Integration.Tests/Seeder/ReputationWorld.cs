@@ -106,7 +106,7 @@ public sealed class ReputationWorld : IAsyncDisposable
 
     /// <summary>The options a run uses: Booking's plus Reputation's url and key.</summary>
     public SeedOptions WithReputation => _options ??= new SeedOptions("http://localhost", DirectoryHost.Key, DirectoryHost.Authority, SeedOptions.DevIdentityPassword)
-        { BookingUrl = "http://localhost", BookingKey = BookingHost.Key, ReputationUrl = "http://localhost", ReputationKey = ReputationHost.Key };
+        { AccessUrl = "http://localhost", BookingKey = BookingHost.Key, ReputationUrl = "http://localhost", ReputationKey = ReputationHost.Key };
 
     public SeedContext NewContext(SeedOptions? options = null) => new(options ?? WithReputation, Http, Log, TimeProvider.System);
 

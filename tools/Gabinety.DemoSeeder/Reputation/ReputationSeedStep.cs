@@ -23,7 +23,7 @@ public sealed class ReputationSeedStep : ISeedStep
     {
         if (context.Options.ReputationUrl.Length == 0) { context.Log.Info("reputation: skipped (Backend:Reputation is not configured)"); return; }
         if (context.Options.ReputationKey.Length == 0) throw new SeedException("reputation: Internal:Keys:Reputation is not configured");
-        if (context.Options.BookingUrl.Length == 0) throw new SeedException("reputation: Backend:Booking is not configured (reviews need the bookings)");
+        if (context.Options.AccessUrl.Length == 0) throw new SeedException("reputation: Backend:Booking is not configured (reviews need the bookings)");
         var accesses = new BookingApi(context.Http.For(SeedService.Access), context.Options, context.Time);
         var reputation = new ReputationApi(context.Http.For(SeedService.Reputation), context.Time);
         var clients = context.Clients.OrderBy(c => c.Key, StringComparer.Ordinal).Select(c => c.Value).ToList();
