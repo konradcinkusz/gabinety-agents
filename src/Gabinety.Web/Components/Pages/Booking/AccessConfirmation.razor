@@ -24,14 +24,14 @@
 else if (_booking is { } b)
 {
     var confirmed = b.Status == "Confirmed";
-    <BookingSteps Current="2" />
+    <AccessSteps Current="2" />
     <div class="stack booking-confirmation">
         @if (confirmed) {<div class="callout callout--success" role="status">@BookFlowText.Confirmation.Confirmed</div>}
         else if (b.Status == "PendingPayment") {<div class="callout callout--info" role="status">@BookFlowText.Confirmation.Pending <a href="@CurrentPath">@BookFlowText.Confirmation.Refresh</a></div>}
         else {<div class="callout callout--warning" role="status">@BookFlowText.Confirmation.Other</div>}
-        <ConsultationSummary Package="@b.PackageTitle" Party="@BookingFormat.Name(b.Agent.DisplayName)" Units="@BookingFormat.UnitsLine(b.Kind, b.UnitsTotal)"
-                             Validity="@string.Format(BookFlowText.Summary.ValidUntil, BookingFormat.ValidUntil(b.EndUtc))" PriceMinor="b.Price.AmountMinor">
-            <p class="muted" data-testid="confirmation-state">@BookFlowText.Confirmation.State: <BookingBadge Badge="Badge.ForBooking(b.Status)" /></p>
+        <ConsultationSummary Package="@b.PackageTitle" Party="@AccessFormat.Name(b.Agent.DisplayName)" Units="@AccessFormat.UnitsLine(b.Kind, b.UnitsTotal)"
+                             Validity="@string.Format(BookFlowText.Summary.ValidUntil, AccessFormat.ValidUntil(b.EndUtc))" PriceMinor="b.Price.AmountMinor">
+            <p class="muted" data-testid="confirmation-state">@BookFlowText.Confirmation.State: <AccessBadge Badge="Badge.ForAccess(b.Status)" /></p>
         </ConsultationSummary>
         @if (confirmed)
         {
@@ -66,7 +66,7 @@ else if (_booking is { } b)
 @code {
     [Parameter] public Guid BookingId { get; set; }
 
-    BookingDetailDto? _booking;
+    AccessDetailDto? _booking;
     ApiFailure? _failure;
     int? _refreshSeconds;
 

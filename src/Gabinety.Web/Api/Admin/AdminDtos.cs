@@ -5,10 +5,10 @@ namespace Gabinety.Web.Api;
 // Gabinety.Contracts yet, so ContractCopiesTests pins the ones that ARE in Contracts (SuspiciousPairDto) and AdminClientTests pins the wire spelling of the rest. Statuses are strings: a value this copy does
 // not know renders as "unknown" instead of failing the page. Free text (bio, reason, dispute text, review text, notes) is shown to administrators only and never logged.
 
-public sealed record AdminPractitionerRowDto(Guid Id, string Slug, string DisplayName, string Headline, string Status, string? StatusReason, bool GithubLinked, string? GithubLogin,
+public sealed record AdminAgentRowDto(Guid Id, string Slug, string DisplayName, string Headline, string Status, string? StatusReason, bool GithubLinked, string? GithubLogin,
     bool NipValid, DateTimeOffset CreatedAt, DateTimeOffset? SubmittedAt);
 
-public sealed record AdminPractitionerDetailDto(Guid Id, string Slug, string DisplayName, string Headline, string Bio, string Status, string? StatusReason, bool GithubLinked,
+public sealed record AdminAgentDetailDto(Guid Id, string Slug, string DisplayName, string Headline, string Bio, string Status, string? StatusReason, bool GithubLinked,
     string? GithubLogin, string? Nip, bool NipValid, string? PortfolioUrl, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, DateTimeOffset? SubmittedAt, DateTimeOffset? ApprovedAt);
 
 public sealed record AdminVerificationEventDto(Guid Id, string Kind, string ActorUserId, string? Note, DateTimeOffset At);
@@ -19,7 +19,7 @@ public sealed record AdminDisputeDto([property: JsonPropertyName("bookingId")] G
     string? Resolution, string? Note);
 
 /// <summary>The part of <c>BookingView</c> (CONTRACTS 4.4) a dispute card shows: what was booked, for how much, the payment. The party names are empty until Directory can look them up (the booking feature says so).</summary>
-public sealed record AdminBookingDto(Guid Id, string Status, DateTimeOffset StartUtc, [property: JsonPropertyName("offeringTitle")] string PackageTitle, MoneyDto Price, [property: JsonPropertyName("practitioner")] PractitionerRefDto Agent, ClientRefDto? Client, PaymentViewDto Payment, string Kind = "Tasks", long UnitsTotal = 0, long UnitsUsed = 0);
+public sealed record AdminAccessDto(Guid Id, string Status, DateTimeOffset StartUtc, [property: JsonPropertyName("offeringTitle")] string PackageTitle, MoneyDto Price, [property: JsonPropertyName("practitioner")] AgentRefDto Agent, ClientRefDto? Client, PaymentViewDto Payment, string Kind = "Tasks", long UnitsTotal = 0, long UnitsUsed = 0);
 
 
 public sealed record AdminReviewDto(Guid Id, [property: JsonPropertyName("practitionerId")] Guid AgentId, int Rating, string? Text, string Status, IReadOnlyList<string>? HoldReasons, string? TriageFlag, string? TriageModelId,

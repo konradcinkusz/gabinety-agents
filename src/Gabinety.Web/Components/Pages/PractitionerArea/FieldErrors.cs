@@ -18,11 +18,11 @@ public static partial class FieldErrors
 
     public static bool LooksLikeContact(string? text) => !string.IsNullOrEmpty(text) && (Email().IsMatch(text) || Phone().IsMatch(text) || Messenger().IsMatch(text) || Handle().IsMatch(text));
 
-    public static string ContactDetails => PlPractitioner.Errors.ContactDetails;
+    public static string ContactDetails => PlAgent.Errors.ContactDetails;
 
-    static readonly Dictionary<string, string> ByField = PlPractitioner.Errors.ByField.ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal);
+    static readonly Dictionary<string, string> ByField = PlAgent.Errors.ByField.ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal);
 
-    public static string Unknown => PlPractitioner.Errors.Unknown;
+    public static string Unknown => PlAgent.Errors.Unknown;
 
     /// <summary>Field name to message. <paramref name="freeText"/> maps the free-text fields the contact rule covers to their current values.</summary>
     public static Dictionary<string, string> From(ApiFailure failure, IReadOnlyDictionary<string, string?> freeText)
@@ -40,9 +40,9 @@ public static partial class FieldErrors
     /// <summary>The line for a failure that belongs to no field.</summary>
     public static string General(ApiFailure failure, string fallback) => failure switch
     {
-        { Status: 0 } => PlPractitioner.Common.Network,
-        { Status: 403 } => PlPractitioner.Common.Forbidden,
-        { Status: 503 } => PlPractitioner.Common.Unavailable,
+        { Status: 0 } => PlAgent.Common.Network,
+        { Status: 403 } => PlAgent.Common.Forbidden,
+        { Status: 503 } => PlAgent.Common.Unavailable,
         _ => fallback,
     };
 }

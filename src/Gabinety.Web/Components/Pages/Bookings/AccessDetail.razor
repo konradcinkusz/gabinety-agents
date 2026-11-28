@@ -8,17 +8,17 @@
    native dialog that is open in the markup (no script): a GET form's button opens it, a POST form confirms it, and the result is a redirect with a fixed key (?done=), so a reload never repeats it.
    The texts of users (the cancel reason, the dispute) are request bodies only: never logged, never echoed into a URL. *@
 
-<PageTitle>@BookingsText.DetailMetaTitle</PageTitle>
+<PageTitle>@AccessesText.DetailMetaTitle</PageTitle>
 <HeadContent>
     <meta name="robots" content="noindex,follow" />
 </HeadContent>
-<h1>@BookingsText.DetailTitle</h1>
+<h1>@AccessesText.DetailTitle</h1>
 
 @if (_failure is not null)
 {
     <div class="callout callout--danger" role="alert" data-testid="unavailable">
         <p>@ActionFailure.Text(_failure)</p>
-        <a class="btn btn--secondary" href="@DetailHref()">@BookingsText.ReloadHint</a>
+        <a class="btn btn--secondary" href="@DetailHref()">@AccessesText.ReloadHint</a>
     </div>
 }
 else if (_booking is { } b)
@@ -30,44 +30,44 @@ else if (_booking is { } b)
             @if (b.Status == "Confirmed")
             {
                 <div class="head" data-testid="booking-head">
-                    <p class="head__when">@string.Format(BookingsText.Detail.ActiveLine, BookingFormat.ValidUntil(b.EndUtc))</p>
+                    <p class="head__when">@string.Format(AccessesText.Detail.ActiveLine, AccessFormat.ValidUntil(b.EndUtc))</p>
                 </div>
             }
             else if (b.Status == "Completed")
             {
                 <div class="head" data-testid="booking-head">
-                    <p class="head__when">@BookingsText.Detail.CompletedLine</p>
-                    @if (b.CanReview) {<div class="form-actions"><a class="btn btn--primary" href="@($"/moje/opinie/{b.Id}")">@BookingsText.Review</a></div>}
+                    <p class="head__when">@AccessesText.Detail.CompletedLine</p>
+                    @if (b.CanReview) {<div class="form-actions"><a class="btn btn--primary" href="@($"/moje/opinie/{b.Id}")">@AccessesText.Review</a></div>}
                 </div>
             }
-            else if (BookingFormat.IsCancelled(b.Status) && RefundLine(b) is { } refundLine)
+            else if (AccessFormat.IsCancelled(b.Status) && RefundLine(b) is { } refundLine)
             {
                 <p class="callout callout--info" data-testid="booking-head">@refundLine</p>
             }
             <dl class="dl">
-                @if (BookingFormat.Name(_role == AccessClient.ClientRole ? b.Agent.DisplayName : b.Client?.DisplayName) is { } party)
+                @if (AccessFormat.Name(_role == AccessClient.ClientRole ? b.Agent.DisplayName : b.Client?.DisplayName) is { } party)
                 {
-                    <dt>@(_role == AccessClient.ClientRole ? BookingsText.PartyPractitioner : BookingsText.PartyClient)</dt><dd>@party @if (_role == AccessClient.ClientRole) {<AiBadge />}</dd>
+                    <dt>@(_role == AccessClient.ClientRole ? AccessesText.PartyAgent : AccessesText.PartyClient)</dt><dd>@party @if (_role == AccessClient.ClientRole) {<AiBadge />}</dd>
                 }
-                <dt>@BookingsText.Detail.Units</dt><dd data-testid="detail-units">@BookingFormat.UnitsLine(b.Kind, b.UnitsTotal)</dd>
-                <dt>@BookingsText.Detail.Usage</dt><dd><UsageBar Kind="@b.Kind" Used="b.UnitsUsed" Total="b.UnitsTotal" /></dd>
-                <dt>@BookingsText.Detail.ValidUntil</dt><dd data-testid="detail-valid-until">@BookingFormat.ValidUntil(b.EndUtc)</dd>
-                <dt>@BookingsText.Detail.Status</dt><dd><BookingBadge Badge="Badge.ForBooking(b.Status)" /></dd>
-                <dt>@BookingsText.Detail.Price</dt><dd class="num">@Money.Pln(b.Price.AmountMinor)</dd>
-                <dt>@BookingsText.Detail.Payment</dt>
+                <dt>@AccessesText.Detail.Units</dt><dd data-testid="detail-units">@AccessFormat.UnitsLine(b.Kind, b.UnitsTotal)</dd>
+                <dt>@AccessesText.Detail.Usage</dt><dd><UsageBar Kind="@b.Kind" Used="b.UnitsUsed" Total="b.UnitsTotal" /></dd>
+                <dt>@AccessesText.Detail.ValidUntil</dt><dd data-testid="detail-valid-until">@AccessFormat.ValidUntil(b.EndUtc)</dd>
+                <dt>@AccessesText.Detail.Status</dt><dd><AccessBadge Badge="Badge.ForAccess(b.Status)" /></dd>
+                <dt>@AccessesText.Detail.Price</dt><dd class="num">@Money.Pln(b.Price.AmountMinor)</dd>
+                <dt>@AccessesText.Detail.Payment</dt>
                 <dd>
-                    <BookingBadge Badge="Badge.ForPayment(b.Payment.Status)" />
-                    @if (b.Payment.Refunded.AmountMinor > 0) {<span class="num refund-line">@string.Format(BookingsText.Detail.Refunded, Money.Pln(b.Payment.Refunded.AmountMinor))</span>}
+                    <AccessBadge Badge="Badge.ForPayment(b.Payment.Status)" />
+                    @if (b.Payment.Refunded.AmountMinor > 0) {<span class="num refund-line">@string.Format(AccessesText.Detail.Refunded, Money.Pln(b.Payment.Refunded.AmountMinor))</span>}
                 </dd>
-                @if (b.Fee is { } fee) {<dt>@BookingsText.Detail.Fee</dt><dd class="num">@Money.Pln(fee.AmountMinor)</dd>}
-                @if (b.Payout is { } payout) {<dt>@BookingsText.Detail.Payout</dt><dd class="num">@Money.Pln(payout.AmountMinor)</dd>}
+                @if (b.Fee is { } fee) {<dt>@AccessesText.Detail.Fee</dt><dd class="num">@Money.Pln(fee.AmountMinor)</dd>}
+                @if (b.Payout is { } payout) {<dt>@AccessesText.Detail.Payout</dt><dd class="num">@Money.Pln(payout.AmountMinor)</dd>}
             </dl>
         </section>
 
         @if (b.Brief is { } brief)
         {
             <section class="card" aria-labelledby="brief-title">
-                <h2 id="brief-title">@(_role == AccessClient.ClientRole ? BookingsText.Detail.BriefOwn : BookingsText.Detail.Brief)</h2>
+                <h2 id="brief-title">@(_role == AccessClient.ClientRole ? AccessesText.Detail.BriefOwn : AccessesText.Detail.Brief)</h2>
                 <p class="brief">@brief.Text</p>
             </section>
         }
@@ -75,16 +75,16 @@ else if (_booking is { } b)
         @if (Open == "cancel" && b.CanCancel)
         {
             <dialog open data-enhance="dialog" role="alertdialog" aria-labelledby="cancel-title" class="dialog" data-testid="cancel-dialog">
-                <h2 id="cancel-title" tabindex="-1" autofocus>@BookingsText.Cancel.Title</h2>
+                <h2 id="cancel-title" tabindex="-1" autofocus>@AccessesText.Cancel.Title</h2>
                 <p class="@(CancelOutcome.Warns(_outcome, _role) ? "callout callout--danger" : "callout callout--info")">@CancelOutcome.Sentence(_outcome, _role)</p>
                 <form method="post" @onsubmit="CancelAsync" @formname="cancel" class="form" novalidate>
                     <AntiforgeryToken />
-                    <BookingFormProblems Items="_problems" />
-                    <CounterTextArea Id="reason" Name="Model.Reason" Label="@BookingsText.Cancel.ReasonLabel" Hint="@BookingsText.Cancel.ReasonHint" Value="@CancelModel!.Reason" Rows="3" Error="@_reasonError" />
+                    <AccessFormProblems Items="_problems" />
+                    <CounterTextArea Id="reason" Name="Model.Reason" Label="@AccessesText.Cancel.ReasonLabel" Hint="@AccessesText.Cancel.ReasonHint" Value="@CancelModel!.Reason" Rows="3" Error="@_reasonError" />
                     <ActionError Failure="_actionFailure" Href="@DetailHref()" />
                     <div class="form-actions">
-                        <button type="submit" class="btn btn--danger">@BookingsText.Cancel.Confirm</button>
-                        <a class="btn btn--secondary" href="@DetailHref()" data-dialog-dismiss>@BookingsText.Cancel.Keep</a>
+                        <button type="submit" class="btn btn--danger">@AccessesText.Cancel.Confirm</button>
+                        <a class="btn btn--secondary" href="@DetailHref()" data-dialog-dismiss>@AccessesText.Cancel.Keep</a>
                     </div>
                 </form>
             </dialog>
@@ -92,23 +92,23 @@ else if (_booking is { } b)
         else if (Open == "dispute" && b.CanDispute)
         {
             <dialog open data-enhance="dialog" role="alertdialog" aria-labelledby="dispute-title" class="dialog" data-testid="dispute-form">
-                <h2 id="dispute-title" tabindex="-1">@BookingsText.Dispute.Title</h2>
-                <p>@BookingsText.Dispute.Intro</p>
+                <h2 id="dispute-title" tabindex="-1">@AccessesText.Dispute.Title</h2>
+                <p>@AccessesText.Dispute.Intro</p>
                 <form method="post" @onsubmit="DisputeAsync" @formname="dispute" class="form" novalidate>
                     <AntiforgeryToken />
-                    <BookingFormProblems Items="_problems" />
+                    <AccessFormProblems Items="_problems" />
                     <div class="field">
-                        <label class="field__label" for="kind">@BookingsText.Dispute.KindLabel</label>
+                        <label class="field__label" for="kind">@AccessesText.Dispute.KindLabel</label>
                         <select id="kind" name="Model.Kind" class="field__control">
                             @foreach (var k in DisputeRules.Kinds) {<option value="@k" selected="@(k == (DisputeModel!.Kind ?? DisputeRules.Kinds[0]))">@DisputeRules.KindLabel(k)</option>}
                         </select>
                     </div>
-                    <CounterTextArea Id="text" Name="Model.Text" Label="@BookingsText.Dispute.TextLabel" Hint="@BookingsText.Dispute.TextHint" Value="@DisputeModel!.Text" Rows="5"
-                                     CounterFormat="@BookingsText.Dispute.Counter" Error="@_textError" Autofocus="@(_problems.Count == 1)" />
+                    <CounterTextArea Id="text" Name="Model.Text" Label="@AccessesText.Dispute.TextLabel" Hint="@AccessesText.Dispute.TextHint" Value="@DisputeModel!.Text" Rows="5"
+                                     CounterFormat="@AccessesText.Dispute.Counter" Error="@_textError" Autofocus="@(_problems.Count == 1)" />
                     <ActionError Failure="_actionFailure" Href="@DetailHref()" />
                     <div class="form-actions">
-                        <button type="submit" class="btn btn--primary">@BookingsText.Dispute.Submit</button>
-                        <a class="btn btn--ghost" href="@DetailHref()" data-dialog-dismiss>@BookingsText.Dispute.Close</a>
+                        <button type="submit" class="btn btn--primary">@AccessesText.Dispute.Submit</button>
+                        <a class="btn btn--ghost" href="@DetailHref()" data-dialog-dismiss>@AccessesText.Dispute.Close</a>
                     </div>
                 </form>
             </dialog>
@@ -116,15 +116,15 @@ else if (_booking is { } b)
         else
         {
             <div class="form-actions">
-                @if (b.CanReview && b.Status != "Completed") {<a class="btn btn--primary" href="@($"/moje/opinie/{b.Id}")">@BookingsText.Review</a>}
-                @if (_role == AccessClient.ClientRole && BookingFormat.RebookHref(b.Status, b.Agent.Slug) is { } rebook) {<a class="btn btn--secondary" href="@rebook">@BookingsText.Detail.Rebook</a>}
+                @if (b.CanReview && b.Status != "Completed") {<a class="btn btn--primary" href="@($"/moje/opinie/{b.Id}")">@AccessesText.Review</a>}
+                @if (_role == AccessClient.ClientRole && AccessFormat.RebookHref(b.Status, b.Agent.Slug) is { } rebook) {<a class="btn btn--secondary" href="@rebook">@AccessesText.Detail.Rebook</a>}
                 @if (b.CanCancel || b.CanDispute)
                 {
                     @* a GET form: the buttons open the action without a script and without a state change (a link would not be a button) *@
                     <form method="get" action="@DetailPath" class="cluster">
                         <input type="hidden" name="role" value="@_role" />
-                        @if (b.CanDispute) {<button type="submit" name="action" value="dispute" class="btn btn--secondary">@BookingsText.Actions.Dispute</button>}
-                        @if (b.CanCancel) {<button type="submit" name="action" value="cancel" class="btn btn--ghost-danger">@BookingsText.Actions.Cancel</button>}
+                        @if (b.CanDispute) {<button type="submit" name="action" value="dispute" class="btn btn--secondary">@AccessesText.Actions.Dispute</button>}
+                        @if (b.CanCancel) {<button type="submit" name="action" value="cancel" class="btn btn--ghost-danger">@AccessesText.Actions.Cancel</button>}
                     </form>
                 }
             </div>
@@ -132,46 +132,46 @@ else if (_booking is { } b)
         @if (b.Kind != "Chat" && _role == AccessClient.ClientRole)
         {
             <section class="card stack" aria-labelledby="tasks-title" id="zadania" data-testid="tasks">
-                <h2 id="tasks-title">@BookingsText.Tasks.Title</h2>
+                <h2 id="tasks-title">@AccessesText.Tasks.Title</h2>
                 @if (b.Status == "Confirmed" && b.UnitsUsed < b.UnitsTotal)
                 {
                     <form method="post" @onsubmit="CreateTaskAsync" @formname="task" class="form" novalidate>
                         <AntiforgeryToken />
-                        <h3>@BookingsText.Tasks.FormTitle</h3>
-                        <BookingFormProblems Items="_taskProblems" />
-                        <CounterTextArea Id="task-input" Name="Model.Input" Label="@BookingsText.Tasks.InputLabel" Hint="@BookingsText.Tasks.InputHint" Value="@TaskModel!.Input" Rows="6"
-                                         CounterFormat="@BookingsText.Tasks.Counter" Error="@_taskError" />
+                        <h3>@AccessesText.Tasks.FormTitle</h3>
+                        <AccessFormProblems Items="_taskProblems" />
+                        <CounterTextArea Id="task-input" Name="Model.Input" Label="@AccessesText.Tasks.InputLabel" Hint="@AccessesText.Tasks.InputHint" Value="@TaskModel!.Input" Rows="6"
+                                         CounterFormat="@AccessesText.Tasks.Counter" Error="@_taskError" />
                         <ActionError Failure="_taskFailure" Href="@DetailHref()" />
-                        <div class="form-actions"><button type="submit" class="btn btn--primary">@BookingsText.Tasks.Submit</button></div>
+                        <div class="form-actions"><button type="submit" class="btn btn--primary">@AccessesText.Tasks.Submit</button></div>
                     </form>
                 }
                 else
                 {
-                    <p class="muted" data-testid="task-not-active">@BookingsText.Tasks.NotActive</p>
+                    <p class="muted" data-testid="task-not-active">@AccessesText.Tasks.NotActive</p>
                 }
-                <h3>@BookingsText.Tasks.ListTitle</h3>
+                <h3>@AccessesText.Tasks.ListTitle</h3>
                 @if (_tasksFailed)
                 {
-                    <div class="callout callout--warning" role="status" data-testid="tasks-unavailable"><p>@BookingsText.Tasks.Unavailable</p><a class="btn btn--secondary" href="@DetailHref()">@BookingsText.Tasks.Refresh</a></div>
+                    <div class="callout callout--warning" role="status" data-testid="tasks-unavailable"><p>@AccessesText.Tasks.Unavailable</p><a class="btn btn--secondary" href="@DetailHref()">@AccessesText.Tasks.Refresh</a></div>
                 }
                 else if (_tasks.Count == 0)
                 {
-                    <p data-testid="tasks-empty">@BookingsText.Tasks.Empty</p>
+                    <p data-testid="tasks-empty">@AccessesText.Tasks.Empty</p>
                 }
                 else
                 {
-                    <ul class="stack tasks" aria-label="@BookingsText.Tasks.ListLabel">
+                    <ul class="stack tasks" aria-label="@AccessesText.Tasks.ListLabel">
                         @foreach (var t in _tasks)
                         {
                             <li class="card" data-testid="task-row">
                                 <p class="cluster">
                                     <span class="badge @TaskBadge(t.Status)" data-testid="task-status">@TaskStatusLabel(t.Status)</span>
-                                    <span class="muted">@string.Format(BookingsText.Tasks.Created, PlFormat.DayLong(t.CreatedAt))@if (t.CompletedAt is { } finished) {<text>, @string.Format(BookingsText.Tasks.Completed, PlFormat.DayLong(finished))</text>}</span>
+                                    <span class="muted">@string.Format(AccessesText.Tasks.Created, PlFormat.DayLong(t.CreatedAt))@if (t.CompletedAt is { } finished) {<text>, @string.Format(AccessesText.Tasks.Completed, PlFormat.DayLong(finished))</text>}</span>
                                 </p>
                                 @if (!string.IsNullOrEmpty(t.Output))
                                 {
                                     @* the agent's text: encoded text in a pre-wrapped block, never markup *@
-                                    <p class="muted">@BookingsText.Tasks.Result</p>
+                                    <p class="muted">@AccessesText.Tasks.Result</p>
                                     <p class="task-output" data-testid="task-output">@t.Output</p>
                                 }
                             </li>
@@ -179,12 +179,12 @@ else if (_booking is { } b)
                     </ul>
                     @if (_tasks.Any(t => t.Status is "queued" or "running"))
                     {
-                        <p class="muted" role="status">@BookingsText.Tasks.Pending <a href="@DetailHref()">@BookingsText.Tasks.Refresh</a></p>
+                        <p class="muted" role="status">@AccessesText.Tasks.Pending <a href="@DetailHref()">@AccessesText.Tasks.Refresh</a></p>
                     }
                 }
             </section>
         }
-        <p><a href="/moje/dostepy?role=@_role">@BookingsText.Back</a></p>
+        <p><a href="/moje/dostepy?role=@_role">@AccessesText.Back</a></p>
     </div>
 }
 
@@ -204,7 +204,7 @@ else if (_booking is { } b)
     /// <summary>The path the action buttons post back to (a GET form: the query is replaced by the form's own fields).</summary>
     string DetailPath => $"/moje/dostepy/{BookingId}";
 
-    BookingDetailDto? _booking;
+    AccessDetailDto? _booking;
     ApiFailure? _failure, _actionFailure;
     CancelOutcome? _outcome;
     string _role = AccessClient.ClientRole;
@@ -216,17 +216,17 @@ else if (_booking is { } b)
     List<FormProblem> _problems = [];
 
     /// <summary>What happens to the money of a cancelled booking, from the payment view only: the refund when there is one; "bez zwrotu" only for the late cancellation the status itself names.</summary>
-    static string? RefundLine(BookingDetailDto b) =>
-        b.Payment.Refunded.AmountMinor > 0 ? string.Format(BookingsText.Detail.RefundLine, Money.Pln(b.Payment.Refunded.AmountMinor))
-        : b.Status == "LateCancelledByClient" ? BookingsText.Detail.NoRefundLine : null;
+    static string? RefundLine(AccessDetailDto b) =>
+        b.Payment.Refunded.AmountMinor > 0 ? string.Format(AccessesText.Detail.RefundLine, Money.Pln(b.Payment.Refunded.AmountMinor))
+        : b.Status == "LateCancelledByClient" ? AccessesText.Detail.NoRefundLine : null;
 
     string? Open => ActionParam is "cancel" or "dispute" ? ActionParam : null;
 
     string? DoneText => DoneParam switch
     {
-        "cancelled" => BookingsText.Cancel.Done,
-        "disputed" => BookingsText.Dispute.Done,
-        "task" => BookingsText.Tasks.Done,
+        "cancelled" => AccessesText.Cancel.Done,
+        "disputed" => AccessesText.Dispute.Done,
+        "task" => AccessesText.Tasks.Done,
         _ => null,
     };
 
@@ -238,7 +238,7 @@ else if (_booking is { } b)
         CancelModel ??= new();
         DisputeModel ??= new();
         TaskModel ??= new();
-        _role = BookingFormat.Role(RoleParam);
+        _role = AccessFormat.Role(RoleParam);
         var result = await Accesses.GetAsync(BookingId);
         if (result.IsOk)
         {
@@ -259,7 +259,7 @@ else if (_booking is { } b)
         else { _tasks = []; _tasksFailed = true; }
     }
 
-    static string TaskStatusLabel(string status) => BookingsText.Tasks.Statuses.TryGetValue(status.ToLowerInvariant(), out var label) ? label : BookingsText.Tasks.UnknownStatus;
+    static string TaskStatusLabel(string status) => AccessesText.Tasks.Statuses.TryGetValue(status.ToLowerInvariant(), out var label) ? label : AccessesText.Tasks.UnknownStatus;
 
     static string TaskBadge(string status) => status.ToLowerInvariant() switch { "succeeded" => "badge--success", "failed" => "badge--danger", "running" => "badge--info", _ => "badge--neutral" };
 
@@ -267,7 +267,7 @@ else if (_booking is { } b)
     async Task CreateTaskAsync()
     {
         var length = (TaskModel!.Input ?? "").Trim().Length;
-        _taskError = length < 20 ? BookingsText.Tasks.TooShort : length > 20000 ? BookingsText.Tasks.TooLong : null;
+        _taskError = length < 20 ? AccessesText.Tasks.TooShort : length > 20000 ? AccessesText.Tasks.TooLong : null;
         _taskProblems = _taskError is null ? [] : [new FormProblem("task-input", _taskError)];
         if (_taskError is not null) return;
         var result = await Accesses.CreateTaskAsync(BookingId, TaskModel.Input!);
@@ -298,14 +298,14 @@ else if (_booking is { } b)
 
 
     /// <summary>Runs one action: success is a redirect with a fixed key; a failure is kept for display next to the form; a 401 goes to sign-in.</summary>
-    async Task RunAsync(Func<Task<ApiResult<BookingDetailDto>>> call, string done, string action)
+    async Task RunAsync(Func<Task<ApiResult<AccessDetailDto>>> call, string done, string action)
     {
         var result = await call();
         if (result.IsOk) { Navigation.NavigateTo(DetailHref(done: done)); return; }
         if (result.Failure!.IsUnauthenticated) { SignIn(); return; }
         _actionFailure = result.Failure;
         // the field the server named is shown under that field as well, in our words
-        if (result.Failure.Names("text")) { _textError = BookingsText.Dispute.TooShort; _problems = [new FormProblem("text", _textError)]; }
-        if (result.Failure.Names("reason")) { _reasonError = BookingsText.Cancel.ReasonTooLong; _problems = [new FormProblem("reason", _reasonError)]; }
+        if (result.Failure.Names("text")) { _textError = AccessesText.Dispute.TooShort; _problems = [new FormProblem("text", _textError)]; }
+        if (result.Failure.Names("reason")) { _reasonError = AccessesText.Cancel.ReasonTooLong; _problems = [new FormProblem("reason", _reasonError)]; }
     }
 }

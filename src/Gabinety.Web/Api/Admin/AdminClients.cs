@@ -8,17 +8,17 @@ namespace Gabinety.Web.Api;
 
 public sealed partial class DirectoryClient
 {
-    public Task<ApiResult<PageDto<AdminPractitionerRowDto>>> AdminPractitionersAsync(string? token, string status, string? cursor, int limit, CancellationToken ct = default) =>
-        GetAsync<PageDto<AdminPractitionerRowDto>>("/api/v1/admin/practitioners" + Query(("status", status), ("limit", limit.ToString(CultureInfo.InvariantCulture)), ("cursor", cursor)), token, ct);
+    public Task<ApiResult<PageDto<AdminAgentRowDto>>> AdminAgentsAsync(string? token, string status, string? cursor, int limit, CancellationToken ct = default) =>
+        GetAsync<PageDto<AdminAgentRowDto>>("/api/v1/admin/practitioners" + Query(("status", status), ("limit", limit.ToString(CultureInfo.InvariantCulture)), ("cursor", cursor)), token, ct);
 
-    public Task<ApiResult<AdminPractitionerDetailDto>> AdminPractitionerAsync(string? token, Guid id, CancellationToken ct = default) =>
-        GetAsync<AdminPractitionerDetailDto>($"/api/v1/admin/practitioners/{id}", token, ct);
+    public Task<ApiResult<AdminAgentDetailDto>> AdminAgentAsync(string? token, Guid id, CancellationToken ct = default) =>
+        GetAsync<AdminAgentDetailDto>($"/api/v1/admin/practitioners/{id}", token, ct);
 
     public Task<ApiResult<AdminVerificationEventsDto>> AdminVerificationEventsAsync(string? token, Guid id, CancellationToken ct = default) =>
         GetAsync<AdminVerificationEventsDto>($"/api/v1/admin/practitioners/{id}/verification-events", token, ct);
 
     /// <summary><c>approve</c> and <c>reinstate</c> carry no body; <c>reject</c> and <c>suspend</c> carry the reason (10 to 500 characters, trimmed here: CONTRACTS 3.4).</summary>
-    public Task<ApiResult<Unit>> AdminPractitionerActionAsync(string? token, Guid id, string action, string? reason, CancellationToken ct = default) =>
+    public Task<ApiResult<Unit>> AdminAgentActionAsync(string? token, Guid id, string action, string? reason, CancellationToken ct = default) =>
         PostAsync<Unit>($"/api/v1/admin/practitioners/{id}/{action}", reason is null ? null : new { reason = reason.Trim() }, token, ct);
 
     internal static string Query(params (string Name, string? Value)[] parts) =>
@@ -31,8 +31,8 @@ public sealed partial class AccessClient
         GetAsync<PageDto<AdminDisputeDto>>("/api/v1/admin/disputes" + DirectoryClient.Query(("status", status), ("limit", limit.ToString(CultureInfo.InvariantCulture)), ("cursor", cursor)), token, ct);
 
     /// <summary>An administrator may read any booking (CONTRACTS 4.2): the dispute card shows what was booked, the price and the payment.</summary>
-    public Task<ApiResult<AdminBookingDto>> AdminBookingAsync(string? token, Guid id, CancellationToken ct = default) =>
-        GetAsync<AdminBookingDto>($"/api/v1/bookings/{id}", token, ct);
+    public Task<ApiResult<AdminAccessDto>> AdminAccessAsync(string? token, Guid id, CancellationToken ct = default) =>
+        GetAsync<AdminAccessDto>($"/api/v1/bookings/{id}", token, ct);
 
     /// <summary><c>resolution</c> is <c>release | refund_full | refund_partial</c>; <c>refundMinor</c> only for a partial refund (grosz, strictly between 0 and the price).</summary>
     public Task<ApiResult<Unit>> AdminResolveAsync(string? token, Guid accessId, string resolution, long? refundMinor, string note, CancellationToken ct = default) =>

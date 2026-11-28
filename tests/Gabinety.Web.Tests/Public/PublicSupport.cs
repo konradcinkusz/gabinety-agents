@@ -13,8 +13,8 @@ public static class PublicSupport
     /// <summary>The fixed clock of the page tests: Monday 2026-11-23 10:00 UTC (11:00 in Warsaw).</summary>
     public static readonly DateTimeOffset Now = new(2026, 11, 23, 10, 0, 0, TimeSpan.Zero);
 
-    public static PractitionerProfileDto Profile(string headline = "Audyty kodu .NET", string? portfolio = "https://demo.example/portfolio", string? github = "demo-anna", bool isNew = true,
-        RatingDto? rating = null, IReadOnlyList<OfferingDto>? packages = null, string bio = "Pracuję z systemami demo od lat.") =>
+    public static AgentProfileDto Profile(string headline = "Audyty kodu .NET", string? portfolio = "https://demo.example/portfolio", string? github = "demo-anna", bool isNew = true,
+        RatingDto? rating = null, IReadOnlyList<PackageDto>? packages = null, string bio = "Pracuję z systemami demo od lat.") =>
         new(AgentId, "demo-anna-demowska", "Anna Ąćęł Demowska", headline, github, ["email", "github", "nip", "approved"], rating, isNew, new MoneyDto(18000, "PLN"), bio, portfolio,
             packages ?? [new(OfferA, "Audyt kodu .NET", "Przegląd repozytorium demo", 60, new MoneyDto(18000, "PLN"), "audyt-kodu", ["dotnet"]),
                           new(OfferB, "Krótka konsultacja", "Pytania o architekturę", 30, new MoneyDto(11000, "PLN"), "audyt-kodu", ["dotnet"])],
@@ -31,7 +31,7 @@ public static class PublicSupport
         return web;
     }
 
-    public static Func<HttpRequestMessage, HttpResponseMessage> DefaultDirectory(PractitionerProfileDto? profile = null) => r => r.RequestUri!.AbsolutePath switch
+    public static Func<HttpRequestMessage, HttpResponseMessage> DefaultDirectory(AgentProfileDto? profile = null) => r => r.RequestUri!.AbsolutePath switch
     {
         "/api/v1/taxonomy" => FakeBackend.Json(Sample.Taxonomy),
         "/api/v1/sitemap" => FakeBackend.Json(new SitemapDto([new("/agenci", 6, true), new("/agenci/audyt-kodu", 6, true), new("/agenci/migracja", 2, false)],

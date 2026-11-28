@@ -70,7 +70,7 @@ sealed class CreateHost : WebApplicationFactory<Program>
     public bool Active = true;
     public string? MeetingUrl;
     public Action<IServiceCollection>? Configure;
-    public string PractitionerName = "Demo Practitioner", AgentSlug = "demo-practitioner";
+    public string AgentName = "Demo Practitioner", AgentSlug = "demo-practitioner";
     /// <summary>The <c>name</c> claim the tokens carry (authservice puts the e-mail there); null: no such claim.</summary>
     public string? NameClaim;
     public bool DirectoryDown;
@@ -100,7 +100,7 @@ sealed class CreateHost : WebApplicationFactory<Program>
             })
             : r.RequestUri!.AbsolutePath == $"/internal/v1/practitioners/{Agent}"
                 ? (DirectoryDown ? new HttpResponseMessage(System.Net.HttpStatusCode.ServiceUnavailable)
-                    : FakeDirectory.Json(new { practitionerId = Agent, displayName = PractitionerName, slug = AgentSlug }))
+                    : FakeDirectory.Json(new { practitionerId = Agent, displayName = AgentName, slug = AgentSlug }))
             : new HttpResponseMessage(System.Net.HttpStatusCode.NotFound);
     }
 

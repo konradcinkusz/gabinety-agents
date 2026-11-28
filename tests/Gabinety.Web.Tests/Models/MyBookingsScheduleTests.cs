@@ -11,7 +11,7 @@ public class MyBookingsScheduleTests
 
     static DateTimeOffset Utc(int month, int day, int hour, int minute = 0) => new(2026, month, day, hour, minute, 0, TimeSpan.Zero);
 
-    static BookingViewDto At(DateTimeOffset start, string status = "Confirmed", string title = "x") =>
+    static AccessViewDto At(DateTimeOffset start, string status = "Confirmed", string title = "x") =>
         Sample.Access(title, status) with { StartUtc = start, EndUtc = start.AddHours(1) };
 
     [Theory]
@@ -22,15 +22,15 @@ public class MyBookingsScheduleTests
     [InlineData("2026-11-29T08:00:00Z", "niedziela, 29 listopada, 09:00")] // a week or more: the long date
     [InlineData("2026-12-01T12:00:00Z", "wtorek, 1 grudnia, 13:00")]
     public void The_start_is_worded_from_the_warsaw_calendar_day(string start, string expected) =>
-        Assert.Equal(expected, MyBookingsSchedule.Relative(Now, DateTimeOffset.Parse(start, System.Globalization.CultureInfo.InvariantCulture)));
+        Assert.Equal(expected, MyAccessesSchedule.Relative(Now, DateTimeOffset.Parse(start, System.Globalization.CultureInfo.InvariantCulture)));
 
     [Fact]
     public void The_day_is_the_warsaw_day_not_the_utc_day_near_midnight()
     {
         // 23:30 UTC on 22 November is 00:30 on 23 November in Warsaw: a booking at 01:15 Warsaw on 23 November is "dziś" of that moment, not "jutro".
         var lateNow = Utc(11, 22, 23, 30);
-        Assert.Equal("dziś, 01:15", MyBookingsSchedule.Relative(lateNow, Utc(11, 23, 0, 15)));
-        Assert.Equal("jutro, 01:15", MyBookingsSchedule.Relative(Now, Utc(11, 23, 0, 15))); // from 11:00 on the 22nd it is tomorrow
+        Assert.Equal("dziś, 01:15", MyAccessesSchedule.Relative(lateNow, Utc(11, 23, 0, 15)));
+        Assert.Equal("jutro, 01:15", MyAccessesSchedule.Relative(Now, Utc(11, 23, 0, 15))); // from 11:00 on the 22nd it is tomorrow
     }
 
     [Fact]
@@ -46,7 +46,7 @@ public class MyBookingsScheduleTests
             At(Utc(12, 6, 12), "Expired", "Wygasła"),
             At(Utc(11, 10, 12), "Completed", "Zakończona"),
         };
-        var (upcoming, past) = MyBookingsSchedule.Split(items, Now);
+        var (upcoming, past) = MyAccessesSchedule.Split(items, Now);
         Assert.Equal(["Przed płatnością", "Dalsza"], upcoming.Select(b => b.PackageTitle));
         Assert.Equal(["Wygasła", "Późno odwołana", "Odwołana", "Anulowana", "Zakończona"], past.Select(b => b.PackageTitle));
     }
@@ -56,7 +56,7 @@ public class MyBookingsScheduleTests
     public void Only_a_booking_awaiting_payment_or_confirmed_is_upcoming_whatever_its_start_says(string status)
     {
         // seeded data made with a moved test clock has a completed booking that starts in the future of the real clock
-        var (upcoming, past) = MyBookingsSchedule.Split([At(Now.AddDays(2), status, "Z przyszłością")], Now);
+        var (upcoming, past) = MyAccessesSchedule.Split([At(Now.AddDays(2), status, "Z przyszłością")], Now);
         Assert.Empty(upcoming);
         Assert.Single(past);
     }
@@ -65,9 +65,9 @@ public class MyBookingsScheduleTests
     public void A_package_whose_validity_ends_exactly_now_is_past_and_nothing_is_lost_in_the_split()
     {
         var items = new[] { At(Now.AddHours(-1), title: "Teraz"), At(Now.AddMinutes(-59), title: "Za minutę") };
-        var (upcoming, past) = MyBookingsSchedule.Split(items, Now);
+        var (upcoming, past) = MyAccessesSchedule.Split(items, Now);
         Assert.Equal(["Za minutę"], upcoming.Select(b => b.PackageTitle));
         Assert.Equal(["Teraz"], past.Select(b => b.PackageTitle));
-        Assert.Empty(MyBookingsSchedule.Split([], Now).Upcoming);
+        Assert.Empty(MyAccessesSchedule.Split([], Now).Upcoming);
     }
 }

@@ -1,7 +1,7 @@
 namespace Gabinety.Web.Components.Pages.Booking;
 
 /// <summary>What the booking form posts. Strings only: the page validates and decides; nothing here is trusted. The brief is user free text: it lives in this object for the request and goes to the Booking service as a body, never to a log.</summary>
-public sealed class BookingFormModel
+public sealed class AccessFormModel
 {
     public const string Assist = "assist", Apply = "apply", Pay = "pay";
 

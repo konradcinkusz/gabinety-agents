@@ -26,10 +26,10 @@ else if (_unavailable)
 }
 else if (_offering is not null)
 {
-    <BookingSteps Current="0" />
+    <AccessSteps Current="0" />
     <div class="booking-layout">
         <div class="booking-layout__summary">
-            <ConsultationSummary Package="@_offering.Title" Party="@BookingFormat.Name(_practitionerName)" Units="@Gabinety.Web.Components.Pages.Gabinet.Profile.UnitsLine(_offering)"
+            <ConsultationSummary Package="@_offering.Title" Party="@AccessFormat.Name(_agentName)" Units="@Gabinety.Web.Components.Pages.Gabinet.Profile.UnitsLine(_offering)"
                                  Validity="@string.Format(BookFlowText.Summary.ValidFor, PlPages.Profile.ValidityDays)" PriceMinor="_offering.Price.AmountMinor">
                 <div class="callout callout--info stack stack--tight">
                     <p>@BookFlowText.Summary.Hold</p>
@@ -43,12 +43,12 @@ else if (_offering is not null)
             <input type="hidden" name="Model.AttemptFingerprint" value="@_attemptFingerprint" />
             <input type="hidden" name="Model.AppliedSlug" value="@Model!.AppliedSlug" />
             <input type="hidden" name="Model.SuggestedSlug" value="@Model!.SuggestedSlug" />
-            <BookingFormProblems Items="_problems" />
+            <AccessFormProblems Items="_problems" />
             <CounterTextArea Id="brief" Name="Model.Brief" Label="@BookFlowText.Brief.Label" Hint="@BookFlowText.Brief.Hint" Value="@Model!.Brief" Rows="8" CounterFormat="@BookFlowText.Brief.Counter"
                              Error="@_briefError" Autofocus="@(_problems.Count == 1)" />
 
             <section class="assist stack stack--tight" aria-live="polite">
-                <div><button type="submit" name="Model.Intent" value="@BookingFormModel.Assist" class="btn btn--secondary" formnovalidate>@BookFlowText.Assist.Ask</button></div>
+                <div><button type="submit" name="Model.Intent" value="@AccessFormModel.Assist" class="btn btn--secondary" formnovalidate>@BookFlowText.Assist.Ask</button></div>
                 <p class="field__hint">@BookFlowText.Assist.Note</p>
                 @if (_assistNote is { } note) {<div class="callout callout--info">@note</div>}
                 @if (_assistApplied) {<div class="callout callout--success">@BookFlowText.Assist.Applied</div>}
@@ -65,7 +65,7 @@ else if (_offering is not null)
                                 <ul class="assist__questions stack stack--tight">@foreach (var q in s.ClarifyingQuestions) {<li>@q</li>}</ul>
                             </div>
                         }
-                        <div><button type="submit" name="Model.Intent" value="@BookingFormModel.Apply" class="btn btn--secondary" formnovalidate>@BookFlowText.Assist.Apply</button></div>
+                        <div><button type="submit" name="Model.Intent" value="@AccessFormModel.Apply" class="btn btn--secondary" formnovalidate>@BookFlowText.Assist.Apply</button></div>
                     </div>
                 }
             </section>
@@ -78,7 +78,7 @@ else if (_offering is not null)
                 </div>
             }
             <div class="form-actions">
-                <button type="submit" name="Model.Intent" value="@BookingFormModel.Pay" class="btn btn--primary">@string.Format(BookFlowText.Form.Pay, Money.Pln(_offering.Price.AmountMinor))</button>
+                <button type="submit" name="Model.Intent" value="@AccessFormModel.Pay" class="btn btn--primary">@string.Format(BookFlowText.Form.Pay, Money.Pln(_offering.Price.AmountMinor))</button>
             </div>
         </form>
     </div>
@@ -88,11 +88,11 @@ else if (_offering is not null)
     [Parameter] public Guid OfferingId { get; set; }
     /// <summary>The profile slug (<c>?gabinet=</c>): no endpoint resolves an offering id on its own, so the offering is looked up in the public profile.</summary>
     [SupplyParameterFromQuery(Name = "gabinet")] public string? SlugParam { get; set; }
-    [SupplyParameterFromForm(FormName = "booking")] BookingFormModel? Model { get; set; }
+    [SupplyParameterFromForm(FormName = "booking")] AccessFormModel? Model { get; set; }
 
     string CurrentPath => "/" + Navigation.ToBaseRelativePath(Navigation.Uri);
-    OfferingDto? _offering;
-    string? _practitionerName, _slug, _categoryName, _assistNote, _briefError, _attemptKey, _attemptFingerprint;
+    PackageDto? _offering;
+    string? _agentName, _slug, _categoryName, _assistNote, _briefError, _attemptKey, _attemptFingerprint;
     bool _missing, _unavailable, _assistApplied;
     BriefSuggestionDto? _suggestion;
     BookFailure? _failure;
@@ -113,7 +113,7 @@ else if (_offering is not null)
         }
         _offering = profile.Value!.Packages.FirstOrDefault(o => o.Id == OfferingId);
         if (_offering is null) { Navigation.NotFound(); return; }
-        _practitionerName = profile.Value.DisplayName;
+        _agentName = profile.Value.DisplayName;
     }
 
     async Task SubmitAsync()
@@ -121,9 +121,9 @@ else if (_offering is not null)
         if (_offering is null || Model is null) return;
         switch (Model.Intent)
         {
-            case BookingFormModel.Assist: await AskAssistantAsync(); break;
-            case BookingFormModel.Apply: Apply(); break;
-            case BookingFormModel.Pay: await PayAsync(); break;
+            case AccessFormModel.Assist: await AskAssistantAsync(); break;
+            case AccessFormModel.Apply: Apply(); break;
+            case AccessFormModel.Pay: await PayAsync(); break;
         }
     }
 
@@ -167,11 +167,11 @@ else if (_offering is not null)
 
         var applied = string.IsNullOrWhiteSpace(Model.AppliedSlug) ? null : Model.AppliedSlug.Trim();
         var text = Model.Brief!.Trim();
-        var fingerprint = BookingAttempt.Fingerprint(_offering!.Id, text, applied, applied is not null);
-        var key = BookingAttempt.KeyFor(Model.AttemptKey, Model.AttemptFingerprint, fingerprint, Guid.NewGuid);
+        var fingerprint = AccessAttempt.Fingerprint(_offering!.Id, text, applied, applied is not null);
+        var key = AccessAttempt.KeyFor(Model.AttemptKey, Model.AttemptFingerprint, fingerprint, Guid.NewGuid);
         (_attemptKey, _attemptFingerprint) = (key.ToString(), fingerprint); // kept in the form: a retry of this same request reuses the key
 
-        var result = await Accesses.CreateAsync(key, new CreateBookingRequestDto(_offering.Id, new BriefDto(text, applied, applied is not null)));
+        var result = await Accesses.CreateAsync(key, new CreateAccessRequestDto(_offering.Id, new BriefDto(text, applied, applied is not null)));
         if (result.IsOk)
         {
             if (CheckoutTarget.Safe(result.Value!.CheckoutUrl, Site.SiteBaseUrl, Site.MockPayments) is { } target) { Navigation.NavigateTo(target); return; }

@@ -13,7 +13,7 @@ namespace Gabinety.Web.Components.Layout;
 /// only, so the next page asks again. A profile created in the last minute appears after the cache expires. Process-wide, like <see cref="SessionCache"/>; the key is the session id,
 /// which is random per sign-in and carries no personal data.
 /// </summary>
-public static class PractitionerProfileCheck
+public static class AgentProfileCheck
 {
     public static readonly TimeSpan Lifetime = TimeSpan.FromSeconds(60), FailureLifetime = TimeSpan.FromSeconds(10);
     static readonly TimeSpan SweepEvery = TimeSpan.FromMinutes(5);

@@ -18,19 +18,19 @@ public sealed record CancelOutcome(long RefundMinor, long PaidMinor)
         dto is { Refund: { } refund } && refund.AmountMinor >= 0 && refund.AmountMinor <= price.AmountMinor ? new CancelOutcome(refund.AmountMinor, price.AmountMinor) : null;
 
     /// <summary>A client who would get nothing back is warned (danger); every other sentence only informs.</summary>
-    public static bool Warns(CancelOutcome? outcome, string role) => role != AccessClient.PractitionerRole && outcome is { IsNone: true };
+    public static bool Warns(CancelOutcome? outcome, string role) => role != AccessClient.AgentRole && outcome is { IsNone: true };
 
     /// <summary>The sentence of the cancel dialog: the outcome when the booking carries one, else the general rule of the role.</summary>
     public static string Sentence(CancelOutcome? outcome, string role)
     {
-        if (role == AccessClient.PractitionerRole)
-            return outcome is null ? BookingsText.Cancel.PractitionerRule : string.Format(BookingsText.Cancel.PractitionerOutcome, Money.Pln(outcome.RefundMinor));
+        if (role == AccessClient.AgentRole)
+            return outcome is null ? AccessesText.Cancel.AgentRule : string.Format(AccessesText.Cancel.AgentOutcome, Money.Pln(outcome.RefundMinor));
         return outcome switch
         {
-            null => BookingsText.Cancel.ClientRule,
-            { IsNone: true } => BookingsText.Cancel.OutcomeNone,
-            { IsFull: true } => string.Format(BookingsText.Cancel.OutcomeFull, Money.Pln(outcome.RefundMinor)),
-            _ => string.Format(BookingsText.Cancel.OutcomePartial, Money.Pln(outcome.RefundMinor), Money.Pln(outcome.PaidMinor)),
+            null => AccessesText.Cancel.ClientRule,
+            { IsNone: true } => AccessesText.Cancel.OutcomeNone,
+            { IsFull: true } => string.Format(AccessesText.Cancel.OutcomeFull, Money.Pln(outcome.RefundMinor)),
+            _ => string.Format(AccessesText.Cancel.OutcomePartial, Money.Pln(outcome.RefundMinor), Money.Pln(outcome.PaidMinor)),
         };
     }
 }

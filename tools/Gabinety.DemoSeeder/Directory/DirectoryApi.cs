@@ -91,7 +91,7 @@ public sealed class DirectoryApi(HttpClient http, SeedOptions options, TimeProvi
         if (v.Status != HttpStatusCode.NoContent) throw Fail("github link verify (needs a GitHub lookup that answers in the fake profile)", v);
     }
 
-    public async Task<IReadOnlyList<MyOffering>> OfferingsAsync(DemoUser u, CancellationToken ct)
+    public async Task<IReadOnlyList<MyOffering>> PackagesAsync(DemoUser u, CancellationToken ct)
     {
         var r = await SendAsync(HttpMethod.Get, "/api/v1/me/practitioner/offerings", u.AccessToken, false, null, ct);
         if (r.Status != HttpStatusCode.OK || r.Json is not { } j) throw Fail("list offerings", r);

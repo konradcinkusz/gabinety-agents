@@ -6,7 +6,7 @@ namespace Gabinety.Web.Api;
 /// Directory, the practitioner's own profile and offers (CONTRACTS 3.3, 3.5). Every call carries the user's bearer; the service decides who may do what. One provider account may own several
 /// agents (E-04): <see cref="Agent"/> is the slug of the agent the page works on, sent as <c>?agent=</c> on every call except the creation of a new agent; null means "the account's only agent".
 /// </summary>
-public sealed class PractitionerClient(HttpClient http, VisitorAddressAccessor visitor, IAccessTokenSource tokens) : ApiClient(http, visitor)
+public sealed class AgentClient(HttpClient http, VisitorAddressAccessor visitor, IAccessTokenSource tokens) : ApiClient(http, visitor)
 {
     const string Me = "/api/v1/me/practitioner";
 
@@ -20,20 +20,20 @@ public sealed class PractitionerClient(HttpClient http, VisitorAddressAccessor v
     async Task<ApiResult<T>> Write<T>(HttpMethod method, string path, object? body, CancellationToken ct) => await WriteAsync<T>(method, Scoped(path), await tokens.AccessTokenAsync(ct), body, ct);
 
     /// <summary>404 means the account has no practitioner profile yet.</summary>
-    public Task<ApiResult<PractitionerPrivateDto>> ProfileAsync(CancellationToken ct = default) => Get<PractitionerPrivateDto>(Me, ct);
+    public Task<ApiResult<AgentPrivateDto>> ProfileAsync(CancellationToken ct = default) => Get<AgentPrivateDto>(Me, ct);
 
     /// <summary>Creates a NEW agent of the account (E-04: not scoped to <see cref="Agent"/>); 422 <c>too_many_agents</c> at the account's limit.</summary>
-    public async Task<ApiResult<PractitionerPrivateDto>> CreateProfileAsync(string displayName, CancellationToken ct = default) =>
-        await WriteAsync<PractitionerPrivateDto>(HttpMethod.Post, Me, await tokens.AccessTokenAsync(ct), new CreatePractitionerBody(displayName), ct);
+    public async Task<ApiResult<AgentPrivateDto>> CreateProfileAsync(string displayName, CancellationToken ct = default) =>
+        await WriteAsync<AgentPrivateDto>(HttpMethod.Post, Me, await tokens.AccessTokenAsync(ct), new CreateAgentBody(displayName), ct);
 
     /// <summary>The account's agents, oldest first (E-04); an empty list when it has none.</summary>
-    public async Task<ApiResult<IReadOnlyList<PractitionerSummaryDto>>> AgentsAsync(CancellationToken ct = default)
+    public async Task<ApiResult<IReadOnlyList<AgentSummaryDto>>> AgentsAsync(CancellationToken ct = default)
     {
-        var r = await GetAsync<PractitionerSummariesDto>("/api/v1/me/practitioners", await tokens.AccessTokenAsync(ct), ct);
-        return r.IsOk ? ApiResult<IReadOnlyList<PractitionerSummaryDto>>.Ok(r.Value!.Items) : ApiResult<IReadOnlyList<PractitionerSummaryDto>>.Fail(r.Failure!);
+        var r = await GetAsync<AgentSummariesDto>("/api/v1/me/practitioners", await tokens.AccessTokenAsync(ct), ct);
+        return r.IsOk ? ApiResult<IReadOnlyList<AgentSummaryDto>>.Ok(r.Value!.Items) : ApiResult<IReadOnlyList<AgentSummaryDto>>.Fail(r.Failure!);
     }
 
-    public Task<ApiResult<PractitionerPrivateDto>> SaveProfileAsync(UpdatePractitionerBody body, CancellationToken ct = default) => Write<PractitionerPrivateDto>(HttpMethod.Put, Me, body, ct);
+    public Task<ApiResult<AgentPrivateDto>> SaveProfileAsync(UpdateAgentBody body, CancellationToken ct = default) => Write<AgentPrivateDto>(HttpMethod.Put, Me, body, ct);
 
     public Task<ApiResult<Unit>> SubmitAsync(CancellationToken ct = default) => Write<Unit>(HttpMethod.Post, Me + "/submit", null, ct);
 
@@ -42,23 +42,23 @@ public sealed class PractitionerClient(HttpClient http, VisitorAddressAccessor v
 
     public Task<ApiResult<Unit>> VerifyGithubLinkAsync(CancellationToken ct = default) => Write<Unit>(HttpMethod.Post, Me + "/github-link/verify", null, ct);
 
-    public async Task<ApiResult<IReadOnlyList<OfferingPrivateDto>>> OfferingsAsync(CancellationToken ct = default)
+    public async Task<ApiResult<IReadOnlyList<PackagePrivateDto>>> PackagesAsync(CancellationToken ct = default)
     {
-        var r = await Get<OfferingsDto>(Me + "/offerings", ct);
-        return r.IsOk ? ApiResult<IReadOnlyList<OfferingPrivateDto>>.Ok(r.Value!.Items) : ApiResult<IReadOnlyList<OfferingPrivateDto>>.Fail(r.Failure!);
+        var r = await Get<PackagesDto>(Me + "/offerings", ct);
+        return r.IsOk ? ApiResult<IReadOnlyList<PackagePrivateDto>>.Ok(r.Value!.Items) : ApiResult<IReadOnlyList<PackagePrivateDto>>.Fail(r.Failure!);
     }
 
     /// <summary>Creates the offer (<paramref name="id"/> null) or replaces it.</summary>
-    public Task<ApiResult<OfferingPrivateDto>> SaveOfferingAsync(Guid? id, OfferingBody body, CancellationToken ct = default) =>
-        Write<OfferingPrivateDto>(id is null ? HttpMethod.Post : HttpMethod.Put, Me + "/offerings" + (id is null ? "" : "/" + id), body, ct);
+    public Task<ApiResult<PackagePrivateDto>> SavePackageAsync(Guid? id, PackageBody body, CancellationToken ct = default) =>
+        Write<PackagePrivateDto>(id is null ? HttpMethod.Post : HttpMethod.Put, Me + "/offerings" + (id is null ? "" : "/" + id), body, ct);
 
-    public Task<ApiResult<Unit>> DeactivateOfferingAsync(Guid id, CancellationToken ct = default) => Write<Unit>(HttpMethod.Post, $"{Me}/offerings/{id}/deactivate", null, ct);
+    public Task<ApiResult<Unit>> DeactivatePackageAsync(Guid id, CancellationToken ct = default) => Write<Unit>(HttpMethod.Post, $"{Me}/offerings/{id}/deactivate", null, ct);
 
-    public Task<ApiResult<Unit>> ActivateOfferingAsync(Guid id, CancellationToken ct = default) => Write<Unit>(HttpMethod.Post, $"{Me}/offerings/{id}/activate", null, ct);
+    public Task<ApiResult<Unit>> ActivatePackageAsync(Guid id, CancellationToken ct = default) => Write<Unit>(HttpMethod.Post, $"{Me}/offerings/{id}/activate", null, ct);
 }
 
 /// <summary>Booking, the provider's payments account (PAYMENTS-GO-LIVE).</summary>
-public sealed class PractitionerSchedulingClient(HttpClient http, VisitorAddressAccessor visitor, IAccessTokenSource tokens) : ApiClient(http, visitor)
+public sealed class AgentSchedulingClient(HttpClient http, VisitorAddressAccessor visitor, IAccessTokenSource tokens) : ApiClient(http, visitor)
 {
     /// <summary>The slug of the agent whose payment account the calls are about (E-04: the account is per agent); null for a provider with one agent.</summary>
     public string? Agent { get; set; }

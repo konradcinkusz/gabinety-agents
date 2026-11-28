@@ -1,14 +1,14 @@
 @page "/panel-agenta/profil"
 @attribute [Authorize]
-@layout PractitionerLayout
-@inherits PractitionerPage
+@layout AgentLayout
+@inherits AgentPage
 @* One plain form: the posted fields are read, saved through the service, and a success redirects with the flash "Zapisano." (a refresh does not post again). Errors are shown all at once, in a summary and under each field (contract 5.5). *@
-<PageTitle>@PlPractitioner.Profile.MetaTitle</PageTitle>
-<h1>@PlPractitioner.Profile.Title</h1>
+<PageTitle>@PlAgent.Profile.MetaTitle</PageTitle>
+<h1>@PlAgent.Profile.Title</h1>
 
 @if (LoadFailure is not null)
 {
-    <Alert Variant="AlertVariant.Danger" TestId="unavailable">@FailureText(LoadFailure) <a href="@At(PractitionerPaths.Profile)">@PlPractitioner.Common.Retry</a></Alert>
+    <Alert Variant="AlertVariant.Danger" TestId="unavailable">@FailureText(LoadFailure) <a href="@At(AgentPaths.Profile)">@PlAgent.Common.Retry</a></Alert>
 }
 else if (Profile is not null)
 {
@@ -17,25 +17,25 @@ else if (Profile is not null)
     <div class="grid-2">
         <form method="post" @onsubmit="SaveAsync" @formname="profile" class="form stack form-narrow" novalidate>
             <AntiforgeryToken />
-            <FormField Id="displayName" Label="@PlPractitioner.Profile.DisplayName" Error="@Error("displayName")" Max="80" Length="_v.DisplayName.Length">
+            <FormField Id="displayName" Label="@PlAgent.Profile.DisplayName" Error="@Error("displayName")" Max="80" Length="_v.DisplayName.Length">
                 <input id="@context.Id" name="displayName" value="@_v.DisplayName" maxlength="80" autocomplete="name" aria-describedby="@context.DescribedBy" aria-invalid="@Invalid(context)" />
             </FormField>
-            <FormField Id="headline" Label="@PlPractitioner.Profile.Headline" Hint="@PlPractitioner.Profile.HeadlineHint" Error="@Error("headline")" Max="120" Length="_v.Headline.Length">
+            <FormField Id="headline" Label="@PlAgent.Profile.Headline" Hint="@PlAgent.Profile.HeadlineHint" Error="@Error("headline")" Max="120" Length="_v.Headline.Length">
                 <input id="@context.Id" name="headline" value="@_v.Headline" maxlength="120" aria-describedby="@context.DescribedBy" aria-invalid="@Invalid(context)" />
             </FormField>
-            <FormField Id="bio" Label="@PlPractitioner.Profile.Bio" Hint="@PlPractitioner.Profile.BioHint" Error="@Error("bio")" Max="2000" Length="_v.Bio.Length">
+            <FormField Id="bio" Label="@PlAgent.Profile.Bio" Hint="@PlAgent.Profile.BioHint" Error="@Error("bio")" Max="2000" Length="_v.Bio.Length">
                 <textarea id="@context.Id" name="bio" rows="8" maxlength="2000" aria-describedby="@context.DescribedBy" aria-invalid="@Invalid(context)">@_v.Bio</textarea>
             </FormField>
-            <FormField Id="portfolioUrl" Label="@PlPractitioner.Profile.Portfolio" Hint="@PlPractitioner.Profile.PortfolioHint" Error="@Error("portfolioUrl")" Optional="true">
+            <FormField Id="portfolioUrl" Label="@PlAgent.Profile.Portfolio" Hint="@PlAgent.Profile.PortfolioHint" Error="@Error("portfolioUrl")" Optional="true">
                 <input id="@context.Id" name="portfolioUrl" type="url" inputmode="url" value="@_v.PortfolioUrl" maxlength="300" aria-describedby="@context.DescribedBy" aria-invalid="@Invalid(context)" />
             </FormField>
-            <FormField Id="nip" Label="@PlPractitioner.Profile.Nip" Hint="@(Profile.Status == "Approved" ? PlPractitioner.Profile.NipChangeWarning : PlPractitioner.Profile.NipHint)" Error="@Error("nip")" Optional="true">
+            <FormField Id="nip" Label="@PlAgent.Profile.Nip" Hint="@(Profile.Status == "Approved" ? PlAgent.Profile.NipChangeWarning : PlAgent.Profile.NipHint)" Error="@Error("nip")" Optional="true">
                 <input id="@context.Id" name="nip" inputmode="numeric" value="@_v.Nip" maxlength="10" autocomplete="off" aria-describedby="@context.DescribedBy" aria-invalid="@Invalid(context)" />
             </FormField>
-            <div class="form-actions"><button class="btn btn--primary" type="submit">@PlPractitioner.Common.Save</button></div>
+            <div class="form-actions"><button class="btn btn--primary" type="submit">@PlAgent.Common.Save</button></div>
         </form>
         <section class="card profile-preview" aria-labelledby="profile-preview-title">
-            <p class="muted" id="profile-preview-title">@PlPractitioner.Profile.PreviewTitle</p>
+            <p class="muted" id="profile-preview-title">@PlAgent.Profile.PreviewTitle</p>
             <p class="profile-preview__name">@Profile.DisplayName</p>
             @if (!string.IsNullOrEmpty(Profile.Headline)) {<p class="profile-preview__headline">@Profile.Headline</p>}
             @if (!string.IsNullOrEmpty(Profile.Bio)) {<p class="profile-preview__bio">@Profile.Bio</p>}
@@ -68,9 +68,9 @@ else if (Profile is not null)
         var f = Posted;
         _v = new(f.Text("displayName"), f.Text("headline"), f.Text("bio"), f.Text("portfolioUrl"), f.Text("nip"));
         static string? Blank(string s) => s.Length == 0 ? null : s; // an empty optional field is omitted, not sent as null (CONTRACTS 0)
-        var r = await Agent.SaveProfileAsync(new UpdatePractitionerBody(_v.DisplayName, _v.Headline, _v.Bio, Blank(_v.PortfolioUrl), Blank(_v.Nip)));
-        if (r.IsOk) { Done(PractitionerPaths.Profile, FlashKey.Saved); return; }
+        var r = await Agent.SaveProfileAsync(new UpdateAgentBody(_v.DisplayName, _v.Headline, _v.Bio, Blank(_v.PortfolioUrl), Blank(_v.Nip)));
+        if (r.IsOk) { Done(AgentPaths.Profile, FlashKey.Saved); return; }
         foreach (var (field, message) in FieldErrors.From(r.Failure!, new Dictionary<string, string?> { ["headline"] = _v.Headline, ["bio"] = _v.Bio })) _errors[field] = message;
-        if (_errors.Count == 0) _general = FieldErrors.General(r.Failure!, PlPractitioner.Common.Unavailable);
+        if (_errors.Count == 0) _general = FieldErrors.General(r.Failure!, PlAgent.Common.Unavailable);
     }
 }

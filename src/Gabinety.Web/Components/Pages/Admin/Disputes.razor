@@ -35,14 +35,14 @@
                         else {<AdminBadge Kind="BadgeKind.Neutral">@PlAdmin.Disputes.Resolved</AdminBadge>}
                     </div>
                     <dl class="admin-facts">
-                        <dt>@PlAdmin.Disputes.Offer</dt><dd>@(b?.PackageTitle ?? PlAdmin.Disputes.BookingUnreadable)</dd>
+                        <dt>@PlAdmin.Disputes.Offer</dt><dd>@(b?.PackageTitle ?? PlAdmin.Disputes.AccessUnreadable)</dd>
                         <dt>@PlAdmin.Disputes.Client</dt><dd><span title="@d.ClientUserId">@string.Format(PlAdmin.Common.ClientRef, AdminFormat.ShortRef(d.ClientUserId))</span></dd>
                         <dt>@PlAdmin.Disputes.Agent</dt>
-                        <dd><span title="@d.AgentUserId">@(card.PractitionerName ?? string.Format(PlAdmin.Common.AgentRef, AdminFormat.ShortRef(d.AgentUserId)))</span></dd>
+                        <dd><span title="@d.AgentUserId">@(card.AgentName ?? string.Format(PlAdmin.Common.AgentRef, AdminFormat.ShortRef(d.AgentUserId)))</span></dd>
                         @if (b is not null)
                         {
                             <dt>@PlAdmin.Disputes.Price</dt><dd class="num">@AdminFormat.Pln(b.Price.AmountMinor)</dd>
-                            <dt>@PlAdmin.Disputes.Usage</dt><dd data-testid="dispute-usage">@Gabinety.Web.Components.Pages.Bookings.BookingFormat.UsageLine(b.Kind, b.UnitsUsed, b.UnitsTotal)</dd>
+                            <dt>@PlAdmin.Disputes.Usage</dt><dd data-testid="dispute-usage">@Gabinety.Web.Components.Pages.Bookings.AccessFormat.UsageLine(b.Kind, b.UnitsUsed, b.UnitsTotal)</dd>
                             @if (_status == DisputeRules.Open)
                             {
                                 <dt>@PlAdmin.Disputes.MaxRefund</dt><dd class="num">@AdminFormat.Pln(b.Price.AmountMinor)</dd>

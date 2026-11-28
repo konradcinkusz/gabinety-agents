@@ -78,7 +78,7 @@ public partial class RenderModeTests
             "/api/v1/sitemap" => FakeBackend.Json(Sample.Sitemap()),
             _ => FakeBackend.Json(Sample.Cards(1)),
         };
-        web.Access.Respond = _ => FakeBackend.Json(new Gabinety.Web.Api.PageDto<Gabinety.Web.Api.BookingViewDto>([Sample.Access("Konsultacja z prerenderu")], null));
+        web.Access.Respond = _ => FakeBackend.Json(new Gabinety.Web.Api.PageDto<Gabinety.Web.Api.AccessViewDto>([Sample.Access("Konsultacja z prerenderu")], null));
         var browser = web.NewBrowser();
 
         foreach (var path in new[] { "/", "/agenci", "/agenci/audyt-kodu", "/logowanie" })

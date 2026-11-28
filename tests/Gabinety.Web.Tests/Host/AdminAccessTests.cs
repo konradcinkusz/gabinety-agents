@@ -58,7 +58,7 @@ public class AdminAccessTests
     public async Task An_administrator_or_a_super_administrator_gets_the_page(string role)
     {
         await using var host = await AdminHost.StartAsync([role]);
-        host.Web.Directory.Respond = _ => AdminHost.Paged<Gabinety.Web.Api.AdminPractitionerRowDto>();
+        host.Web.Directory.Respond = _ => AdminHost.Paged<Gabinety.Web.Api.AdminAgentRowDto>();
         var page = await host.Browser.GetAsync("/admin/weryfikacja");
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Null(page.One("[data-testid=forbidden]"));
@@ -68,7 +68,7 @@ public class AdminAccessTests
     public async Task A_user_with_several_roles_one_of_them_Admin_is_an_administrator()
     {
         await using var host = await AdminHost.StartAsync(["Client", "Admin"]);
-        host.Web.Directory.Respond = _ => AdminHost.Paged<Gabinety.Web.Api.AdminPractitionerRowDto>();
+        host.Web.Directory.Respond = _ => AdminHost.Paged<Gabinety.Web.Api.AdminAgentRowDto>();
         Assert.Equal(HttpStatusCode.OK, (await host.Browser.GetAsync("/admin/weryfikacja")).Status);
     }
 

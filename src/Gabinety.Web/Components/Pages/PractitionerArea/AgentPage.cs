@@ -11,9 +11,9 @@ namespace Gabinety.Web.Components.Pages.PractitionerArea;
 /// plain forms (antiforgery, works without JavaScript): a handler reads the posted fields, calls the service, and either redirects with a flash (post, redirect, get: a refresh does not post again) or
 /// shows the errors where they belong.
 /// </summary>
-public abstract class PractitionerPage : ComponentBase
+public abstract class AgentPage : ComponentBase
 {
-    [Inject] protected PractitionerClient Agent { get; set; } = default!;
+    [Inject] protected AgentClient Agent { get; set; } = default!;
     [Inject] protected NavigationManager Navigation { get; set; } = default!;
     [CascadingParameter] protected HttpContext HttpContext { get; set; } = default!;
 
@@ -46,7 +46,7 @@ public abstract class PractitionerPage : ComponentBase
     protected FormValues Posted => HttpContext.Request.HasFormContentType ? new FormValues(HttpContext.Request.Form) : FormValues.Empty;
 
     /// <summary>The profile, set by <see cref="LoadProfileAsync"/>.</summary>
-    protected PractitionerPrivateDto? Profile { get; private set; }
+    protected AgentPrivateDto? Profile { get; private set; }
 
     /// <summary>The failure that stopped the page from loading (a service that is down), shown as an alert in place of the content.</summary>
     protected ApiFailure? LoadFailure { get; set; }
@@ -69,10 +69,10 @@ public abstract class PractitionerPage : ComponentBase
         {
             case { Status: 422 } f when f.Names("agent"): // several agents, none named: the overview lets the provider choose
                 NeedsAgent = true;
-                if (!missingIsState) Navigation.NavigateTo(PractitionerPaths.Home);
+                if (!missingIsState) Navigation.NavigateTo(AgentPaths.Home);
                 break;
             case { Status: 404 } when missingIsState && _agent is null: NoProfile = true; break;
-            case { Status: 404 }: Navigation.NavigateTo(PractitionerPaths.Home); break; // no agent, or not an agent of this account: the overview shows the real ones
+            case { Status: 404 }: Navigation.NavigateTo(AgentPaths.Home); break; // no agent, or not an agent of this account: the overview shows the real ones
             case { Status: 401 }: Navigation.NavigateTo(Auth.ReturnTarget.LoginUrl(Auth.ReturnTarget.Safe("/" + Navigation.ToBaseRelativePath(Navigation.Uri)))); break;
             default:
                 LoadFailure = r.Failure;
@@ -82,5 +82,5 @@ public abstract class PractitionerPage : ComponentBase
         return false;
     }
 
-    protected static string FailureText(ApiFailure f) => f switch { { Status: 0 } => PlPractitioner.Common.Network, { Status: 429 } or { Status: 503 } => PlPractitioner.Common.Unavailable, _ => PlPractitioner.Common.Unavailable };
+    protected static string FailureText(ApiFailure f) => f switch { { Status: 0 } => PlAgent.Common.Network, { Status: 429 } or { Status: 503 } => PlAgent.Common.Unavailable, _ => PlAgent.Common.Unavailable };
 }

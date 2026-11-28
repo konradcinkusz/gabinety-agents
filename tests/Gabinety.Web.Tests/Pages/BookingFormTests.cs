@@ -12,7 +12,7 @@ public class BookingFormTests
     static readonly Guid NewBooking = Guid.Parse("018f0000-0000-7000-8000-0000000000c1");
 
     static HttpResponseMessage Created(string url = "/checkout/mock/018f0000-0000-7000-8000-0000000000c1") =>
-        FakeBackend.Json(new CreateBookingResponseDto(NewBooking, "PendingPayment", DateTimeOffset.UtcNow.AddMinutes(10), url), HttpStatusCode.Created);
+        FakeBackend.Json(new CreateAccessResponseDto(NewBooking, "PendingPayment", DateTimeOffset.UtcNow.AddMinutes(10), url), HttpStatusCode.Created);
 
     static async Task<ClientAreaFixture> Open(Func<HttpRequestMessage, HttpResponseMessage>? access = null, Func<HttpRequestMessage, HttpResponseMessage>? assistant = null)
     {
@@ -62,7 +62,7 @@ public class BookingFormTests
         await using var f = await Open();
         var html = (await f.Browser.GetAsync(AccessUrl)).Html;
         Assert.True(html.IndexOf("booking-layout__summary", StringComparison.Ordinal) < html.IndexOf("booking-layout__form", StringComparison.Ordinal));
-        Assert.Contains("min-width: 56rem", File.ReadAllText(Path.Combine(Repo.Web, "Components", "Pages", "Booking", "BookingFormPage.razor.css"))); // the two columns of DESIGN-CONTRACT 3.5
+        Assert.Contains("min-width: 56rem", File.ReadAllText(Path.Combine(Repo.Web, "Components", "Pages", "Booking", "AccessFormPage.razor.css"))); // the two columns of DESIGN-CONTRACT 3.5
     }
 
     [Fact]

@@ -27,7 +27,7 @@ public static class PlPages
             ["rozwiazanie-awarii"] = "Pilna pomoc przy awarii: diagnoza, przywrócenie działania i wnioski.",
         };
         public const string CategoryFallback = "Agent AI w obszarze: {0}.";
-        public const string PractitionersOne = "{0} agent", PractitionersFew = "{0} agenci", PractitionersMany = "{0} agentów";
+        public const string AgentsOne = "{0} agent", AgentsFew = "{0} agenci", AgentsMany = "{0} agentów";
 
         // Trust band: the verified count is the real number from the sitemap; the statements are the existing ones.
         public const string TrustLabel = "Dlaczego warto";
@@ -40,9 +40,9 @@ public static class PlPages
         public const string FeaturedFrom = "od {0}";
 
         // Call to action for providers.
-        public const string ForPractitionersTitle = "Udostępniasz agenta AI?";
-        public const string ForPractitionersBody = How.P1 + " " + How.P2;
-        public const string ForPractitionersLink = "Dołącz jako dostawca";
+        public const string ForAgentsTitle = "Udostępniasz agenta AI?";
+        public const string ForAgentsBody = How.P1 + " " + How.P2;
+        public const string ForAgentsLink = "Dołącz jako dostawca";
 
         // Questions and answers. Every rule is the wording of the Pricing, How and Pl.Home texts; no amount is written here: the price list is /cennik.
         public const string FaqTitle = "Pytania i odpowiedzi";
@@ -76,7 +76,7 @@ public static class PlPages
         public const string Pay1 = "Rezygnacja z pakietu przed pierwszym użyciem oznacza pełny zwrot.";
         public const string Pay2 = "Po pierwszym użyciu rezygnacja nie jest możliwa.";
         public const string Pay3 = "Jeśli agent zadziałał inaczej, niż opisano, możesz zgłosić reklamację do 72 godzin po końcu ważności pakietu. Rozstrzyga ją administrator.";
-        public const string PractitionerTitle = "Dla dostawcy";
+        public const string AgentTitle = "Dla dostawcy";
         public const string P1 = "Załóż konto, uzupełnij profil agenta i dodaj pakiety.";
         public const string P2 = "Administrator sprawdza profil. Po zatwierdzeniu pojawiasz się na liście.";
         public const string P3 = "Wypłata następuje po zakończeniu pakietu, o ile nikt nie zgłosił reklamacji.";
@@ -137,10 +137,10 @@ public static class PlPages
     public static class Profile
     {
         public const string MetaTitle = "{0}: agent AI | Gabinety Tech", MetaDescription = "{0}. {1} Wykup dostęp do agenta AI.";
-        public const string OfferingsTitle = "Pakiety", AboutTitle = "O mnie", Duration = "{0} min", Book = "Wykup dostęp", BookOffering = "Wykup dostęp: {0}";
+        public const string PackagesTitle = "Pakiety", AboutTitle = "O mnie", Duration = "{0} min", Book = "Wykup dostęp", BookPackage = "Wykup dostęp: {0}";
         public const string Portfolio = "Portfolio", Github = "GitHub", Completed = "Zrealizowane pakiety: {0}", MemberSince = "Na platformie od {0}";
         public const string IsNew = "Nowy", Rating = "Ocena {0} ({1})", BadgesLabel = "Weryfikacje", FactsLabel = "Dane agenta", LinksLabel = "Linki";
-        public const string NoOfferings = "Ten agent nie ma teraz aktywnych pakietów.";
+        public const string NoPackages = "Ten agent nie ma teraz aktywnych pakietów.";
         public const string Email = "E-mail zweryfikowany", EmailInfo = "Adres e-mail dostawcy tego agenta został potwierdzony.";
         public const string GithubBadge = "GitHub połączony", GithubInfo = "Konto GitHub należy do dostawcy tego agenta: potwierdził to kodem w publicznym profilu.";
         public const string Nip = "NIP zweryfikowany", NipInfo = "Numer NIP działalności dostawcy tego agenta został sprawdzony.";

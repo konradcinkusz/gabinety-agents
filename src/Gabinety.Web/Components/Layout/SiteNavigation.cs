@@ -53,10 +53,10 @@ public static class SiteNavigation
     public static IReadOnlyList<NavItem> Product { get; } = [Agents, HowItWorks, Pricing, RankingRules];
 
     public static readonly NavItem SignIn = new(ReturnTarget.LoginPath, Pl.Nav.SignIn), Register = new(ReturnTarget.RegisterPath, Pl.Nav.Register);
-    public static readonly NavItem MyBookings = new("/moje/dostepy", Pl.Nav.MyBookings), ApiKeys = new("/moje/klucze", Pl.Nav.ApiKeys), Account = new("/konto", Pl.Nav.Account), SignOut = new(ReturnTarget.LogoutPath, Pl.Nav.SignOut);
-    public static readonly NavItem PractitionerArea = new("/panel-agenta", Pl.Nav.PractitionerArea), BecomePractitioner = new("/panel-agenta", Pl.Nav.BecomePractitioner);
+    public static readonly NavItem MyAccesses = new("/moje/dostepy", Pl.Nav.MyAccesses), ApiKeys = new("/moje/klucze", Pl.Nav.ApiKeys), Account = new("/konto", Pl.Nav.Account), SignOut = new(ReturnTarget.LogoutPath, Pl.Nav.SignOut);
+    public static readonly NavItem AgentArea = new("/panel-agenta", Pl.Nav.AgentArea), BecomeAgent = new("/panel-agenta", Pl.Nav.BecomeAgent);
     public static readonly NavItem Admin = new("/admin/weryfikacja", Pl.Nav.Admin, "/admin");
-    public static readonly NavItem VisitorBecomePractitioner = new("/rejestracja", Pl.Nav.BecomePractitioner);
+    public static readonly NavItem VisitorBecomeAgent = new("/rejestracja", Pl.Nav.BecomeAgent);
     public static readonly NavItem Terms = new("/regulamin", Pl.Site.Terms), Privacy = new("/polityka-prywatnosci", Pl.Site.Privacy);
 
     /// <param name="back">The page the visitor is on, already filtered by <see cref="ReturnTarget.Safe"/>: the sign-in and registration links bring them back to it.</param>
@@ -64,7 +64,7 @@ public static class SiteNavigation
     public static HeaderModel For(ClaimsPrincipal? user, string currentPath, string back = "/", bool agent = false)
     {
         if (user?.Identity?.IsAuthenticated != true) return new HeaderModel(Primary, SignIn with { Href = ReturnTarget.LoginUrl(back) }, Register with { Href = ReturnTarget.RegisterUrl(back) }, [], null, currentPath);
-        List<NavItem> menu = [MyBookings, ApiKeys, Account, agent ? PractitionerArea : BecomePractitioner];
+        List<NavItem> menu = [MyAccesses, ApiKeys, Account, agent ? AgentArea : BecomeAgent];
         if (ClaimMapping.IsAdmin(user)) menu.Add(Admin);
         menu.Add(SignOut);
         return new HeaderModel(Primary, null, null, menu, ClaimMapping.Email(user.Claims), currentPath);
@@ -73,8 +73,8 @@ public static class SiteNavigation
     /// <summary>The footer of the same visitor: a visitor is sent to registration, a client to the way to become a programmer, a practitioner to the panel (D-2).</summary>
     public static FooterModel Footer(ClaimsPrincipal? user, bool agent)
     {
-        var practitionerLink = user?.Identity?.IsAuthenticated != true ? VisitorBecomePractitioner : agent ? PractitionerArea : BecomePractitioner;
-        return new FooterModel(Product, practitionerLink, [Terms, Privacy]);
+        var agentLink = user?.Identity?.IsAuthenticated != true ? VisitorBecomeAgent : agent ? AgentArea : BecomeAgent;
+        return new FooterModel(Product, agentLink, [Terms, Privacy]);
     }
 }
 

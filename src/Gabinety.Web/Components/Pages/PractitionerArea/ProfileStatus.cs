@@ -7,8 +7,8 @@ public static class ProfileStatus
 {
     public static string Label(string status) => status switch
     {
-        "Draft" => PlPractitioner.Status.Draft, "Submitted" => PlPractitioner.Status.Submitted, "Approved" => PlPractitioner.Status.Approved,
-        "Rejected" => PlPractitioner.Status.Rejected, "Suspended" => PlPractitioner.Status.Suspended, _ => PlPractitioner.Status.Unknown,
+        "Draft" => PlAgent.Status.Draft, "Submitted" => PlAgent.Status.Submitted, "Approved" => PlAgent.Status.Approved,
+        "Rejected" => PlAgent.Status.Rejected, "Suspended" => PlAgent.Status.Suspended, _ => PlAgent.Status.Unknown,
     };
 
     /// <summary>The <c>badge--*</c> modifier of the design contract (5.7): neutral, warning, success, danger.</summary>
@@ -16,7 +16,7 @@ public static class ProfileStatus
 
     public static string? Help(string status) => status switch
     {
-        "Rejected" => PlPractitioner.Status.RejectedHelp, "Submitted" => PlPractitioner.Status.SubmittedHelp, "Approved" => PlPractitioner.Status.ApprovedHelp,
-        "Suspended" => PlPractitioner.Status.SuspendedHelp, _ => null,
+        "Rejected" => PlAgent.Status.RejectedHelp, "Submitted" => PlAgent.Status.SubmittedHelp, "Approved" => PlAgent.Status.ApprovedHelp,
+        "Suspended" => PlAgent.Status.SuspendedHelp, _ => null,
     };
 }

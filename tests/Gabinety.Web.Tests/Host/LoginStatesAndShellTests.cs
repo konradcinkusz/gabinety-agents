@@ -5,7 +5,7 @@ namespace Gabinety.Web.Tests.Pipeline;
 /// <summary>The sign-in states authservice has and DevIdentity never shows (429, lockout, two-factor), and the shell by session (DESIGN-CONTRACT 5.1, audit G-1 G-2 G-4).</summary>
 public class LoginStatesTests
 {
-    static WebFactory Web() { var w = new WebFactory(); w.Access.Respond = _ => FakeBackend.Json(new Gabinety.Web.Api.PageDto<Gabinety.Web.Api.BookingViewDto>([], null)); return w; }
+    static WebFactory Web() { var w = new WebFactory(); w.Access.Respond = _ => FakeBackend.Json(new Gabinety.Web.Api.PageDto<Gabinety.Web.Api.AccessViewDto>([], null)); return w; }
     static Dictionary<string, string> Form(string password = FakeIdentity.Password) => new() { ["Model.Email"] = "demo-client@demo.example", ["Model.Password"] = password };
 
     [Fact]
@@ -195,7 +195,7 @@ public class ShellTests
     {
         var web = new WebFactory();
         web.Directory.Respond = r => r.RequestUri!.AbsolutePath switch { "/api/v1/taxonomy" => FakeBackend.Json(Sample.Taxonomy), "/api/v1/sitemap" => FakeBackend.Json(Sample.Sitemap()), "/api/v1/me" => FakeBackend.Json(new Gabinety.Web.Api.MeDto("user-1", null, null, false, false)), _ => FakeBackend.Json(Sample.Cards(2)) };
-        web.Access.Respond = _ => FakeBackend.Json(new Gabinety.Web.Api.PageDto<Gabinety.Web.Api.BookingViewDto>([], null));
+        web.Access.Respond = _ => FakeBackend.Json(new Gabinety.Web.Api.PageDto<Gabinety.Web.Api.AccessViewDto>([], null));
         return web;
     }
 

@@ -190,15 +190,15 @@ public class MyBookingsTests : BunitContext
         _me.Respond = _ => FakeBackend.Json(new MeDto("demo-client", Guid.NewGuid(), "Approved", false, false)); // a practitioner too: the role tabs show
         Services.AddSingleton(new MeClient(new HttpClient(_me) { BaseAddress = new Uri("http://directory.test") }, new VisitorAddressAccessor(new HttpContextAccessor()), new Token("tok")));
         Services.AddSingleton<TimeProvider>(_clock);
-        _booking.Respond = _ => FakeBackend.Json(new PageDto<BookingViewDto>([Sample.Access("Pierwsza"), Sample.Access("Druga", "PendingPayment")], null));
+        _booking.Respond = _ => FakeBackend.Json(new PageDto<AccessViewDto>([Sample.Access("Pierwsza"), Sample.Access("Druga", "PendingPayment")], null));
     }
 
     // A SupplyParameterFromQuery parameter takes its value from the URL, as in the browser: navigate, then render.
-    IRenderedComponent<MyBookings> Open(string? role = null, string? status = null, string? cursor = null)
+    IRenderedComponent<MyAccesses> Open(string? role = null, string? status = null, string? cursor = null)
     {
         var query = string.Join('&', new[] { role is null ? null : $"role={Uri.EscapeDataString(role)}", status is null ? null : $"status={Uri.EscapeDataString(status)}", cursor is null ? null : $"cursor={Uri.EscapeDataString(cursor)}" }.Where(q => q is not null));
         Services.GetRequiredService<NavigationManager>().NavigateTo("/moje/dostepy" + (query.Length > 0 ? "?" + query : ""));
-        return Render<MyBookings>();
+        return Render<MyAccesses>();
     }
 
     [Fact]
@@ -230,7 +230,7 @@ public class MyBookingsTests : BunitContext
     [Fact]
     public void A_row_names_the_agent_with_the_badge_for_a_client_and_the_client_for_a_provider_F03()
     {
-        _booking.Respond = _ => FakeBackend.Json(new PageDto<BookingViewDto>([Sample.Access("Z imieniem"), Sample.Access("Bez imienia", agent: "")], null));
+        _booking.Respond = _ => FakeBackend.Json(new PageDto<AccessViewDto>([Sample.Access("Z imieniem"), Sample.Access("Bez imienia", agent: "")], null));
         var cut = Open();
         var lines = cut.FindAll("[data-testid=booking-party]").Select(p => Page.Squash(p.TextContent)).ToList();
         Assert.Equal("Anna DemowskaAgent AI", lines[0]);
@@ -241,7 +241,7 @@ public class MyBookingsTests : BunitContext
     [Fact]
     public void A_row_shows_the_usage_and_the_validity_of_the_package_C03()
     {
-        _booking.Respond = _ => FakeBackend.Json(new PageDto<BookingViewDto>([Sample.Access("Pakiet") with { UnitsTotal = 10, UnitsUsed = 3 }, Sample.Access("Czat", "Confirmed") with { Kind = "Chat", UnitsTotal = 500000, UnitsUsed = 120000 }], null));
+        _booking.Respond = _ => FakeBackend.Json(new PageDto<AccessViewDto>([Sample.Access("Pakiet") with { UnitsTotal = 10, UnitsUsed = 3 }, Sample.Access("Czat", "Confirmed") with { Kind = "Chat", UnitsTotal = 500000, UnitsUsed = 120000 }], null));
         var rows = Open().FindAll("[data-testid=booking-row]");
         Assert.Equal("wykorzystano 3 z 10", rows[0].QuerySelector(".usage__text")!.TextContent);
         Assert.Equal("wykorzystano 120 z 500 tys. tokenów", rows[1].QuerySelector(".usage__text")!.TextContent);
@@ -276,7 +276,7 @@ public class MyBookingsTests : BunitContext
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
             look(request);
-            return Task.FromResult(FakeBackend.Json(new PageDto<BookingViewDto>([], null)));
+            return Task.FromResult(FakeBackend.Json(new PageDto<AccessViewDto>([], null)));
         }
     }
 
@@ -305,7 +305,7 @@ public class MyBookingsTests : BunitContext
     [Fact]
     public void A_status_that_matched_nothing_still_lists_itself_so_the_filter_can_be_left()
     {
-        _booking.Respond = _ => FakeBackend.Json(new PageDto<BookingViewDto>([], null));
+        _booking.Respond = _ => FakeBackend.Json(new PageDto<AccessViewDto>([], null));
         var cut = Open("practitioner", "Completed");
         var chips = cut.Find("[data-testid=status-filter]").QuerySelectorAll("a.chip");
         Assert.Equal(["Wszystkie", "Zakończony"], chips.Select(a => a.TextContent));
@@ -318,8 +318,8 @@ public class MyBookingsTests : BunitContext
     public void More_is_a_link_with_the_cursor_that_keeps_the_view_and_the_last_page_has_none()
     {
         _booking.Respond = r => r.RequestUri!.Query.Contains("cursor=C2")
-            ? FakeBackend.Json(new PageDto<BookingViewDto>([Sample.Access("Strona druga")], null))
-            : FakeBackend.Json(new PageDto<BookingViewDto>([Sample.Access("Strona pierwsza")], "C 2"));
+            ? FakeBackend.Json(new PageDto<AccessViewDto>([Sample.Access("Strona druga")], null))
+            : FakeBackend.Json(new PageDto<AccessViewDto>([Sample.Access("Strona pierwsza")], "C 2"));
         var cut = Open("practitioner", "Confirmed");
         Assert.Equal("/moje/dostepy?role=practitioner&status=Confirmed&cursor=C%202", cut.Find("a[rel=next]").GetAttribute("href")); // the cursor is escaped
         var second = Open("practitioner", "Confirmed", "C2");
@@ -331,7 +331,7 @@ public class MyBookingsTests : BunitContext
     [Fact]
     public void An_empty_listing_has_a_heading_a_sentence_and_one_action_and_no_alert()
     {
-        _booking.Respond = _ => FakeBackend.Json(new PageDto<BookingViewDto>([], null));
+        _booking.Respond = _ => FakeBackend.Json(new PageDto<AccessViewDto>([], null));
         var empty = Open().Find("[data-testid=bookings-empty]");
         Assert.Equal("Brak dostępów", empty.QuerySelector("h2")!.TextContent);
         Assert.Equal("Znajdź agenta", empty.QuerySelector("a")!.TextContent);
@@ -343,7 +343,7 @@ public class MyBookingsTests : BunitContext
     [Fact]
     public void An_empty_filtered_view_offers_to_show_every_status_instead()
     {
-        _booking.Respond = _ => FakeBackend.Json(new PageDto<BookingViewDto>([], null));
+        _booking.Respond = _ => FakeBackend.Json(new PageDto<AccessViewDto>([], null));
         var empty = Open("client", "Disputed").Find("[data-testid=bookings-empty]");
         Assert.Equal("Brak dostępów o tym statusie.", empty.QuerySelector("p")!.TextContent);
         Assert.Equal("/moje/dostepy?role=client", empty.QuerySelector("a")!.GetAttribute("href"));
@@ -381,13 +381,13 @@ public class MyBookingsTests : BunitContext
     // The clock of the fixture is 22 November 2026, 11:00 in Warsaw.
     static DateTimeOffset Utc(int month, int day, int hour, int minute = 0) => new(2026, month, day, hour, minute, 0, TimeSpan.Zero);
 
-    static BookingViewDto Dated(string title, string status, DateTimeOffset start) =>
+    static AccessViewDto Dated(string title, string status, DateTimeOffset start) =>
         Sample.Access(title, status) with { StartUtc = start, EndUtc = start.AddHours(1) };
 
     [Fact]
     public void The_list_is_two_sections_split_by_the_end_of_validity_from_the_clock_active_soonest_to_expire_first_and_past_newest_first()
     {
-        _booking.Respond = _ => FakeBackend.Json(new PageDto<BookingViewDto>(
+        _booking.Respond = _ => FakeBackend.Json(new PageDto<AccessViewDto>(
         [
             Dated("Dawna", "Completed", Utc(10, 1, 12)),
             Dated("Dalsza", "Confirmed", Utc(12, 5, 12)),
@@ -406,7 +406,7 @@ public class MyBookingsTests : BunitContext
     [Fact]
     public void An_empty_section_is_not_shown()
     {
-        _booking.Respond = _ => FakeBackend.Json(new PageDto<BookingViewDto>([Dated("Minęła", "Completed", Utc(10, 1, 12))], null));
+        _booking.Respond = _ => FakeBackend.Json(new PageDto<AccessViewDto>([Dated("Minęła", "Completed", Utc(10, 1, 12))], null));
         var cut = Open();
         Assert.Equal(["Zakończone"], cut.FindAll("section h2").Select(h => h.TextContent));
         Assert.Empty(cut.FindAll("[data-testid=bookings-upcoming]"));

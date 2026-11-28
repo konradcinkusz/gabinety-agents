@@ -21,7 +21,7 @@ public sealed class StatelessSessionTests : IDisposable
         var web = new WebFactory().SharingIdentity(identity).With("DataProtection:KeysPath", keysPath ?? _keys.FullName);
         web.Access.Respond = r => r.Headers.Authorization is null // the real service: no bearer, no bookings
             ? FakeBackend.Problem(HttpStatusCode.Unauthorized, "unauthenticated")
-            : FakeBackend.Json(new PageDto<BookingViewDto>([Sample.Access("Konsultacja demo")], null));
+            : FakeBackend.Json(new PageDto<AccessViewDto>([Sample.Access("Konsultacja demo")], null));
         return web;
     }
 

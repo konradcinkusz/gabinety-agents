@@ -10,7 +10,7 @@ public static class ListFormat
 {
     /// <summary><c>1 programista</c>; every other number, zero and the teens included, takes <c>programistów</c> (the masculine personal noun in the genitive plural).</summary>
     public static string AgentCount(int count) =>
-        string.Format(Pl.ListPage.CountPhrase, count, count == 1 ? Pl.ListPage.PractitionerOne : Pl.ListPage.PractitionerMany);
+        string.Format(Pl.ListPage.CountPhrase, count, count == 1 ? Pl.ListPage.AgentOne : Pl.ListPage.AgentMany);
 
     /// <summary><c>120 zł</c> for a whole amount, <c>120,50 zł</c> otherwise. Integer grosz in, the grosz only shown when there are some.</summary>
     public static string Price(long grosz) => grosz % 100 == 0 ? Money.Pln(grosz).Replace(",00", "") : Money.Pln(grosz);

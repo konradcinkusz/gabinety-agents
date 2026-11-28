@@ -88,7 +88,7 @@ public sealed class DirectorySeedStep : ISeedStep
     static async Task<int> EnsureOfferingsAsync(DirectoryApi api, DemoUser user, TaxonomyView taxonomy, DemoPractitioner demo, SeededPractitioner seeded, CancellationToken ct)
     {
         if (demo.Packages.Length == 0) return 0;
-        var existing = (await api.OfferingsAsync(user, ct)).ToDictionary(o => o.Title);
+        var existing = (await api.PackagesAsync(user, ct)).ToDictionary(o => o.Title);
         var changes = 0;
         foreach (var o in demo.Packages)
         {

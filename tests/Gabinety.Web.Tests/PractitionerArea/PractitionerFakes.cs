@@ -14,7 +14,7 @@ public sealed class PractitionerWorld
 {
     public sealed class Offer { public Guid Id = Guid.NewGuid(); public string Title = "", Description = "", ProblemSlug = "", MeetingUrl = ""; public int Duration; public long Price; public string[] Techs = []; public bool Active = true; public string Kind = "Tasks"; public int Units = 1; }
 
-    public PractitionerPrivateDto? Profile { get; set; }
+    public AgentPrivateDto? Profile { get; set; }
     public List<Offer> Offers { get; } = [];
     public string? PaymentState { get; set; } = "none"; // null: the mock provider (404)
     public bool EmailVerified { get; set; } = true;
@@ -23,13 +23,13 @@ public sealed class PractitionerWorld
     public bool DirectoryDown { get; set; }
     public bool BookingDown { get; set; }
     public bool BookingsFail { get; set; }
-    public List<BookingViewDto> Accesses { get; } = [];
+    public List<AccessViewDto> Accesses { get; } = [];
     public string OnboardingUrl { get; set; } = "https://connect.stripe.com/setup/e/acct_test/abc";
     public int OnboardingCalls { get; private set; }
 
     public static readonly JsonSerializerOptions Json = ApiClient.Json;
 
-    PractitionerPrivateDto Current => Profile! with { EmailVerified = EmailVerified };
+    AgentPrivateDto Current => Profile! with { EmailVerified = EmailVerified };
 
     public void Attach(WebFactory web)
     {
@@ -38,7 +38,7 @@ public sealed class PractitionerWorld
     }
 
     public void HaveProfile(string status = "Draft", string name = "Demo Programista") =>
-        Profile = new PractitionerPrivateDto(Guid.NewGuid(), "demo-programista", status, null, name, "", "", null, null, null, EmailVerified, false, false, null);
+        Profile = new AgentPrivateDto(Guid.NewGuid(), "demo-programista", status, null, name, "", "", null, null, null, EmailVerified, false, false, null);
 
     public void CompleteProfile(bool github = true)
     {
@@ -62,7 +62,7 @@ public sealed class PractitionerWorld
 
     static bool Contact(string text) => text.Contains('@') || text.Contains("telegram", StringComparison.OrdinalIgnoreCase);
 
-    OfferingPrivateDto View(Offer o) => new(o.Id, o.Title, o.Description, o.Duration, new MoneyDto(o.Price, "PLN"), o.ProblemSlug, o.Techs, o.Active, string.IsNullOrEmpty(o.MeetingUrl) ? null : o.MeetingUrl, o.Kind, o.Units);
+    PackagePrivateDto View(Offer o) => new(o.Id, o.Title, o.Description, o.Duration, new MoneyDto(o.Price, "PLN"), o.ProblemSlug, o.Techs, o.Active, string.IsNullOrEmpty(o.MeetingUrl) ? null : o.MeetingUrl, o.Kind, o.Units);
 
     HttpResponseMessage Directory(HttpRequestMessage r)
     {
@@ -190,7 +190,7 @@ public sealed class PractitionerWorld
         if (path == "/api/v1/me/bookings" && r.Method == HttpMethod.Get)
         {
             if (BookingsFail) return Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable");
-            return FakeBackend.Json(new PageDto<BookingViewDto>(Accesses, null));
+            return FakeBackend.Json(new PageDto<AccessViewDto>(Accesses, null));
         }
         if (path == "/api/v1/me/payments/account")
         {

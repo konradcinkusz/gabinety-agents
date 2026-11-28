@@ -24,7 +24,7 @@ public class AdminClientTests : IClassFixture<WebFactory>
         var (client, scope) = Get<DirectoryClient>(); using var _ = scope;
         _web.Directory.Respond = _ => FakeBackend.Raw($$"""{"items":[{"id":"{{Id}}","slug":"demo-anna","displayName":"Anna Demowska","headline":"H","status":"Submitted","statusReason":null,"githubLinked":true,"githubLogin":"demo-dev","nipValid":false,"createdAt":"2026-11-20T08:00:00Z","submittedAt":"2026-11-24T12:00:09Z"}],"nextCursor":"CUR"}""");
         var before = _web.Directory.Calls;
-        var page = await client.AdminPractitionersAsync("tok-1", "Submitted", "C+/=", 12);
+        var page = await client.AdminAgentsAsync("tok-1", "Submitted", "C+/=", 12);
         Assert.True(page.IsOk);
         var row = Assert.Single(page.Value!.Items);
         Assert.Equal(("Anna Demowska", "Submitted", true, false, "CUR"), (row.DisplayName, row.Status, row.GithubLinked, row.NipValid, page.Value.NextCursor));
@@ -41,7 +41,7 @@ public class AdminClientTests : IClassFixture<WebFactory>
         _web.Directory.Respond = _ => new HttpResponseMessage(HttpStatusCode.NoContent);
         var before = _web.Directory.Calls;
         foreach (var (action, reason) in new[] { ("approve", (string?)null), ("reject", "  powód odrzucenia  "), ("suspend", "powód zawieszenia"), ("reinstate", null) })
-            Assert.True((await client.AdminPractitionerActionAsync("tok", Id, action, reason)).IsOk);
+            Assert.True((await client.AdminAgentActionAsync("tok", Id, action, reason)).IsOk);
         var sent = _web.Directory.Requests.Skip(before).ToList();
         Assert.All(sent, r => { Assert.Equal(HttpMethod.Post, r.Method); Assert.Equal("Bearer tok", r.Authorization); });
         Assert.Equal(["approve", "reject", "suspend", "reinstate"], sent.Select(r => r.PathAndQuery.Split('/')[^1]));
@@ -94,13 +94,13 @@ public class AdminClientTests : IClassFixture<WebFactory>
     {
         var (client, scope) = Get<DirectoryClient>(); using var _ = scope;
         _web.Directory.Respond = _ => FakeBackend.Problem(HttpStatusCode.Conflict, "invalid_transition");
-        var result = await client.AdminPractitionerActionAsync("tok", Id, "approve", null);
+        var result = await client.AdminAgentActionAsync("tok", Id, "approve", null);
         Assert.False(result.IsOk);
         Assert.Equal((409, "invalid_transition"), (result.Failure!.Status, result.Failure.Code));
         Assert.DoesNotContain("SERVER", result.Failure.ToString());
 
         _web.Directory.Respond = FakeBackend.Throw(new HttpRequestException("down secret.internal"));
-        Assert.Equal(0, (await client.AdminPractitionerActionAsync("tok", Id, "approve", null)).Failure!.Status); // no answer at all
+        Assert.Equal(0, (await client.AdminAgentActionAsync("tok", Id, "approve", null)).Failure!.Status); // no answer at all
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public class AdminClientTests : IClassFixture<WebFactory>
         var (client, scope) = Get<DirectoryClient>(); using var _ = scope;
         _web.Directory.Respond = _ => FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable");
         var before = _web.Directory.Calls;
-        await client.AdminPractitionerActionAsync("tok", Id, "approve", null);
+        await client.AdminAgentActionAsync("tok", Id, "approve", null);
         Assert.Equal(1, _web.Directory.Calls - before); // a second approve of a decision that may have been taken is a double action (SPEC 5 rule 8)
     }
 

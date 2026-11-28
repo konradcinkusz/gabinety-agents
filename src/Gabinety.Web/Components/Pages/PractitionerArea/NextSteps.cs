@@ -27,19 +27,19 @@ public static class NextSteps
     /// <summary>The banner is for a real provider whose account is not ready; the mock (fake profile) and an unreadable answer show none.</summary>
     public static bool ShowPaymentsBanner(PaymentsState s) => s is PaymentsState.None or PaymentsState.Pending;
 
-    public static IReadOnlyList<NextStep> Build(PractitionerPrivateDto profile, IReadOnlyList<OfferingPrivateDto> offers, PaymentsState payments)
+    public static IReadOnlyList<NextStep> Build(AgentPrivateDto profile, IReadOnlyList<PackagePrivateDto> offers, PaymentsState payments)
     {
         var approved = profile.Status == "Approved";
         return
         [
-            new(PlPractitioner.Dashboard.StepVerification, approved ? PlPractitioner.Dashboard.StepVerificationDone : profile.Status == "Submitted" ? PlPractitioner.Dashboard.StepVerificationWaiting : PlPractitioner.Dashboard.StepVerificationTodo,
-                approved, PractitionerPaths.Home, "verification"),
-            new(PlPractitioner.Dashboard.StepOffers, offers.Any(o => o.IsActive) ? PlPractitioner.Dashboard.StepOffersDone : PlPractitioner.Dashboard.StepOffersTodo, offers.Any(o => o.IsActive), PractitionerPaths.Offers, "offers"),
-            new(PlPractitioner.Dashboard.StepPayments, payments switch
+            new(PlAgent.Dashboard.StepVerification, approved ? PlAgent.Dashboard.StepVerificationDone : profile.Status == "Submitted" ? PlAgent.Dashboard.StepVerificationWaiting : PlAgent.Dashboard.StepVerificationTodo,
+                approved, AgentPaths.Home, "verification"),
+            new(PlAgent.Dashboard.StepOffers, offers.Any(o => o.IsActive) ? PlAgent.Dashboard.StepOffersDone : PlAgent.Dashboard.StepOffersTodo, offers.Any(o => o.IsActive), AgentPaths.Offers, "offers"),
+            new(PlAgent.Dashboard.StepPayments, payments switch
             {
-                PaymentsState.Ready => PlPractitioner.Dashboard.StepPaymentsDone, PaymentsState.NotApplicable => PlPractitioner.Dashboard.StepPaymentsDemo,
-                PaymentsState.Unknown => PlPractitioner.Dashboard.StepPaymentsUnknown, _ => PlPractitioner.Dashboard.StepPaymentsTodo,
-            }, payments is PaymentsState.Ready or PaymentsState.NotApplicable, PractitionerPaths.Payments, "payments", payments != PaymentsState.Unknown),
+                PaymentsState.Ready => PlAgent.Dashboard.StepPaymentsDone, PaymentsState.NotApplicable => PlAgent.Dashboard.StepPaymentsDemo,
+                PaymentsState.Unknown => PlAgent.Dashboard.StepPaymentsUnknown, _ => PlAgent.Dashboard.StepPaymentsTodo,
+            }, payments is PaymentsState.Ready or PaymentsState.NotApplicable, AgentPaths.Payments, "payments", payments != PaymentsState.Unknown),
         ];
     }
 

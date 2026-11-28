@@ -20,29 +20,29 @@ public sealed record OfferForm(string Title, string Description, string Duration
     /// <summary>The id of the control of a service field.</summary>
     public static string IdOf(string field) => field switch { "durationMinutes" => "duration", "priceMinor" => "price", _ => field };
 
-    public static OfferForm From(OfferingPrivateDto o) => new(o.Title, o.Description, o.DurationMinutes.ToString(System.Globalization.CultureInfo.InvariantCulture), PriceInput.ToInput(o.Price.AmountMinor), o.ProblemSlug, o.TechSlugs, o.Kind, o.Units.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    public static OfferForm From(PackagePrivateDto o) => new(o.Title, o.Description, o.DurationMinutes.ToString(System.Globalization.CultureInfo.InvariantCulture), PriceInput.ToInput(o.Price.AmountMinor), o.ProblemSlug, o.TechSlugs, o.Kind, o.Units.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
     public static OfferForm FromPosted(FormValues f) => new(f.Text("title"), f.Text("description"), f.Text("duration"), f.Text("price"), f.Text("problemSlug"), f.All("techs", MaxTechs + 8), f.Text("kind"), f.Text("units"));
 
     public IReadOnlyDictionary<string, string> Validate()
     {
         var errors = new Dictionary<string, string>();
-        if (Title.Length is < 5 or > 80) errors["title"] = PlPractitioner.Errors.ByField["title"];
-        if (Description.Length > 600) errors["description"] = PlPractitioner.Errors.ByField["description"];
-        if (Duration is not ("30" or "60")) errors["durationMinutes"] = PlPractitioner.Errors.ByField["durationMinutes"];
+        if (Title.Length is < 5 or > 80) errors["title"] = PlAgent.Errors.ByField["title"];
+        if (Description.Length > 600) errors["description"] = PlAgent.Errors.ByField["description"];
+        if (Duration is not ("30" or "60")) errors["durationMinutes"] = PlAgent.Errors.ByField["durationMinutes"];
         switch (PriceInput.Parse(Price).Problem)
         {
-            case PriceProblem.Format: errors["priceMinor"] = PlPractitioner.Offers.PriceFormat; break;
-            case PriceProblem.Range: errors["priceMinor"] = PlPractitioner.Offers.PriceRange; break;
+            case PriceProblem.Format: errors["priceMinor"] = PlAgent.Offers.PriceFormat; break;
+            case PriceProblem.Range: errors["priceMinor"] = PlAgent.Offers.PriceRange; break;
         }
-        if (Problem.Length == 0) errors["problemSlug"] = PlPractitioner.Errors.ByField["problemSlug"];
-        if (Techs.Count > MaxTechs) errors["techSlugs"] = PlPractitioner.Errors.ByField["techSlugs"];
-        if (Kind is not ("Tasks" or "Chat")) errors["kind"] = PlPractitioner.Errors.ByField["kind"];
+        if (Problem.Length == 0) errors["problemSlug"] = PlAgent.Errors.ByField["problemSlug"];
+        if (Techs.Count > MaxTechs) errors["techSlugs"] = PlAgent.Errors.ByField["techSlugs"];
+        if (Kind is not ("Tasks" or "Chat")) errors["kind"] = PlAgent.Errors.ByField["kind"];
         else if (!int.TryParse(Units, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var units) || units < (Kind == "Chat" ? ChatMin : TasksMin) || units > (Kind == "Chat" ? ChatMax : TasksMax))
-            errors["units"] = Kind == "Chat" ? PlPractitioner.Offers.UnitsRangeChat : PlPractitioner.Offers.UnitsRangeTasks;
+            errors["units"] = Kind == "Chat" ? PlAgent.Offers.UnitsRangeChat : PlAgent.Offers.UnitsRangeTasks;
         return errors;
     }
 
     /// <summary>The body for the service; call only when <see cref="Validate"/> found nothing.</summary>
-    public OfferingBody ToBody() => new(Title, Description, Duration == "60" ? 60 : 30, PriceInput.Parse(Price).Grosz, Problem, Techs, Kind, int.Parse(Units, System.Globalization.CultureInfo.InvariantCulture));
+    public PackageBody ToBody() => new(Title, Description, Duration == "60" ? 60 : 30, PriceInput.Parse(Price).Grosz, Problem, Techs, Kind, int.Parse(Units, System.Globalization.CultureInfo.InvariantCulture));
 }

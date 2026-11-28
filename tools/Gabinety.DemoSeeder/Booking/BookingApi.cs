@@ -105,7 +105,7 @@ public sealed class BookingApi(HttpClient http, SeedOptions options, TimeProvide
         ToInfo(Need(await SendAsync(HttpMethod.Get, $"/api/v1/bookings/{id}", user.AccessToken, false, null, ct), "get booking", HttpStatusCode.OK));
 
     /// <summary>All of the client's own bookings (any status), through the paged list.</summary>
-    public async Task<List<BookingInfo>> MyBookingsAsync(DemoUser client, CancellationToken ct)
+    public async Task<List<BookingInfo>> MyAccessesAsync(DemoUser client, CancellationToken ct)
     {
         var all = new List<BookingInfo>();
         string? cursor = null;

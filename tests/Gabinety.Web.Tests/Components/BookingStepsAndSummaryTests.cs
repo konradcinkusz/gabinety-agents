@@ -13,7 +13,7 @@ public class BookingStepsTests : BunitContext
     [InlineData(0)] [InlineData(1)] [InlineData(2)]
     public void One_step_is_current_the_earlier_ones_are_marked_done_for_assistive_technology(int current)
     {
-        var cut = Render<BookingSteps>(p => p.Add(c => c.Current, current));
+        var cut = Render<AccessSteps>(p => p.Add(c => c.Current, current));
         Assert.Equal("Kroki wykupu", cut.Find("nav").GetAttribute("aria-label"));
         var items = cut.FindAll("nav > ol > li");
         Assert.Equal(["Pakiet", "Płatność", "Gotowe"], items.Select(li => li.QuerySelector(".booking-steps__name")!.FirstChild!.TextContent));
@@ -28,7 +28,7 @@ public class BookingStepsTests : BunitContext
 
     [Fact]
     public void The_form_is_on_the_first_step_called_Pakiet() =>
-        Assert.Contains("Pakiet", Render<BookingSteps>(p => p.Add(c => c.Current, 0)).Find("[aria-current=step]").TextContent);
+        Assert.Contains("Pakiet", Render<AccessSteps>(p => p.Add(c => c.Current, 0)).Find("[aria-current=step]").TextContent);
 
     [Fact]
     public void The_summary_has_no_time_and_no_change_link_only_agent_units_validity_and_price()

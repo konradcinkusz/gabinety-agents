@@ -1,11 +1,11 @@
 @* One field of a form (contract 4.4, 5.5): label, hint, the control, the counter INSIDE the field, and the error under it. The control is the child content; it gets the ids it must point at.
    The error starts with a visually hidden "Błąd:" so a screen reader says what it is. *@
 <div class="@($"field{(HasError ? " field--invalid" : "")}")">
-    <label class="field__label" for="@Id">@Label@if (Optional) {<span class="field__optional"> (@PlPractitioner.Common.Optional)</span>}</label>
+    <label class="field__label" for="@Id">@Label@if (Optional) {<span class="field__optional"> (@PlAgent.Common.Optional)</span>}</label>
     @if (Hint is not null) {<p class="field__hint" id="@HintId">@Hint</p>}
     @ChildContent(new FieldContext(Id, DescribedBy, HasError))
-    @if (Max is { } max) {<p class="field__counter" aria-hidden="true">@string.Format(PlPractitioner.Common.Counter, Length, max)</p>}
-    @if (HasError) {<p class="field__error" id="@ErrorId"><span class="visually-hidden">@($"{PlPractitioner.Common.ErrorWord} ")</span>@Error</p>}
+    @if (Max is { } max) {<p class="field__counter" aria-hidden="true">@string.Format(PlAgent.Common.Counter, Length, max)</p>}
+    @if (HasError) {<p class="field__error" id="@ErrorId"><span class="visually-hidden">@($"{PlAgent.Common.ErrorWord} ")</span>@Error</p>}
 </div>
 
 @code {

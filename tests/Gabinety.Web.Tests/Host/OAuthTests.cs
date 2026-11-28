@@ -6,7 +6,7 @@ namespace Gabinety.Web.Tests.Pipeline;
 /// <summary>GitHub sign-in with the gt_oauth_state scheme of PR #118 on the Blazor host, and the registration/2FA/202 states as the plumbing returns them.</summary>
 public class OAuthTests
 {
-    static WebFactory Web() { var w = new WebFactory(); w.Access.Respond = _ => FakeBackend.Json(new Gabinety.Web.Api.PageDto<Gabinety.Web.Api.BookingViewDto>([], null)); return w; }
+    static WebFactory Web() { var w = new WebFactory(); w.Access.Respond = _ => FakeBackend.Json(new Gabinety.Web.Api.PageDto<Gabinety.Web.Api.AccessViewDto>([], null)); return w; }
 
     static async Task<(Page Start, string State, Uri Target)> Start(Browser b, string query = "")
     {

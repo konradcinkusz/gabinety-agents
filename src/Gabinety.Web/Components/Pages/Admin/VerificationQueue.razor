@@ -30,7 +30,7 @@
                 <li class="card" data-testid="verification-row">
                     <div class="admin-row__head">
                         <h2 class="admin-row__title"><a href="/admin/weryfikacja/@id">@row.DisplayName</a></h2>
-                        <AdminBadge Kind="AdminFormat.PractitionerStatusKind(row.Status)">@AdminFormat.AgentStatus(row.Status)</AdminBadge>
+                        <AdminBadge Kind="AdminFormat.AgentStatusKind(row.Status)">@AdminFormat.AgentStatus(row.Status)</AdminBadge>
                     </div>
                     <p class="admin-row__sub">@row.Headline</p>
                     <dl class="admin-facts admin-facts--inline">
@@ -111,7 +111,7 @@
     [SupplyParameterFromQuery(Name = "odrzuc")] public string? RejectParam { get; set; }
     [SupplyParameterFromQuery(Name = "zawies")] public string? SuspendParam { get; set; }
 
-    readonly List<AdminPractitionerRowDto> _items = [];
+    readonly List<AdminAgentRowDto> _items = [];
     readonly Dictionary<Guid, (AlertVariant Variant, string Text)> _messages = [];
     string _status = "Submitted";
     string? _cursor, _next, _reason, _reasonError, _notice;
@@ -121,7 +121,7 @@
     IReadOnlyList<SegmentedLinks.Item> Filters => [.. VerificationRules.QueueStatuses.Select(s => new SegmentedLinks.Item(PlAdmin.Verification.Filters[s], AdminQuery.Url("/admin/weryfikacja", ("status", s)), s == _status, s == _status ? AdminQuery.ChipCount(_failure is null, _cursor, _next, _items.Count) : null))];
     IEnumerable<KeyValuePair<string, string>> Kept => _cursor is null ? [new("status", _status)] : [new("status", _status), new("cursor", _cursor)];
     string ListUrl(string? cursor = null) => AdminQuery.Url("/admin/weryfikacja", ("status", _status), ("cursor", cursor ?? _cursor));
-    bool IsOpen(AdminPractitionerRowDto row) => _open is { } open && open.Id == row.Id && VerificationRules.Allowed(row.Status).Contains(open.Verb);
+    bool IsOpen(AdminAgentRowDto row) => _open is { } open && open.Id == row.Id && VerificationRules.Allowed(row.Status).Contains(open.Verb);
 
     /// <summary>The forms this page renders: the reason form of the open row, the direct forms (approve, reinstate) of the others.</summary>
     IReadOnlyCollection<string> RenderedForms =>
@@ -155,7 +155,7 @@
 
     async Task ActAsync(Guid id, string verb, string? reason)
     {
-        var result = await Api.PractitionerAction(id, verb, reason);
+        var result = await Api.AgentAction(id, verb, reason);
         if (result.IsOk)
         {
             Navigation.NavigateTo(AdminQuery.Url("/admin/weryfikacja", ("status", _status), ("flash", "admin-" + verb switch { "approve" => "approved", "reject" => "rejected", "suspend" => "suspended", _ => "reinstated" })));
@@ -164,7 +164,7 @@
         var f = result.Failure!;
         _open = null;
         if (AdminFailure.IsConflict(f)) { _notice = PlAdmin.Verification.StateChanged; await LoadAsync(); } // somebody else decided first: the row is probably gone, so the message is the page's
-        else if (verb == VerificationRules.Suspend && f.Status == 503) { _messages[id] = (AlertVariant.Danger, PlAdmin.Verification.SuspendedButBookings); await LoadAsync(); } // saved, but the future bookings are not all cancelled yet
+        else if (verb == VerificationRules.Suspend && f.Status == 503) { _messages[id] = (AlertVariant.Danger, PlAdmin.Verification.SuspendedButAccesses); await LoadAsync(); } // saved, but the future bookings are not all cancelled yet
         else _messages[id] = (AlertVariant.Danger, AdminFailure.Text(f));
     }
 

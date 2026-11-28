@@ -7,7 +7,7 @@ namespace Gabinety.Web.Components.Pages.Booking;
 /// One Idempotency-Key per attempt (CONTRACTS 0). The key is made on the first submit and kept across retries of the SAME request (a network error, a 5xx, a double submit); it is replaced as soon as
 /// the body differs, because the same key with another body is a 409. The form carries the key and the fingerprint of the body it was made for in hidden fields, so no server state is needed.
 /// </summary>
-public static class BookingAttempt
+public static class AccessAttempt
 {
     /// <summary>A fingerprint of what the request says, not of the text: only the hash goes back to the browser, never the brief.</summary>
     public static string Fingerprint(Guid packageId, string brief, string? problemSlug, bool aiAssisted) =>

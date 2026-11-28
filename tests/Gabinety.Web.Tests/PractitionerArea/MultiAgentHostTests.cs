@@ -12,16 +12,16 @@ public class MultiAgentHostTests
 {
     sealed class Agents
     {
-        public readonly List<PractitionerPrivateDto> List = [];
-        public readonly List<BookingViewDto> Accesses = [];
+        public readonly List<AgentPrivateDto> List = [];
+        public readonly List<AccessViewDto> Accesses = [];
         public int Max = 10;
 
         public Agents(params string[] slugs) { foreach (var s in slugs) Add(s); }
 
-        public PractitionerPrivateDto Add(string slug) =>
-            Add(new PractitionerPrivateDto(Guid.NewGuid(), slug, "Draft", null, "Demo " + slug, "", "", null, null, null, true, false, false, null));
+        public AgentPrivateDto Add(string slug) =>
+            Add(new AgentPrivateDto(Guid.NewGuid(), slug, "Draft", null, "Demo " + slug, "", "", null, null, null, true, false, false, null));
 
-        PractitionerPrivateDto Add(PractitionerPrivateDto p) { List.Add(p); return p; }
+        AgentPrivateDto Add(AgentPrivateDto p) { List.Add(p); return p; }
 
         public void Attach(WebFactory web)
         {
@@ -42,7 +42,7 @@ public class MultiAgentHostTests
             var agent = System.Web.HttpUtility.ParseQueryString(r.RequestUri.Query)["agent"];
             const string me = "/api/v1/me/practitioner";
             if (path == "/api/v1/taxonomy") return FakeBackend.Json(new TaxonomyDto("1", [new CategoryDto("code-review", "Przegląd kodu")], [new CategoryDto("dotnet", ".NET")]));
-            if (path == "/api/v1/me/practitioners") return FakeBackend.Json(new { items = List.Select(p => new PractitionerSummaryDto(p.Id, p.Slug, p.DisplayName, p.Headline, p.Status, p.StatusReason)) });
+            if (path == "/api/v1/me/practitioners") return FakeBackend.Json(new { items = List.Select(p => new AgentSummaryDto(p.Id, p.Slug, p.DisplayName, p.Headline, p.Status, p.StatusReason)) });
             if (path == me && r.Method == HttpMethod.Post)
             {
                 if (List.Count >= Max) return Problem(HttpStatusCode.UnprocessableEntity, "too_many_agents");
@@ -55,21 +55,21 @@ public class MultiAgentHostTests
             var p = agent is null ? List[0] : List.SingleOrDefault(x => x.Slug == agent);
             if (p is null) return Problem(HttpStatusCode.NotFound, "not_found");
             if (path == me) return FakeBackend.Json(p);
-            if (path == me + "/offerings") return FakeBackend.Json(new { items = Array.Empty<OfferingPrivateDto>() });
+            if (path == me + "/offerings") return FakeBackend.Json(new { items = Array.Empty<PackagePrivateDto>() });
             return new HttpResponseMessage(HttpStatusCode.NotFound);
         }
 
         HttpResponseMessage Access(HttpRequestMessage r)
         {
             var path = r.RequestUri!.AbsolutePath;
-            if (path == "/api/v1/me/bookings") return FakeBackend.Json(new PageDto<BookingViewDto>(Accesses, null));
+            if (path == "/api/v1/me/bookings") return FakeBackend.Json(new PageDto<AccessViewDto>(Accesses, null));
             if (path == "/api/v1/me/payments/account") return FakeBackend.Json(new PaymentAccountDto("Stripe", "none"));
             return new HttpResponseMessage(HttpStatusCode.NotFound);
         }
 
-        public static BookingViewDto Bought(string slug, string title) =>
+        public static AccessViewDto Bought(string slug, string title) =>
             new(Guid.NewGuid(), "Confirmed", DateTimeOffset.UtcNow.AddDays(-1), new DateTimeOffset(2099, 1, 1, 0, 0, 0, TimeSpan.Zero), 30, title, new MoneyDto(10000, "PLN"),
-                new PractitionerRefDto(Guid.NewGuid(), "Demo " + slug, slug), new ClientRefDto("Demo Klient"), "Tasks", 10, 1);
+                new AgentRefDto(Guid.NewGuid(), "Demo " + slug, slug), new ClientRefDto("Demo Klient"), "Tasks", 10, 1);
     }
 
     static async Task<(WebFactory Web, Browser Browser, Agents World)> Host(Action<Agents>? setup = null, params string[] slugs)

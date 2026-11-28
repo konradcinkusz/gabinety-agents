@@ -10,7 +10,7 @@ public class BookingDetailDialogTests
     static readonly string Detail_ = $"/moje/dostepy/{AccessId}";
     static readonly string Client = Detail_ + "?role=client";
 
-    static async Task<ClientAreaFixture> Open(BookingDetailDto access)
+    static async Task<ClientAreaFixture> Open(AccessDetailDto access)
     {
         var f = await ClientAreaFixture.SignedIn();
         f.Web.Access.Respond = _ => FakeBackend.Json(access);
@@ -150,7 +150,7 @@ public class BookingDetailDialogTests
     [InlineData("Completed", "", null)]
     [InlineData("Completed", null, null)]
     public void The_rebook_target_is_the_profile_of_a_finished_booking_only(string status, string? slug, string? expected) =>
-        Assert.Equal(expected, BookingFormat.RebookHref(status, slug));
+        Assert.Equal(expected, AccessFormat.RebookHref(status, slug));
 
     [Fact]
     public void Only_a_client_who_gets_nothing_back_is_warned()

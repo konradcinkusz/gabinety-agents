@@ -96,16 +96,16 @@ else
     [SupplyParameterFromQuery(Name = "cursor")] public string? CursorParam { get; set; }
 
     ListView? _view;
-    PageDto<PractitionerCardDto>? _page;
+    PageDto<AgentCardDto>? _page;
 
     protected override async Task OnParametersSetAsync()
     {
         var state = ListState.Parse(Problem, Tech, DurationParam, MaxPriceParam, QueryParam, CursorParam);
-        var query = new PractitionerQuery(state.Problem, state.Tech, state.Q, state.Duration, state.MaxPriceMinor, state.Cursor);
+        var query = new AgentQuery(state.Problem, state.Tech, state.Q, state.Duration, state.MaxPriceMinor, state.Cursor);
         // Three independent reads: a failure of any is an error state of this page, never an exception (BLAZOR-WEB-APP section 5).
         var taxonomyTask = Directory.TaxonomyAsync();
         var sitemapTask = Directory.SitemapAsync();
-        var pageTask = Directory.PractitionersAsync(query);
+        var pageTask = Directory.AgentsAsync(query);
         await Task.WhenAll(taxonomyTask, sitemapTask, pageTask);
         var (taxonomy, sitemap, page) = (taxonomyTask.Result, sitemapTask.Result, pageTask.Result);
 

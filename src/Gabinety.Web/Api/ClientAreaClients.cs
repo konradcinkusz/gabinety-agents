@@ -12,18 +12,18 @@ public sealed partial class AccessClient
 
     static string Id(Guid id) => id.ToString("D", CultureInfo.InvariantCulture);
 
-    public async Task<ApiResult<BookingDetailDto>> GetAsync(Guid id, CancellationToken ct = default) =>
-        await GetAsync<BookingDetailDto>($"/api/v1/bookings/{Id(id)}", await tokens.AccessTokenAsync(ct), ct);
+    public async Task<ApiResult<AccessDetailDto>> GetAsync(Guid id, CancellationToken ct = default) =>
+        await GetAsync<AccessDetailDto>($"/api/v1/bookings/{Id(id)}", await tokens.AccessTokenAsync(ct), ct);
 
-    public async Task<ApiResult<CreateBookingResponseDto>> CreateAsync(Guid idempotencyKey, CreateBookingRequestDto request, CancellationToken ct = default) =>
-        await PostAsync<CreateBookingResponseDto>("/api/v1/bookings", request, await tokens.AccessTokenAsync(ct), ct, new Dictionary<string, string> { [IdempotencyHeader] = Id(idempotencyKey) }, CreateBudget);
+    public async Task<ApiResult<CreateAccessResponseDto>> CreateAsync(Guid idempotencyKey, CreateAccessRequestDto request, CancellationToken ct = default) =>
+        await PostAsync<CreateAccessResponseDto>("/api/v1/bookings", request, await tokens.AccessTokenAsync(ct), ct, new Dictionary<string, string> { [IdempotencyHeader] = Id(idempotencyKey) }, CreateBudget);
 
-    public async Task<ApiResult<BookingDetailDto>> CancelAsync(Guid id, string? reason, CancellationToken ct = default) =>
-        await PostAsync<BookingDetailDto>($"/api/v1/bookings/{Id(id)}/cancel", string.IsNullOrWhiteSpace(reason) ? new { } : new { reason = reason.Trim() }, await tokens.AccessTokenAsync(ct), ct);
+    public async Task<ApiResult<AccessDetailDto>> CancelAsync(Guid id, string? reason, CancellationToken ct = default) =>
+        await PostAsync<AccessDetailDto>($"/api/v1/bookings/{Id(id)}/cancel", string.IsNullOrWhiteSpace(reason) ? new { } : new { reason = reason.Trim() }, await tokens.AccessTokenAsync(ct), ct);
 
     /// <param name="kind">The wire name: <c>not_as_described</c>, <c>practitioner_no_show</c> or <c>other</c>.</param>
-    public async Task<ApiResult<BookingDetailDto>> DisputeAsync(Guid id, string kind, string text, CancellationToken ct = default) =>
-        await PostAsync<BookingDetailDto>($"/api/v1/bookings/{Id(id)}/dispute", new { kind, text = text.Trim() }, await tokens.AccessTokenAsync(ct), ct);
+    public async Task<ApiResult<AccessDetailDto>> DisputeAsync(Guid id, string kind, string text, CancellationToken ct = default) =>
+        await PostAsync<AccessDetailDto>($"/api/v1/bookings/{Id(id)}/dispute", new { kind, text = text.Trim() }, await tokens.AccessTokenAsync(ct), ct);
 
     /// <summary>The mock checkout's button (fake profile only: the route does not exist elsewhere, a 403 or 404 says so). <paramref name="outcome"/> is <c>succeeded</c> or <c>failed</c>.</summary>
     public async Task<ApiResult<Unit>> SimulatePaymentAsync(Guid accessId, string outcome, CancellationToken ct = default) =>

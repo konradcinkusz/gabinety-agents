@@ -32,7 +32,7 @@ public sealed class ReputationSeedStep : ISeedStep
         // the used demo packages (a review needs UnitsUsed above 0, and a package that is Confirmed, Completed or Resolved), each with the client who made it
         var completed = new Dictionary<string, (DemoUser Client, Guid Id)>();
         foreach (var client in clients)
-            foreach (var b in await accesses.MyBookingsAsync(client, ct))
+            foreach (var b in await accesses.MyAccessesAsync(client, ct))
                 if (b.Status is "Confirmed" or "Completed" or "Resolved" && b.UnitsUsed > 0 && BookingSeedStep.KeyOf(b) is { } key) completed[key] = (client, b.Id);
         if (completed.Count == 0)
         {

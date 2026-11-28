@@ -15,7 +15,7 @@ public static class ProfileJsonLd
 
     public static string Github(string login) => "https://github.com/" + Uri.EscapeDataString(login);
 
-    public static string Build(PractitionerProfileDto p, string url)
+    public static string Build(AgentProfileDto p, string url)
     {
         var portfolio = SafeHttps(p.PortfolioUrl);
         var ld = new Dictionary<string, object?>

@@ -11,7 +11,7 @@ public class BookingDetailTests
     static readonly string Detail_ = $"/moje/dostepy/{AccessId}";
     static readonly string Client = Detail_ + "?role=client";
 
-    static async Task<ClientAreaFixture> Open(BookingDetailDto? access = null, Func<HttpRequestMessage, HttpResponseMessage>? post = null)
+    static async Task<ClientAreaFixture> Open(AccessDetailDto? access = null, Func<HttpRequestMessage, HttpResponseMessage>? post = null)
     {
         var f = await ClientAreaFixture.SignedIn();
         f.Web.Access.Respond = r => r.Method == HttpMethod.Post && post is not null ? post(r) : FakeBackend.Json(access ?? Detail());

@@ -1,15 +1,15 @@
 namespace Gabinety.Web.Text;
 
 /// <summary>The Polish text of the client area (docs/agentic/PLAN.md C-03): my accesses, the access detail with its actions (cancel, complaint, review), the tasks of a package and the API keys.</summary>
-public static class BookingsText
+public static class AccessesText
 {
     public const string DetailTitle = "Szczegóły dostępu", DetailMetaTitle = "Szczegóły dostępu | Gabinety Tech";
     public const string TabsLabel = "Dostępy jako", Details = "Szczegóły", Back = "Wróć do listy dostępów", Review = "Wystaw opinię";
     public const string Loading = "Ładowanie dostępów…", NotFound = "Nie znaleziono takiego dostępu.";
-    public const string EmptyTitle = "Brak dostępów", EmptyClient = "Gdy wykupisz dostęp do agenta, zobaczysz go tutaj.", EmptyPractitioner = "Gdy klient wykupi pakiet Twojego agenta, zobaczysz go tutaj.", EmptyFiltered = "Brak dostępów o tym statusie.";
-    public const string FindPractitioner = "Znajdź agenta", ShowAll = "Pokaż wszystkie statusy", Next = "Pokaż kolejne dostępy";
+    public const string EmptyTitle = "Brak dostępów", EmptyClient = "Gdy wykupisz dostęp do agenta, zobaczysz go tutaj.", EmptyAgent = "Gdy klient wykupi pakiet Twojego agenta, zobaczysz go tutaj.", EmptyFiltered = "Brak dostępów o tym statusie.";
+    public const string FindAgent = "Znajdź agenta", ShowAll = "Pokaż wszystkie statusy", Next = "Pokaż kolejne dostępy";
     public const string ReloadHint = "Odśwież stronę", Retry = "Spróbuj ponownie";
-    public const string PartyPractitioner = "Agent", PartyClient = "Klient";
+    public const string PartyAgent = "Agent", PartyClient = "Klient";
     public const string UsageLabel = "Wykorzystanie pakietu";
 
     public static class Detail
@@ -35,10 +35,10 @@ public static class BookingsText
         public const string Title = "Czy na pewno zrezygnować z pakietu?";
         /// <summary>The rule of docs/agentic/PLAN.md 2.5, said when the access does not carry its own outcome (F-11): the page never computes the outcome itself.</summary>
         public const string ClientRule = "Do pierwszego użycia rezygnacja oznacza pełny zwrot ceny.";
-        public const string PractitionerRule = "Jako dostawca wycofujesz dostęp zawsze z pełnym zwrotem: klient dostanie z powrotem 100% ceny, a Ty nie otrzymasz wypłaty za ten pakiet.";
+        public const string AgentRule = "Jako dostawca wycofujesz dostęp zawsze z pełnym zwrotem: klient dostanie z powrotem 100% ceny, a Ty nie otrzymasz wypłaty za ten pakiet.";
         public const string OutcomeFull = "Otrzymasz zwrot {0}.", OutcomeNone = "Nie otrzymasz zwrotu.";
         public const string OutcomePartial = "Otrzymasz zwrot {0} z {1}.";
-        public const string PractitionerOutcome = "Klient dostanie zwrot {0}, a Ty nie otrzymasz wypłaty za ten pakiet.";
+        public const string AgentOutcome = "Klient dostanie zwrot {0}, a Ty nie otrzymasz wypłaty za ten pakiet.";
         public const string ReasonLabel = "Powód (opcjonalnie)", ReasonHint = "Najwyżej 500 znaków.", Confirm = "Tak, zrezygnuj", Keep = "Nie rezygnuj", Done = "Zrezygnowano z pakietu.";
         public const string ReasonTooLong = "Powód może mieć najwyżej 500 znaków.";
     }

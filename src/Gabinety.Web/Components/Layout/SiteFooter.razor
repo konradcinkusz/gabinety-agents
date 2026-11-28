@@ -15,7 +15,7 @@
                 </ul>
             </nav>
             <nav class="site-footer__column" aria-labelledby="site-footer-practitioners">
-                <p id="site-footer-practitioners" class="site-footer__title">@Pl.Site.PractitionersColumn</p>
+                <p id="site-footer-practitioners" class="site-footer__title">@Pl.Site.AgentsColumn</p>
                 <ul>
                     <li><a href="@Model.Agent.Href">@Model.Agent.Label</a></li>
                 </ul>
@@ -42,7 +42,7 @@
     protected override async Task OnParametersSetAsync()
     {
         var user = AuthState is null ? null : (await AuthState).User;
-        var agent = await PractitionerProfileCheck.HasProfileAsync(user, Me, Time);
+        var agent = await AgentProfileCheck.HasProfileAsync(user, Me, Time);
         Model = SiteNavigation.Footer(user, agent);
     }
 }

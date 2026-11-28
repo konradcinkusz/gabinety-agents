@@ -41,7 +41,7 @@
     /// <summary>The Polish names of the problem categories by slug, from the list page's taxonomy. A slug without a name is not shown.</summary>
     [Parameter] public IReadOnlyDictionary<string, string>? CategoryNames { get; set; }
 
-    [Parameter, EditorRequired] public PractitionerCardDto Agent { get; set; } = default!;
+    [Parameter, EditorRequired] public AgentCardDto Agent { get; set; } = default!;
 
     /// <summary>At most three problems, in the order the Directory gives them.</summary>
     IReadOnlyList<string> Categories

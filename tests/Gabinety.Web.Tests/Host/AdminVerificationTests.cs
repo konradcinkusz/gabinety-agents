@@ -101,7 +101,7 @@ public class AdminVerificationTests
         host.Web.Directory.Respond = r =>
         {
             if (r.Method == HttpMethod.Post) { decided = true; return FakeBackend.Problem(HttpStatusCode.Conflict, "invalid_transition"); } // somebody else decided first
-            return decided ? AdminHost.Paged<AdminPractitionerRowDto>() : AdminHost.Paged(anna);
+            return decided ? AdminHost.Paged<AdminAgentRowDto>() : AdminHost.Paged(anna);
         };
         var page = await host.Browser.GetAsync("/admin/weryfikacja");
         var conflict = await host.PostAsync(page, "/admin/weryfikacja", $"approve-{anna.Id}");
@@ -114,7 +114,7 @@ public class AdminVerificationTests
     public async Task A_post_for_a_row_that_is_gone_is_answered_with_the_list_and_a_message_not_an_error_page()
     {
         await using var host = await AdminHost.StartAsync();
-        host.Web.Directory.Respond = _ => AdminHost.Paged<AdminPractitionerRowDto>();
+        host.Web.Directory.Respond = _ => AdminHost.Paged<AdminAgentRowDto>();
         var answer = await host.PostRawAsync("/admin/weryfikacja", [KeyValuePair.Create("_handler", $"approve-{Guid.NewGuid()}"), .. await TokenAsync(host)]);
         Assert.Equal(HttpStatusCode.OK, answer.Status);
         Assert.Contains(PlAdmin.Common.StaleForm, answer.Text);
@@ -126,7 +126,7 @@ public class AdminVerificationTests
         // The antiforgery token of a page that has a form: the queue with one row.
         host.Web.Directory.Respond = _ => AdminHost.Paged(AdminHost.Row());
         var page = await host.Browser.GetAsync("/admin/weryfikacja");
-        host.Web.Directory.Respond = _ => AdminHost.Paged<AdminPractitionerRowDto>();
+        host.Web.Directory.Respond = _ => AdminHost.Paged<AdminAgentRowDto>();
         return page.All("form[method=post] input[name=__RequestVerificationToken]").Take(1).Select(i => KeyValuePair.Create("__RequestVerificationToken", i.GetAttribute("value")!));
     }
 }

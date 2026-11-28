@@ -139,16 +139,16 @@ public class BookingComponentsTests : BunitContext
     public void The_form_summary_lists_every_problem_as_a_link_and_takes_focus_only_when_there_are_several()
     {
         FormProblem[] two = [new("brief", "Opis jest za krótki."), new("rating-1", "Wybierz ocenę.")];
-        var cut = Render<BookingFormProblems>(p => p.Add(c => c.Items, two));
+        var cut = Render<AccessFormProblems>(p => p.Add(c => c.Items, two));
         var summary = cut.Find(".form-summary");
         Assert.Equal(("alert", "Popraw 2 pola"), (summary.GetAttribute("role")!, cut.Find("h2").TextContent));
         Assert.Equal([("#brief", "Opis jest za krótki."), ("#rating-1", "Wybierz ocenę.")], cut.FindAll("a").Select(a => (a.GetAttribute("href")!, a.TextContent)));
         Assert.True(summary.HasAttribute("autofocus"));
         Assert.Equal("-1", summary.GetAttribute("tabindex"));
 
-        var one = Render<BookingFormProblems>(p => p.Add(c => c.Items, two[..1]));
+        var one = Render<AccessFormProblems>(p => p.Add(c => c.Items, two[..1]));
         Assert.False(one.Find(".form-summary").HasAttribute("autofocus")); // one problem: the control itself takes focus
-        Assert.Empty(Render<BookingFormProblems>(p => p.Add(c => c.Items, [])).FindAll(".form-summary"));
+        Assert.Empty(Render<AccessFormProblems>(p => p.Add(c => c.Items, [])).FindAll(".form-summary"));
     }
 
     [Theory]
@@ -175,7 +175,7 @@ public class BookingComponentsTests : BunitContext
     [Fact]
     public void A_badge_is_a_real_text_node_with_the_class_of_its_kind()
     {
-        var cut = Render<BookingBadge>(p => p.Add(c => c.Badge, Badge.ForBooking("Disputed")));
+        var cut = Render<AccessBadge>(p => p.Add(c => c.Badge, Badge.ForAccess("Disputed")));
         Assert.Equal("Reklamacja w toku", cut.Find("span").TextContent);
         Assert.Equal("badge badge--warning", cut.Find("span").ClassName);
         Assert.Empty(cut.Find("span").Children); // text, not CSS content: the journeys read it with getByText

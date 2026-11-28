@@ -7,17 +7,17 @@ namespace Gabinety.Web.Components.Pages.Bookings;
 
 /// <summary>
 /// The two sections of the client's list and the words for the start of the next consultation (UX-030). Pure: the clock is passed in, so the split and the wording are unit-tested
-/// without a page. Times are Europe/Warsaw (CONTRACTS 0), the same zone <see cref="BookingFormat"/> uses.
+/// without a page. Times are Europe/Warsaw (CONTRACTS 0), the same zone <see cref="AccessFormat"/> uses.
 /// </summary>
-public static class MyBookingsSchedule
+public static class MyAccessesSchedule
 {
     /// <summary>Only a package that is still running is active: awaiting payment or confirmed, and its validity (<c>EndUtc</c>) not over. Anything else (completed, cancelled, expired, in a complaint) is past.</summary>
     static readonly string[] Pending = ["PendingPayment", "Confirmed"];
 
-    public static bool IsUpcoming(BookingViewDto access, DateTimeOffset now) => access.EndUtc > now && Pending.Contains(access.Status);
+    public static bool IsUpcoming(AccessViewDto access, DateTimeOffset now) => access.EndUtc > now && Pending.Contains(access.Status);
 
     /// <summary>Active: the one that expires first, first. Everything else: the most recently ended first.</summary>
-    public static (List<BookingViewDto> Upcoming, List<BookingViewDto> Past) Split(IEnumerable<BookingViewDto> items, DateTimeOffset now)
+    public static (List<AccessViewDto> Upcoming, List<AccessViewDto> Past) Split(IEnumerable<AccessViewDto> items, DateTimeOffset now)
     {
         var list = items.ToList();
         return (list.Where(b => IsUpcoming(b, now)).OrderBy(b => b.EndUtc).ToList(),
@@ -30,7 +30,7 @@ public static class MyBookingsSchedule
     /// </summary>
     public static string Relative(DateTimeOffset now, DateTimeOffset startUtc)
     {
-        var start = TimeZoneInfo.ConvertTime(startUtc, BookingFormat.Warsaw);
+        var start = TimeZoneInfo.ConvertTime(startUtc, AccessFormat.Warsaw);
         var day = DateOnly.FromDateTime(start.DateTime);
         var days = day.DayNumber - PlFormat.TodayWarsaw(now).DayNumber;
         var time = start.ToString("HH:mm", CultureInfo.InvariantCulture);

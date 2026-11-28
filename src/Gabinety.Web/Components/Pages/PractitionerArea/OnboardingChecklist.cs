@@ -9,23 +9,23 @@ public sealed record ChecklistItem(ChecklistKey Key, bool Done)
 {
     public string Title => Key switch
     {
-        ChecklistKey.Headline => PlPractitioner.Checklist.Headline, ChecklistKey.Bio => PlPractitioner.Checklist.Bio, ChecklistKey.Offering => PlPractitioner.Checklist.Package,
-        ChecklistKey.Github => PlPractitioner.Checklist.Github, ChecklistKey.Nip => PlPractitioner.Checklist.Nip, ChecklistKey.Portfolio => PlPractitioner.Checklist.Portfolio,
-        _ => PlPractitioner.Checklist.Email,
+        ChecklistKey.Headline => PlAgent.Checklist.Headline, ChecklistKey.Bio => PlAgent.Checklist.Bio, ChecklistKey.Offering => PlAgent.Checklist.Package,
+        ChecklistKey.Github => PlAgent.Checklist.Github, ChecklistKey.Nip => PlAgent.Checklist.Nip, ChecklistKey.Portfolio => PlAgent.Checklist.Portfolio,
+        _ => PlAgent.Checklist.Email,
     };
 
     public string Help => Key switch
     {
-        ChecklistKey.Headline or ChecklistKey.Bio => PlPractitioner.Checklist.HelpProfile, ChecklistKey.Offering => PlPractitioner.Checklist.HelpOffers,
-        ChecklistKey.Github => PlPractitioner.Checklist.HelpGithub, ChecklistKey.Nip => PlPractitioner.Checklist.HelpNip, ChecklistKey.Portfolio => PlPractitioner.Checklist.HelpPortfolio,
-        _ => PlPractitioner.Checklist.HelpEmail,
+        ChecklistKey.Headline or ChecklistKey.Bio => PlAgent.Checklist.HelpProfile, ChecklistKey.Offering => PlAgent.Checklist.HelpOffers,
+        ChecklistKey.Github => PlAgent.Checklist.HelpGithub, ChecklistKey.Nip => PlAgent.Checklist.HelpNip, ChecklistKey.Portfolio => PlAgent.Checklist.HelpPortfolio,
+        _ => PlAgent.Checklist.HelpEmail,
     };
 
     /// <summary>Where the missing step is done; null when it is done on the dashboard itself (GitHub) or outside the product (the e-mail link).</summary>
     public string? Href => Key switch
     {
-        ChecklistKey.Headline or ChecklistKey.Bio or ChecklistKey.Nip or ChecklistKey.Portfolio => PractitionerPaths.Profile,
-        ChecklistKey.Offering => PractitionerPaths.Offers,
+        ChecklistKey.Headline or ChecklistKey.Bio or ChecklistKey.Nip or ChecklistKey.Portfolio => AgentPaths.Profile,
+        ChecklistKey.Offering => AgentPaths.Offers,
         _ => null,
     };
 }
@@ -35,7 +35,7 @@ public static class OnboardingChecklist
 {
     public const int BioMinimum = 200;
 
-    public static IReadOnlyList<ChecklistItem> Build(PractitionerPrivateDto p, IReadOnlyList<OfferingPrivateDto> offers) =>
+    public static IReadOnlyList<ChecklistItem> Build(AgentPrivateDto p, IReadOnlyList<PackagePrivateDto> offers) =>
     [
         new(ChecklistKey.Headline, p.Headline.Trim().Length > 0),
         new(ChecklistKey.Bio, p.Bio.Trim().Length >= BioMinimum),
@@ -64,7 +64,7 @@ public static class OnboardingChecklist
 }
 
 /// <summary>The routes of the area, in one place.</summary>
-public static class PractitionerPaths
+public static class AgentPaths
 {
     public const string Home = "/panel-agenta", Profile = "/panel-agenta/profil", Offers = "/panel-agenta/oferty", Payments = "/panel-agenta/platnosci";
 }

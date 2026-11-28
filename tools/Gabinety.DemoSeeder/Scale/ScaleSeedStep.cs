@@ -47,7 +47,7 @@ public sealed class ScaleSeedStep : ISeedStep
         }
         if (!mine.GithubLinked) { await api.LinkGithubAsync(user, p.GithubLogin, ct); changes++; }
 
-        var existing = (await api.OfferingsAsync(user, ct)).Select(o => o.Title).ToHashSet();
+        var existing = (await api.PackagesAsync(user, ct)).Select(o => o.Title).ToHashSet();
         foreach (var o in p.Packages.Where(o => !existing.Contains(o.Title)))
         {
             await api.CreateOfferingAsync(user, new

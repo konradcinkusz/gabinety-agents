@@ -12,9 +12,9 @@
     <div class="card">
         <h1>@Pl.Login.Title</h1>
 
-        @if (ForBooking)
+        @if (ForAccess)
         {
-            <p class="callout callout--info" data-testid="booking-context">@Pl.Login.BookingContext</p>
+            <p class="callout callout--info" data-testid="booking-context">@Pl.Login.AccessContext</p>
         }
 
         <FormSummary Problems="_problems" />
@@ -68,7 +68,7 @@
 
     string Back => ReturnTarget.Safe(Redirect);
     /// <summary>A sign-in that continues a booking: the context line says so. Only the sanitised target is read; the query itself is never printed.</summary>
-    bool ForBooking => Back.StartsWith("/dostep/", StringComparison.Ordinal);
+    bool ForAccess => Back.StartsWith("/dostep/", StringComparison.Ordinal);
     string GithubHref => OAuthEndpoints.StartPath + (Back == "/" ? "" : $"?{ReturnTarget.Parameter}={Uri.EscapeDataString(Back)}");
 
     protected override void OnInitialized()

@@ -61,7 +61,7 @@ public class AdminDisputesTests
         var (host, _) = await HostWithDisputeAsync(bookingReadable: false);
         await using var _h = host;
         var card = Assert.Single((await host.Browser.GetAsync(Open)).All("main ul[aria-label] > li"));
-        Assert.Contains(PlAdmin.Disputes.BookingUnreadable, card.TextContent);
+        Assert.Contains(PlAdmin.Disputes.AccessUnreadable, card.TextContent);
         Assert.DoesNotContain("Najwyższy możliwy zwrot", card.TextContent);
         Assert.Contains(card.QuerySelectorAll("button"), b => b.TextContent.Trim() == "Rozstrzygnij"); // the report and the form still work: the server checks the bounds
     }

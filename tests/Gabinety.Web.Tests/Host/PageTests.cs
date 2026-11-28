@@ -222,7 +222,7 @@ public class PageTests
         {
             "/api/v1/taxonomy" => FakeBackend.Json(Sample.Taxonomy),
             "/api/v1/sitemap" => FakeBackend.Json(Sample.Sitemap()),
-            _ => FakeBackend.Json(new PageDto<PractitionerCardDto>([Sample.Card(name: "<img src=x onerror=alert(1)>", headline: "<script>alert(2)</script>")], null)),
+            _ => FakeBackend.Json(new PageDto<AgentCardDto>([Sample.Card(name: "<img src=x onerror=alert(1)>", headline: "<script>alert(2)</script>")], null)),
         };
         var page = await web.NewBrowser().GetAsync("/agenci");
         Assert.DoesNotContain("<img src=x", page.Html);

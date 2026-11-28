@@ -175,8 +175,8 @@ public class DashboardHostTests
         Assert.True(page.One("[data-testid=github-code]")!.HasAttribute("hidden")); // the form exists (Blazor dispatches by name) but shows no code
     }
 
-    static BookingViewDto Access(string title, int days, string? client = "Demo Klient", string status = "Confirmed") =>
-        new(Guid.NewGuid(), status, DateTimeOffset.UtcNow.AddDays(days), DateTimeOffset.UtcNow.AddDays(days).AddHours(1), 60, title, new MoneyDto(18000, "PLN"), new PractitionerRefDto(Guid.NewGuid(), "Demo Programista", "demo-programista"),
+    static AccessViewDto Access(string title, int days, string? client = "Demo Klient", string status = "Confirmed") =>
+        new(Guid.NewGuid(), status, DateTimeOffset.UtcNow.AddDays(days), DateTimeOffset.UtcNow.AddDays(days).AddHours(1), 60, title, new MoneyDto(18000, "PLN"), new AgentRefDto(Guid.NewGuid(), "Demo Programista", "demo-programista"),
             client is null ? null : new ClientRefDto(client));
 
     [Fact]
@@ -332,7 +332,7 @@ public class DashboardHostTests
         var page = await browser.GetAsync("/panel-agenta");
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Null(page.One("[data-testid=payments-banner]"));
-        Assert.DoesNotContain(PractitionerPaths.Payments, page.One("[data-testid=next-step]")?.InnerHtml ?? ""); // unreadable payments are never offered as the next step
+        Assert.DoesNotContain(AgentPaths.Payments, page.One("[data-testid=next-step]")?.InnerHtml ?? ""); // unreadable payments are never offered as the next step
         Assert.NotNull(page.One("[data-testid=recent-failed]"));
     }
 

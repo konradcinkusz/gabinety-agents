@@ -4,7 +4,7 @@ using Gabinety.Web.Text;
 namespace Gabinety.Web.Components.Pages.Bookings;
 
 /// <summary>How a booking is described, in one place so a number or a date reads the same on every page (BLAZOR-WEB-APP section 10). Times are shown in Europe/Warsaw whatever the server's zone (CONTRACTS 0).</summary>
-public static class BookingFormat
+public static class AccessFormat
 {
     public static readonly string[] Statuses = [.. Pl.Accesses.Statuses.Keys];
     public static readonly TimeZoneInfo Warsaw = TimeZoneInfo.FindSystemTimeZoneById("Europe/Warsaw");
@@ -12,7 +12,7 @@ public static class BookingFormat
     public static string StatusLabel(string status) => Pl.Accesses.Statuses.TryGetValue(status, out var label) ? label : Pl.Accesses.UnknownStatus;
 
     /// <summary><c>niedziela, 28 marca, 13:00–14:00</c></summary>
-    public static string When(BookingViewDto b)
+    public static string When(AccessViewDto b)
     {
         var start = TimeZoneInfo.ConvertTime(b.StartUtc, Warsaw);
         var end = TimeZoneInfo.ConvertTime(b.EndUtc, Warsaw);
@@ -54,10 +54,10 @@ public static class BookingFormat
     public static string? Name(string? raw) => string.IsNullOrWhiteSpace(raw) ? null : raw.Trim();
 
     /// <summary>The other party's name when the API sent one, else a neutral label.</summary>
-    public static string OtherParty(BookingViewDto b, string role)
+    public static string OtherParty(AccessViewDto b, string role)
     {
         var name = (role == AccessClient.ClientRole ? b.Agent.DisplayName : b.Client?.DisplayName)?.Trim();
-        return string.IsNullOrEmpty(name) ? (role == AccessClient.ClientRole ? Pl.Accesses.PartyPractitioner : Pl.Accesses.PartyClient) : name;
+        return string.IsNullOrEmpty(name) ? (role == AccessClient.ClientRole ? Pl.Accesses.PartyAgent : Pl.Accesses.PartyClient) : name;
     }
 
     /// <summary>What to tell the user about a failed call, from its code (never from the server's title or detail).</summary>
@@ -77,7 +77,7 @@ public static class BookingFormat
     public static string? RebookHref(string status, string? slug) =>
         (status == "Completed" || IsCancelled(status)) && !string.IsNullOrWhiteSpace(slug) ? "/agent/" + Uri.EscapeDataString(slug.Trim()) : null;
 
-    public static string Role(string? raw) => raw == AccessClient.PractitionerRole ? AccessClient.PractitionerRole : AccessClient.ClientRole;
+    public static string Role(string? raw) => raw == AccessClient.AgentRole ? AccessClient.AgentRole : AccessClient.ClientRole;
 
     public static string StatusFilter(string? raw) => raw is not null && Pl.Accesses.Statuses.ContainsKey(raw) ? raw : "";
 }

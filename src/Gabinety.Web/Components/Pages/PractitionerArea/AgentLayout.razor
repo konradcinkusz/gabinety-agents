@@ -6,9 +6,9 @@
 @if (Agent is not null)
 {
     @* E-04: the section links keep the agent the provider chose; this line says which one it is, and leads back to the overview of all of them. *@
-    <p class="muted" data-testid="agent-bar">@PlPractitioner.Agents.Current: <strong>@Agent</strong> · <a href="@PractitionerPaths.Home">@PlPractitioner.Agents.All</a></p>
+    <p class="muted" data-testid="agent-bar">@PlAgent.Agents.Current: <strong>@Agent</strong> · <a href="@AgentPaths.Home">@PlAgent.Agents.All</a></p>
 }
-<nav class="tabs" aria-label="@PlPractitioner.SectionsLabel">
+<nav class="tabs" aria-label="@PlAgent.SectionsLabel">
     <ul>
         @foreach (var (href, label) in Sections)
         {
@@ -21,8 +21,8 @@
 @code {
     static readonly (string Href, string Label)[] Sections =
     [
-        (PractitionerPaths.Home, PlPractitioner.Tabs.Overview), (PractitionerPaths.Profile, PlPractitioner.Tabs.Profile), (PractitionerPaths.Offers, PlPractitioner.Tabs.Offers),
-        (PractitionerPaths.Payments, PlPractitioner.Tabs.Payments),
+        (AgentPaths.Home, PlAgent.Tabs.Overview), (AgentPaths.Profile, PlAgent.Tabs.Profile), (AgentPaths.Offers, PlAgent.Tabs.Offers),
+        (AgentPaths.Payments, PlAgent.Tabs.Payments),
     ];
 
     /// <summary>The slug in <c>?agent=</c> of the current address, or null.</summary>

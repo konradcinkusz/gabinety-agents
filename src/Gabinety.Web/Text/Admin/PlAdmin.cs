@@ -65,7 +65,7 @@ public static class PlAdmin
         public const string TimelineTitle = "Historia weryfikacji", TimelineEmpty = "Brak zdarzeń weryfikacji.", TimelineUnavailable = "Historia weryfikacji jest chwilowo niedostępna.";
         public const string Actor = "Wykonał", Note = "Notatka";
         public const string StateChanged = "Status się zmienił, odśwież stronę.", NotFound = "Nie znaleziono agenta.";
-        public const string SuspendedButBookings = "Agent jest zawieszony, ale jego aktywnych pakietów nie udało się jeszcze wszystkich anulować. Powtórz anulowanie (RUNBOOK 9.2).";
+        public const string SuspendedButAccesses = "Agent jest zawieszony, ale jego aktywnych pakietów nie udało się jeszcze wszystkich anulować. Powtórz anulowanie (RUNBOOK 9.2).";
 
         public static readonly IReadOnlyDictionary<string, string> Filters = new Dictionary<string, string>
         {
@@ -94,7 +94,7 @@ public static class PlAdmin
         public const string EmptyOpen = "Brak otwartych reklamacji.", EmptyResolved = "Brak rozstrzygniętych reklamacji.";
         public const string Refunded = "Zwrócono: {0}";
         public const string Offer = "Pakiet", Client = "Klient", Agent = "Agent", Price = "Cena pakietu", Usage = "Wykorzystanie pakietu", MaxRefund = "Najwyższy możliwy zwrot", Payment = "Płatność", Access = "Dostęp";
-        public const string Opened = "Otwarto", ResolvedAt = "Rozstrzygnięto", Text = "Treść zgłoszenia", Outcome = "Rozstrzygnięcie", Note = "Notatka moderatora", BookingUnreadable = "Szczegóły dostępu są chwilowo niedostępne.";
+        public const string Opened = "Otwarto", ResolvedAt = "Rozstrzygnięto", Text = "Treść zgłoszenia", Outcome = "Rozstrzygnięcie", Note = "Notatka moderatora", AccessUnreadable = "Szczegóły dostępu są chwilowo niedostępne.";
         public const string ResolveOpen = "Rozstrzygnij", Legend = "Rozstrzygnięcie reklamacji";
         public const string Release = "Wypłać dostawcy", RefundFull = "Zwróć klientowi całość", RefundPartial = "Zwróć klientowi część";
         public const string ReleaseHint = "Klient nie dostaje zwrotu, dostawca dostaje wypłatę.", RefundFullHint = "Klient dostaje całą cenę, dostawca nic.", RefundPartialHint = "Klient dostaje podaną kwotę, dostawca resztę.";
@@ -169,8 +169,8 @@ public static class PlAdmin
         public const string Unauthorized = "Sesja wygasła. Zaloguj się ponownie.", Forbidden = "Nie masz uprawnień do pobrania księgi.", Validation = "Serwer odrzucił okres. Sprawdź daty.";
         public const string Unavailable = "Księga jest chwilowo niedostępna. Spróbuj ponownie za chwilę.";
         public const string TableLabel = "Wpisy księgi", Empty = "Brak wpisów w tym okresie.", Showing = "Pierwsze {0} wpisów okresu. Pełną listę zawiera plik CSV.", ShowingAll = "Wpisów w okresie: {0}.";
-        public const string ColBooking = "Dostęp", ColKind = "Rodzaj", ColAmount = "Kwota", ColDate = "Data";
-        public const string KindClientCharge = "Płatność klienta", KindRefund = "Zwrot dla klienta", KindPlatformFee = "Prowizja platformy", KindPractitionerPayout = "Wypłata dla dostawcy", KindPayoutReversal = "Cofnięcie wypłaty";
+        public const string ColAccess = "Dostęp", ColKind = "Rodzaj", ColAmount = "Kwota", ColDate = "Data";
+        public const string KindClientCharge = "Płatność klienta", KindRefund = "Zwrot dla klienta", KindPlatformFee = "Prowizja platformy", KindAgentPayout = "Wypłata dla dostawcy", KindPayoutReversal = "Cofnięcie wypłaty";
         public const string KindUnknown = "Inny wpis";
         /// <summary>The body of the download route's refusals, never the backend's text (CONTRACTS 10.1 codes).</summary>
         public const string DownloadFailed = "Pobieranie nie powiodło się.";
@@ -182,6 +182,6 @@ public static class PlAdmin
         public const string Title = "Podejrzane pary", MetaTitle = "Podejrzane pary | Gabinety Tech";
         public const string Intro = "Pary klient–agent z więcej niż dwiema opłaconymi pakietami i wyłącznie opiniami z oceną 5/5. To sygnał do sprawdzenia, nie dowód.";
         public const string Unavailable = "Lista jest chwilowo niedostępna. Spróbuj ponownie za chwilę.", Empty = "Brak podejrzanych par na tej stronie.", Next = "Dalej";
-        public const string TableLabel = "Podejrzane pary", ColClient = "Klient", ColPractitioner = "Agent", ColBookings = "Opłacone pakiety", ColReviews = "Opinie (wszystkie 5/5)";
+        public const string TableLabel = "Podejrzane pary", ColClient = "Klient", ColAgent = "Agent", ColAccesses = "Opłacone pakiety", ColReviews = "Opinie (wszystkie 5/5)";
     }
 }

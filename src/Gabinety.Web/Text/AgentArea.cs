@@ -4,7 +4,7 @@ namespace Gabinety.Web.Text;
 /// The Polish text of the provider's area (the agent's owner) (<c>/panel-agenta/*</c>). Strings of the Next.js area (<c>web/src/components/practitioner/strings.ts</c>) are verbatim where the journeys read them
 /// (J2: the checklist item names, <c>Gotowe</c>, <c>Do zrobienia</c>, <c>Szkic</c>, <c>Zapisano.</c>, the submit and GitHub messages); the rest follows docs/ui/DESIGN-CONTRACT.md section 8.
 /// </summary>
-public static class PlPractitioner
+public static class PlAgent
 {
     public const string Title = "Panel dostawcy", SectionsLabel = "Sekcje panelu dostawcy";
 
@@ -90,7 +90,7 @@ public static class PlPractitioner
         public const string ProgressAria = "Postęp uzupełniania profilu";
         public const string PublicTitle = "Twój profil jest publiczny", PublicBody = "Klienci mogą go znaleźć i wykupić dostęp do agenta.", ViewPublic = "Zobacz profil publiczny", CopyLink = "Skopiuj link", Copied = "Skopiowano";
         public const string ActiveCount = "Aktywne pakiety: {0}", RecentTitle = "Ostatnie zakupy", RecentEmpty = "Nikt nie wykupił jeszcze pakietu Twojego agenta.", RecentFailed = "Nie możemy teraz pokazać zakupów.", Bought = "kupiono {0}";
-        public const string Details = "Szczegóły", AllBookings = "Wszystkie dostępy";
+        public const string Details = "Szczegóły", AllAccesses = "Wszystkie dostępy";
     }
 
     public static class Checklist
@@ -166,7 +166,7 @@ public static class PlPractitioner
         public const string Refresh = "Link do konfiguracji wygasł albo został już użyty. Wygeneruj nowy przyciskiem poniżej.";
         public const string Demo = "Tryb demonstracyjny: płatności są symulowane, więc nie musisz niczego konfigurować.";
         public const string Unavailable = "Nie udało się teraz sprawdzić konta płatności. Spróbuj ponownie za chwilę.", StartFailed = "Nie udało się przygotować konfiguracji płatności. Spróbuj ponownie za chwilę.";
-        public const string NotPractitioner = "Konto płatności możesz założyć po założeniu profilu agenta.", CreateFirst = "Załóż profil agenta";
+        public const string NotAgent = "Konto płatności możesz założyć po założeniu profilu agenta.", CreateFirst = "Załóż profil agenta";
     }
 
     /// <summary>What to do about a field the service complained about, by the field's name (CONTRACTS 3.5); the service's own messages are never shown.</summary>

@@ -16,7 +16,7 @@ else if (_state == State.Ready)
         <p><a href="/admin/weryfikacja">@PlAdmin.Verification.BackToQueue</a></p>
         <div class="admin-row__head">
             <h1>@_detail!.DisplayName</h1>
-            <AdminBadge Kind="AdminFormat.PractitionerStatusKind(_detail.Status)">@AdminFormat.AgentStatus(_detail.Status)</AdminBadge>
+            <AdminBadge Kind="AdminFormat.AgentStatusKind(_detail.Status)">@AdminFormat.AgentStatus(_detail.Status)</AdminBadge>
         </div>
         <p class="admin-lead">@_detail.Headline</p>
         <div class="card">
@@ -92,7 +92,7 @@ else if (_state != State.Loading)
     [CascadingParameter] HttpContext HttpContext { get; set; } = default!;
 
     State _state;
-    AdminPractitionerDetailDto? _detail;
+    AdminAgentDetailDto? _detail;
     IReadOnlyList<AdminVerificationEventDto>? _events; // null: the history could not be read
 
     protected override async Task OnInitializedAsync()

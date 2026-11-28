@@ -386,7 +386,7 @@ public class ListPageFixesTests
     public async Task P_LIST_2_a_card_shows_one_verified_badge_not_four_and_the_rating_as_a_star()
     {
         await using var web = PublicSupport.Host(r => r.RequestUri!.AbsolutePath == "/api/v1/practitioners"
-            ? FakeBackend.Json(new PageDto<PractitionerCardDto>([Sample.Card(rating: new RatingDto(4.8, 25), isNew: false)], null)) : PublicSupport.DefaultDirectory()(r));
+            ? FakeBackend.Json(new PageDto<AgentCardDto>([Sample.Card(rating: new RatingDto(4.8, 25), isNew: false)], null)) : PublicSupport.DefaultDirectory()(r));
         var card = (await web.NewBrowser().GetAsync("/agenci")).One("[data-testid=practitioner-card]")!;
         Assert.Equal(["Agent AI", "Zweryfikowany"], card.QuerySelectorAll(".badge").Select(b => b.TextContent));
         Assert.Equal("★ 4,8 (25)", card.QuerySelector(".practitioner-card__rating")!.TextContent);

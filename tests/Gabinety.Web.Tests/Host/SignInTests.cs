@@ -8,7 +8,7 @@ public class SignInTests
     static WebFactory Web()
     {
         var web = new WebFactory();
-        web.Access.Respond = _ => FakeBackend.Json(new Gabinety.Web.Api.PageDto<Gabinety.Web.Api.BookingViewDto>([Sample.Access("Konsultacja demo"), Sample.Access("Druga konsultacja", "PendingPayment")], null));
+        web.Access.Respond = _ => FakeBackend.Json(new Gabinety.Web.Api.PageDto<Gabinety.Web.Api.AccessViewDto>([Sample.Access("Konsultacja demo"), Sample.Access("Druga konsultacja", "PendingPayment")], null));
         return web;
     }
 

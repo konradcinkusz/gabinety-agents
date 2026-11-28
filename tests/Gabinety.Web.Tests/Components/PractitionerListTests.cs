@@ -13,7 +13,7 @@ public class PractitionerListTests : BunitContext
         ["audyt-kodu"] = "Audyt kodu", ["migracja"] = "Migracja", ["ai"] = "Integracja AI", ["testy"] = "Testy",
     };
 
-    static PractitionerCardDto Card(string name = "Anna Demowska", IReadOnlyList<string>? problems = null, RatingDto? rating = null, bool isNew = false,
+    static AgentCardDto Card(string name = "Anna Demowska", IReadOnlyList<string>? problems = null, RatingDto? rating = null, bool isNew = false,
         IReadOnlyList<string>? badges = null, long price = 12000, IReadOnlyList<int>? durations = null) =>
         new(Guid.NewGuid(), "demo-anna-demowska", name, "Audyty kodu .NET", null, badges ?? [], rating, isNew, new MoneyDto(price, "PLN"), problems ?? [], durations ?? [30, 60]);
 

@@ -25,7 +25,7 @@ public class PractitionerContractCopiesTests
     {
         var me = Read<W.MeDto>(new MeDto("u1", Id, AgentStatus.Submitted, false, true));
         Assert.Equal(("u1", Id, "Submitted", false, true), (me.UserId, me.AgentId, me.AgentStatus, me.IsAdmin, me.IsModerator));
-        var p = Read<W.PractitionerPrivateDto>(new AgentPrivate(Id, "demo-x", AgentStatus.Rejected, "Powód", "Demo X", "Nagłówek", "Opis", "https://x.example.com/", "https://meet.google.com/a", "5260250274", true, true, true, "demo-gh"));
+        var p = Read<W.AgentPrivateDto>(new AgentPrivate(Id, "demo-x", AgentStatus.Rejected, "Powód", "Demo X", "Nagłówek", "Opis", "https://x.example.com/", "https://meet.google.com/a", "5260250274", true, true, true, "demo-gh"));
         Assert.Equal(("Rejected", "Powód", "demo-x", "demo-gh", "5260250274"), (p.Status, p.StatusReason, p.Slug, p.GithubLogin, p.Nip));
         Assert.True(p.EmailVerified && p.GithubLinked && p.NipValid);
         Assert.Equal("https://meet.google.com/a", p.MeetingUrlDefault);
@@ -41,7 +41,7 @@ public class PractitionerContractCopiesTests
         Assert.Equal([("demo-a", "Approved"), ("demo-b", "Suspended")], me.Agents!.Select(a => (a.Slug, a.Status)));
         Assert.Empty(Read<W.MeDto>(new MeDto("u1", null, null, false, false)).Agents ?? []); // an account with none, or an older service: no agents
 
-        var list = Read<W.PractitionerSummariesDto>(new { items = new[] { new AgentSummary(Id, "demo-a", "Demo A", "Nagłówek", AgentStatus.Rejected, "Powód") } });
+        var list = Read<W.AgentSummariesDto>(new { items = new[] { new AgentSummary(Id, "demo-a", "Demo A", "Nagłówek", AgentStatus.Rejected, "Powód") } });
         var row = Assert.Single(list.Items);
         Assert.Equal((Id, "demo-a", "Demo A", "Nagłówek", "Rejected", "Powód"), (row.Id, row.Slug, row.DisplayName, row.Headline, row.Status, row.StatusReason));
     }
@@ -50,21 +50,21 @@ public class PractitionerContractCopiesTests
     public void An_offer_reads_into_the_copy_and_the_list_is_wrapped_in_items()
     {
         var offer = new PackagePrivate(Id, "Tytuł", "Opis", 60, new MoneyDto(18050), "code-review", ["dotnet"], false, "https://meet.google.com/a");
-        var o = Read<W.OfferingPrivateDto>(offer);
+        var o = Read<W.PackagePrivateDto>(offer);
         Assert.Equal(("Tytuł", 60, 18050L, "PLN", "code-review", false, "https://meet.google.com/a"), (o.Title, o.DurationMinutes, o.Price.AmountMinor, o.Price.Currency, o.ProblemSlug, o.IsActive, o.MeetingUrl));
         Assert.Equal(["dotnet"], o.TechSlugs);
-        var list = Read<W.OfferingsDto>(new { items = new[] { offer } });
+        var list = Read<W.PackagesDto>(new { items = new[] { offer } });
         Assert.Equal(Id, list.Items.Single().Id);
     }
 
     [Fact]
     public void What_the_web_sends_reads_into_the_services_own_request_types_with_the_same_values()
     {
-        var create = Send<CreateAgentRequest>(new W.CreatePractitionerBody("Demo Jedyny"));
+        var create = Send<CreateAgentRequest>(new W.CreateAgentBody("Demo Jedyny"));
         Assert.Equal("Demo Jedyny", create.DisplayName);
-        var update = Send<UpdateAgentRequest>(new W.UpdatePractitionerBody("Demo", "Nagłówek", "Opis", "https://x.example.com/", "5260250274"));
+        var update = Send<UpdateAgentRequest>(new W.UpdateAgentBody("Demo", "Nagłówek", "Opis", "https://x.example.com/", "5260250274"));
         Assert.Equal(("Demo", "Nagłówek", "Opis", "https://x.example.com/", null, "5260250274"), (update.DisplayName, update.Headline, update.Bio, update.PortfolioUrl, update.MeetingUrlDefault, update.Nip)); // no meeting link is sent
-        var offer = Send<PackageRequest>(new W.OfferingBody("Tytuł oferty", "Opis", 60, 18050, "code-review", ["dotnet", "react"], "Chat", 500));
+        var offer = Send<PackageRequest>(new W.PackageBody("Tytuł oferty", "Opis", 60, 18050, "code-review", ["dotnet", "react"], "Chat", 500));
         Assert.Equal(("Tytuł oferty", "Opis", 60, 18050L, "code-review", null, PackageKind.Chat, 500), (offer.Title, offer.Description, offer.DurationMinutes, offer.PriceMinor, offer.ProblemSlug, offer.MeetingUrl, offer.Kind, offer.Units)); // the kind and the units reach the service
         Assert.Equal(["dotnet", "react"], offer.TechSlugs);
     }
@@ -72,7 +72,7 @@ public class PractitionerContractCopiesTests
     [Fact]
     public void An_empty_optional_field_is_omitted_from_the_json_not_sent_as_null()
     {
-        var json = JsonSerializer.Serialize(new W.UpdatePractitionerBody("Demo", "H", "B", null, null), W.ApiClient.Json);
+        var json = JsonSerializer.Serialize(new W.UpdateAgentBody("Demo", "H", "B", null, null), W.ApiClient.Json);
         Assert.DoesNotContain("portfolioUrl", json);
         Assert.DoesNotContain("null", json);
     }

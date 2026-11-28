@@ -9,7 +9,7 @@ public sealed record Badge(string Label, BadgeKind Kind)
 {
     public string CssClass => $"badge badge--{Kind.ToString().ToLowerInvariant()}";
 
-    public static Badge ForBooking(string status) => status switch
+    public static Badge ForAccess(string status) => status switch
     {
         "PendingPayment" => new(Pl.Accesses.Statuses[status], BadgeKind.Warning),
         "Confirmed" => new(Pl.Accesses.Statuses[status], BadgeKind.Info),
@@ -22,11 +22,11 @@ public sealed record Badge(string Label, BadgeKind Kind)
 
     public static Badge ForPayment(string status) => status switch
     {
-        "Succeeded" => new(BookingsText.Payment.Succeeded, BadgeKind.Success),
-        "Refunded" => new(BookingsText.Payment.Refunded, BadgeKind.Info),
-        "PartiallyRefunded" => new(BookingsText.Payment.PartiallyRefunded, BadgeKind.Info),
-        "Created" => new(BookingsText.Payment.Created, BadgeKind.Warning),
-        "Failed" => new(BookingsText.Payment.Failed, BadgeKind.Danger),
-        _ => new(BookingsText.Payment.Unknown, BadgeKind.Neutral),
+        "Succeeded" => new(AccessesText.Payment.Succeeded, BadgeKind.Success),
+        "Refunded" => new(AccessesText.Payment.Refunded, BadgeKind.Info),
+        "PartiallyRefunded" => new(AccessesText.Payment.PartiallyRefunded, BadgeKind.Info),
+        "Created" => new(AccessesText.Payment.Created, BadgeKind.Warning),
+        "Failed" => new(AccessesText.Payment.Failed, BadgeKind.Danger),
+        _ => new(AccessesText.Payment.Unknown, BadgeKind.Neutral),
     };
 }

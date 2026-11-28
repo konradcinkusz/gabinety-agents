@@ -3,7 +3,7 @@ using Gabinety.Web.Api;
 namespace Gabinety.Web.Components.Pages.Admin;
 
 /// <summary>One dispute as its card shows it: the report, and what the page could read about the booking (offer, price, payment) and the practitioner's name. Missing pieces are null, and the card says so.</summary>
-public sealed record DisputeCard(AdminDisputeDto Dispute, AdminBookingDto? Access, string? PractitionerName)
+public sealed record DisputeCard(AdminDisputeDto Dispute, AdminAccessDto? Access, string? AgentName)
 {
     public Guid Id => Dispute.AccessId;
     public long? PriceGrosz => Access is { Price.AmountMinor: > 0 } b ? b.Price.AmountMinor : null;
@@ -31,7 +31,7 @@ public static class DisputeRules
         }));
         var views = accesses.Select(b => b.IsOk ? b.Value : null).ToList();
         var missingNames = views.Where(b => b is not null && string.IsNullOrWhiteSpace(b.Agent.DisplayName)).Select(b => b!.Agent.Id);
-        var names = await api.PractitionerNames(missingNames, ct: ct);
+        var names = await api.AgentNames(missingNames, ct: ct);
         return [.. disputes.Select((d, i) => new DisputeCard(d, views[i], views[i] is { } b ? (!string.IsNullOrWhiteSpace(b.Agent.DisplayName) ? b.Agent.DisplayName : names.GetValueOrDefault(b.Agent.Id)) : null))];
     }
 }

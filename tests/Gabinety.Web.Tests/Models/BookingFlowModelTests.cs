@@ -67,27 +67,27 @@ public class BookingFlowModelTests
     public void The_key_is_kept_for_the_same_body_and_replaced_when_the_body_differs()
     {
         var package = Guid.NewGuid();
-        var first = BookingAttempt.Fingerprint(package, "Opis problemu z integracją", null, false);
+        var first = AccessAttempt.Fingerprint(package, "Opis problemu z integracją", null, false);
         var key = Guid.NewGuid();
-        Assert.Equal(key, BookingAttempt.KeyFor(key.ToString(), first, first, () => throw new InvalidOperationException("must reuse")));
-        var edited = BookingAttempt.Fingerprint(package, "Inny opis problemu z integracją", null, false);
+        Assert.Equal(key, AccessAttempt.KeyFor(key.ToString(), first, first, () => throw new InvalidOperationException("must reuse")));
+        var edited = AccessAttempt.Fingerprint(package, "Inny opis problemu z integracją", null, false);
         Assert.NotEqual(first, edited);
         var fresh = Guid.NewGuid();
-        Assert.Equal(fresh, BookingAttempt.KeyFor(key.ToString(), first, edited, () => fresh)); // same key with another body would be a 409
-        Assert.Equal(fresh, BookingAttempt.KeyFor(null, null, first, () => fresh));
-        Assert.Equal(fresh, BookingAttempt.KeyFor("not-a-guid", first, first, () => fresh));
-        Assert.Equal(fresh, BookingAttempt.KeyFor(Guid.Empty.ToString(), first, first, () => fresh));
+        Assert.Equal(fresh, AccessAttempt.KeyFor(key.ToString(), first, edited, () => fresh)); // same key with another body would be a 409
+        Assert.Equal(fresh, AccessAttempt.KeyFor(null, null, first, () => fresh));
+        Assert.Equal(fresh, AccessAttempt.KeyFor("not-a-guid", first, first, () => fresh));
+        Assert.Equal(fresh, AccessAttempt.KeyFor(Guid.Empty.ToString(), first, first, () => fresh));
     }
 
     [Fact]
     public void The_fingerprint_ignores_surrounding_blanks_and_covers_every_part_of_the_request()
     {
         var o = Guid.NewGuid();
-        var baseline = BookingAttempt.Fingerprint(o, "tekst", "audyt", true);
-        Assert.Equal(baseline, BookingAttempt.Fingerprint(o, "  tekst ", "audyt", true));
-        Assert.NotEqual(baseline, BookingAttempt.Fingerprint(Guid.NewGuid(), "tekst", "audyt", true));
-        Assert.NotEqual(baseline, BookingAttempt.Fingerprint(o, "tekst", "inny", true));
-        Assert.NotEqual(baseline, BookingAttempt.Fingerprint(o, "tekst", "audyt", false));
+        var baseline = AccessAttempt.Fingerprint(o, "tekst", "audyt", true);
+        Assert.Equal(baseline, AccessAttempt.Fingerprint(o, "  tekst ", "audyt", true));
+        Assert.NotEqual(baseline, AccessAttempt.Fingerprint(Guid.NewGuid(), "tekst", "audyt", true));
+        Assert.NotEqual(baseline, AccessAttempt.Fingerprint(o, "tekst", "inny", true));
+        Assert.NotEqual(baseline, AccessAttempt.Fingerprint(o, "tekst", "audyt", false));
         Assert.DoesNotContain("tekst", baseline); // a hash: the brief itself never goes back to the browser in a field
     }
 
@@ -117,19 +117,19 @@ public class BookingFlowModelTests
     [Fact]
     public void A_meta_line_never_starts_or_ends_with_a_separator_F03()
     {
-        Assert.Equal("poniedziałek, 23 listopada · 180,00\u00a0zł", BookingFormat.MetaLine(null, "poniedziałek, 23 listopada", "180,00\u00a0zł")); // the audit's "· poniedziałek..." has no name
-        Assert.Equal("Anna · wtorek", BookingFormat.MetaLine("Anna", "", "wtorek", "   "));
-        Assert.Equal("", BookingFormat.MetaLine(null, ""));
-        Assert.Null(BookingFormat.Name("   "));
-        Assert.Equal("Anna", BookingFormat.Name(" Anna "));
+        Assert.Equal("poniedziałek, 23 listopada · 180,00\u00a0zł", AccessFormat.MetaLine(null, "poniedziałek, 23 listopada", "180,00\u00a0zł")); // the audit's "· poniedziałek..." has no name
+        Assert.Equal("Anna · wtorek", AccessFormat.MetaLine("Anna", "", "wtorek", "   "));
+        Assert.Equal("", AccessFormat.MetaLine(null, ""));
+        Assert.Null(AccessFormat.Name("   "));
+        Assert.Equal("Anna", AccessFormat.Name(" Anna "));
     }
 
     [Fact]
     public void A_range_is_shown_in_warsaw_time_whatever_the_server_zone()
     {
         // 12:00 UTC on 1 December is 13:00 in Warsaw (CET); 12:00 UTC on 1 July is 14:00 (CEST).
-        Assert.Equal("wtorek, 1 grudnia, 13:00–14:00", BookingFormat.When(new DateTimeOffset(2026, 12, 1, 12, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 12, 1, 13, 0, 0, TimeSpan.Zero)));
-        Assert.Equal("środa, 1 lipca, 14:00–14:30", BookingFormat.When(new DateTimeOffset(2026, 7, 1, 12, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 7, 1, 12, 30, 0, TimeSpan.Zero)));
+        Assert.Equal("wtorek, 1 grudnia, 13:00–14:00", AccessFormat.When(new DateTimeOffset(2026, 12, 1, 12, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 12, 1, 13, 0, 0, TimeSpan.Zero)));
+        Assert.Equal("środa, 1 lipca, 14:00–14:30", AccessFormat.When(new DateTimeOffset(2026, 7, 1, 12, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 7, 1, 12, 30, 0, TimeSpan.Zero)));
     }
 
     // ---- badges (G-8)
@@ -139,7 +139,7 @@ public class BookingFlowModelTests
     [InlineData("CancelledByClient", "Zrezygnowano", BadgeKind.Neutral)] [InlineData("LateCancelledByClient", "Zrezygnowano (bez zwrotu)", BadgeKind.Warning)]
     [InlineData("CancelledByPractitioner", "Wycofany przez dostawcę", BadgeKind.Danger)] [InlineData("Expired", "Wygasł", BadgeKind.Neutral)] [InlineData("ClientNoShow", "Klient nie skorzystał", BadgeKind.Danger)]
     [InlineData("Disputed", "Reklamacja w toku", BadgeKind.Warning)] [InlineData("Resolved", "Reklamacja rozstrzygnięta", BadgeKind.Neutral)] [InlineData("Whatever", "Status nieznany", BadgeKind.Neutral)]
-    public void A_booking_state_has_a_label_and_a_kind(string status, string label, BadgeKind kind) => Assert.Equal((label, kind), (Badge.ForBooking(status).Label, Badge.ForBooking(status).Kind));
+    public void A_booking_state_has_a_label_and_a_kind(string status, string label, BadgeKind kind) => Assert.Equal((label, kind), (Badge.ForAccess(status).Label, Badge.ForAccess(status).Kind));
 
     [Theory]
     [InlineData("Succeeded", "Opłacona", BadgeKind.Success)] [InlineData("Refunded", "Zwrócona w całości", BadgeKind.Info)] [InlineData("PartiallyRefunded", "Zwrócona częściowo", BadgeKind.Info)]
@@ -149,8 +149,8 @@ public class BookingFlowModelTests
     [Fact]
     public void Every_booking_status_the_contract_has_is_mapped_and_the_css_class_follows_the_kind()
     {
-        foreach (var s in BookingFormat.Statuses) Assert.NotEqual(Pl.Accesses.UnknownStatus, Badge.ForBooking(s).Label);
-        Assert.Equal("badge badge--warning", Badge.ForBooking("Disputed").CssClass);
+        foreach (var s in AccessFormat.Statuses) Assert.NotEqual(Pl.Accesses.UnknownStatus, Badge.ForAccess(s).Label);
+        Assert.Equal("badge badge--warning", Badge.ForAccess("Disputed").CssClass);
     }
 
     // ---- what cancelling means (F-11)
@@ -162,8 +162,8 @@ public class BookingFlowModelTests
     public void Without_a_cancel_outcome_the_dialog_says_the_general_rule_and_computes_nothing()
     {
         Assert.Null(CancelOutcome.From(null, Price));
-        Assert.Equal(BookingsText.Cancel.ClientRule, CancelOutcome.Sentence(null, "client"));
-        Assert.Equal(BookingsText.Cancel.PractitionerRule, CancelOutcome.Sentence(null, "practitioner"));
+        Assert.Equal(AccessesText.Cancel.ClientRule, CancelOutcome.Sentence(null, "client"));
+        Assert.Equal(AccessesText.Cancel.AgentRule, CancelOutcome.Sentence(null, "practitioner"));
     }
 
     [Theory]
@@ -173,9 +173,9 @@ public class BookingFlowModelTests
         var o = CancelOutcome.From(Outcome(kind, refund), Price)!;
         Assert.Equal(refund, o.RefundMinor);
         var sentence = CancelOutcome.Sentence(o, "client");
-        Assert.NotEqual(BookingsText.Cancel.ClientRule, sentence);
+        Assert.NotEqual(AccessesText.Cancel.ClientRule, sentence);
         if (refund == 18000) Assert.Equal("Otrzymasz zwrot 180,00\u00a0zł.", sentence);
-        else if (refund == 0) Assert.Equal(BookingsText.Cancel.OutcomeNone, sentence);
+        else if (refund == 0) Assert.Equal(AccessesText.Cancel.OutcomeNone, sentence);
         else Assert.Equal("Otrzymasz zwrot 90,00\u00a0zł z 180,00\u00a0zł.", sentence);
     }
 

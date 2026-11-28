@@ -8,15 +8,15 @@ public static class ActionFailure
 {
     public static string Text(ApiFailure f) => f switch
     {
-        { Status: 0 } => BookingsText.Errors.Network,
-        { Code: "invalid_transition" } => BookingsText.Errors.InvalidTransition,
-        { Code: "insufficient_quota" } => BookingsText.Errors.QuotaExhausted,
-        { Code: "dependency_unavailable" } or { Status: 503 } => BookingsText.Errors.Unavailable,
-        { Code: "not_found" } or { Status: 404 } => BookingsText.NotFound,
-        { Code: "validation_failed" or "invalid_input" } or { Status: 400 or 422 } => BookingsText.Errors.Validation,
-        { Code: "forbidden" } or { Status: 403 } => BookingsText.Errors.Forbidden,
-        { Code: "rate_limited" } or { Status: 429 } => BookingsText.Errors.RateLimited,
-        _ => BookingsText.Errors.Generic,
+        { Status: 0 } => AccessesText.Errors.Network,
+        { Code: "invalid_transition" } => AccessesText.Errors.InvalidTransition,
+        { Code: "insufficient_quota" } => AccessesText.Errors.QuotaExhausted,
+        { Code: "dependency_unavailable" } or { Status: 503 } => AccessesText.Errors.Unavailable,
+        { Code: "not_found" } or { Status: 404 } => AccessesText.NotFound,
+        { Code: "validation_failed" or "invalid_input" } or { Status: 400 or 422 } => AccessesText.Errors.Validation,
+        { Code: "forbidden" } or { Status: 403 } => AccessesText.Errors.Forbidden,
+        { Code: "rate_limited" } or { Status: 429 } => AccessesText.Errors.RateLimited,
+        _ => AccessesText.Errors.Generic,
     };
 
     /// <summary>The state of the booking changed under the user: the way out is to read it again.</summary>
@@ -32,17 +32,17 @@ public static class DisputeRules
 
     public static string KindLabel(string kind) => kind switch
     {
-        "not_as_described" => BookingsText.Dispute.NotAsDescribed,
-        _ => BookingsText.Dispute.Other,
+        "not_as_described" => AccessesText.Dispute.NotAsDescribed,
+        _ => AccessesText.Dispute.Other,
     };
 
-    public static string? KindProblem(string? kind) => kind is not null && Kinds.Contains(kind) ? null : BookingsText.Dispute.KindInvalid;
+    public static string? KindProblem(string? kind) => kind is not null && Kinds.Contains(kind) ? null : AccessesText.Dispute.KindInvalid;
 
     public static string? TextProblem(string? text)
     {
         var n = (text ?? "").Trim().Length;
-        return n < TextMin ? BookingsText.Dispute.TooShort : n > TextMax ? BookingsText.Dispute.TooLong : null;
+        return n < TextMin ? AccessesText.Dispute.TooShort : n > TextMax ? AccessesText.Dispute.TooLong : null;
     }
 
-    public static string? ReasonProblem(string? reason) => (reason ?? "").Trim().Length > ReasonMax ? BookingsText.Cancel.ReasonTooLong : null;
+    public static string? ReasonProblem(string? reason) => (reason ?? "").Trim().Length > ReasonMax ? AccessesText.Cancel.ReasonTooLong : null;
 }

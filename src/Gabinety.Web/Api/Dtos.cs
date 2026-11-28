@@ -14,7 +14,7 @@ public sealed record TaxonomyDto(string Version, IReadOnlyList<CategoryDto> Prob
 
 public sealed record RatingDto(double Average, int Count);
 
-public sealed record PractitionerCardDto(Guid Id, string Slug, string DisplayName, string Headline, string? GithubLogin, IReadOnlyList<string> Badges,
+public sealed record AgentCardDto(Guid Id, string Slug, string DisplayName, string Headline, string? GithubLogin, IReadOnlyList<string> Badges,
     RatingDto? Rating, bool IsNew, MoneyDto FromPrice, IReadOnlyList<string> ProblemSlugs, IReadOnlyList<int> Durations);
 
 /// <summary>A cursor page (CONTRACTS 0); <c>NextCursor</c> is absent on the last page.</summary>
@@ -22,17 +22,17 @@ public sealed record PageDto<T>(IReadOnlyList<T> Items, string? NextCursor);
 
 public sealed record SitemapCategoryDto(string Path, [property: JsonPropertyName("practitionerCount")] int AgentCount, bool Indexable);
 
-public sealed record SitemapPractitionerDto(string Slug, DateTimeOffset LastModified);
+public sealed record SitemapAgentDto(string Slug, DateTimeOffset LastModified);
 
 /// <summary><c>Practitioners</c> is optional so a caller that only needs the categories (the list pages) is unaffected by it.</summary>
-public sealed record SitemapDto(IReadOnlyList<SitemapCategoryDto> Categories, [property: JsonPropertyName("practitioners")] IReadOnlyList<SitemapPractitionerDto>? Agents = null);
+public sealed record SitemapDto(IReadOnlyList<SitemapCategoryDto> Categories, [property: JsonPropertyName("practitioners")] IReadOnlyList<SitemapAgentDto>? Agents = null);
 
 /// <summary><c>Kind</c> is <c>Tasks</c> or <c>Chat</c> (a string stands for the enum); <c>Units</c> is the number of tasks, or thousands of tokens for <c>Chat</c> (docs/agentic/PLAN.md 2.1).</summary>
-public sealed record OfferingDto(Guid Id, string Title, string Description, int DurationMinutes, MoneyDto Price, string ProblemSlug, IReadOnlyList<string> TechSlugs, string Kind = "Tasks", int Units = 1);
+public sealed record PackageDto(Guid Id, string Title, string Description, int DurationMinutes, MoneyDto Price, string ProblemSlug, IReadOnlyList<string> TechSlugs, string Kind = "Tasks", int Units = 1);
 
 /// <summary>The public profile (CONTRACTS 3.2): the card's fields and the extras side by side (flat on the wire).</summary>
-public sealed record PractitionerProfileDto(Guid Id, string Slug, string DisplayName, string Headline, string? GithubLogin, IReadOnlyList<string> Badges, RatingDto? Rating, bool IsNew,
-    MoneyDto FromPrice, string Bio, string? PortfolioUrl, [property: JsonPropertyName("offerings")] IReadOnlyList<OfferingDto> Packages, int CompletedCount, DateTimeOffset MemberSince);
+public sealed record AgentProfileDto(Guid Id, string Slug, string DisplayName, string Headline, string? GithubLogin, IReadOnlyList<string> Badges, RatingDto? Rating, bool IsNew,
+    MoneyDto FromPrice, string Bio, string? PortfolioUrl, [property: JsonPropertyName("offerings")] IReadOnlyList<PackageDto> Packages, int CompletedCount, DateTimeOffset MemberSince);
 
 public sealed record RankingWeightsDto(double Rating, double Reliability, double Availability, double Completeness);
 
@@ -40,13 +40,13 @@ public sealed record RankingConstantsDto(int M, double Mu, int MinReviewsToShowR
 
 public sealed record RankingRulesDto(string Version, DateTimeOffset EffectiveFrom, RankingWeightsDto Weights, RankingConstantsDto Constants);
 
-public sealed record PractitionerRefDto(Guid Id, string DisplayName, string Slug);
+public sealed record AgentRefDto(Guid Id, string DisplayName, string Slug);
 
 public sealed record ClientRefDto(string DisplayName);
 
 /// <summary>The part of <c>BookingView</c> (CONTRACTS 4.4) the list shows. <c>Status</c> is the wire name (<c>PendingPayment</c>, <c>Confirmed</c>, ...).</summary>
-public sealed record BookingViewDto(Guid Id, string Status, DateTimeOffset StartUtc, DateTimeOffset EndUtc, int DurationMinutes, [property: JsonPropertyName("offeringTitle")] string PackageTitle,
-    MoneyDto Price, [property: JsonPropertyName("practitioner")] PractitionerRefDto Agent, ClientRefDto? Client, string Kind = "Tasks", long UnitsTotal = 0, long UnitsUsed = 0);
+public sealed record AccessViewDto(Guid Id, string Status, DateTimeOffset StartUtc, DateTimeOffset EndUtc, int DurationMinutes, [property: JsonPropertyName("offeringTitle")] string PackageTitle,
+    MoneyDto Price, [property: JsonPropertyName("practitioner")] AgentRefDto Agent, ClientRefDto? Client, string Kind = "Tasks", long UnitsTotal = 0, long UnitsUsed = 0);
 
 public sealed record ReplyDto(string Text, DateTimeOffset RepliedAt);
 
@@ -60,18 +60,18 @@ public sealed record AssistantStatusDto(string State, IReadOnlyList<string> Feat
 public sealed record BriefDto(string Text, string? ProblemSlug, bool AiAssisted);
 
 /// <summary>A package has no time slot (docs/agentic/PLAN.md A-02): the request carries no <c>startUtc</c>.</summary>
-public sealed record CreateBookingRequestDto([property: JsonPropertyName("offeringId")] Guid PackageId, BriefDto Brief);
+public sealed record CreateAccessRequestDto([property: JsonPropertyName("offeringId")] Guid PackageId, BriefDto Brief);
 
 /// <summary><c>CheckoutUrl</c> is where the browser goes next: the mock checkout of this site, or the payment provider's page (Stripe Checkout) which returns to the site afterwards.</summary>
-public sealed record CreateBookingResponseDto([property: JsonPropertyName("bookingId")] Guid AccessId, string Status, DateTimeOffset HoldExpiresAt, string CheckoutUrl);
+public sealed record CreateAccessResponseDto([property: JsonPropertyName("bookingId")] Guid AccessId, string Status, DateTimeOffset HoldExpiresAt, string CheckoutUrl);
 
 public sealed record PaymentViewDto(string Status, MoneyDto Refunded);
 
 /// <summary>
 /// <c>BookingView</c> (CONTRACTS 4.4) as the detail, the checkout and the confirmation read it.
 /// </summary>
-public sealed record BookingDetailDto(Guid Id, string Status, string? StatusReason, DateTimeOffset StartUtc, DateTimeOffset EndUtc, int DurationMinutes, [property: JsonPropertyName("offeringTitle")] string PackageTitle, MoneyDto Price,
-    [property: JsonPropertyName("practitioner")] PractitionerRefDto Agent, ClientRefDto? Client, BriefDto? Brief, string? MeetingUrl, DateTimeOffset? HoldExpiresAt, PaymentViewDto Payment, MoneyDto? Fee, MoneyDto? Payout,
+public sealed record AccessDetailDto(Guid Id, string Status, string? StatusReason, DateTimeOffset StartUtc, DateTimeOffset EndUtc, int DurationMinutes, [property: JsonPropertyName("offeringTitle")] string PackageTitle, MoneyDto Price,
+    [property: JsonPropertyName("practitioner")] AgentRefDto Agent, ClientRefDto? Client, BriefDto? Brief, string? MeetingUrl, DateTimeOffset? HoldExpiresAt, PaymentViewDto Payment, MoneyDto? Fee, MoneyDto? Payout,
     bool CanCancel, bool CanDispute, bool CanReportNoShow, bool CanReview, CancelOutcomeDto? CancelOutcome = null, string Kind = "Tasks", long UnitsTotal = 0, long UnitsUsed = 0);
 
 /// <summary><c>cancelOutcome</c> (CONTRACTS 4.4, 9.2): what cancelling would do for the viewer right now, computed by the service on its clock. Present only when <c>canCancel</c>. <c>Outcome</c> is <c>full_refund</c>, <c>partial</c> or <c>no_refund</c>; <c>Refund</c> is what the client gets back.</summary>
@@ -104,27 +104,27 @@ public sealed record MeDto(string UserId, [property: JsonPropertyName("practitio
 // ---- the practitioner's own area (CONTRACTS 3.3, 3.5, 4.2; docs/operations/PAYMENTS-GO-LIVE.md)
 
 /// <summary><c>GET /api/v1/me/practitioner</c>; <c>Status</c> is <c>Draft | Submitted | Approved | Rejected | Suspended</c>.</summary>
-public sealed record PractitionerPrivateDto(Guid Id, string Slug, string Status, string? StatusReason, string DisplayName, string Headline, string Bio, string? PortfolioUrl,
+public sealed record AgentPrivateDto(Guid Id, string Slug, string Status, string? StatusReason, string DisplayName, string Headline, string Bio, string? PortfolioUrl,
     string? MeetingUrlDefault, string? Nip, bool EmailVerified, bool GithubLinked, bool NipValid, string? GithubLogin);
 
 /// <summary>One row of <c>GET /api/v1/me/practitioners</c>: the provider's own agents, oldest first (E-04).</summary>
-public sealed record PractitionerSummaryDto(Guid Id, string Slug, string DisplayName, string Headline, string Status, string? StatusReason);
+public sealed record AgentSummaryDto(Guid Id, string Slug, string DisplayName, string Headline, string Status, string? StatusReason);
 
-public sealed record PractitionerSummariesDto(IReadOnlyList<PractitionerSummaryDto> Items);
+public sealed record AgentSummariesDto(IReadOnlyList<AgentSummaryDto> Items);
 
-public sealed record CreatePractitionerBody(string DisplayName);
+public sealed record CreateAgentBody(string DisplayName);
 
 /// <summary>An empty optional field is omitted, not sent as null (CONTRACTS 0): the attribute is on the body, not on the shared options.</summary>
-public sealed record UpdatePractitionerBody(string DisplayName, string Headline, string Bio,
+public sealed record UpdateAgentBody(string DisplayName, string Headline, string Bio,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] string? PortfolioUrl,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] string? Nip);
 
-public sealed record OfferingPrivateDto(Guid Id, string Title, string Description, int DurationMinutes, MoneyDto Price, string ProblemSlug, IReadOnlyList<string> TechSlugs, bool IsActive, string? MeetingUrl, string Kind = "Tasks", int Units = 1);
+public sealed record PackagePrivateDto(Guid Id, string Title, string Description, int DurationMinutes, MoneyDto Price, string ProblemSlug, IReadOnlyList<string> TechSlugs, bool IsActive, string? MeetingUrl, string Kind = "Tasks", int Units = 1);
 
-public sealed record OfferingsDto(IReadOnlyList<OfferingPrivateDto> Items);
+public sealed record PackagesDto(IReadOnlyList<PackagePrivateDto> Items);
 
 /// <summary><c>Kind</c> is <c>Tasks</c> or <c>Chat</c>; <c>Units</c> counts tasks, or thousands of tokens for <c>Chat</c>. The meeting link of the old model is not sent (docs/agentic/PLAN.md C-04).</summary>
-public sealed record OfferingBody(string Title, string Description, int DurationMinutes, long PriceMinor, string ProblemSlug, IReadOnlyList<string> TechSlugs, string Kind = "Tasks", int Units = 1);
+public sealed record PackageBody(string Title, string Description, int DurationMinutes, long PriceMinor, string ProblemSlug, IReadOnlyList<string> TechSlugs, string Kind = "Tasks", int Units = 1);
 
 public sealed record GithubLinkBody(string GithubLogin);
 

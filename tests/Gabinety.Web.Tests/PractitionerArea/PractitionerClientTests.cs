@@ -28,7 +28,7 @@ public class PractitionerClientTests
         await using var _w = web;
         using var _s = scope;
         web.Directory.Respond = _ => FakeBackend.Problem(HttpStatusCode.Unauthorized, "unauthorized");
-        var r = await scope.ServiceProvider.GetRequiredService<PractitionerClient>().ProfileAsync();
+        var r = await scope.ServiceProvider.GetRequiredService<AgentClient>().ProfileAsync();
         Assert.True(r.Failure!.IsUnauthenticated);
         Assert.Null(web.Directory.Requests.Single().Authorization);
     }
@@ -39,11 +39,11 @@ public class PractitionerClientTests
         var (web, scope, world) = Scoped();
         await using var _w = web;
         using var _s = scope;
-        var client = scope.ServiceProvider.GetRequiredService<PractitionerClient>();
+        var client = scope.ServiceProvider.GetRequiredService<AgentClient>();
         world.Offers.Add(new PractitionerWorld.Offer { Title = "Tytuł oferty", ProblemSlug = "code-review", Duration = 30, Price = 10000 });
         var id = world.Offers[0].Id;
-        Assert.True((await client.DeactivateOfferingAsync(id)).IsOk);
-        Assert.True((await client.ActivateOfferingAsync(id)).IsOk);
+        Assert.True((await client.DeactivatePackageAsync(id)).IsOk);
+        Assert.True((await client.ActivatePackageAsync(id)).IsOk);
         Assert.Equal([$"/api/v1/me/practitioner/offerings/{id}/deactivate", $"/api/v1/me/practitioner/offerings/{id}/activate"], web.Directory.Requests.Where(r => r.Method == HttpMethod.Post).Select(r => r.PathAndQuery));
         Assert.All(web.Directory.Requests, r => Assert.StartsWith("Bearer ", r.Authorization));
     }
@@ -55,7 +55,7 @@ public class PractitionerClientTests
         await using var _w = web;
         using var _s = scope;
         web.Directory.Respond = _ => FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable");
-        var r = await scope.ServiceProvider.GetRequiredService<PractitionerClient>().SubmitAsync();
+        var r = await scope.ServiceProvider.GetRequiredService<AgentClient>().SubmitAsync();
         Assert.Equal(503, r.Failure!.Status);
         Assert.Single(web.Directory.Requests, x => x.Method == HttpMethod.Post); // one attempt: SPEC 5 rule 8
     }
@@ -70,7 +70,7 @@ public class PractitionerClientTests
         {
             Content = new StringContent("""{"code":"submit_incomplete","title":"SERVER-TITLE","detail":"SERVER-DETAIL","errors":{"headline":["SERVER-MSG"],"bad key <b>":["x"],"rules[2].endLocal":["y"]},"unmetItems":["bio","github_linked","<script>","portfolioUrl"]}""", System.Text.Encoding.UTF8, "application/problem+json"),
         };
-        var f = (await scope.ServiceProvider.GetRequiredService<PractitionerClient>().SubmitAsync()).Failure!;
+        var f = (await scope.ServiceProvider.GetRequiredService<AgentClient>().SubmitAsync()).Failure!;
         Assert.Equal((422, "submit_incomplete"), (f.Status, f.Code));
         Assert.Equal(["headline", "rules[2].endLocal"], f.Fields); // the key with markup characters is dropped
         Assert.Equal(["bio", "github_linked", "portfolioUrl"], f.Unmet);
@@ -85,7 +85,7 @@ public class PractitionerClientTests
         await using var _w = web;
         using var _s = scope;
         web.Directory.Respond = _ => new HttpResponseMessage(HttpStatusCode.Conflict) { Content = new StringContent(body, System.Text.Encoding.UTF8, "application/problem+json") };
-        var f = (await scope.ServiceProvider.GetRequiredService<PractitionerClient>().CreateProfileAsync("Demo")).Failure!;
+        var f = (await scope.ServiceProvider.GetRequiredService<AgentClient>().CreateProfileAsync("Demo")).Failure!;
         Assert.Equal((409, "http_409"), (f.Status, f.Code));
         Assert.Empty(f.Fields ?? []);
     }
@@ -96,7 +96,7 @@ public class PractitionerClientTests
         var (web, scope, world) = Scoped();
         await using var _w = web;
         using var _s = scope;
-        var client = scope.ServiceProvider.GetRequiredService<PractitionerSchedulingClient>();
+        var client = scope.ServiceProvider.GetRequiredService<AgentSchedulingClient>();
         world.PaymentState = "pending";
         Assert.Equal("pending", (await client.PaymentAccountAsync()).Value!.State);
         Assert.Equal("https://connect.stripe.com/setup/e/acct_test/abc", (await client.StartPaymentOnboardingAsync()).Value!.OnboardingUrl);
@@ -112,7 +112,7 @@ public class PractitionerClientTests
         await using var _w = web;
         using var _s = scope;
         world.DirectoryDown = true;
-        var r = await scope.ServiceProvider.GetRequiredService<PractitionerClient>().OfferingsAsync();
+        var r = await scope.ServiceProvider.GetRequiredService<AgentClient>().PackagesAsync();
         Assert.Equal(0, r.Failure!.Status);
     }
 }

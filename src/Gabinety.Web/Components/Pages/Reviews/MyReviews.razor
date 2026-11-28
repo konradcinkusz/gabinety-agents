@@ -14,14 +14,14 @@
 {
     <div class="callout callout--danger" role="alert" data-testid="unavailable">
         <p>@ReviewRules.FailureText(_failure)</p>
-        <a class="btn btn--secondary" href="@Here()">@BookingsText.Retry</a>
+        <a class="btn btn--secondary" href="@Here()">@AccessesText.Retry</a>
     </div>
 }
 else if (_noProfile)
 {
     <div class="empty-state" data-testid="no-profile">
-        <h2>@ReviewsText.List.NotPractitionerTitle</h2>
-        <p>@ReviewsText.List.NotPractitioner</p>
+        <h2>@ReviewsText.List.NotAgentTitle</h2>
+        <p>@ReviewsText.List.NotAgent</p>
         <a class="btn btn--secondary" href="/panel-agenta">@ReviewsText.List.CreateProfile</a>
     </div>
 }
@@ -38,7 +38,7 @@ else if (_page is not null)
             @foreach (var r in _page.Items)
             {
                 <li class="card stack stack--tight">
-                    <p class="muted">@BookingFormat.MetaLine(ReviewsText.List.Reviewer, string.Format(ReviewsText.List.Rating, r.Rating), Day(r.CreatedAt))</p>
+                    <p class="muted">@AccessFormat.MetaLine(ReviewsText.List.Reviewer, string.Format(ReviewsText.List.Rating, r.Rating), Day(r.CreatedAt))</p>
                     <p class="review-text">@r.Text</p>
                     @if (r.Reply is { } reply)
                     {
@@ -52,12 +52,12 @@ else if (_page is not null)
                         <form method="post" @onsubmit="ReplyAsync" @formname="reply" class="form" novalidate>
                             <AntiforgeryToken />
                             <input type="hidden" name="Model.ReviewId" value="@r.Id" />
-                            <BookingFormProblems Items="_problems" />
+                            <AccessFormProblems Items="_problems" />
                             <CounterTextArea Id="reply" Name="Model.Text" Label="@ReviewsText.Reply.Label" Hint="@ReviewsText.Reply.Hint" Value="@Model!.Text" Rows="3" Error="@_replyError" Autofocus="@(_problems.Count == 1)" />
                             @if (_replyNote is not null) {<div class="callout callout--danger" role="alert">@_replyNote</div>}
                             <div class="form-actions">
                                 <button type="submit" class="btn btn--primary">@ReviewsText.Reply.Submit</button>
-                                <a class="btn btn--ghost" href="@Here()">@BookingsText.Dispute.Close</a>
+                                <a class="btn btn--ghost" href="@Here()">@AccessesText.Dispute.Close</a>
                             </div>
                         </form>
                     }
@@ -80,7 +80,7 @@ else if (_page is not null)
 
     public sealed class ReplyFormModel { public string? ReviewId { get; set; } public string? Text { get; set; } }
 
-    Guid _practitionerId;
+    Guid _agentId;
     PageDto<ReviewDto>? _page;
     ApiFailure? _failure;
     bool _noProfile;
@@ -89,7 +89,7 @@ else if (_page is not null)
 
     static string Day(DateTimeOffset at)
     {
-        var d = TimeZoneInfo.ConvertTime(at, BookingFormat.Warsaw);
+        var d = TimeZoneInfo.ConvertTime(at, AccessFormat.Warsaw);
         return $"{d.Day} {Pl.Format.MonthsGenitive[d.Month - 1]} {d.Year}";
     }
 
@@ -112,13 +112,13 @@ else if (_page is not null)
             return;
         }
         if (me.Value!.AgentId is not { } id) { _noProfile = true; return; }
-        _practitionerId = id;
+        _agentId = id;
         await LoadAsync();
     }
 
     async Task LoadAsync()
     {
-        var list = await Reviews.ListAsync(_practitionerId, string.IsNullOrWhiteSpace(CursorParam) ? null : CursorParam);
+        var list = await Reviews.ListAsync(_agentId, string.IsNullOrWhiteSpace(CursorParam) ? null : CursorParam);
         if (list.IsOk) { _page = list.Value; return; }
         Fail(list.Failure!);
     }

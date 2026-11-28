@@ -66,10 +66,10 @@
     </section>
 
     <section class="section" aria-labelledby="offerings">
-        <h2 id="offerings">@PlPages.Profile.OfferingsTitle</h2>
+        <h2 id="offerings">@PlPages.Profile.PackagesTitle</h2>
         @if (p.Packages.Count == 0)
         {
-            <p data-testid="no-offerings">@PlPages.Profile.NoOfferings</p>
+            <p data-testid="no-offerings">@PlPages.Profile.NoPackages</p>
         }
         else
         {
@@ -86,7 +86,7 @@
                             }
                             <p class="cluster"><span data-testid="offering-units">@UnitsLine(o)</span><span class="num price">@Money.Pln(o.Price.AmountMinor)</span></p>
                             <p class="muted" data-testid="offering-validity">@string.Format(PlPages.Profile.ValidityLine, PlPages.Profile.ValidityDays)</p>
-                            <a class="btn btn--primary" href="@BookHref(p.Slug, o)" aria-label="@string.Format(PlPages.Profile.BookOffering, o.Title)">@PlPages.Profile.Book</a>
+                            <a class="btn btn--primary" href="@BookHref(p.Slug, o)" aria-label="@string.Format(PlPages.Profile.BookPackage, o.Title)">@PlPages.Profile.Book</a>
                         </div>
                     </li>
                 }
@@ -171,19 +171,19 @@ else
     [Parameter] public string Slug { get; set; } = "";
     [SupplyParameterFromQuery(Name = "opinie")] public string? ReviewCursor { get; set; }
 
-    PractitionerProfileDto? _profile;
+    AgentProfileDto? _profile;
     bool _gone;
     PageDto<ReviewDto>? _reviews;
     IReadOnlyList<CategoryDto> _suggestions = [];
     Dictionary<string, string> _techs = [];
 
-    List<string> TechNames(OfferingDto o) => [.. o.TechSlugs.Select(t => _techs.GetValueOrDefault(t) ?? t)];
+    List<string> TechNames(PackageDto o) => [.. o.TechSlugs.Select(t => _techs.GetValueOrDefault(t) ?? t)];
 
     /// <summary>The purchase page of the package; it looks the package up in this profile, so the slug travels in the query (no endpoint resolves an offering id on its own).</summary>
-    static string BookHref(string slug, OfferingDto o) => $"/dostep/{o.Id}?gabinet={Uri.EscapeDataString(slug)}";
+    static string BookHref(string slug, PackageDto o) => $"/dostep/{o.Id}?gabinet={Uri.EscapeDataString(slug)}";
 
     /// <summary>"10 zadań, typowy czas ok. 30 min" for a task package, "500 tys. tokenów, API zgodne z OpenAI" for a chat package (<c>Units</c> are thousands of tokens).</summary>
-    public static string UnitsLine(OfferingDto o) => UnitsLine(o.Kind, o.Units, o.DurationMinutes);
+    public static string UnitsLine(PackageDto o) => UnitsLine(o.Kind, o.Units, o.DurationMinutes);
 
     public static string UnitsLine(string kind, int units, int minutes) => string.Equals(kind, "Chat", StringComparison.OrdinalIgnoreCase) // the public profile writes the kind in lower case ("chat"), the provider's own list in capitals
         ? string.Format(PlPages.Profile.ChatLine, units)

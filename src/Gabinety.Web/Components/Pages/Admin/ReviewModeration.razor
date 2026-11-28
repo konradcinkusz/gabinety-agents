@@ -122,7 +122,7 @@
         (_failure, _next) = (result.Failure, result.Value?.NextCursor);
         if (!result.IsOk) return;
         _items.AddRange(result.Value!.Items);
-        _names = await Api.PractitionerNames(_items.Select(r => r.AgentId));
+        _names = await Api.AgentNames(_items.Select(r => r.AgentId));
     }
 
     Task PublishAsync(Guid id) => DecideAsync(id, () => Api.PublishReview(id), "admin-review-published");

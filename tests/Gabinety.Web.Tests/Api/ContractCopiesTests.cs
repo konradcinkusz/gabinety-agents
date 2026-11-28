@@ -63,14 +63,14 @@ public class ContractCopiesTests
 
     [Fact]
     public void The_practitioner_page() =>
-        RoundTrip<W.PageDto<W.PractitionerCardDto>>(
+        RoundTrip<W.PageDto<W.AgentCardDto>>(
             new Page<AgentCard>([new AgentCard(Id, "demo-anna-demowska", "Anna Demowska", "Audyty", "demo-anna", [Badge.Email, Badge.Github, Badge.Nip, Badge.Approved],
                 new RatingDto(4.5, 12), false, new MoneyDto(25000), ["audyt-kodu"], [30, 60])], "NEXT"),
             check: c => { Assert.Equal(["email", "github", "nip", "approved"], c.Items[0].Badges); Assert.Equal(25000, c.Items[0].FromPrice.AmountMinor); Assert.Equal("NEXT", c.NextCursor); Assert.Equal(4.5, c.Items[0].Rating!.Average); });
 
     [Fact]
     public void The_last_page_has_no_cursor_and_a_card_without_rating_has_none() =>
-        RoundTrip<W.PageDto<W.PractitionerCardDto>>(
+        RoundTrip<W.PageDto<W.AgentCardDto>>(
             new Page<AgentCard>([new AgentCard(Id, "s", "N", "H", null, [], null, true, new MoneyDto(5000), [], [30])]), check: c => { Assert.Null(c.NextCursor); Assert.Null(c.Items[0].Rating); });
 
     [Fact]
@@ -86,7 +86,7 @@ public class ContractCopiesTests
     public void An_offering_carries_its_kind_as_the_wire_name_and_its_units(PackageKind kind, int units)
     {
         var real = new Package(Id, "Pakiet", "Opis", 30, new MoneyDto(9900), "audyt-kodu", ["dotnet"], kind, units);
-        RoundTrip<W.OfferingDto>(real, Plain, c => Assert.Equal((kind.ToString(), units), (c.Kind, c.Units)));
+        RoundTrip<W.PackageDto>(real, Plain, c => Assert.Equal((kind.ToString(), units), (c.Kind, c.Units)));
     }
 
     [Theory]
@@ -96,10 +96,10 @@ public class ContractCopiesTests
         // Booking serializes BookingStatus with the attribute converter: PascalCase, which is also what the Polish labels are keyed by.
         var real = new AccessView(Id, status, null, At, At.AddHours(1), 60, "Konsultacja", new MoneyDto(25000), new AgentRef(Id, "Anna", "demo-anna"), new ClientRef("demo-client"), null, null, null,
             new PaymentView(PaymentStatus.Succeeded, new MoneyDto(0)), null, null, true, false, false, false);
-        RoundTrip<W.PageDto<W.BookingViewDto>>(new Page<AccessView>([real], null), new JsonSerializerOptions(JsonSerializerDefaults.Web), c =>
+        RoundTrip<W.PageDto<W.AccessViewDto>>(new Page<AccessView>([real], null), new JsonSerializerOptions(JsonSerializerDefaults.Web), c =>
         {
             Assert.Equal(status.ToString(), c.Items[0].Status);
-            Assert.Contains(c.Items[0].Status, Components.Pages.Bookings.BookingFormat.Statuses);
+            Assert.Contains(c.Items[0].Status, Components.Pages.Bookings.AccessFormat.Statuses);
             Assert.Equal(At, c.Items[0].StartUtc);
             Assert.Equal("demo-client", c.Items[0].Client!.DisplayName);
         });
@@ -123,7 +123,7 @@ public class ContractCopiesTests
     {
         var real = new AccessView(Id, AccessStatus.Disputed, null, At, At.AddHours(1), 60, "Audyt kodu", new MoneyDto(18000), new AgentRef(Id, "", "demo-anna"), null, null, null, null,
             new PaymentView(payment, new MoneyDto(10000)), null, null, false, false, false, false);
-        RoundTrip<W.AdminBookingDto>(real, new JsonSerializerOptions(JsonSerializerDefaults.Web), c =>
+        RoundTrip<W.AdminAccessDto>(real, new JsonSerializerOptions(JsonSerializerDefaults.Web), c =>
         {
             Assert.Equal(payment.ToString(), c.Payment.Status); // the keys of the Polish labels
             Assert.Equal((18000L, 10000L, "Disputed"), (c.Price.AmountMinor, c.Payment.Refunded.AmountMinor, c.Status));
@@ -140,7 +140,7 @@ public class ContractCopiesTests
         var real = new AccessView(Id, AccessStatus.Confirmed, "powód", At, At.AddHours(1), 60, "Audyt", new MoneyDto(25000), new AgentRef(Id, "Anna", "demo-anna"), new ClientRef("demo-client"),
             new BriefDto("Opis problemu demo, syntetyczny.", "audyt-kodu", true), "https://meet.example/x", At.AddMinutes(10), new PaymentView(PaymentStatus.PartiallyRefunded, new MoneyDto(9000)), new MoneyDto(3750), new MoneyDto(21250),
             true, false, true, false, new CancelOutcomeDto(CancelOutcomeKind.Partial, new MoneyDto(9000)));
-        RoundTrip<W.BookingDetailDto>(real, Plain, c =>
+        RoundTrip<W.AccessDetailDto>(real, Plain, c =>
         {
             Assert.Equal(("Confirmed", "PartiallyRefunded", 9000L), (c.Status, c.Payment.Status, c.Payment.Refunded.AmountMinor));
             Assert.Equal((true, false, true, false), (c.CanCancel, c.CanDispute, c.CanReportNoShow, c.CanReview));
@@ -156,18 +156,18 @@ public class ContractCopiesTests
     {
         var real = new AccessView(Id, AccessStatus.PendingPayment, null, At, At.AddHours(1), 30, "Audyt", new MoneyDto(25000), new AgentRef(Id, "Anna", "demo-anna"), null, null, null, null,
             new PaymentView(PaymentStatus.Created, new MoneyDto(0)), null, null, false, false, false, false);
-        RoundTrip<W.BookingDetailDto>(real, Plain, c => { Assert.Null(c.Client); Assert.Null(c.Brief); Assert.Null(c.MeetingUrl); Assert.Null(c.Fee); Assert.Null(c.CancelOutcome); });
+        RoundTrip<W.AccessDetailDto>(real, Plain, c => { Assert.Null(c.Client); Assert.Null(c.Brief); Assert.Null(c.MeetingUrl); Assert.Null(c.Fee); Assert.Null(c.CancelOutcome); });
     }
 
     [Fact]
     public void The_create_response_carries_the_checkout_url_of_the_mock_or_of_the_provider() =>
-        RoundTrip<W.CreateBookingResponseDto>(new CreateAccessResponse(Id, AccessStatus.PendingPayment, At, "https://checkout.stripe.com/c/pay/cs_test_1"), Plain,
+        RoundTrip<W.CreateAccessResponseDto>(new CreateAccessResponse(Id, AccessStatus.PendingPayment, At, "https://checkout.stripe.com/c/pay/cs_test_1"), Plain,
             c => Assert.Equal(("PendingPayment", "https://checkout.stripe.com/c/pay/cs_test_1", At), (c.Status, c.CheckoutUrl, c.HoldExpiresAt)));
 
     [Fact]
     public void The_create_request_carries_no_start_and_the_service_binds_it()
     {
-        var copy = new W.CreateBookingRequestDto(Id, new W.BriefDto("Opis problemu demo, syntetyczny.", "audyt-kodu", true));
+        var copy = new W.CreateAccessRequestDto(Id, new W.BriefDto("Opis problemu demo, syntetyczny.", "audyt-kodu", true));
         var json = JsonSerializer.Serialize(copy, W.ApiClient.Json);
         var real = JsonSerializer.Deserialize<CreateAccessRequest>(json, Plain)!; // the service's own record reads what the web writes
         Assert.Equal((Id, (DateTimeOffset?)null, "audyt-kodu", true), (real.PackageId, real.StartUtc, real.Brief.ProblemSlug, real.Brief.AiAssisted)); // C-02: a package has no start

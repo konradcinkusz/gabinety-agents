@@ -36,10 +36,10 @@ public class PriceInputTests
 
 public class ChecklistTests
 {
-    static PractitionerPrivateDto Profile(string headline = "", string bio = "", bool github = false, bool nip = false, string? portfolio = null, bool email = false, string status = "Draft") =>
+    static AgentPrivateDto Profile(string headline = "", string bio = "", bool github = false, bool nip = false, string? portfolio = null, bool email = false, string status = "Draft") =>
         new(Guid.NewGuid(), "demo-x", status, null, "Demo X", headline, bio, portfolio, null, null, email, github, nip, null);
 
-    static OfferingPrivateDto Offer(bool active) => new(Guid.NewGuid(), "Oferta", "", 30, new MoneyDto(10000, "PLN"), "code-review", [], active, null, "Tasks", 1);
+    static PackagePrivateDto Offer(bool active) => new(Guid.NewGuid(), "Oferta", "", 30, new MoneyDto(10000, "PLN"), "code-review", [], active, null, "Tasks", 1);
 
     [Fact]
     public void An_empty_draft_has_seven_open_steps_in_the_order_of_the_contract()
@@ -85,8 +85,8 @@ public class ChecklistTests
 
 public class NextStepsTests
 {
-    static PractitionerPrivateDto Profile(string status) => new(Guid.NewGuid(), "demo-x", status, null, "Demo X", "", "", null, null, null, false, false, false, null);
-    static OfferingPrivateDto Offer(bool active) => new(Guid.NewGuid(), "Oferta", "", 30, new MoneyDto(10000, "PLN"), "code-review", [], active, null, "Tasks", 1);
+    static AgentPrivateDto Profile(string status) => new(Guid.NewGuid(), "demo-x", status, null, "Demo X", "", "", null, null, null, false, false, false, null);
+    static PackagePrivateDto Offer(bool active) => new(Guid.NewGuid(), "Oferta", "", 30, new MoneyDto(10000, "PLN"), "code-review", [], active, null, "Tasks", 1);
 
     [Fact]
     public void The_order_is_verification_offers_payments_and_the_first_open_one_is_next()

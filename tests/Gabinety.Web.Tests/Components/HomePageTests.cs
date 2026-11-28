@@ -23,7 +23,7 @@ public class HomePageTests : BunitContext
         new("/agenci/integracja-ai", 2, true), new("/agenci/automatyzacja-procesow", 5, true),
     ]);
 
-    PageDto<PractitionerCardDto> _cards = Sample.Cards(5);
+    PageDto<AgentCardDto> _cards = Sample.Cards(5);
     bool _taxonomyDown, _sitemapDown, _practitionersDown;
 
     public HomePageTests()

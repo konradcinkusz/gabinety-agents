@@ -14,17 +14,17 @@ public sealed class AdminApi(DirectoryClient directory, AccessClient access, Rep
         await tokens.AccessTokenAsync(ct) is { Length: > 0 } token ? await call(token) : ApiResult<T>.Fail(Unauthenticated);
 
     // ---- verification (Directory)
-    public Task<ApiResult<PageDto<AdminPractitionerRowDto>>> Agents(string status, string? cursor, int limit, CancellationToken ct = default) =>
-        With(t => directory.AdminPractitionersAsync(t, status, cursor, limit, ct), ct);
-    public Task<ApiResult<AdminPractitionerDetailDto>> Agent(Guid id, CancellationToken ct = default) => With(t => directory.AdminPractitionerAsync(t, id, ct), ct);
+    public Task<ApiResult<PageDto<AdminAgentRowDto>>> Agents(string status, string? cursor, int limit, CancellationToken ct = default) =>
+        With(t => directory.AdminAgentsAsync(t, status, cursor, limit, ct), ct);
+    public Task<ApiResult<AdminAgentDetailDto>> Agent(Guid id, CancellationToken ct = default) => With(t => directory.AdminAgentAsync(t, id, ct), ct);
     public Task<ApiResult<AdminVerificationEventsDto>> VerificationEvents(Guid id, CancellationToken ct = default) => With(t => directory.AdminVerificationEventsAsync(t, id, ct), ct);
-    public Task<ApiResult<Unit>> PractitionerAction(Guid id, string action, string? reason, CancellationToken ct = default) =>
-        With(t => directory.AdminPractitionerActionAsync(t, id, action, reason, ct), ct);
+    public Task<ApiResult<Unit>> AgentAction(Guid id, string action, string? reason, CancellationToken ct = default) =>
+        With(t => directory.AdminAgentActionAsync(t, id, action, reason, ct), ct);
 
     // ---- disputes and the ledger (Booking)
     public Task<ApiResult<PageDto<AdminDisputeDto>>> Disputes(string status, string? cursor, int limit, CancellationToken ct = default) =>
         With(t => access.AdminDisputesAsync(t, status, cursor, limit, ct), ct);
-    public Task<ApiResult<AdminBookingDto>> Access(Guid id, CancellationToken ct = default) => With(t => access.AdminBookingAsync(t, id, ct), ct);
+    public Task<ApiResult<AdminAccessDto>> Access(Guid id, CancellationToken ct = default) => With(t => access.AdminAccessAsync(t, id, ct), ct);
     public Task<ApiResult<Unit>> Resolve(Guid accessId, string resolution, long? refundMinor, string note, CancellationToken ct = default) =>
         With(t => access.AdminResolveAsync(t, accessId, resolution, refundMinor, note, ct), ct);
     public Task<ApiResult<LedgerPreviewDto>> LedgerPreview(string from, string to, int max, CancellationToken ct = default) =>
@@ -43,7 +43,7 @@ public sealed class AdminApi(DirectoryClient directory, AccessClient access, Rep
         With(t => reputation.AdminSuspiciousPairsAsync(t, cursor, limit, ct), ct);
 
     /// <summary>Display names of practitioners by id (one Directory read each, in parallel, at most <paramref name="max"/>): a name a page cannot get is simply absent and the page shows a short reference.</summary>
-    public async Task<IReadOnlyDictionary<Guid, string>> PractitionerNames(IEnumerable<Guid> ids, int max = 20, CancellationToken ct = default)
+    public async Task<IReadOnlyDictionary<Guid, string>> AgentNames(IEnumerable<Guid> ids, int max = 20, CancellationToken ct = default)
     {
         var distinct = ids.Distinct().Take(max).ToList();
         var found = await Task.WhenAll(distinct.Select(async id => (id, result: await Agent(id, ct))));

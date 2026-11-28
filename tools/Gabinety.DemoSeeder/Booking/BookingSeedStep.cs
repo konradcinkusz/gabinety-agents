@@ -59,7 +59,7 @@ public sealed class BookingSeedStep : ISeedStep
     {
         var known = new Dictionary<string, BookingInfo>();
         foreach (var c in clients)
-            foreach (var b in await api.MyBookingsAsync(c, ct))
+            foreach (var b in await api.MyAccessesAsync(c, ct))
                 if (KeyOf(b) is { } key) known[key] = b;
         return known;
     }
