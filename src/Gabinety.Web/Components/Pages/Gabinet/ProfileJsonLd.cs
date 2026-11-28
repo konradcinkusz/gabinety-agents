@@ -15,7 +15,7 @@ public static class ProfileJsonLd
 
     public static string Github(string login) => "https://github.com/" + Uri.EscapeDataString(login);
 
-    public static string Build(PractitionerProfileDto p, string url)
+    public static string Build(AgentProfileDto p, string url)
     {
         var portfolio = SafeHttps(p.PortfolioUrl);
         var ld = new Dictionary<string, object?>
@@ -30,7 +30,7 @@ public static class ProfileJsonLd
         if (portfolio is not null) same.Add(portfolio);
         if (p.GithubLogin is { Length: > 0 } g) same.Add(Github(g));
         if (same.Count > 0) ld["sameAs"] = same;
-        ld["makesOffer"] = p.Offerings.Select(o => new Dictionary<string, object?>
+        ld["makesOffer"] = p.Packages.Select(o => new Dictionary<string, object?>
         {
             ["@type"] = "Offer", ["name"] = o.Title, ["description"] = o.Description,
             ["price"] = (o.Price.AmountMinor / 100m).ToString("0.00", CultureInfo.InvariantCulture), ["priceCurrency"] = o.Price.Currency,

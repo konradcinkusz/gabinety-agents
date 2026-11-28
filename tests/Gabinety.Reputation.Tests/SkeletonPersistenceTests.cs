@@ -29,7 +29,7 @@ public class SkeletonMigrationStateTests
         var id = Guid.NewGuid();
         db.Reviews.Add(new Review
         {
-            Id = id, BookingId = Guid.NewGuid(), PractitionerId = Guid.NewGuid(), ClientUserId = "demo-user-1", Rating = 4,
+            Id = id, AccessId = Guid.NewGuid(), AgentId = Guid.NewGuid(), ClientUserId = "demo-user-1", Rating = 4,
             Text = "Synthetyczna opinia o długości powyżej dwudziestu znaków.", Status = Gabinety.Contracts.Reputation.ReviewStatus.Held,
             HoldReasons = ["contains_link", "repetition"], CreatedAt = new DateTimeOffset(2026, 11, 16, 12, 0, 0, TimeSpan.Zero),
         });

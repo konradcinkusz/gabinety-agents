@@ -31,7 +31,7 @@ public sealed record HeaderModel(IReadOnlyList<NavItem> Links, NavItem? SignIn, 
 }
 
 /// <summary>What the footer shows: the product links, one call to action for programmers (the practitioner panel or the way to become one) and the legal links.</summary>
-public sealed record FooterModel(IReadOnlyList<NavItem> Product, NavItem Practitioner, IReadOnlyList<NavItem> Legal);
+public sealed record FooterModel(IReadOnlyList<NavItem> Product, NavItem Agent, IReadOnlyList<NavItem> Legal);
 
 /// <summary>
 /// The navigation of the header and the footer (DESIGN-CONTRACT 5.1). The ORDER of the primary links is a product decision pinned by a test: <c>Programiści</c>, <c>Jak to działa</c>,
@@ -41,40 +41,40 @@ public sealed record FooterModel(IReadOnlyList<NavItem> Product, NavItem Practit
 /// </summary>
 public static class SiteNavigation
 {
-    public static readonly NavItem Practitioners = new("/agenci", Pl.Nav.Search);
+    public static readonly NavItem Agents = new("/agenci", Pl.Nav.Search);
     public static readonly NavItem HowItWorks = new("/jak-to-dziala", Pl.Nav.HowItWorks);
     public static readonly NavItem Pricing = new("/cennik", Pl.Nav.Pricing);
     public static readonly NavItem RankingRules = new("/zasady-rankingu", Pl.Nav.RankingRules);
 
     /// <summary>The primary navigation of everybody, in order.</summary>
-    public static IReadOnlyList<NavItem> Primary { get; } = [Practitioners, HowItWorks, Pricing];
+    public static IReadOnlyList<NavItem> Primary { get; } = [Agents, HowItWorks, Pricing];
 
     /// <summary>The footer's product column: the primary links and the ranking rules.</summary>
-    public static IReadOnlyList<NavItem> Product { get; } = [Practitioners, HowItWorks, Pricing, RankingRules];
+    public static IReadOnlyList<NavItem> Product { get; } = [Agents, HowItWorks, Pricing, RankingRules];
 
     public static readonly NavItem SignIn = new(ReturnTarget.LoginPath, Pl.Nav.SignIn), Register = new(ReturnTarget.RegisterPath, Pl.Nav.Register);
-    public static readonly NavItem MyBookings = new("/moje/dostepy", Pl.Nav.MyBookings), ApiKeys = new("/moje/klucze", Pl.Nav.ApiKeys), Account = new("/konto", Pl.Nav.Account), SignOut = new(ReturnTarget.LogoutPath, Pl.Nav.SignOut);
-    public static readonly NavItem PractitionerArea = new("/panel-agenta", Pl.Nav.PractitionerArea), BecomePractitioner = new("/panel-agenta", Pl.Nav.BecomePractitioner);
+    public static readonly NavItem MyAccesses = new("/moje/dostepy", Pl.Nav.MyAccesses), ApiKeys = new("/moje/klucze", Pl.Nav.ApiKeys), Account = new("/konto", Pl.Nav.Account), SignOut = new(ReturnTarget.LogoutPath, Pl.Nav.SignOut);
+    public static readonly NavItem AgentArea = new("/panel-agenta", Pl.Nav.AgentArea), BecomeAgent = new("/panel-agenta", Pl.Nav.BecomeAgent);
     public static readonly NavItem Admin = new("/admin/weryfikacja", Pl.Nav.Admin, "/admin");
-    public static readonly NavItem VisitorBecomePractitioner = new("/rejestracja", Pl.Nav.BecomePractitioner);
+    public static readonly NavItem VisitorBecomeAgent = new("/rejestracja", Pl.Nav.BecomeAgent);
     public static readonly NavItem Terms = new("/regulamin", Pl.Site.Terms), Privacy = new("/polityka-prywatnosci", Pl.Site.Privacy);
 
     /// <param name="back">The page the visitor is on, already filtered by <see cref="ReturnTarget.Safe"/>: the sign-in and registration links bring them back to it.</param>
-    /// <param name="practitioner">The signed-in account has a practitioner profile (it decides between the practitioner panel and the way to become one).</param>
-    public static HeaderModel For(ClaimsPrincipal? user, string currentPath, string back = "/", bool practitioner = false)
+    /// <param name="agent">The signed-in account has a practitioner profile (it decides between the practitioner panel and the way to become one).</param>
+    public static HeaderModel For(ClaimsPrincipal? user, string currentPath, string back = "/", bool agent = false)
     {
         if (user?.Identity?.IsAuthenticated != true) return new HeaderModel(Primary, SignIn with { Href = ReturnTarget.LoginUrl(back) }, Register with { Href = ReturnTarget.RegisterUrl(back) }, [], null, currentPath);
-        List<NavItem> menu = [MyBookings, ApiKeys, Account, practitioner ? PractitionerArea : BecomePractitioner];
+        List<NavItem> menu = [MyAccesses, ApiKeys, Account, agent ? AgentArea : BecomeAgent];
         if (ClaimMapping.IsAdmin(user)) menu.Add(Admin);
         menu.Add(SignOut);
         return new HeaderModel(Primary, null, null, menu, ClaimMapping.Email(user.Claims), currentPath);
     }
 
     /// <summary>The footer of the same visitor: a visitor is sent to registration, a client to the way to become a programmer, a practitioner to the panel (D-2).</summary>
-    public static FooterModel Footer(ClaimsPrincipal? user, bool practitioner)
+    public static FooterModel Footer(ClaimsPrincipal? user, bool agent)
     {
-        var practitionerLink = user?.Identity?.IsAuthenticated != true ? VisitorBecomePractitioner : practitioner ? PractitionerArea : BecomePractitioner;
-        return new FooterModel(Product, practitionerLink, [Terms, Privacy]);
+        var agentLink = user?.Identity?.IsAuthenticated != true ? VisitorBecomeAgent : agent ? AgentArea : BecomeAgent;
+        return new FooterModel(Product, agentLink, [Terms, Privacy]);
     }
 }
 

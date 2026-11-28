@@ -39,15 +39,15 @@ static class Pay
         return await c.SendAsync(req);
     }
 
-    public static Task<HttpResponseMessage> Simulate(HttpClient c, Guid bookingId, string outcome) =>
-        c.PostAsJsonAsync("/api/v1/payments/simulate", new { bookingId, outcome });
+    public static Task<HttpResponseMessage> Simulate(HttpClient c, Guid accessId, string outcome) =>
+        c.PostAsJsonAsync("/api/v1/payments/simulate", new { bookingId = accessId, outcome });
 
     /// <summary>Creates a booking as <paramref name="client"/> for Tuesday 10:00 UTC and returns its id and provider payment id.</summary>
-    public static async Task<(Guid Id, string ProviderPaymentId)> CreateBooking(CreateHost h, string client = "demo-client-1", string start = CreateHost.Tuesday10)
+    public static async Task<(Guid Id, string ProviderPaymentId)> CreateAccess(CreateHost h, string client = "demo-client-1", string start = CreateHost.Tuesday10)
     {
         var r = await CreateHost.Post(h.ClientFor(client), h.Req(start), CreateHost.Key());
         Assert.Equal(HttpStatusCode.Created, r.StatusCode);
         var id = (await r.Body()).GetProperty("bookingId").GetGuid();
-        return (id, await h.Query(db => db.Payments.Where(p => p.BookingId == id).Select(p => p.ProviderPaymentId!).SingleAsync()));
+        return (id, await h.Query(db => db.Payments.Where(p => p.AccessId == id).Select(p => p.ProviderPaymentId!).SingleAsync()));
     }
 }

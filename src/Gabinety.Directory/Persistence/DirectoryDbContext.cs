@@ -5,8 +5,8 @@ namespace Gabinety.Directory.Persistence;
 /// <summary>Owns directorydb (P3). Entities and their IEntityTypeConfiguration classes arrive with T-03.02 onward.</summary>
 public sealed class DirectoryDbContext(DbContextOptions<DirectoryDbContext> options) : DbContext(options)
 {
-    public DbSet<Features.Profiles.Practitioner> Practitioners => Set<Features.Profiles.Practitioner>();
-    public DbSet<Features.Offerings.Offering> Offerings => Set<Features.Offerings.Offering>();
+    public DbSet<Features.Profiles.Agent> Agents => Set<Features.Profiles.Agent>();
+    public DbSet<Features.Packages.Package> Packages => Set<Features.Packages.Package>();
     public DbSet<Features.Taxonomy.Category> Categories => Set<Features.Taxonomy.Category>();
     public DbSet<Features.Taxonomy.TaxonomyMeta> TaxonomyMeta => Set<Features.Taxonomy.TaxonomyMeta>();
 

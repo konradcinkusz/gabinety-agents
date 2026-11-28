@@ -12,7 +12,7 @@ namespace Gabinety.Booking.Tests;
 [Trait("tier", "integration")]
 public class NotificationIntegrationTests
 {
-    static BookingDbContext Db(string cs) => new(new DbContextOptionsBuilder<BookingDbContext>().UseNpgsql(cs).Options);
+    static AccessDbContext Db(string cs) => new(new DbContextOptionsBuilder<AccessDbContext>().UseNpgsql(cs).Options);
 
     static async Task<PostgreSqlContainer> Pg()
     {
@@ -37,25 +37,25 @@ public class NotificationIntegrationTests
     }
 
     [Fact]
-    public async Task The_unique_index_rejects_a_duplicate_booking_kind_and_user()
+    public async Task The_unique_index_rejects_a_duplicate_access_kind_and_user()
     {
         await using var pg = await Pg();
         using var host = Host(pg.GetConnectionString(), new(), new());
         host.CreateClient();
         await host.Services.GetRequiredService<MigrationState>().WaitForCompletionAsync(TimeSpan.FromSeconds(60));
-        var booking = Guid.NewGuid();
+        var access = Guid.NewGuid();
         var due = DateTimeOffset.UtcNow;
 
         await using var db = Db(pg.GetConnectionString());
-        db.Notifications.Add(new() { Id = Guid.NewGuid(), BookingId = booking, Kind = NotificationKind.Reminder1h, ToUserId = "demo-client", DueAt = due });
+        db.Notifications.Add(new() { Id = Guid.NewGuid(), AccessId = access, Kind = NotificationKind.Reminder1h, ToUserId = "demo-client", DueAt = due });
         await db.SaveChangesAsync();
 
         await using var db2 = Db(pg.GetConnectionString());
-        db2.Notifications.Add(new() { Id = Guid.NewGuid(), BookingId = booking, Kind = NotificationKind.Reminder1h, ToUserId = "demo-client", DueAt = due });
+        db2.Notifications.Add(new() { Id = Guid.NewGuid(), AccessId = access, Kind = NotificationKind.Reminder1h, ToUserId = "demo-client", DueAt = due });
         await Assert.ThrowsAsync<DbUpdateException>(() => db2.SaveChangesAsync());
 
         db2.ChangeTracker.Clear();
-        db2.Notifications.Add(new() { Id = Guid.NewGuid(), BookingId = booking, Kind = NotificationKind.Reminder1h, ToUserId = "demo-practitioner", DueAt = due }); // another user: fine
+        db2.Notifications.Add(new() { Id = Guid.NewGuid(), AccessId = access, Kind = NotificationKind.Reminder1h, ToUserId = "demo-practitioner", DueAt = due }); // another user: fine
         await db2.SaveChangesAsync();
     }
 
@@ -72,18 +72,18 @@ public class NotificationIntegrationTests
         b.CreateClient();
         await a.Services.GetRequiredService<MigrationState>().WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
-        var booking = Guid.NewGuid();
+        var access = Guid.NewGuid();
         var now = a.Clock.GetUtcNow();
         var ids = new List<Guid>();
         await using (var seed = Db(cs))
         {
             for (var i = 0; i < 40; i++)
             {
-                var n = new Notification { Id = Guid.NewGuid(), BookingId = booking, Kind = NotificationKind.Reminder24h, ToUserId = $"demo-user-{i:D3}", DueAt = now };
+                var n = new Notification { Id = Guid.NewGuid(), AccessId = access, Kind = NotificationKind.Reminder24h, ToUserId = $"demo-user-{i:D3}", DueAt = now };
                 ids.Add(n.Id);
                 seed.Notifications.Add(n);
             }
-            seed.Bookings.Add(new() { Id = booking, ClientUserId = "demo-client", PractitionerUserId = "demo-practitioner", OfferingTitle = "demo-offering", StartUtc = now.AddDays(2), EndUtc = now.AddDays(2).AddHours(1), IdempotencyKey = Guid.NewGuid(), CreatedAt = now, Status = Gabinety.Billing.BookingStatus.Confirmed });
+            seed.Accesses.Add(new() { Id = access, ClientUserId = "demo-client", AgentUserId = "demo-practitioner", PackageTitle = "demo-offering", StartUtc = now.AddDays(2), EndUtc = now.AddDays(2).AddHours(1), IdempotencyKey = Guid.NewGuid(), CreatedAt = now, Status = Gabinety.Billing.AccessStatus.Confirmed });
             await seed.SaveChangesAsync();
         }
 

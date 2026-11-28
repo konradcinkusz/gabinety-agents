@@ -3,7 +3,7 @@ using Gabinety.Booking.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -31,24 +31,24 @@ public class DisputeIntegrationTests : IAsyncLifetime
 
     public async Task DisposeAsync() { await host.DisposeAsync(); await pg.DisposeAsync(); }
 
-    BookingDbContext Db() => new(new DbContextOptionsBuilder<BookingDbContext>().UseNpgsql(cs).Options);
+    AccessDbContext Db() => new(new DbContextOptionsBuilder<AccessDbContext>().UseNpgsql(cs).Options);
 
     [Fact]
-    public async Task Two_concurrent_disputes_of_one_booking_give_one_200_and_one_409_and_the_winners_text_is_kept()
+    public async Task Two_concurrent_disputes_of_one_access_give_one_200_and_one_409_and_the_winners_text_is_kept()
     {
         for (var round = 0; round < 10; round++)
         {
             // A Disputed booking stays in the no-overlap constraint, so each round gets its own slot, 4 h apart: 3 h to 39 h back, each ended
             // less than 48 h ago (inside the dispute window, and inside the 60-day horizon of the test clock).
-            var id = await Life.Seed(host, BookingStatus.Confirmed, TimeSpan.FromHours(-3 - 4 * round));
+            var id = await Life.Seed(host, AccessStatus.Confirmed, TimeSpan.FromHours(-3 - 4 * round));
             var texts = new[] { $"demo-dispute-A-{round:00}-text", $"demo-dispute-B-{round:00}-text" };
             var rs = await Task.WhenAll(texts.Select(t => Task.Run(() => DisputeApiTests.Dispute(host, id, Life.Client, new { kind = "other", text = t }))));
             var codes = rs.Select(r => (int)r.StatusCode).Order().ToArray();
             Assert.True(codes.SequenceEqual([200, 409]), $"round {round}: {string.Join(",", codes)}");
             var winner = Array.FindIndex(rs, r => r.StatusCode == HttpStatusCode.OK);
             await using var db = Db();
-            var row = await db.Bookings.SingleAsync(b => b.Id == id);
-            Assert.Equal(BookingStatus.Disputed, row.Status);
+            var row = await db.Accesses.SingleAsync(b => b.Id == id);
+            Assert.Equal(AccessStatus.Disputed, row.Status);
             Assert.Equal(texts[winner], row.DisputeText);
         }
     }

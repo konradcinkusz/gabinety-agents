@@ -1,15 +1,15 @@
 using System.Net;
 using System.Text.Json;
 using Gabinety.Booking.Features.Analytics;
-using Gabinety.Booking.Features.Bookings.Create;
+using Gabinety.Booking.Features.Accesses.Create;
 using Gabinety.Booking.Features.Payouts;
 using Gabinety.Booking.Persistence;
 using Gabinety.Contracts.Booking;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessEntity = Gabinety.Booking.Features.Accesses.Entities.Access;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -38,7 +38,7 @@ public sealed class PairCountsPostgresFixture : IAsyncLifetime
     public async Task DisposeAsync() { await Host.DisposeAsync(); await _pg.DisposeAsync(); }
 
     /// <summary>Seeds <paramref name="count"/> bookings of a pair, each with a payment in <paramref name="payment"/> (none when null). Every booking gets its own day, so no two overlap.</summary>
-    public Task Seed(string client, Guid practitioner, int count, PaymentStatus? payment = PaymentStatus.Succeeded, BookingStatus status = BookingStatus.Completed) =>
+    public Task Seed(string client, Guid agent, int count, PaymentStatus? payment = PaymentStatus.Succeeded, AccessStatus status = AccessStatus.Completed) =>
         Host.Seed(db =>
         {
             for (var i = 0; i < count; i++)
@@ -48,13 +48,13 @@ public sealed class PairCountsPostgresFixture : IAsyncLifetime
                 if (payment is { } ps)
                     db.Payments.Add(new Payment
                     {
-                        Id = Guid.NewGuid(), BookingId = id, Provider = "mock", AmountMinor = 12345, Status = ps,
+                        Id = Guid.NewGuid(), AccessId = id, Provider = "mock", AmountMinor = 12345, Status = ps,
                         RefundedMinor = ps == PaymentStatus.Refunded ? 12345 : ps == PaymentStatus.PartiallyRefunded ? 100 : 0, CreatedAt = start, UpdatedAt = start,
                     });
-                db.Bookings.Add(new BookingEntity
+                db.Accesses.Add(new AccessEntity
                 {
-                    Id = id, ClientUserId = client, PractitionerId = practitioner, PractitionerUserId = "demo-practitioner-user",
-                    OfferingId = Host.Offering, OfferingTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 12345,
+                    Id = id, ClientUserId = client, AgentId = agent, AgentUserId = "demo-practitioner-user",
+                    PackageId = Host.Package, PackageTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 12345,
                     StartUtc = start, EndUtc = start.AddHours(1), Status = status, BriefText = "demo-brief",
                     IdempotencyKey = Guid.NewGuid(), CreatedAt = start.AddDays(-2),
                 });
@@ -97,7 +97,7 @@ public sealed class PairCountsPostgresFixture : IAsyncLifetime
 public class PairCountsPostgresTests(PairCountsPostgresFixture f) : IClassFixture<PairCountsPostgresFixture>
 {
     [Fact]
-    public async Task A_pair_with_more_than_two_paid_bookings_is_listed_with_its_count_and_a_pair_with_two_is_not()
+    public async Task A_pair_with_more_than_two_paid_accesses_is_listed_with_its_count_and_a_pair_with_two_is_not()
     {
         var p = Guid.NewGuid();
         await f.Seed("demo-pgc-three", p, 3);
@@ -114,12 +114,12 @@ public class PairCountsPostgresTests(PairCountsPostgresFixture f) : IClassFixtur
     }
 
     [Fact]
-    public async Task Only_a_succeeded_or_partially_refunded_payment_counts_the_booking_status_does_not_matter()
+    public async Task Only_a_succeeded_or_partially_refunded_payment_counts_the_access_status_does_not_matter()
     {
         var p = Guid.NewGuid();
-        await f.Seed("demo-pgk-ok", p, 1, PaymentStatus.Succeeded, BookingStatus.Confirmed);
-        await f.Seed("demo-pgk-ok", p, 1, PaymentStatus.PartiallyRefunded, BookingStatus.Resolved);
-        await f.Seed("demo-pgk-ok", p, 1, PaymentStatus.Succeeded, BookingStatus.LateCancelledByClient);
+        await f.Seed("demo-pgk-ok", p, 1, PaymentStatus.Succeeded, AccessStatus.Confirmed);
+        await f.Seed("demo-pgk-ok", p, 1, PaymentStatus.PartiallyRefunded, AccessStatus.Resolved);
+        await f.Seed("demo-pgk-ok", p, 1, PaymentStatus.Succeeded, AccessStatus.LateCancelledByClient);
         foreach (var unpaid in new PaymentStatus?[] { null, PaymentStatus.Created, PaymentStatus.Failed, PaymentStatus.Refunded })
             await f.Seed("demo-pgk-no", p, 1, unpaid); // five bookings in all, two paid
         await f.Seed("demo-pgk-no", p, 1, PaymentStatus.Succeeded);

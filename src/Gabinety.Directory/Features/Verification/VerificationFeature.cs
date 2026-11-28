@@ -19,9 +19,9 @@ public sealed record GithubLinkRequest(string? GithubLogin);
 public sealed record GithubLinkChallenge(string Code, string Instruction);
 public sealed record RejectRequest(string? Reason);
 public sealed record SuspendRequest(string? Reason);
-public sealed record AdminPractitionerRow(Guid Id, string Slug, string DisplayName, string Headline, PractitionerStatus Status,
+public sealed record AdminAgentRow(Guid Id, string Slug, string DisplayName, string Headline, AgentStatus Status,
     string? StatusReason, bool GithubLinked, string? GithubLogin, bool NipValid, DateTimeOffset CreatedAt, DateTimeOffset? SubmittedAt);
-public sealed record AdminPractitionerPage(IReadOnlyList<AdminPractitionerRow> Items, string? NextCursor);
+public sealed record AdminAgentPage(IReadOnlyList<AdminAgentRow> Items, string? NextCursor);
 
 /// <summary>GitHub linking by bio challenge (CONTRACTS 3.3) and the admin verification workflow with moderators (CONTRACTS 3.4). Reasons and bios are never logged.</summary>
 public sealed class VerificationFeature : IServiceFeature
@@ -49,13 +49,13 @@ public sealed class VerificationFeature : IServiceFeature
         var admin = endpoints.MapGroup("/api/v1/admin").RequireAuthorization("Admin");
         admin.MapGet("practitioners", List);
         admin.MapPost("practitioners/{id:guid}/approve", (Guid id, ClaimsPrincipal u, DirectoryDbContext db, TimeProvider t, CancellationToken ct) =>
-            Transition(id, PractitionerTrigger.Approve, null, u, db, t, ct));
+            Transition(id, AgentTrigger.Approve, null, u, db, t, ct));
         admin.MapPost("practitioners/{id:guid}/reject", (Guid id, RejectRequest? req, ClaimsPrincipal u, DirectoryDbContext db, TimeProvider t, CancellationToken ct) =>
-            Transition(id, PractitionerTrigger.Reject, req?.Reason ?? "", u, db, t, ct));
-        admin.MapPost("practitioners/{id:guid}/suspend", (Guid id, SuspendRequest? req, ClaimsPrincipal u, DirectoryDbContext db, TimeProvider t, IBookingClient booking, CancellationToken ct) =>
-            Transition(id, PractitionerTrigger.Suspend, req?.Reason ?? "", u, db, t, ct, booking));
+            Transition(id, AgentTrigger.Reject, req?.Reason ?? "", u, db, t, ct));
+        admin.MapPost("practitioners/{id:guid}/suspend", (Guid id, SuspendRequest? req, ClaimsPrincipal u, DirectoryDbContext db, TimeProvider t, IAccessClient access, CancellationToken ct) =>
+            Transition(id, AgentTrigger.Suspend, req?.Reason ?? "", u, db, t, ct, access));
         admin.MapPost("practitioners/{id:guid}/reinstate", (Guid id, ClaimsPrincipal u, DirectoryDbContext db, TimeProvider t, CancellationToken ct) =>
-            Transition(id, PractitionerTrigger.Reinstate, null, u, db, t, ct));
+            Transition(id, AgentTrigger.Reinstate, null, u, db, t, ct));
         admin.MapPut("moderators/{userId}", AddModerator).RequireAuthorization(p => p.RequireRole("SuperAdmin"));
         admin.MapDelete("moderators/{userId}", RemoveModerator).RequireAuthorization(p => p.RequireRole("SuperAdmin"));
     }
@@ -99,7 +99,7 @@ public sealed class VerificationFeature : IServiceFeature
 
         var lower = login.ToLowerInvariant();
         // One GitHub profile belongs to one provider account (E-04): the agents of one account may share it, another account's agent may not.
-        if (await db.Practitioners.AnyAsync(x => x.UserId != p.UserId && x.GithubLinked && x.GithubLogin != null && x.GithubLogin.ToLower() == lower, ct))
+        if (await db.Agents.AnyAsync(x => x.UserId != p.UserId && x.GithubLinked && x.GithubLogin != null && x.GithubLogin.ToLower() == lower, ct))
             return NotLinked(new() { ["githubLogin"] = ["this GitHub account is already linked to another profile"] });
 
         GithubProfile profile;
@@ -109,7 +109,7 @@ public sealed class VerificationFeature : IServiceFeature
 
         p.GithubLinked = true; p.GithubLogin = login;
         p.GithubChallengeCode = null; p.GithubChallengeLogin = null; p.GithubChallengeExpiresAt = null;
-        p.ProfileCompleteness = ProfileCompleteness.Compute(p.Headline.Length > 0, p.Bio.Length >= 200, await facts.ActiveOfferingCountAsync(p.Id, ct) > 0,
+        p.ProfileCompleteness = ProfileCompleteness.Compute(p.Headline.Length > 0, p.Bio.Length >= 200, await facts.ActivePackageCountAsync(p.Id, ct) > 0,
             true, p.PortfolioUrl is not null, p.NipValid, p.OpenSlots14d > 0);
         Ranking.RankingRecalculator.Recompute(p);
         p.UpdatedAt = now;
@@ -129,7 +129,7 @@ public sealed class VerificationFeature : IServiceFeature
     /// already refuses new bookings when that runs, and the call is idempotent. When Booking cannot finish, the profile stays suspended and the answer is 503 saying so;
     /// the cancellation is repeated through Booking's internal route (RUNBOOK 9.2).
     /// </summary>
-    static async Task<IResult> Transition(Guid id, PractitionerTrigger trigger, string? reason, ClaimsPrincipal user, DirectoryDbContext db, TimeProvider time, CancellationToken ct, IBookingClient? booking = null)
+    static async Task<IResult> Transition(Guid id, AgentTrigger trigger, string? reason, ClaimsPrincipal user, DirectoryDbContext db, TimeProvider time, CancellationToken ct, IAccessClient? access = null)
     {
         if (UserId(user) is not { } admin) return Results.Unauthorized();
         string? note = null;
@@ -138,27 +138,27 @@ public sealed class VerificationFeature : IServiceFeature
             note = reason.Trim();
             if (note.Length is < 10 or > 500) return Invalid("reason", "10 to 500 characters");
         }
-        var p = await db.Practitioners.SingleOrDefaultAsync(x => x.Id == id, ct);
+        var p = await db.Agents.SingleOrDefaultAsync(x => x.Id == id, ct);
         if (p is null) return Problem(404, ErrorCodes.NotFound, "Not found");
-        if (!PractitionerStateMachine.TryTransition(p.Status, trigger, out var next)) return Problem(409, ErrorCodes.InvalidTransition, "Invalid transition");
+        if (!AgentStateMachine.TryTransition(p.Status, trigger, out var next)) return Problem(409, ErrorCodes.InvalidTransition, "Invalid transition");
 
         var now = time.GetUtcNow();
         p.Status = next; p.StatusReason = note; p.UpdatedAt = now;
-        if (trigger == PractitionerTrigger.Approve) p.ApprovedAt = now;
+        if (trigger == AgentTrigger.Approve) p.ApprovedAt = now;
         Ranking.RankingRecalculator.Recompute(p); // scores an Approved row (approve and reinstate); a no-op for any other status
         var kind = trigger switch
         {
-            PractitionerTrigger.Approve => VerificationEventKind.Approved,
-            PractitionerTrigger.Reject => VerificationEventKind.Rejected,
-            PractitionerTrigger.Suspend => VerificationEventKind.Suspended,
+            AgentTrigger.Approve => VerificationEventKind.Approved,
+            AgentTrigger.Reject => VerificationEventKind.Rejected,
+            AgentTrigger.Suspend => VerificationEventKind.Suspended,
             _ => VerificationEventKind.Reinstated,
         };
         VerificationEvents.Record(db, p.Id, kind, admin, note, time); // one SaveChanges: the status and its event commit together
         await db.SaveChangesAsync(ct);
-        if (trigger == PractitionerTrigger.Suspend && booking is not null)
+        if (trigger == AgentTrigger.Suspend && access is not null)
         {
-            try { await booking.CancelFutureBookingsAsync(p.Id, ct); }
-            catch (BookingUnavailableException)
+            try { await access.CancelFutureAccessesAsync(p.Id, ct); }
+            catch (AccessUnavailableException)
             {
                 return Problem(503, ErrorCodes.DependencyUnavailable, "Dependency unavailable",
                     detail: "The practitioner is suspended, but their future bookings could not all be cancelled yet; repeat the cancellation (RUNBOOK 9.2).");
@@ -171,7 +171,7 @@ public sealed class VerificationFeature : IServiceFeature
 
     static async Task<IResult> List(string? status, string? cursor, int? limit, DirectoryDbContext db, CancellationToken ct)
     {
-        var wanted = PractitionerStatus.Submitted;
+        var wanted = AgentStatus.Submitted;
         if (status is not null && !(Enum.TryParse(status, true, out wanted) && Enum.IsDefined(wanted) && !char.IsDigit(status[0])))
             return Invalid("status", "one of Draft, Submitted, Approved, Rejected, Suspended");
         (DateTimeOffset At, Guid Id)? after = null;
@@ -183,20 +183,20 @@ public sealed class VerificationFeature : IServiceFeature
         var take = Math.Clamp(limit ?? DefaultLimit, 1, MaxLimit);
 
         // Sort key: the time of the latest Submitted event, else created_at; then id. Order BEFORE projecting to the record (Npgsql cannot translate it after).
-        var q = db.Practitioners.AsNoTracking().Where(p => p.Status == wanted)
+        var q = db.Agents.AsNoTracking().Where(p => p.Status == wanted)
             .Select(p => new
             {
                 P = p,
-                Submitted = db.VerificationEvents.Where(e => e.PractitionerId == p.Id && e.Kind == VerificationEventKind.Submitted).Max(e => (DateTimeOffset?)e.At),
+                Submitted = db.VerificationEvents.Where(e => e.AgentId == p.Id && e.Kind == VerificationEventKind.Submitted).Max(e => (DateTimeOffset?)e.At),
             })
             .Select(x => new { x.P, x.Submitted, Key = x.Submitted ?? x.P.CreatedAt });
         if (after is { } a) q = q.Where(x => x.Key > a.At || (x.Key == a.At && x.P.Id.CompareTo(a.Id) > 0));
         var rows = await q.OrderBy(x => x.Key).ThenBy(x => x.P.Id).Take(take + 1).ToListAsync(ct);
 
-        var items = rows.Take(take).Select(x => new AdminPractitionerRow(x.P.Id, x.P.Slug, x.P.DisplayName, x.P.Headline, x.P.Status, x.P.StatusReason,
+        var items = rows.Take(take).Select(x => new AdminAgentRow(x.P.Id, x.P.Slug, x.P.DisplayName, x.P.Headline, x.P.Status, x.P.StatusReason,
             x.P.GithubLinked, x.P.GithubLogin, x.P.NipValid, x.P.CreatedAt, x.Submitted)).ToList();
         var next = rows.Count > take ? Encode(rows[take - 1].Key, rows[take - 1].P.Id) : null;
-        return Results.Ok(new AdminPractitionerPage(items, next));
+        return Results.Ok(new AdminAgentPage(items, next));
     }
 
     /// <summary>Opaque cursor: base64url of "&lt;UTC ticks&gt;:&lt;id&gt;" (the id is last: a total order).</summary>

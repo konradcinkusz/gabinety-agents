@@ -1,10 +1,10 @@
 using System.Net;
-using Gabinety.Booking.Features.Bookings.Create;
+using Gabinety.Booking.Features.Accesses.Create;
 using Gabinety.Booking.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -30,15 +30,15 @@ public class ErasureIntegrationTests : IAsyncLifetime
 
     public async Task DisposeAsync() { await host.DisposeAsync(); await pg.DisposeAsync(); }
 
-    BookingDbContext Db() => new(new DbContextOptionsBuilder<BookingDbContext>().UseNpgsql(cs).Options);
+    AccessDbContext Db() => new(new DbContextOptionsBuilder<AccessDbContext>().UseNpgsql(cs).Options);
 
     [Fact]
     public async Task Two_users_with_the_same_idempotency_key_both_survive_their_erasure_with_their_own_row()
     {
         var shared = Guid.NewGuid(); // the key is only unique per client: two clients may well send the same one
-        string a = ErasureApiTests.NewUser("a"), b = ErasureApiTests.NewUser("b"), practitionerUser = ErasureApiTests.NewUser("p");
-        var ba = await ErasureApiTests.SeedBooking(host, a, practitionerUser, key: shared, withMoney: false);
-        var bb = await ErasureApiTests.SeedBooking(host, b, practitionerUser, key: shared, withMoney: false, day: 2);
+        string a = ErasureApiTests.NewUser("a"), b = ErasureApiTests.NewUser("b"), agentUser = ErasureApiTests.NewUser("p");
+        var ba = await ErasureApiTests.SeedAccess(host, a, agentUser, key: shared, withMoney: false);
+        var bb = await ErasureApiTests.SeedAccess(host, b, agentUser, key: shared, withMoney: false, day: 2);
         await host.Seed(db => db.IdempotencyRecords.AddRange(
             new IdempotencyRecord { ClientUserId = a, IdempotencyKey = shared, RequestHash = "ha", ResponseStatus = 201, ResponseBody = "{}", CreatedAt = host.Clock.GetUtcNow() },
             new IdempotencyRecord { ClientUserId = b, IdempotencyKey = shared, RequestHash = "hb", ResponseStatus = 201, ResponseBody = "{}", CreatedAt = host.Clock.GetUtcNow() }));
@@ -47,40 +47,40 @@ public class ErasureIntegrationTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.NoContent, (await ErasureApiTests.Erase(host, b)).StatusCode);
 
         await using var db = Db();
-        var rows = await db.Bookings.AsNoTracking().Where(x => x.Id == ba || x.Id == bb).OrderBy(x => x.ClientUserId).ToListAsync();
+        var rows = await db.Accesses.AsNoTracking().Where(x => x.Id == ba || x.Id == bb).OrderBy(x => x.ClientUserId).ToListAsync();
         Assert.Equal(new[] { ErasureApiTests.Token(a), ErasureApiTests.Token(b) }.Order().ToArray(), rows.Select(x => x.ClientUserId).ToArray());
         Assert.All(rows, x => { Assert.Equal(shared, x.IdempotencyKey); Assert.Equal("[usunięto]", x.BriefText); Assert.Equal(ErasureApiTests.Token(x.ClientUserId == ErasureApiTests.Token(a) ? a : b), x.ClientUserId); });
         var records = await db.IdempotencyRecords.AsNoTracking().Where(r => r.IdempotencyKey == shared).ToListAsync();
         Assert.Equal(new[] { ErasureApiTests.Token(a), ErasureApiTests.Token(b) }.Order().ToArray(), records.Select(r => r.ClientUserId).Order().ToArray());
-        Assert.Equal(0, await db.Bookings.CountAsync(x => x.ClientUserId == a || x.ClientUserId == b || x.PractitionerUserId == a || x.PractitionerUserId == b));
+        Assert.Equal(0, await db.Accesses.CountAsync(x => x.ClientUserId == a || x.ClientUserId == b || x.AgentUserId == a || x.AgentUserId == b));
 
         // the index still guards: a second row of the same (token, key) is refused
-        db.Bookings.Add(new Gabinety.Booking.Features.Bookings.Entities.Booking
+        db.Accesses.Add(new Gabinety.Booking.Features.Accesses.Entities.Access
         {
-            Id = Guid.NewGuid(), ClientUserId = ErasureApiTests.Token(a), PractitionerId = Guid.NewGuid(), PractitionerUserId = practitionerUser, OfferingId = host.Offering, OfferingTitle = "demo-offering",
-            DurationMinutes = 60, PriceMinor = 1, StartUtc = host.Clock.GetUtcNow().AddDays(5), EndUtc = host.Clock.GetUtcNow().AddDays(5).AddHours(1), Status = BookingStatus.Confirmed,
+            Id = Guid.NewGuid(), ClientUserId = ErasureApiTests.Token(a), AgentId = Guid.NewGuid(), AgentUserId = agentUser, PackageId = host.Package, PackageTitle = "demo-offering",
+            DurationMinutes = 60, PriceMinor = 1, StartUtc = host.Clock.GetUtcNow().AddDays(5), EndUtc = host.Clock.GetUtcNow().AddDays(5).AddHours(1), Status = AccessStatus.Confirmed,
             BriefText = "x", IdempotencyKey = shared, CreatedAt = host.Clock.GetUtcNow(),
         });
         await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
     }
 
     [Fact]
-    public async Task A_user_with_several_batches_of_bookings_is_erased_on_PostgreSQL()
+    public async Task A_user_with_several_batches_of_accesses_is_erased_on_PostgreSQL()
     {
         string u = ErasureApiTests.NewUser("many"), p = ErasureApiTests.NewUser("p");
         await host.Seed(db =>
         {
             for (var i = 0; i < 1203; i++)
-                db.Bookings.Add(new Gabinety.Booking.Features.Bookings.Entities.Booking
+                db.Accesses.Add(new Gabinety.Booking.Features.Accesses.Entities.Access
                 {
-                    Id = Guid.NewGuid(), ClientUserId = u, PractitionerId = Guid.NewGuid(), PractitionerUserId = p, OfferingId = host.Offering, OfferingTitle = "demo-offering",
+                    Id = Guid.NewGuid(), ClientUserId = u, AgentId = Guid.NewGuid(), AgentUserId = p, PackageId = host.Package, PackageTitle = "demo-offering",
                     DurationMinutes = 60, PriceMinor = 1, StartUtc = host.Clock.GetUtcNow().AddDays(1), EndUtc = host.Clock.GetUtcNow().AddDays(1).AddHours(1),
-                    Status = BookingStatus.Completed, BriefText = "demo-brief", IdempotencyKey = Guid.NewGuid(), CreatedAt = host.Clock.GetUtcNow(),
+                    Status = AccessStatus.Completed, BriefText = "demo-brief", IdempotencyKey = Guid.NewGuid(), CreatedAt = host.Clock.GetUtcNow(),
                 });
         });
         Assert.Equal(HttpStatusCode.NoContent, (await ErasureApiTests.Erase(host, u)).StatusCode);
         await using var db = Db();
-        Assert.Equal(0, await db.Bookings.CountAsync(x => x.ClientUserId == u));
-        Assert.Equal(1203, await db.Bookings.CountAsync(x => x.ClientUserId == ErasureApiTests.Token(u) && x.BriefText == "[usunięto]"));
+        Assert.Equal(0, await db.Accesses.CountAsync(x => x.ClientUserId == u));
+        Assert.Equal(1203, await db.Accesses.CountAsync(x => x.ClientUserId == ErasureApiTests.Token(u) && x.BriefText == "[usunięto]"));
     }
 }

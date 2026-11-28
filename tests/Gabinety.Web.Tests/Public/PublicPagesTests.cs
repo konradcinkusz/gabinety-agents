@@ -37,19 +37,19 @@ public class ProfilePageTests
     [Fact]
     public async Task The_book_button_is_Wykup_dostep_and_never_waits_for_a_slot_C01()
     {
-        await using var web = PublicSupport.Host(booking: FakeBackend.Throw(new HttpRequestException("down")));
+        await using var web = PublicSupport.Host(access: FakeBackend.Throw(new HttpRequestException("down")));
         var page = await Get(web);
         var book = page.All("ul.offerings > li")[1].QuerySelector("a.btn--primary")!;
         Assert.Equal("Wykup dostęp", book.TextContent); Assert.Equal("Wykup dostęp: Krótka konsultacja", book.GetAttribute("aria-label"));
         Assert.Equal($"/dostep/{PublicSupport.OfferB}?gabinet=demo-anna-demowska", book.GetAttribute("href"));
-        Assert.Empty(web.Booking.Requests); // no slot is read: the Booking service is not asked at all
+        Assert.Empty(web.Access.Requests); // no slot is read: the Booking service is not asked at all
         Assert.Null(page.One(".slot-days")); Assert.Null(page.One("a.slot"));
     }
 
     [Fact]
     public async Task Each_package_shows_its_units_and_validity_and_a_chat_package_the_openai_line_C01()
     {
-        await using var web = PublicSupport.Host(PublicSupport.DefaultDirectory(PublicSupport.Profile(offerings:
+        await using var web = PublicSupport.Host(PublicSupport.DefaultDirectory(PublicSupport.Profile(packages:
         [
             new(PublicSupport.OfferA, "Plan migracji", "Plan", 30, new MoneyDto(18000, "PLN"), "audyt-kodu", ["dotnet"], "Tasks", 10),
             new(PublicSupport.OfferB, "Dostęp do API czatu", "Czat", 30, new MoneyDto(9900, "PLN"), "audyt-kodu", [], "Chat", 500),
@@ -64,7 +64,7 @@ public class ProfilePageTests
     public async Task The_kind_is_read_as_the_public_profile_writes_it_in_lower_case()
     {
         // the Directory's public JSON writes the kind camelCased ("tasks", "chat"); the page must not show a chat package as "500 zadań"
-        await using var web = PublicSupport.Host(PublicSupport.DefaultDirectory(PublicSupport.Profile(offerings:
+        await using var web = PublicSupport.Host(PublicSupport.DefaultDirectory(PublicSupport.Profile(packages:
         [
             new(PublicSupport.OfferA, "Plan migracji", "Plan", 30, new MoneyDto(18000, "PLN"), "audyt-kodu", ["dotnet"], "tasks", 10),
             new(PublicSupport.OfferB, "Dostęp do API czatu", "Czat", 30, new MoneyDto(9900, "PLN"), "audyt-kodu", [], "chat", 500),
@@ -138,7 +138,7 @@ public class ProfilePageTests
         Assert.Equal("Zobacz pakiety", aside.QuerySelector("a")!.TextContent);
         Assert.Contains("Płatność z góry, pełny zwrot do pierwszego użycia pakietu", aside.TextContent);
 
-        await using var none = PublicSupport.Host(PublicSupport.DefaultDirectory(PublicSupport.Profile(offerings: [])));
+        await using var none = PublicSupport.Host(PublicSupport.DefaultDirectory(PublicSupport.Profile(packages: [])));
         Assert.Null((await Get(none)).One("aside.summary"));
     }
 
@@ -158,12 +158,12 @@ public class ProfilePageTests
     }
 
     [Fact]
-    public async Task F16_a_profile_with_no_packages_says_so_and_the_booking_service_is_not_asked()
+    public async Task F16_a_profile_with_no_packages_says_so_and_the_access_service_is_not_asked()
     {
-        await using var none = PublicSupport.Host(PublicSupport.DefaultDirectory(PublicSupport.Profile(offerings: [])));
+        await using var none = PublicSupport.Host(PublicSupport.DefaultDirectory(PublicSupport.Profile(packages: [])));
         var noOffers = await Get(none);
         Assert.Equal("Ten agent nie ma teraz aktywnych pakietów.", noOffers.TextOf("[data-testid=no-offerings]"));
-        Assert.Empty(none.Booking.Requests);
+        Assert.Empty(none.Access.Requests);
     }
 
     [Fact]
@@ -181,7 +181,7 @@ public class ProfilePageTests
         var review = new ReviewDto(Guid.NewGuid(), 5, "<b>Świetnie</b> & szybko", new DateTimeOffset(2026, 11, 20, 12, 0, 0, TimeSpan.Zero), new ReplyDto("Dziękuję!", new DateTimeOffset(2026, 11, 21, 12, 0, 0, TimeSpan.Zero)));
         await using var web = PublicSupport.Host(reputation: r => FakeBackend.Json(new PageDto<ReviewDto>([review], "CUR2")));
         var page = await Get(web, "/agent/demo-anna-demowska?opinie=CUR1");
-        Assert.Equal($"/api/v1/practitioners/{PublicSupport.PractitionerId}/reviews?cursor=CUR1", web.Reputation.Requests[0].PathAndQuery);
+        Assert.Equal($"/api/v1/practitioners/{PublicSupport.AgentId}/reviews?cursor=CUR1", web.Reputation.Requests[0].PathAndQuery);
         var item = page.One("section#opinie li")!;
         Assert.Contains("Zweryfikowany klient · Ocena: 5 z 5 · 20 listopada 2026", item.TextContent);
         Assert.Contains("<b>Świetnie</b> & szybko", item.TextContent);
@@ -386,7 +386,7 @@ public class ListPageFixesTests
     public async Task P_LIST_2_a_card_shows_one_verified_badge_not_four_and_the_rating_as_a_star()
     {
         await using var web = PublicSupport.Host(r => r.RequestUri!.AbsolutePath == "/api/v1/practitioners"
-            ? FakeBackend.Json(new PageDto<PractitionerCardDto>([Sample.Card(rating: new RatingDto(4.8, 25), isNew: false)], null)) : PublicSupport.DefaultDirectory()(r));
+            ? FakeBackend.Json(new PageDto<AgentCardDto>([Sample.Card(rating: new RatingDto(4.8, 25), isNew: false)], null)) : PublicSupport.DefaultDirectory()(r));
         var card = (await web.NewBrowser().GetAsync("/agenci")).One("[data-testid=practitioner-card]")!;
         Assert.Equal(["Agent AI", "Zweryfikowany"], card.QuerySelectorAll(".badge").Select(b => b.TextContent));
         Assert.Equal("★ 4,8 (25)", card.QuerySelector(".practitioner-card__rating")!.TextContent);
@@ -396,7 +396,7 @@ public class ListPageFixesTests
 public class SeoEndpointsTests
 {
     [Fact]
-    public async Task The_sitemap_lists_every_approved_practitioner_and_only_the_indexable_categories()
+    public async Task The_sitemap_lists_every_approved_agent_and_only_the_indexable_categories()
     {
         await using var web = PublicSupport.Host();
         var page = await web.NewBrowser().GetAsync("/sitemap.xml");

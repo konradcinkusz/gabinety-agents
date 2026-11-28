@@ -5,9 +5,9 @@ using Gabinety.Contracts.Common;
 using Gabinety.Contracts.Directory;
 using Gabinety.Directory.Features.Verification;
 using Gabinety.Directory.Tests.Internal;
-using Gabinety.Directory.Tests.Offerings;
+using Gabinety.Directory.Tests.Packages;
 using Gabinety.Directory.Tests.Verification;
-using static Gabinety.Directory.Tests.Offerings.Kit;
+using static Gabinety.Directory.Tests.Packages.Kit;
 
 namespace Gabinety.Directory.Tests.Profiles;
 
@@ -22,21 +22,21 @@ public class MultiAgentTests(InternalFactory f) : IClassFixture<InternalFactory>
 
     static string Account() => "demo-provider-" + Guid.NewGuid().ToString("n");
 
-    static async Task<PractitionerPrivate> Create(HttpClient c, string name)
+    static async Task<AgentPrivate> Create(HttpClient c, string name)
     {
-        var r = await c.PostAsJsonAsync(Me, new CreatePractitionerRequest(name), J);
+        var r = await c.PostAsJsonAsync(Me, new CreateAgentRequest(name), J);
         Assert.Equal(HttpStatusCode.Created, r.StatusCode);
-        return (await r.Content.ReadFromJsonAsync<PractitionerPrivate>(J))!;
+        return (await r.Content.ReadFromJsonAsync<AgentPrivate>(J))!;
     }
 
     static async Task<ApiProblem> Problem(HttpResponseMessage r) => (await r.Content.ReadFromJsonAsync<ApiProblem>(J))!;
 
-    static async Task<List<PractitionerSummary>> Agents(HttpClient c)
+    static async Task<List<AgentSummary>> Agents(HttpClient c)
     {
         var r = await c.GetAsync("/api/v1/me/practitioners");
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
         var doc = await r.Content.ReadFromJsonAsync<JsonElement>(J);
-        return doc.GetProperty("items").Deserialize<List<PractitionerSummary>>(J)!;
+        return doc.GetProperty("items").Deserialize<List<AgentSummary>>(J)!;
     }
 
     [Fact]
@@ -65,13 +65,13 @@ public class MultiAgentTests(InternalFactory f) : IClassFixture<InternalFactory>
     {
         var c = f.As(Account());
         for (var i = 0; i < 10; i++) await Create(c, $"Demo Limit {i} {Guid.NewGuid().ToString("n")[..8]}");
-        var r = await c.PostAsJsonAsync(Me, new CreatePractitionerRequest("Demo Eleventh Agent"), J);
+        var r = await c.PostAsJsonAsync(Me, new CreateAgentRequest("Demo Eleventh Agent"), J);
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, r.StatusCode);
         Assert.Equal("too_many_agents", (await Problem(r)).Code);
         Assert.Equal(10, (await Agents(c)).Count);
         // another account is not affected by this one's count
-        Assert.Equal(HttpStatusCode.Created, (await f.As(Account()).PostAsJsonAsync(Me, new CreatePractitionerRequest("Demo Other Account"), J)).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await f.As(Account()).PostAsJsonAsync(Me, new CreateAgentRequest("Demo Other Account"), J)).StatusCode);
     }
 
     [Fact]
@@ -85,10 +85,10 @@ public class MultiAgentTests(InternalFactory f) : IClassFixture<InternalFactory>
         Assert.Equal(HttpStatusCode.UnprocessableEntity, bare.StatusCode);
         Assert.Contains("agent", (await Problem(bare)).Errors!.Keys);
 
-        var put = await c.PutAsJsonAsync($"{Me}?agent={b.Slug}", new UpdatePractitionerRequest("Demo Epsilon Renamed", "Senior reviewer of agents", ""), J);
+        var put = await c.PutAsJsonAsync($"{Me}?agent={b.Slug}", new UpdateAgentRequest("Demo Epsilon Renamed", "Senior reviewer of agents", ""), J);
         Assert.Equal(HttpStatusCode.OK, put.StatusCode);
-        var gotB = (await c.GetFromJsonAsync<PractitionerPrivate>($"{Me}?agent={b.Slug}", J))!;
-        var gotA = (await c.GetFromJsonAsync<PractitionerPrivate>($"{Me}?agent={a.Slug}", J))!;
+        var gotB = (await c.GetFromJsonAsync<AgentPrivate>($"{Me}?agent={b.Slug}", J))!;
+        var gotA = (await c.GetFromJsonAsync<AgentPrivate>($"{Me}?agent={a.Slug}", J))!;
         Assert.Equal("Demo Epsilon Renamed", gotB.DisplayName);
         Assert.Equal(a.DisplayName, gotA.DisplayName);
     }
@@ -98,7 +98,7 @@ public class MultiAgentTests(InternalFactory f) : IClassFixture<InternalFactory>
     {
         var c = f.As(Account());
         var a = await Create(c, "Demo Solo " + Guid.NewGuid().ToString("n")[..6]);
-        Assert.Equal(a.Id, (await c.GetFromJsonAsync<PractitionerPrivate>(Me, J))!.Id);
+        Assert.Equal(a.Id, (await c.GetFromJsonAsync<AgentPrivate>(Me, J))!.Id);
     }
 
     [Fact]
@@ -110,21 +110,21 @@ public class MultiAgentTests(InternalFactory f) : IClassFixture<InternalFactory>
         await Create(intruder, "Demo Intruder " + Guid.NewGuid().ToString("n")[..6]);
 
         Assert.Equal(HttpStatusCode.NotFound, (await intruder.GetAsync($"{Me}?agent={mine.Slug}")).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await intruder.PutAsJsonAsync($"{Me}?agent={mine.Slug}", new UpdatePractitionerRequest("Demo Hijacked", "Senior reviewer of agents", ""), J)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await intruder.PutAsJsonAsync($"{Me}?agent={mine.Slug}", new UpdateAgentRequest("Demo Hijacked", "Senior reviewer of agents", ""), J)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await intruder.PostAsync($"{Me}/submit?agent={mine.Slug}", null)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await intruder.PostAsJsonAsync($"{Me}/offerings?agent={mine.Slug}", Valid(), J)).StatusCode);
-        Assert.Equal(mine.DisplayName, (await owner.GetFromJsonAsync<PractitionerPrivate>($"{Me}?agent={mine.Slug}", J))!.DisplayName);
+        Assert.Equal(mine.DisplayName, (await owner.GetFromJsonAsync<AgentPrivate>($"{Me}?agent={mine.Slug}", J))!.DisplayName);
         Assert.Empty(await List(owner, mine.Slug));
     }
 
-    static async Task<List<OfferingPrivate>> List(HttpClient c, string slug)
+    static async Task<List<PackagePrivate>> List(HttpClient c, string slug)
     {
         var doc = await c.GetFromJsonAsync<JsonElement>($"{Me}/offerings?agent={slug}", J);
-        return doc.GetProperty("items").Deserialize<List<OfferingPrivate>>(J)!;
+        return doc.GetProperty("items").Deserialize<List<PackagePrivate>>(J)!;
     }
 
     [Fact]
-    public async Task Offerings_belong_to_one_agent_and_the_active_limit_is_per_agent()
+    public async Task Packages_belong_to_one_agent_and_the_active_limit_is_per_agent()
     {
         var c = f.As(Account());
         var a = await Create(c, "Demo Offer A " + Guid.NewGuid().ToString("n")[..6]);
@@ -145,22 +145,22 @@ public class MultiAgentTests(InternalFactory f) : IClassFixture<InternalFactory>
     public async Task Approving_one_agent_leaves_the_other_submitted_and_suspending_one_leaves_the_other_approved()
     {
         var sub = Account();
-        var one = await f.Seed(PractitionerStatus.Submitted, userId: sub);
-        var two = await f.Seed(PractitionerStatus.Submitted, userId: sub);
+        var one = await f.Seed(AgentStatus.Submitted, userId: sub);
+        var two = await f.Seed(AgentStatus.Submitted, userId: sub);
         var admin = f.As("demo-admin-" + Guid.NewGuid().ToString("n"), "Admin");
 
         Assert.Equal(HttpStatusCode.NoContent, (await admin.PostAsync($"/api/v1/admin/practitioners/{one.Id}/approve", null)).StatusCode);
-        Assert.Equal(PractitionerStatus.Approved, (await f.Load(one.Id)).Status);
-        Assert.Equal(PractitionerStatus.Submitted, (await f.Load(two.Id)).Status);
+        Assert.Equal(AgentStatus.Approved, (await f.Load(one.Id)).Status);
+        Assert.Equal(AgentStatus.Submitted, (await f.Load(two.Id)).Status);
 
         Assert.Equal(HttpStatusCode.NoContent, (await admin.PostAsync($"/api/v1/admin/practitioners/{two.Id}/approve", null)).StatusCode);
-        f.Booking.Calls.Clear();
+        f.Access.Calls.Clear();
         var suspend = await admin.PostAsJsonAsync($"/api/v1/admin/practitioners/{one.Id}/suspend", new { reason = "Violates the rules of the marketplace" }, J);
         Assert.Equal(HttpStatusCode.NoContent, suspend.StatusCode);
 
-        Assert.Equal(PractitionerStatus.Suspended, (await f.Load(one.Id)).Status);
-        Assert.Equal(PractitionerStatus.Approved, (await f.Load(two.Id)).Status);
-        Assert.Equal([one.Id], f.Booking.Calls); // only the suspended agent's bookings were cancelled
+        Assert.Equal(AgentStatus.Suspended, (await f.Load(one.Id)).Status);
+        Assert.Equal(AgentStatus.Approved, (await f.Load(two.Id)).Status);
+        Assert.Equal([one.Id], f.Access.Calls); // only the suspended agent's bookings were cancelled
     }
 
     [Fact]
@@ -168,7 +168,7 @@ public class MultiAgentTests(InternalFactory f) : IClassFixture<InternalFactory>
     {
         var sub = Account();
         var login = "demo-shared-" + Guid.NewGuid().ToString("n")[..8];
-        await f.Seed(PractitionerStatus.Draft, p => { p.GithubLinked = true; p.GithubLogin = login; }, userId: sub);
+        await f.Seed(AgentStatus.Draft, p => { p.GithubLinked = true; p.GithubLogin = login; }, userId: sub);
         var c = f.As(sub);
         var second = await Create(c, "Demo Second Github " + Guid.NewGuid().ToString("n")[..6]);
         var third = await Create(c, "Demo Third Github " + Guid.NewGuid().ToString("n")[..6]);
@@ -190,26 +190,26 @@ public class MultiAgentTests(InternalFactory f) : IClassFixture<InternalFactory>
     }
 
     [Fact]
-    public async Task Me_lists_the_agents_and_keeps_the_first_as_practitionerId()
+    public async Task Me_lists_the_agents_and_keeps_the_first_as_agentId()
     {
         var c = f.As(Account());
         var a = await Create(c, "Demo Me A " + Guid.NewGuid().ToString("n")[..6]);
         f.Clock.Advance(TimeSpan.FromSeconds(1));
         var b = await Create(c, "Demo Me B " + Guid.NewGuid().ToString("n")[..6]);
         var me = (await c.GetFromJsonAsync<MeDto>("/api/v1/me", J))!;
-        Assert.Equal(a.Id, me.PractitionerId);
-        Assert.Equal(PractitionerStatus.Draft, me.PractitionerStatus);
+        Assert.Equal(a.Id, me.AgentId);
+        Assert.Equal(AgentStatus.Draft, me.AgentStatus);
         Assert.Equal([a.Id, b.Id], me.Agents!.Select(x => x.Id));
-        Assert.Null((await f.As(Account()).GetFromJsonAsync<MeDto>("/api/v1/me", J))!.PractitionerId);
+        Assert.Null((await f.As(Account()).GetFromJsonAsync<MeDto>("/api/v1/me", J))!.AgentId);
     }
 
     [Fact]
     public async Task The_internal_lookups_answer_for_an_account_with_two_agents()
     {
         var sub = Account();
-        var one = await f.Seed(PractitionerStatus.Approved, p => p.ContactEmail = "demo-old@example.test", userId: sub);
+        var one = await f.Seed(AgentStatus.Approved, p => p.ContactEmail = "demo-old@example.test", userId: sub);
         f.Clock.Advance(TimeSpan.FromSeconds(1));
-        var two = await f.Seed(PractitionerStatus.Draft, p => p.ContactEmail = "demo-new@example.test", userId: sub);
+        var two = await f.Seed(AgentStatus.Draft, p => p.ContactEmail = "demo-new@example.test", userId: sub);
         var i = f.Internal();
 
         var first = await i.GetFromJsonAsync<JsonElement>($"/internal/v1/practitioners/by-user/{sub}", J);
@@ -223,16 +223,16 @@ public class MultiAgentTests(InternalFactory f) : IClassFixture<InternalFactory>
     }
 
     [Fact]
-    public async Task Erasing_the_account_anonymises_every_agent_after_cancelling_each_ones_bookings()
+    public async Task Erasing_the_account_anonymises_every_agent_after_cancelling_each_ones_accesses()
     {
         var sub = Account();
-        var one = await f.Seed(PractitionerStatus.Approved, userId: sub);
-        var two = await f.Seed(PractitionerStatus.Approved, userId: sub);
-        f.Booking.Calls.Clear();
+        var one = await f.Seed(AgentStatus.Approved, userId: sub);
+        var two = await f.Seed(AgentStatus.Approved, userId: sub);
+        f.Access.Calls.Clear();
 
         Assert.Equal(HttpStatusCode.NoContent, (await f.Internal().DeleteAsync($"/internal/v1/subjects/{sub}")).StatusCode);
 
-        Assert.Equal(new[] { one.Id, two.Id }.Order(), f.Booking.Calls.Order());
+        Assert.Equal(new[] { one.Id, two.Id }.Order(), f.Access.Calls.Order());
         foreach (var id in new[] { one.Id, two.Id })
         {
             var row = await f.Load(id);
@@ -262,9 +262,9 @@ public class MultiAgentConfiguredLimitTests(LimitFactory f) : IClassFixture<Limi
     {
         var c = f.As("demo-provider-" + Guid.NewGuid().ToString("n"));
         for (var i = 0; i < 3; i++)
-            Assert.Equal(HttpStatusCode.Created, (await c.PostAsJsonAsync("/api/v1/me/practitioner", new CreatePractitionerRequest($"Demo Cfg {i} {Guid.NewGuid().ToString("n")[..8]}"), J)).StatusCode);
+            Assert.Equal(HttpStatusCode.Created, (await c.PostAsJsonAsync("/api/v1/me/practitioner", new CreateAgentRequest($"Demo Cfg {i} {Guid.NewGuid().ToString("n")[..8]}"), J)).StatusCode);
 
-        var r = await c.PostAsJsonAsync("/api/v1/me/practitioner", new CreatePractitionerRequest("Demo Fourth Agent"), J);
+        var r = await c.PostAsJsonAsync("/api/v1/me/practitioner", new CreateAgentRequest("Demo Fourth Agent"), J);
         Assert.Equal(HttpStatusCode.UnprocessableEntity, r.StatusCode);
         Assert.Equal("application/problem+json", r.Content.Headers.ContentType?.MediaType);
         var p = (await r.Content.ReadFromJsonAsync<ApiProblem>(J))!;

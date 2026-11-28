@@ -19,7 +19,7 @@ public class AgentApiProxyTests
     {
         var web = new WebFactory();
         var seen = new List<Seen>();
-        web.Booking.Respond = r =>
+        web.Access.Respond = r =>
         {
             lock (seen)
                 seen.Add(new(r.Method.Method, r.RequestUri!.PathAndQuery,
@@ -37,7 +37,7 @@ public class AgentApiProxyTests
     }
 
     [Fact]
-    public async Task The_method_path_query_body_and_the_four_headers_reach_Booking_and_the_answer_comes_back_as_it_is()
+    public async Task The_method_path_query_body_and_the_four_headers_reach_Access_and_the_answer_comes_back_as_it_is()
     {
         var (web, seen) = Host(r => new HttpResponseMessage(HttpStatusCode.Accepted)
         {
@@ -52,7 +52,7 @@ public class AgentApiProxyTests
         Assert.Equal("{\"id\":\"1\",\"status\":\"queued\"}", await response.Content.ReadAsStringAsync());
         Assert.Equal("7", response.Headers.GetValues("Retry-After").Single());
         Assert.Equal("yes", response.Headers.GetValues("X-Provider").Single());
-        var call = Assert.Single(web.Booking.Requests);
+        var call = Assert.Single(web.Access.Requests);
         Assert.Equal(HttpMethod.Post, call.Method);
         Assert.Equal("/v1/tasks?x=1", call.PathAndQuery);
         Assert.Equal($"Bearer {Key}", call.Authorization);
@@ -65,7 +65,7 @@ public class AgentApiProxyTests
     }
 
     [Fact]
-    public async Task The_session_cookie_and_every_other_cookie_never_reach_Booking_and_the_answers_cookie_never_reaches_the_client()
+    public async Task The_session_cookie_and_every_other_cookie_never_reach_Access_and_the_answers_cookie_never_reaches_the_client()
     {
         var (web, seen) = Host(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}"), Headers = { { "Set-Cookie", "provider=1; Path=/" } } });
         await using var _ = web;
@@ -138,7 +138,7 @@ public class AgentApiProxyTests
         var response = await web.CreateClient().SendAsync(request);
         Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
         Assert.Equal("request_too_large", JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement.GetProperty("error").GetProperty("code").GetString());
-        Assert.Empty(web.Booking.Requests);
+        Assert.Empty(web.Access.Requests);
     }
 
     [Fact]
@@ -153,19 +153,19 @@ public class AgentApiProxyTests
     }
 
     [Fact]
-    public async Task The_visitor_address_goes_to_Booking_with_the_proxy_key_and_the_visitors_own_values_are_never_copied()
+    public async Task The_visitor_address_goes_to_Access_with_the_proxy_key_and_the_visitors_own_values_are_never_copied()
     {
         var (web, _) = Host();
         await using var _ = web;
         var request = Post("/v1/models", "{}", ("Authorization", $"Bearer {Key}"), ("Fly-Client-IP", "203.0.113.9"), ("X-Client-Address", "1.2.3.4"), ("X-Edge-Key", "guess"));
         await web.CreateClient().SendAsync(request);
-        var call = Assert.Single(web.Booking.Requests);
+        var call = Assert.Single(web.Access.Requests);
         Assert.Equal("203.0.113.9", call.ClientAddress);
         Assert.Equal(WebFactory.TrustedKey, call.EdgeKey);
     }
 
     [Fact]
-    public async Task When_Booking_does_not_answer_the_client_gets_502_in_the_OpenAI_shape_without_the_exception_text()
+    public async Task When_Access_does_not_answer_the_client_gets_502_in_the_OpenAI_shape_without_the_exception_text()
     {
         var (web, _) = Host(FakeBackend.Throw(new HttpRequestException("connect ECONNREFUSED 10.0.0.7:8080 SECRET-HOST")));
         await using var _ = web;
@@ -195,7 +195,7 @@ public class AgentApiProxyTests
         var (web, _) = Host();
         await using var _ = web;
         var response = await web.CreateClient(new() { AllowAutoRedirect = false }).GetAsync(path);
-        Assert.Empty(web.Booking.Requests);
+        Assert.Empty(web.Access.Requests);
         Assert.NotEqual(HttpStatusCode.OK, response.StatusCode);
     }
 
@@ -205,7 +205,7 @@ public class AgentApiProxyTests
         var (web, _) = Host();
         await using var _ = web;
         var response = await web.CreateClient(new() { AllowAutoRedirect = false }).GetAsync("/v10/models");
-        Assert.Empty(web.Booking.Requests);
+        Assert.Empty(web.Access.Requests);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 

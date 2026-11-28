@@ -23,21 +23,21 @@ public class ReviewsIntegrationTests
     }
 
     [Fact]
-    public async Task The_unique_index_refuses_a_second_review_of_one_booking_even_when_the_application_check_is_bypassed()
+    public async Task The_unique_index_refuses_a_second_review_of_one_access_even_when_the_application_check_is_bypassed()
     {
         await using var pg = new PostgreSqlBuilder("postgres:17-alpine").Build();
         await pg.StartAsync();
         using var h = await StartAsync(pg.GetConnectionString());
-        string user = "demo-user-1"; var pract = Guid.NewGuid(); var booking = h.Booking.Add(user, pract);
+        string user = "demo-user-1"; var pract = Guid.NewGuid(); var access = h.Access.Add(user, pract);
         var c = h.ClientFor(user);
 
-        Assert.Equal(HttpStatusCode.Created, (await ReviewsHost.Post(c, booking)).StatusCode);
-        Assert.Equal(HttpStatusCode.Conflict, (await ReviewsHost.Post(c, booking)).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await ReviewsHost.Post(c, access)).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await ReviewsHost.Post(c, access)).StatusCode);
 
         // the same insert straight into the table: only the index can stop it
         var ex = await Assert.ThrowsAsync<DbUpdateException>(() => h.Seed(db => db.Reviews.Add(new Review
         {
-            Id = Guid.NewGuid(), BookingId = booking, PractitionerId = pract, ClientUserId = user, Rating = 5, Text = ReviewsHost.GoodText,
+            Id = Guid.NewGuid(), AccessId = access, AgentId = pract, ClientUserId = user, Rating = 5, Text = ReviewsHost.GoodText,
             Status = Gabinety.Contracts.Reputation.ReviewStatus.Published, CreatedAt = h.Clock.GetUtcNow(),
         })));
         Assert.Contains("ux_reviews_booking_id", ex.InnerException?.Message ?? "");
@@ -45,7 +45,7 @@ public class ReviewsIntegrationTests
     }
 
     [Fact]
-    public async Task Parallel_reviews_of_one_practitioner_lose_no_summary_update()
+    public async Task Parallel_reviews_of_one_agent_lose_no_summary_update()
     {
         await using var pg = new PostgreSqlBuilder("postgres:17-alpine").Build();
         await pg.StartAsync();
@@ -54,7 +54,7 @@ public class ReviewsIntegrationTests
         var posts = Enumerable.Range(0, 12).Select(i =>
         {
             var user = $"demo-user-{i}";
-            return ReviewsHost.Post(h.ClientFor(user), h.Booking.Add(user, pract), 1 + i % 5);
+            return ReviewsHost.Post(h.ClientFor(user), h.Access.Add(user, pract), 1 + i % 5);
         }).ToList();
 
         Assert.All(await Task.WhenAll(posts), r => Assert.Equal(HttpStatusCode.Created, r.StatusCode));

@@ -69,7 +69,7 @@ public class AuthPagesTests : BunitContext
     }
 
     [Fact]
-    public void A_sign_in_that_continues_a_booking_says_so_and_does_not_print_the_query()
+    public void A_sign_in_that_continues_a_access_says_so_and_does_not_print_the_query()
     {
         var cut = Page<Login>("http://localhost/logowanie?redirect=%2Fdostep%2Fabc%3Fstart%3D2026-12-01T09%3A00Z%26gabinet%3Ddemo-anna");
         var context = cut.Find("[data-testid=booking-context]");
@@ -80,7 +80,7 @@ public class AuthPagesTests : BunitContext
     }
 
     [Fact]
-    public void A_registration_that_continues_a_booking_says_so()
+    public void A_registration_that_continues_a_access_says_so()
     {
         var cut = Registration("http://localhost/rejestracja?redirect=%2Fdostep%2Fabc");
         Assert.Equal("Załóż konto, aby dokończyć wykup dostępu.", cut.Find("[data-testid=booking-context]").TextContent);

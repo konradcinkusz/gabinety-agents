@@ -11,7 +11,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace Gabinety.Booking.Persistence.Migrations
 {
-    [DbContext(typeof(BookingDbContext))]
+    [DbContext(typeof(AccessDbContext))]
     [Migration("20261122100000_T-04.09c_ClientEmail")]
     partial class ClientEmail
     {

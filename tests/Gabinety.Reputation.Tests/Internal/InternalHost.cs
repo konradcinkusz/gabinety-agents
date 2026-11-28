@@ -98,12 +98,12 @@ sealed class InternalHost : WebApplicationFactory<Program>
     }
 
     public Task<Review> ReviewOf(Guid id) => Query(db => db.Reviews.AsNoTracking().SingleAsync(r => r.Id == id));
-    public Task<RatingSummary?> SummaryOf(Guid p) => Query(db => db.RatingSummaries.AsNoTracking().SingleOrDefaultAsync(s => s.PractitionerId == p));
+    public Task<RatingSummary?> SummaryOf(Guid p) => Query(db => db.RatingSummaries.AsNoTracking().SingleOrDefaultAsync(s => s.AgentId == p));
     public Task<List<ModerationEvent>> EventsOf(Guid reviewId) => Query(db => db.ModerationEvents.AsNoTracking().Where(e => e.ReviewId == reviewId).ToListAsync());
 
-    public static Review NewReview(Guid practitioner, string reviewer, int rating = 5, ReviewStatus status = ReviewStatus.Published, bool withExtras = false) => new()
+    public static Review NewReview(Guid agent, string reviewer, int rating = 5, ReviewStatus status = ReviewStatus.Published, bool withExtras = false) => new()
     {
-        Id = Guid.CreateVersion7(), BookingId = Guid.NewGuid(), PractitionerId = practitioner, ClientUserId = reviewer, Rating = (short)rating, Text = Text,
+        Id = Guid.CreateVersion7(), AccessId = Guid.NewGuid(), AgentId = agent, ClientUserId = reviewer, Rating = (short)rating, Text = Text,
         Status = status, HoldReasons = status == ReviewStatus.Held ? ["spam"] : [], CreatedAt = new DateTimeOffset(2026, 11, 1, 10, 0, 0, TimeSpan.Zero),
         PublishedAt = status == ReviewStatus.Published ? new DateTimeOffset(2026, 11, 1, 10, 0, 0, TimeSpan.Zero) : null,
         ReplyText = withExtras ? Reply : null, RepliedAt = withExtras ? new DateTimeOffset(2026, 11, 2, 10, 0, 0, TimeSpan.Zero) : null,

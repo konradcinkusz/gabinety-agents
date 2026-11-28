@@ -114,7 +114,7 @@ public class PageTests
     }
 
     [Fact]
-    public async Task A_category_with_fewer_than_three_practitioners_is_noindex_and_a_full_one_is_indexed()
+    public async Task A_category_with_fewer_than_three_agents_is_noindex_and_a_full_one_is_indexed()
     {
         foreach (var (count, indexable, robots) in new[] { (2, false, "noindex,follow"), (3, true, "index,follow") })
         {
@@ -222,7 +222,7 @@ public class PageTests
         {
             "/api/v1/taxonomy" => FakeBackend.Json(Sample.Taxonomy),
             "/api/v1/sitemap" => FakeBackend.Json(Sample.Sitemap()),
-            _ => FakeBackend.Json(new PageDto<PractitionerCardDto>([Sample.Card(name: "<img src=x onerror=alert(1)>", headline: "<script>alert(2)</script>")], null)),
+            _ => FakeBackend.Json(new PageDto<AgentCardDto>([Sample.Card(name: "<img src=x onerror=alert(1)>", headline: "<script>alert(2)</script>")], null)),
         };
         var page = await web.NewBrowser().GetAsync("/agenci");
         Assert.DoesNotContain("<img src=x", page.Html);

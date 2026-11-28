@@ -11,14 +11,14 @@ namespace Gabinety.Directory.Tests.Verification;
 public class AdminTransitionTests(VerificationFactory f) : IClassFixture<VerificationFactory>
 {
     const string Admin = "/api/v1/admin/practitioners";
-    static readonly PractitionerStatus[] All = Enum.GetValues<PractitionerStatus>();
+    static readonly AgentStatus[] All = Enum.GetValues<AgentStatus>();
     // action -> (from, to, event kind); anything else is illegal (CONTRACTS 8.2)
-    static readonly Dictionary<string, (PractitionerStatus From, PractitionerStatus To, VerificationEventKind Kind)> Legal = new()
+    static readonly Dictionary<string, (AgentStatus From, AgentStatus To, VerificationEventKind Kind)> Legal = new()
     {
-        ["approve"] = (PractitionerStatus.Submitted, PractitionerStatus.Approved, VerificationEventKind.Approved),
-        ["reject"] = (PractitionerStatus.Submitted, PractitionerStatus.Rejected, VerificationEventKind.Rejected),
-        ["suspend"] = (PractitionerStatus.Approved, PractitionerStatus.Suspended, VerificationEventKind.Suspended),
-        ["reinstate"] = (PractitionerStatus.Suspended, PractitionerStatus.Approved, VerificationEventKind.Reinstated),
+        ["approve"] = (AgentStatus.Submitted, AgentStatus.Approved, VerificationEventKind.Approved),
+        ["reject"] = (AgentStatus.Submitted, AgentStatus.Rejected, VerificationEventKind.Rejected),
+        ["suspend"] = (AgentStatus.Approved, AgentStatus.Suspended, VerificationEventKind.Suspended),
+        ["reinstate"] = (AgentStatus.Suspended, AgentStatus.Approved, VerificationEventKind.Reinstated),
     };
     const string Reason = "Does not meet the bar for review quality";
 
@@ -29,7 +29,7 @@ public class AdminTransitionTests(VerificationFactory f) : IClassFixture<Verific
 
     [Theory]
     [MemberData(nameof(Matrix))]
-    public async Task Every_transition_is_legal_only_from_its_state_and_writes_exactly_one_event(string action, PractitionerStatus from)
+    public async Task Every_transition_is_legal_only_from_its_state_and_writes_exactly_one_event(string action, AgentStatus from)
     {
         var p = await f.Seed(from);
         var adminId = "demo-admin-" + Guid.NewGuid().ToString("n");
@@ -67,7 +67,7 @@ public class AdminTransitionTests(VerificationFactory f) : IClassFixture<Verific
     [Fact]
     public async Task Approve_sets_approved_at_clears_the_reason_and_computes_the_contract_ranking()
     {
-        var p = await f.Seed(PractitionerStatus.Submitted, x => { x.ProfileCompleteness = 1.00m; x.OpenSlots14d = 10; x.StatusReason = "old"; });
+        var p = await f.Seed(AgentStatus.Submitted, x => { x.ProfileCompleteness = 1.00m; x.OpenSlots14d = 10; x.StatusReason = "old"; });
         Assert.Equal(HttpStatusCode.NoContent, (await f.As("demo-admin", "SuperAdmin").PostAsync($"{Admin}/{p.Id}/approve", null)).StatusCode);
         var row = await f.Load(p.Id);
         Assert.Equal(82.95m, row.RankingScore);
@@ -105,22 +105,22 @@ public class AdminTransitionTests(VerificationFactory f) : IClassFixture<Verific
     [Fact]
     public async Task Reject_without_a_body_is_422()
     {
-        var p = await f.Seed(PractitionerStatus.Submitted);
+        var p = await f.Seed(AgentStatus.Submitted);
         Assert.Equal(HttpStatusCode.UnprocessableEntity, (await f.As("demo-admin", "Admin").PostAsync($"{Admin}/{p.Id}/reject", null)).StatusCode);
     }
 
     [Fact]
     public async Task Suspend_then_reinstate_returns_to_Approved_with_two_events_and_no_reason()
     {
-        var p = await f.Seed(PractitionerStatus.Approved);
+        var p = await f.Seed(AgentStatus.Approved);
         var c = f.As("demo-admin", "Admin");
         Assert.Equal(HttpStatusCode.NoContent, (await c.PostAsJsonAsync($"{Admin}/{p.Id}/suspend", new { reason = Reason })).StatusCode);
         var suspended = await f.Load(p.Id);
-        Assert.Equal(PractitionerStatus.Suspended, suspended.Status);
+        Assert.Equal(AgentStatus.Suspended, suspended.Status);
         Assert.Equal(Reason, suspended.StatusReason);
         Assert.Equal(HttpStatusCode.NoContent, (await c.PostAsync($"{Admin}/{p.Id}/reinstate", null)).StatusCode);
         var back = await f.Load(p.Id);
-        Assert.Equal(PractitionerStatus.Approved, back.Status);
+        Assert.Equal(AgentStatus.Approved, back.Status);
         Assert.Null(back.StatusReason);
         Assert.Equal([VerificationEventKind.Suspended, VerificationEventKind.Reinstated], (await f.Events(p.Id)).Select(e => e.Kind));
     }
@@ -128,17 +128,17 @@ public class AdminTransitionTests(VerificationFactory f) : IClassFixture<Verific
     // ---- events written by the profile code (Submit, NipChanged)
 
     const string Me = "/api/v1/me/practitioner";
-    static readonly UpdatePractitionerRequest Full = new("Demo Name", "Senior .NET reviewer", new string('b', 220),
+    static readonly UpdateAgentRequest Full = new("Demo Name", "Senior .NET reviewer", new string('b', 220),
         "https://portfolio.example.test/me", "https://meet.google.com/abc-defg-hij", "5260250995");
 
     async Task<(HttpClient C, Guid Id)> Ready()
     {
-        var p = await f.Seed(PractitionerStatus.Draft, x => x.GithubLinked = true);
+        var p = await f.Seed(AgentStatus.Draft, x => x.GithubLinked = true);
         var c = f.As(p.UserId);
         Assert.Equal(HttpStatusCode.OK, (await c.PutAsJsonAsync(Me, Full)).StatusCode);
         await f.Db(async db =>
         {
-            db.Offerings.Add(new Gabinety.Directory.Features.Offerings.Offering { Id = Guid.NewGuid(), PractitionerId = p.Id, Title = "Demo", Description = "Demo", DurationMinutes = 30, PriceMinor = 10000,
+            db.Packages.Add(new Gabinety.Directory.Features.Packages.Package { Id = Guid.NewGuid(), AgentId = p.Id, Title = "Demo", Description = "Demo", DurationMinutes = 30, PriceMinor = 10000,
                 ProblemSlug = "code-review", IsActive = true, CreatedAt = f.Clock.GetUtcNow() });
             await db.SaveChangesAsync();
             return 0;
@@ -147,7 +147,7 @@ public class AdminTransitionTests(VerificationFactory f) : IClassFixture<Verific
     }
 
     [Fact]
-    public async Task Submit_writes_one_Submitted_event_by_the_practitioner()
+    public async Task Submit_writes_one_Submitted_event_by_the_agent()
     {
         var (c, id) = await Ready();
         Assert.Equal(HttpStatusCode.NoContent, (await c.PostAsync(Me + "/submit", null)).StatusCode);
@@ -160,11 +160,11 @@ public class AdminTransitionTests(VerificationFactory f) : IClassFixture<Verific
     public async Task Changing_the_NIP_of_an_approved_profile_returns_it_to_Submitted_with_one_NipChanged_event()
     {
         var (c, id) = await Ready();
-        await f.Db(async db => { (await db.Practitioners.SingleAsync(p => p.Id == id)).Status = PractitionerStatus.Approved; await db.SaveChangesAsync(); return 0; });
+        await f.Db(async db => { (await db.Agents.SingleAsync(p => p.Id == id)).Status = AgentStatus.Approved; await db.SaveChangesAsync(); return 0; });
         Assert.Equal(HttpStatusCode.OK, (await c.PutAsJsonAsync(Me, Full)).StatusCode); // same NIP: nothing happens
         Assert.Empty(await f.Events(id));
         Assert.Equal(HttpStatusCode.OK, (await c.PutAsJsonAsync(Me, Full with { Nip = "1234563218" })).StatusCode);
-        Assert.Equal(PractitionerStatus.Submitted, (await f.Load(id)).Status);
+        Assert.Equal(AgentStatus.Submitted, (await f.Load(id)).Status);
         var e = Assert.Single(await f.Events(id));
         Assert.Equal(VerificationEventKind.NipChanged, e.Kind);
         // a NIP change on a profile that is not Approved moves nothing and writes nothing
@@ -255,7 +255,7 @@ public class AdminListTests(VerificationFactory f) : IClassFixture<VerificationF
     const string Url = "/api/v1/admin/practitioners";
     HttpClient Admin => f.As("demo-admin", "Admin");
 
-    async Task<AdminPractitionerPage> Page(string query) => (await Admin.GetFromJsonAsync<AdminPractitionerPage>(Url + query, J))!;
+    async Task<AdminAgentPage> Page(string query) => (await Admin.GetFromJsonAsync<AdminAgentPage>(Url + query, J))!;
 
     /// <summary>Submitted practitioners with a Submitted event each; many share one timestamp so the id decides.</summary>
     async Task<List<Guid>> SeedSubmitted(int n, int daysBack)
@@ -264,10 +264,10 @@ public class AdminListTests(VerificationFactory f) : IClassFixture<VerificationF
         for (var i = 0; i < n; i++)
         {
             var at = f.Clock.GetUtcNow().AddDays(-daysBack).AddMinutes(i / 3); // groups of three share a time
-            var p = await f.Seed(PractitionerStatus.Submitted);
+            var p = await f.Seed(AgentStatus.Submitted);
             await f.Db(async db =>
             {
-                db.VerificationEvents.Add(new VerificationEvent { Id = Guid.NewGuid(), PractitionerId = p.Id, Kind = VerificationEventKind.Submitted, ActorUserId = p.UserId, At = at });
+                db.VerificationEvents.Add(new VerificationEvent { Id = Guid.NewGuid(), AgentId = p.Id, Kind = VerificationEventKind.Submitted, ActorUserId = p.UserId, At = at });
                 await db.SaveChangesAsync();
                 return 0;
             });
@@ -276,14 +276,14 @@ public class AdminListTests(VerificationFactory f) : IClassFixture<VerificationF
         return ids;
     }
 
-    static DateTimeOffset Key(AdminPractitionerRow r) => r.SubmittedAt ?? r.CreatedAt;
+    static DateTimeOffset Key(AdminAgentRow r) => r.SubmittedAt ?? r.CreatedAt;
 
     [Fact]
     public async Task Default_is_Submitted_oldest_first_with_the_contract_row_and_paging_has_no_gaps_or_duplicates()
     {
         var mine = await SeedSubmitted(30, 4000);
-        await f.Seed(PractitionerStatus.Approved); // must not appear in the default list
-        var all = new List<AdminPractitionerRow>();
+        await f.Seed(AgentStatus.Approved); // must not appear in the default list
+        var all = new List<AdminAgentRow>();
         string? cursor = null;
         var pages = 0;
         do
@@ -294,7 +294,7 @@ public class AdminListTests(VerificationFactory f) : IClassFixture<VerificationF
         } while (cursor is not null && pages < 100);
 
         Assert.Equal(all.Count, all.Select(r => r.Id).Distinct().Count());
-        Assert.All(all, r => Assert.Equal(PractitionerStatus.Submitted, r.Status));
+        Assert.All(all, r => Assert.Equal(AgentStatus.Submitted, r.Status));
         Assert.Equal(all.OrderBy(Key).ThenBy(r => r.Id).Select(r => r.Id), all.Select(r => r.Id));
         Assert.Equal(mine.Count, all.Count(r => mine.Contains(r.Id)));
         Assert.True(all.Select(r => r.Id).Intersect(mine).Count() == 30);
@@ -314,10 +314,10 @@ public class AdminListTests(VerificationFactory f) : IClassFixture<VerificationF
     [Fact]
     public async Task Status_filter_and_bad_values()
     {
-        var p = await f.Seed(PractitionerStatus.Suspended);
+        var p = await f.Seed(AgentStatus.Suspended);
         var suspended = await Page("?status=Suspended&limit=50");
         Assert.Contains(suspended.Items, r => r.Id == p.Id);
-        Assert.All(suspended.Items, r => Assert.Equal(PractitionerStatus.Suspended, r.Status));
+        Assert.All(suspended.Items, r => Assert.Equal(AgentStatus.Suspended, r.Status));
         foreach (var bad in new[] { "?status=Nonsense", "?status=9", "?cursor=!!!", "?cursor=" + Convert.ToBase64String("x"u8.ToArray()) })
         {
             var r = await Admin.GetAsync(Url + bad);

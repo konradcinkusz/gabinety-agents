@@ -24,7 +24,7 @@ sealed class PolicyProbeFeature : IServiceFeature
 public class SkeletonAuthTests : IDisposable
 {
     const string RoleClaim = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
-    readonly BookingFactory f = new();
+    readonly AccessFactory f = new();
 
     public void Dispose() => f.Dispose();
 
@@ -40,7 +40,7 @@ public class SkeletonAuthTests : IDisposable
     {
         var token = new Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler().CreateToken(new Microsoft.IdentityModel.Tokens.SecurityTokenDescriptor
         {
-            Issuer = BookingFactory.Issuer, Audience = "someone-else", Expires = DateTime.UtcNow.AddMinutes(5),
+            Issuer = AccessFactory.Issuer, Audience = "someone-else", Expires = DateTime.UtcNow.AddMinutes(5),
             Claims = new Dictionary<string, object> { ["sub"] = "demo-user-1" },
         });
         var c = f.CreateClient();
@@ -69,7 +69,7 @@ public class SkeletonAuthTests : IDisposable
 
 public class SkeletonHealthTests : IDisposable
 {
-    readonly BookingFactory f = new();
+    readonly AccessFactory f = new();
     public void Dispose() => f.Dispose();
 
     static async Task<Dictionary<string, string?>> Checks(HttpClient c)

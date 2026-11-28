@@ -19,9 +19,9 @@ public class ReplyDirectoryClientTests
         var (c, h) = Make();
         var id = h.Add("demo-user-a");
 
-        var found = await c.GetPractitionerByUserAsync("demo-user-a", default);
+        var found = await c.GetAgentByUserAsync("demo-user-a", default);
 
-        Assert.Equal(id, found!.PractitionerId);
+        Assert.Equal(id, found!.AgentId);
         Assert.Equal(FakeDirectory.Key, h.LastKeyHeader);
         Assert.Equal("/internal/v1/practitioners/by-user/demo-user-a", h.LastPath);
     }
@@ -30,7 +30,7 @@ public class ReplyDirectoryClientTests
     public async Task A_404_is_null_and_not_retried()
     {
         var (c, h) = Make();
-        Assert.Null(await c.GetPractitionerByUserAsync("demo-nobody", default));
+        Assert.Null(await c.GetAgentByUserAsync("demo-nobody", default));
         Assert.Equal(1, h.Calls);
     }
 
@@ -39,7 +39,7 @@ public class ReplyDirectoryClientTests
     {
         var (c, h) = Make();
         h.Override = (_, _) => new HttpResponseMessage(HttpStatusCode.BadGateway);
-        await Assert.ThrowsAsync<DirectoryUnavailableException>(() => c.GetPractitionerByUserAsync("demo-user-a", default));
+        await Assert.ThrowsAsync<DirectoryUnavailableException>(() => c.GetAgentByUserAsync("demo-user-a", default));
         Assert.Equal(2, h.Calls);
     }
 
@@ -50,7 +50,7 @@ public class ReplyDirectoryClientTests
         var id = Guid.NewGuid();
         h.Override = (_, n) => n == 1 ? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
             : new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { practitionerId = id, status = "Approved" }) };
-        Assert.Equal(id, (await c.GetPractitionerByUserAsync("demo-user-a", default))!.PractitionerId);
+        Assert.Equal(id, (await c.GetAgentByUserAsync("demo-user-a", default))!.AgentId);
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class ReplyDirectoryClientTests
     {
         var (c, h) = Make();
         h.Override = (_, _) => new HttpResponseMessage(HttpStatusCode.Unauthorized);
-        await Assert.ThrowsAsync<DirectoryUnavailableException>(() => c.GetPractitionerByUserAsync("demo-user-a", default));
+        await Assert.ThrowsAsync<DirectoryUnavailableException>(() => c.GetAgentByUserAsync("demo-user-a", default));
         Assert.Equal(1, h.Calls);
     }
 
@@ -67,7 +67,7 @@ public class ReplyDirectoryClientTests
     {
         var (c, h) = Make();
         h.Down = true;
-        var e = await Assert.ThrowsAsync<DirectoryUnavailableException>(() => c.GetPractitionerByUserAsync("demo-user-a", default));
+        var e = await Assert.ThrowsAsync<DirectoryUnavailableException>(() => c.GetAgentByUserAsync("demo-user-a", default));
         Assert.DoesNotContain(FakeDirectory.Key, e.Message);
         Assert.DoesNotContain("directory.demo.invalid", e.Message);
     }
@@ -77,7 +77,7 @@ public class ReplyDirectoryClientTests
     {
         var slow = new SlowHandler();
         var c = new DirectoryClient(new HttpClient(slow) { BaseAddress = new Uri(FakeDirectory.BaseUrl + "/") }, FakeDirectory.Key, TimeSpan.Zero, TimeSpan.FromMilliseconds(50));
-        await Assert.ThrowsAsync<DirectoryUnavailableException>(() => c.GetPractitionerByUserAsync("demo-user-a", default));
+        await Assert.ThrowsAsync<DirectoryUnavailableException>(() => c.GetAgentByUserAsync("demo-user-a", default));
         Assert.Equal(2, slow.Calls);
     }
 

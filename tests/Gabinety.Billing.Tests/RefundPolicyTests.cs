@@ -34,11 +34,11 @@ public class RefundPolicyTests
     [InlineData(MoneyEvent.ClientNoShow, 0, 21250, 3750)]
     [InlineData(MoneyEvent.DisputeRelease, 0, 21250, 3750)]
     [InlineData(MoneyEvent.DisputeRefundFull, 25000, 0, 0)]
-    public void Table_9_2_rows(MoneyEvent e, long refund, long practitioner, long fee)
+    public void Table_9_2_rows(MoneyEvent e, long refund, long agent, long fee)
     {
         var s = RefundPolicy.Settle(e, Price, 1500, false);
         Assert.Equal(refund, s.Refund.Minor);
-        Assert.Equal(practitioner, s.PractitionerShare.Minor);
+        Assert.Equal(agent, s.AgentShare.Minor);
         Assert.Equal(fee, s.Fee.Minor);
     }
 
@@ -47,7 +47,7 @@ public class RefundPolicyTests
     {
         var s = RefundPolicy.Settle(MoneyEvent.DisputeRefundPartial, Price, 1500, false, Money.Pln(5000));
         Assert.Equal(5000, s.Refund.Minor);
-        Assert.Equal(17000, s.PractitionerShare.Minor);
+        Assert.Equal(17000, s.AgentShare.Minor);
         Assert.Equal(3000, s.Fee.Minor);
     }
 
@@ -67,7 +67,7 @@ public class RefundPolicyTests
     {
         var s = RefundPolicy.Settle(e, Price, 1500, true);
         Assert.Equal(0, s.Fee.Minor);
-        Assert.Equal(25000, s.PractitionerShare.Minor);
+        Assert.Equal(25000, s.AgentShare.Minor);
     }
 
     [Fact]

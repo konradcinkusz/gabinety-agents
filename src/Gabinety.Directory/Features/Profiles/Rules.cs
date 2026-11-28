@@ -86,7 +86,7 @@ public static class UrlRules
 /// <summary>Pure function of the profile facts (CONTRACTS 3.5), two decimal places.</summary>
 public static class ProfileCompleteness
 {
-    public static decimal Compute(bool headline, bool bio200, bool offering, bool github, bool portfolio, bool nipValid, bool openSlots) =>
-        (headline ? 0.15m : 0) + (bio200 ? 0.20m : 0) + (offering ? 0.25m : 0) + (github ? 0.10m : 0) +
+    public static decimal Compute(bool headline, bool bio200, bool package, bool github, bool portfolio, bool nipValid, bool openSlots) =>
+        (headline ? 0.15m : 0) + (bio200 ? 0.20m : 0) + (package ? 0.25m : 0) + (github ? 0.10m : 0) +
         (portfolio ? 0.10m : 0) + (nipValid ? 0.10m : 0) + (openSlots ? 0.10m : 0);
 }

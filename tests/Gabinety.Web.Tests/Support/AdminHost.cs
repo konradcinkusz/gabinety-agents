@@ -44,7 +44,7 @@ public sealed class AdminHost : IAsyncDisposable
     }
 
     // ---- fake backend data (synthetic: demo-)
-    public static AdminPractitionerRowDto Row(string name = "Anna Demowska", string status = "Submitted", Guid? id = null, bool github = true, bool nip = true, string? reason = null) =>
+    public static AdminAgentRowDto Row(string name = "Anna Demowska", string status = "Submitted", Guid? id = null, bool github = true, bool nip = true, string? reason = null) =>
         new(id ?? Guid.NewGuid(), "demo-" + name.ToLowerInvariant().Replace(' ', '-'), name, "Audyty kodu .NET demo", status, reason, github, github ? "demo-dev" : null, nip,
             new DateTimeOffset(2026, 11, 20, 8, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 11, 24, 12, 0, 9, TimeSpan.Zero));
 
@@ -55,14 +55,14 @@ public sealed class AdminHost : IAsyncDisposable
     public static string Fact(IElement root, string label) =>
         Page.Squash(root.QuerySelectorAll("dt").FirstOrDefault(d => d.TextContent.Trim() == label)?.NextElementSibling?.TextContent ?? throw new InvalidOperationException($"no fact '{label}'")).Replace('\u00A0', ' ');
 
-    public static AdminDisputeDto Dispute(Guid? id = null, string kind = "not_as_described", string text = "Konsultacja różniła się od opisu, dane syntetyczne testu.", string client = "demo-client-2", string practitioner = "demo-practitioner-4") =>
-        new(id ?? Guid.NewGuid(), client, practitioner, kind, text, new DateTimeOffset(2026, 11, 24, 12, 0, 9, TimeSpan.Zero), null, null, null);
+    public static AdminDisputeDto Dispute(Guid? id = null, string kind = "not_as_described", string text = "Konsultacja różniła się od opisu, dane syntetyczne testu.", string client = "demo-client-2", string agent = "demo-practitioner-4") =>
+        new(id ?? Guid.NewGuid(), client, agent, kind, text, new DateTimeOffset(2026, 11, 24, 12, 0, 9, TimeSpan.Zero), null, null, null);
 
-    public static AdminBookingDto BookingOf(Guid id, long price = 18000, string title = "Audyt kodu .NET", string practitionerName = "", Guid? practitionerId = null, string payment = "Succeeded", long refunded = 0) =>
-        new(id, "Disputed", new DateTimeOffset(2026, 11, 23, 10, 0, 0, TimeSpan.Zero), title, new MoneyDto(price, "PLN"), new PractitionerRefDto(practitionerId ?? Guid.NewGuid(), practitionerName, "demo-anna"), null,
+    public static AdminAccessDto AccessOf(Guid id, long price = 18000, string title = "Audyt kodu .NET", string agentName = "", Guid? agentId = null, string payment = "Succeeded", long refunded = 0) =>
+        new(id, "Disputed", new DateTimeOffset(2026, 11, 23, 10, 0, 0, TimeSpan.Zero), title, new MoneyDto(price, "PLN"), new AgentRefDto(agentId ?? Guid.NewGuid(), agentName, "demo-anna"), null,
             new PaymentViewDto(payment, new MoneyDto(refunded, "PLN")));
 
-    public static AdminPractitionerDetailDto DetailOf(Guid id, string name = "Anna Demowska", string status = "Approved") =>
+    public static AdminAgentDetailDto DetailOf(Guid id, string name = "Anna Demowska", string status = "Approved") =>
         new(id, "demo-anna", name, "Audyty kodu .NET demo", "O mnie: **demo**.", status, null, true, "demo-dev", "5260250995", true, "https://demo.example/portfolio",
             new DateTimeOffset(2026, 11, 20, 8, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 11, 24, 12, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 11, 21, 8, 0, 0, TimeSpan.Zero), null);
 

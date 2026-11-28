@@ -5,7 +5,7 @@ using Gabinety.Booking.Features.Payments;
 using Gabinety.Booking.Payments.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -14,19 +14,19 @@ public class DisputesResolveTests
 {
     static async Task<string> Code(HttpResponseMessage r) => (await r.Body()).GetProperty("code").GetString()!;
 
-    public static TheoryData<BookingStatus> NotDisputed
+    public static TheoryData<AccessStatus> NotDisputed
     {
         get
         {
-            var d = new TheoryData<BookingStatus>();
-            foreach (var s in Enum.GetValues<BookingStatus>().Where(s => s != BookingStatus.Disputed)) d.Add(s);
+            var d = new TheoryData<AccessStatus>();
+            foreach (var s in Enum.GetValues<AccessStatus>().Where(s => s != AccessStatus.Disputed)) d.Add(s);
             return d;
         }
     }
 
     [Theory]
     [MemberData(nameof(NotDisputed))]
-    public async Task Every_status_but_Disputed_is_409_and_nothing_moves(BookingStatus status)
+    public async Task Every_status_but_Disputed_is_409_and_nothing_moves(AccessStatus status)
     {
         var provider = new RecordingProvider();
         await using var h = Adm.Host(provider);
@@ -42,14 +42,14 @@ public class DisputesResolveTests
     [Theory]
     [InlineData("refund_full", null)]
     [InlineData("refund_partial", 3000L)]
-    public async Task A_Disputed_booking_whose_payment_is_already_refunded_is_409_without_calling_the_provider(string resolution, long? refundMinor)
+    public async Task A_Disputed_access_whose_payment_is_already_refunded_is_409_without_calling_the_provider(string resolution, long? refundMinor)
     {
         var provider = new RecordingProvider();
         await using var h = Adm.Host(provider);
         var (id, _) = await Adm.Seed(h);
         await h.Seed(db =>
         {
-            var p = db.Payments.Single(x => x.BookingId == id);
+            var p = db.Payments.Single(x => x.AccessId == id);
             p.Status = PaymentStatus.Refunded;
             p.RefundedMinor = p.AmountMinor;
         });
@@ -57,7 +57,7 @@ public class DisputesResolveTests
         Assert.Equal(HttpStatusCode.Conflict, r.StatusCode);
         Assert.Equal("invalid_transition", await Code(r));
         Assert.Empty(provider.Refunds);
-        Assert.Equal(BookingStatus.Disputed, (await Life.Row(h, id)).Status);
+        Assert.Equal(AccessStatus.Disputed, (await Life.Row(h, id)).Status);
     }
 
     [Fact]
@@ -70,14 +70,14 @@ public class DisputesResolveTests
     }
 
     [Fact]
-    public async Task Anonymous_is_401_and_a_non_admin_is_403_even_a_party_of_the_booking()
+    public async Task Anonymous_is_401_and_a_non_admin_is_403_even_a_party_of_the_access()
     {
         await using var h = Adm.Host(new RecordingProvider());
         var (id, client) = await Adm.Seed(h);
         Assert.Equal(HttpStatusCode.Unauthorized, (await Adm.Resolve(h, id, Adm.Body("release"), as_: null)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await Adm.Resolve(h, id, Adm.Body("release"), as_: client)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await Adm.Resolve(h, id, Adm.Body("release"), as_: h.OwnerUserId)).StatusCode);
-        Assert.Equal(BookingStatus.Disputed, (await Life.Row(h, id)).Status);
+        Assert.Equal(AccessStatus.Disputed, (await Life.Row(h, id)).Status);
     }
 
     [Theory]
@@ -112,7 +112,7 @@ public class DisputesResolveTests
         var r = await Adm.Resolve(h, id, Adm.Body(resolution, refundMinor));
         Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
         Assert.Equal("validation_failed", await Code(r));
-        Assert.Equal(BookingStatus.Disputed, (await Life.Row(h, id)).Status);
+        Assert.Equal(AccessStatus.Disputed, (await Life.Row(h, id)).Status);
         Assert.Empty(provider.Refunds);
     }
 
@@ -128,7 +128,7 @@ public class DisputesResolveTests
         var r = await Adm.Resolve(h, id, Adm.Body(resolution, note: note));
         Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
         Assert.Equal("validation_failed", await Code(r));
-        Assert.Equal(BookingStatus.Disputed, (await Life.Row(h, id)).Status);
+        Assert.Equal(AccessStatus.Disputed, (await Life.Row(h, id)).Status);
     }
 
     [Fact]
@@ -174,7 +174,7 @@ public class DisputesResolveTests
         var r = await Adm.Resolve(h, id, Adm.Body("release", note: "  " + Adm.Note + "  "));
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
         var row = await Life.Row(h, id);
-        Assert.Equal(BookingStatus.Resolved, row.Status);
+        Assert.Equal(AccessStatus.Resolved, row.Status);
         Assert.Equal("release", row.DisputeResolution);
         Assert.Equal(h.Clock.GetUtcNow(), row.ResolvedAt);
         Assert.Equal(Adm.Note, row.StatusReason);
@@ -237,7 +237,7 @@ public class DisputesResolveTests
         await using var h = Adm.Host(new RecordingProvider(), hook);
         var (id, _) = await Adm.Seed(h);
         Assert.Equal(HttpStatusCode.OK, (await Adm.Resolve(h, id, Adm.Body(resolution, refundMinor))).StatusCode);
-        var seen = Assert.Single(hook.Seen, s => s.BookingId == id);
+        var seen = Assert.Single(hook.Seen, s => s.AccessId == id);
         Assert.Equal("AdminResolves", seen.Trigger);
         Assert.Equal(expected, seen.RefundedMinor);
     }
@@ -251,14 +251,14 @@ public class DisputesResolveTests
         var (id, _) = await Adm.Seed(h, provider: "Stripe");
         Assert.Equal(HttpStatusCode.OK, (await Adm.Resolve(h, id, Adm.Body("refund_partial", 3000))).StatusCode);
         Assert.Equal(3000, Assert.Single(provider.Refunds).AmountMinor);
-        Assert.Equal(BookingStatus.Resolved, (await Life.Row(h, id)).Status);
+        Assert.Equal(AccessStatus.Resolved, (await Life.Row(h, id)).Status);
         Assert.Equal(PaymentStatus.Succeeded, (await Life.PaymentOf(h, id)).Status); // the RefundSucceeded webhook records it
         Assert.Empty(await Life.RefundRows(h, id));
-        Assert.Equal(0, Assert.Single(hook.Seen, s => s.BookingId == id).RefundedMinor);
+        Assert.Equal(0, Assert.Single(hook.Seen, s => s.AccessId == id).RefundedMinor);
     }
 
     [Fact]
-    public async Task A_provider_that_is_down_gives_503_and_the_booking_stays_Disputed()
+    public async Task A_provider_that_is_down_gives_503_and_the_access_stays_Disputed()
     {
         await using var h = Adm.Host(new RecordingProvider());
         var previous = h.Configure!;
@@ -266,7 +266,7 @@ public class DisputesResolveTests
         var (id, _) = await Adm.Seed(h);
         var r = await Adm.Resolve(h, id, Adm.Body("refund_full"));
         Assert.Equal(HttpStatusCode.ServiceUnavailable, r.StatusCode);
-        Assert.Equal(BookingStatus.Disputed, (await Life.Row(h, id)).Status);
+        Assert.Equal(AccessStatus.Disputed, (await Life.Row(h, id)).Status);
         Assert.Empty(await Life.RefundRows(h, id));
     }
 
@@ -280,7 +280,7 @@ public class DisputesResolveTests
     }
 
     [Fact]
-    public async Task The_response_is_the_booking_view_without_the_dispute_text_or_the_note_and_neither_is_logged()
+    public async Task The_response_is_the_access_view_without_the_dispute_text_or_the_note_and_neither_is_logged()
     {
         await using var h = Adm.Host(new RecordingProvider());
         var (id, client) = await Adm.Seed(h);

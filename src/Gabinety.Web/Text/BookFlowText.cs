@@ -13,7 +13,7 @@ public static class BookFlowText
 
     public static class Summary
     {
-        public const string Title = "Podsumowanie", Offering = "Pakiet", Practitioner = "Agent", Units = "Zawartość", Validity = "Ważność", Price = "Do zapłaty";
+        public const string Title = "Podsumowanie", Package = "Pakiet", Agent = "Agent", Units = "Zawartość", Validity = "Ważność", Price = "Do zapłaty";
         public const string ValidFor = "{0} dni od zakupu", ValidUntil = "do {0}";
         public const string Hold = "Zakup jest wstrzymany na 10 minut od kliknięcia „Zapłać”.";
         /// <summary>The refund rule in one line, before the money is spent: it is the lifecycle rule of docs/agentic/PLAN.md 2.5, applied by the Booking service.</summary>
@@ -74,7 +74,7 @@ public static class BookFlowText
         public const string AnnounceFive = "Zostało 5 minut na płatność.", AnnounceOne = "Została 1 minuta na płatność.", Expired = "Czas na płatność minął. Wykup pakiet ponownie.";
         public const string Failed = "Płatność nie powiodła się. Dostęp nie został aktywowany.";
         public const string NotMock = "Symulacja płatności jest wyłączona w tym środowisku.", Error = "Symulacja nie powiodła się. Spróbuj ponownie.";
-        public const string Closed = "Ten zakup nie oczekuje już na płatność.", ToBooking = "Zobacz dostęp", ToProfile = "Wróć do profilu", ToSearch = "Wróć do wyszukiwarki";
+        public const string Closed = "Ten zakup nie oczekuje już na płatność.", ToAccess = "Zobacz dostęp", ToProfile = "Wróć do profilu", ToSearch = "Wróć do wyszukiwarki";
         public const string LoadFailed = "Nie udało się wczytać zakupu. Odśwież stronę.", Refresh = "Odśwież stronę";
         public const string Declined = "Płatność nie została dokończona.";
     }

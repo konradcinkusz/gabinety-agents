@@ -28,11 +28,11 @@ public sealed class ReputationApi(HttpClient http, TimeProvider time, string int
             : throw new SeedException($"reputation: demo reset answered {(int)res.StatusCode}");
     }
 
-    public async Task<(ReviewOutcome Outcome, string? Status)> CreateReviewAsync(DemoUser client, Guid bookingId, int rating, string text, CancellationToken ct)
+    public async Task<(ReviewOutcome Outcome, string? Status)> CreateReviewAsync(DemoUser client, Guid accessId, int rating, string text, CancellationToken ct)
     {
         for (var attempt = 1; ; attempt++)
         {
-            using var req = new HttpRequestMessage(HttpMethod.Post, "api/v1/reviews") { Content = JsonContent.Create(new { bookingId, rating, text }, options: J) };
+            using var req = new HttpRequestMessage(HttpMethod.Post, "api/v1/reviews") { Content = JsonContent.Create(new { bookingId = accessId, rating, text }, options: J) };
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", client.AccessToken);
             using var res = await http.SendAsync(req, ct);
             if (res.StatusCode == HttpStatusCode.TooManyRequests && attempt < MaxAttempts) // the 60 per minute limit (CONTRACTS 10.2)

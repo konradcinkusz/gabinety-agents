@@ -17,7 +17,7 @@ public class MockPaymentProviderTests
     static string Sign(byte[] body, string secret) => Convert.ToHexString(HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), body)).ToLowerInvariant();
 
     [Fact]
-    public async Task Checkout_url_is_site_base_url_checkout_mock_booking_id_and_the_payment_id_is_mock_guid_N()
+    public async Task Checkout_url_is_site_base_url_checkout_mock_access_id_and_the_payment_id_is_mock_guid_N()
     {
         var id = Guid.NewGuid();
         var r = await new MockPaymentProvider("https://demo.example.test", null).CreateCheckoutAsync(new(id, 10000, "PLN", "demo", "https://demo.example.test/ok"), default);

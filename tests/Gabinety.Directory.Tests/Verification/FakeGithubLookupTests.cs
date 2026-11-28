@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using Gabinety.Contracts.Directory;
 using Gabinety.Directory.Features.Verification;
 using Gabinety.Directory.Tests.Internal;
-using Gabinety.Directory.Tests.Offerings;
+using Gabinety.Directory.Tests.Packages;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using static Gabinety.Directory.Tests.Verification.Vk;
@@ -19,7 +19,7 @@ public class FakeGithubLookupTests
     static async Task<(HttpClient C, string Sub, GithubLinkChallenge Ch)> Challenge(DemoResetHost h, string login)
     {
         var sub = Kit.Id();
-        var c = await Kit.Practitioner(h, sub);
+        var c = await Kit.Agent(h, sub);
         var r = await c.PostAsJsonAsync(Link, new GithubLinkRequest(login));
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
         return (c, sub, (await r.Content.ReadFromJsonAsync<GithubLinkChallenge>(J))!);
@@ -37,11 +37,11 @@ public class FakeGithubLookupTests
         var r = await c.PostAsync(Verify, null);
         Assert.Equal(HttpStatusCode.NoContent, r.StatusCode);
 
-        var p = await h.Db(db => db.Practitioners.AsNoTracking().SingleAsync(x => x.UserId == sub));
+        var p = await h.Db(db => db.Agents.AsNoTracking().SingleAsync(x => x.UserId == sub));
         Assert.True(p.GithubLinked);
         Assert.Equal(login, p.GithubLogin);
         Assert.Null(p.GithubChallengeCode);
-        Assert.Equal(1, await h.Db(db => db.VerificationEvents.CountAsync(e => e.PractitionerId == p.Id && e.Kind == VerificationEventKind.GithubLinked)));
+        Assert.Equal(1, await h.Db(db => db.VerificationEvents.CountAsync(e => e.AgentId == p.Id && e.Kind == VerificationEventKind.GithubLinked)));
         Assert.Equal(0, h.NetworkAttempts); // the fake makes no network call
     }
 
@@ -53,7 +53,7 @@ public class FakeGithubLookupTests
         var r = await c.PostAsync(Verify, null);
         Assert.Equal(HttpStatusCode.UnprocessableEntity, r.StatusCode);
         Assert.Equal("github_not_linked", (await Problem(r)).Code);
-        Assert.False((await h.Db(db => db.Practitioners.AsNoTracking().SingleAsync(x => x.UserId == sub))).GithubLinked);
+        Assert.False((await h.Db(db => db.Agents.AsNoTracking().SingleAsync(x => x.UserId == sub))).GithubLinked);
         Assert.Equal(0, h.NetworkAttempts);
     }
 
@@ -88,7 +88,7 @@ public class FakeGithubLookupTests
         var r = await c.PostAsync(Verify, null);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, r.StatusCode); // the real lookup tried the (refusing) network
         Assert.True(h.NetworkAttempts > 0);
-        Assert.False((await h.Db(db => db.Practitioners.AsNoTracking().SingleAsync(x => x.UserId == sub))).GithubLinked);
+        Assert.False((await h.Db(db => db.Agents.AsNoTracking().SingleAsync(x => x.UserId == sub))).GithubLinked);
     }
 
     [Fact]

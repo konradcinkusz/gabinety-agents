@@ -10,7 +10,7 @@ namespace Gabinety.Booking.Jobs.StatsPush;
 /// </summary>
 public sealed class StatsPushJob(IServiceScopeFactory scopes, IDirectoryStatsClient client, TimeProvider time, ILogger<StatsPushJob> log)
 {
-    readonly ConcurrentDictionary<Guid, BookingStats> _lastPushed = new();
+    readonly ConcurrentDictionary<Guid, AccessStats> _lastPushed = new();
     readonly SemaphoreSlim _gate = new(1, 1);
     long _lastVersion;
 
@@ -21,7 +21,7 @@ public sealed class StatsPushJob(IServiceScopeFactory scopes, IDirectoryStatsCli
         await _gate.WaitAsync(ct);
         try
         {
-            Dictionary<Guid, BookingStats> all;
+            Dictionary<Guid, AccessStats> all;
             try
             {
                 using var scope = scopes.CreateScope();
@@ -41,7 +41,7 @@ public sealed class StatsPushJob(IServiceScopeFactory scopes, IDirectoryStatsCli
                 var version = _lastVersion = Math.Max(time.GetUtcNow().ToUnixTimeMilliseconds(), _lastVersion + 1);
                 try
                 {
-                    if (!await client.PushAsync(id, new BookingStatsPush(stats.CompletedCount, stats.PractitionerCancelCount, stats.NoShowUpheldCount, stats.OpenSlots14d, version), ct))
+                    if (!await client.PushAsync(id, new AccessStatsPush(stats.CompletedCount, stats.AgentCancelCount, stats.NoShowUpheldCount, stats.OpenSlots14d, version), ct))
                     {
                         log.LogWarning("StatsPush gave up on practitioner {PractitionerId} until the next cycle", id);
                         continue;

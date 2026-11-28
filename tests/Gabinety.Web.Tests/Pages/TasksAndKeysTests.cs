@@ -8,20 +8,20 @@ namespace Gabinety.Web.Tests.Pages;
 /// <summary>C-03: the tasks of a package and the API keys, against fake backends. The plain key is shown once; the result of a task is text and never markup.</summary>
 public class TasksAndKeysTests
 {
-    static readonly string Detail_ = $"/moje/dostepy/{BookingId}";
+    static readonly string Detail_ = $"/moje/dostepy/{AccessId}";
     static readonly string Client = Detail_ + "?role=client";
     static readonly DateTimeOffset At = new(2026, 11, 20, 12, 0, 0, TimeSpan.Zero);
     const string Input = "Przygotuj plan migracji dla syntetycznej aplikacji demo, dane testowe.";
     const string PlainKey = "gab_DEMOKEYDEMOKEYDEMOKEYDEMOKEYDEMOKEY0123";
     static readonly Guid KeyId = Guid.Parse("018f0000-0000-7000-8000-0000000000d1");
 
-    static async Task<ClientAreaFixture> OpenDetail(BookingDetailDto booking, IReadOnlyList<AgentTaskDto>? tasks = null, Func<HttpRequestMessage, HttpResponseMessage>? post = null)
+    static async Task<ClientAreaFixture> OpenDetail(AccessDetailDto access, IReadOnlyList<AgentTaskDto>? tasks = null, Func<HttpRequestMessage, HttpResponseMessage>? post = null)
     {
         var f = await ClientAreaFixture.SignedIn();
-        f.Web.Booking.Respond = r =>
+        f.Web.Access.Respond = r =>
             r.Method == HttpMethod.Post && post is not null ? post(r)
             : r.RequestUri!.AbsolutePath.EndsWith("/tasks") ? FakeBackend.Json(tasks ?? [])
-            : FakeBackend.Json(booking);
+            : FakeBackend.Json(access);
         return f;
     }
 
@@ -40,14 +40,14 @@ public class TasksAndKeysTests
         Assert.Equal(["Zleć zadanie"], section.QuerySelectorAll("form button").Select(b => b.TextContent));
         Assert.Equal(["W kolejce", "Gotowe"], section.QuerySelectorAll("[data-testid=task-status]").Select(s => s.TextContent)); // newest first
         Assert.Equal("Gotowy plan.", section.QuerySelector("[data-testid=task-output]")!.TextContent);
-        Assert.Contains(f.Web.Booking.Requests, r => r.PathAndQuery == $"/api/v1/me/bookings/{BookingId}/tasks");
+        Assert.Contains(f.Web.Access.Requests, r => r.PathAndQuery == $"/api/v1/me/bookings/{AccessId}/tasks");
         // ADR-0013, owner decision 3: a pending task does not make the page reload itself (no meta refresh, which axe rejects, WCAG 2.2.1, and which never fired after the enhanced redirect), and the page
         // no longer says it does. What it offers is the link that refreshes the list, which is a plain link to the same page.
         Assert.Empty(page.All("meta[http-equiv=refresh]"));
         Assert.DoesNotContain("odświeża się sam", page.Text);
         var pending = section.QuerySelector("p[role=status]")!;
         Assert.Equal("Zadanie jest w toku. Odśwież listę", Page.Squash(pending.TextContent));
-        Assert.StartsWith($"/moje/dostepy/{BookingId}", pending.QuerySelector("a")!.GetAttribute("href"));
+        Assert.StartsWith($"/moje/dostepy/{AccessId}", pending.QuerySelector("a")!.GetAttribute("href"));
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public class TasksAndKeysTests
         await using var f = await OpenDetail(Detail(kind: "Chat", unitsTotal: 500000));
         var page = await f.Browser.GetAsync(Client);
         Assert.Null(page.One("[data-testid=tasks]"));
-        Assert.DoesNotContain(f.Web.Booking.Requests, r => r.PathAndQuery.EndsWith("/tasks"));
+        Assert.DoesNotContain(f.Web.Access.Requests, r => r.PathAndQuery.EndsWith("/tasks"));
         Assert.Equal("500 tys. tokenów", page.One("[data-testid=detail-units]")!.TextContent);
     }
 
@@ -90,7 +90,7 @@ public class TasksAndKeysTests
     {
         var f = await ClientAreaFixture.SignedIn();
         await using var _ = f;
-        f.Web.Booking.Respond = r => r.RequestUri!.AbsolutePath.EndsWith("/tasks") ? FakeBackend.Throw(new HttpRequestException("down"))(r) : FakeBackend.Json(Detail());
+        f.Web.Access.Respond = r => r.RequestUri!.AbsolutePath.EndsWith("/tasks") ? FakeBackend.Throw(new HttpRequestException("down"))(r) : FakeBackend.Json(Detail());
         var page = await f.Browser.GetAsync(Client);
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Contains("Nie udało się wczytać zadań", page.TextOf("[data-testid=tasks-unavailable]"));
@@ -104,8 +104,8 @@ public class TasksAndKeysTests
         var page = await f.Post(Client, "task", ("Model.Input", $"  {Input}  "));
         Assert.Equal(HttpStatusCode.Found, page.Status);
         Assert.Equal($"{Detail_}?role=client&done=task", page.Location);
-        var call = f.Web.Booking.Requests.Single(r => r.Method == HttpMethod.Post);
-        Assert.Equal($"/api/v1/bookings/{BookingId}/tasks", call.PathAndQuery);
+        var call = f.Web.Access.Requests.Single(r => r.Method == HttpMethod.Post);
+        Assert.Equal($"/api/v1/bookings/{AccessId}/tasks", call.PathAndQuery);
         Assert.Equal(Input, JsonDocument.Parse(call.Body!).RootElement.GetProperty("input").GetString());
         Assert.DoesNotContain("Przygotuj", call.PathAndQuery); // user text is a body only
         Assert.DoesNotContain(f.Logs.Lines, l => l.Contains("Przygotuj", StringComparison.Ordinal)); // and never in a log
@@ -119,7 +119,7 @@ public class TasksAndKeysTests
         var page = await f.Post(Client, "task", ("Model.Input", text));
         Assert.Equal(message, page.TextOf(".form-summary a"));
         Assert.Equal("za krótkie", page.One("#task-input")!.TextContent); // what was typed stays
-        Assert.DoesNotContain(f.Web.Booking.Requests, r => r.Method == HttpMethod.Post);
+        Assert.DoesNotContain(f.Web.Access.Requests, r => r.Method == HttpMethod.Post);
     }
 
     [Fact]
@@ -128,7 +128,7 @@ public class TasksAndKeysTests
         await using var f = await OpenDetail(Detail());
         var page = await f.Post(Client, "task", ("Model.Input", new string('a', 20001)));
         Assert.Equal("Treść zadania może mieć najwyżej 20000 znaków.", page.TextOf(".form-summary a"));
-        Assert.DoesNotContain(f.Web.Booking.Requests, r => r.Method == HttpMethod.Post);
+        Assert.DoesNotContain(f.Web.Access.Requests, r => r.Method == HttpMethod.Post);
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public class TasksAndKeysTests
     {
         var f = await ClientAreaFixture.SignedIn();
         var list = keys ?? [];
-        f.Web.Booking.Respond = r => r.Method == HttpMethod.Get ? FakeBackend.Json(list) : write is not null ? write(r) : new HttpResponseMessage(HttpStatusCode.NoContent);
+        f.Web.Access.Respond = r => r.Method == HttpMethod.Get ? FakeBackend.Json(list) : write is not null ? write(r) : new HttpResponseMessage(HttpStatusCode.NoContent);
         return f;
     }
 
@@ -162,7 +162,7 @@ public class TasksAndKeysTests
         Assert.Contains("jeszcze nie użyto", rows[1].TextContent);
         Assert.Null(page.One("[data-testid=new-key]"));
         Assert.DoesNotContain("gab_" + new string('A', 10), page.Html);
-        Assert.Equal("/api/v1/me/api-keys", f.Web.Booking.Requests.Single(r => r.PathAndQuery.StartsWith("/api/v1/me/api-keys")).PathAndQuery);
+        Assert.Equal("/api/v1/me/api-keys", f.Web.Access.Requests.Single(r => r.PathAndQuery.StartsWith("/api/v1/me/api-keys")).PathAndQuery);
     }
 
     [Fact]
@@ -172,7 +172,7 @@ public class TasksAndKeysTests
         var page = await f.Browser.GetAsync("/moje/klucze");
         Assert.Equal(HttpStatusCode.Found, page.Status);
         Assert.StartsWith("/logowanie?redirect=%2Fmoje%2Fklucze", page.Location);
-        Assert.Empty(f.Web.Booking.Requests);
+        Assert.Empty(f.Web.Access.Requests);
     }
 
     [Fact]
@@ -186,7 +186,7 @@ public class TasksAndKeysTests
         Assert.Contains("tylko raz", box.TextContent); Assert.Equal("alert", box.QuerySelector(".callout--warning")!.GetAttribute("role"));
         var copy = box.QuerySelector("button[data-enhance=copy]")!;
         Assert.Equal((PlainKey, "Skopiowano", "Kopiuj klucz"), (copy.GetAttribute("data-copy"), copy.GetAttribute("data-done"), copy.TextContent));
-        var call = f.Web.Booking.Requests.Single(r => r.Method == HttpMethod.Post);
+        var call = f.Web.Access.Requests.Single(r => r.Method == HttpMethod.Post);
         Assert.Equal(("/api/v1/me/api-keys", "Moje IDE"), (call.PathAndQuery, JsonDocument.Parse(call.Body!).RootElement.GetProperty("name").GetString()));
         Assert.DoesNotContain(f.Logs.Lines, l => l.Contains(PlainKey, StringComparison.Ordinal));
 
@@ -202,7 +202,7 @@ public class TasksAndKeysTests
         await using var f = await OpenKeys();
         var page = await f.Post("/moje/klucze", "createkey", ("Model.Name", name));
         Assert.Equal("Podaj nazwę klucza, najwyżej 60 znaków.", page.TextOf(".form-summary a"));
-        Assert.DoesNotContain(f.Web.Booking.Requests, r => r.Method == HttpMethod.Post);
+        Assert.DoesNotContain(f.Web.Access.Requests, r => r.Method == HttpMethod.Post);
     }
 
     [Fact]
@@ -223,11 +223,11 @@ public class TasksAndKeysTests
         Assert.Equal("alertdialog", dialog.GetAttribute("role"));
         Assert.Contains("„Moje IDE”", dialog.TextContent);
         Assert.Equal("/moje/klucze", dialog.QuerySelector("a[data-dialog-dismiss]")!.GetAttribute("href"));
-        Assert.DoesNotContain(f.Web.Booking.Requests, r => r.Method == HttpMethod.Delete); // a GET changes nothing
+        Assert.DoesNotContain(f.Web.Access.Requests, r => r.Method == HttpMethod.Delete); // a GET changes nothing
 
         var page = await f.Post($"/moje/klucze?revoke={KeyId}", "revokekey");
         Assert.Equal("/moje/klucze?done=revoked", page.Location);
-        var call = f.Web.Booking.Requests.Single(r => r.Method == HttpMethod.Delete);
+        var call = f.Web.Access.Requests.Single(r => r.Method == HttpMethod.Delete);
         Assert.Equal($"/api/v1/me/api-keys/{KeyId}", call.PathAndQuery);
         Assert.Equal("Klucz został unieważniony.", (await f.Browser.GetAsync("/moje/klucze?done=revoked")).One("[data-testid=done]")!.TextContent);
     }

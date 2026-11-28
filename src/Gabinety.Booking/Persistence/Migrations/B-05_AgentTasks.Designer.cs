@@ -11,7 +11,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace Gabinety.Booking.Persistence.Migrations
 {
-    [DbContext(typeof(BookingDbContext))]
+    [DbContext(typeof(AccessDbContext))]
     [Migration("20261123164556_B-05_AgentTasks")]
     partial class B05_AgentTasks
     {

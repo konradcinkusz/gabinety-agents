@@ -48,10 +48,10 @@ public class ChatApiTests
     static async Task<JsonElement> Error(HttpResponseMessage r) => JsonDocument.Parse(await r.Content.ReadAsStringAsync()).RootElement.GetProperty("error");
 
     static Task<(UsageRow[] Rows, long Used)> State(CreateHost h, Guid package) => h.Query(async db => (
-        await db.UsageRecords.AsNoTracking().Where(u => u.BookingId == package).Select(u => new UsageRow(u.Units, u.ApiKeyId, u.Kind)).ToArrayAsync(),
-        (await db.Bookings.AsNoTracking().SingleAsync(b => b.Id == package)).UnitsUsed));
+        await db.UsageRecords.AsNoTracking().Where(u => u.AccessId == package).Select(u => new UsageRow(u.Units, u.ApiKeyId, u.Kind)).ToArrayAsync(),
+        (await db.Accesses.AsNoTracking().SingleAsync(b => b.Id == package)).UnitsUsed));
 
-    record UsageRow(long Units, Guid? ApiKeyId, OfferingKind Kind);
+    record UsageRow(long Units, Guid? ApiKeyId, PackageKind Kind);
 
     // ---- authentication
 
@@ -90,7 +90,7 @@ public class ChatApiTests
         var (key, _) = await AgentApiFx.MakeKey(h, Me);
         await AgentApiFx.Package(h, Me, "demo-b-" + Slug);
         await AgentApiFx.Package(h, Me, "demo-a-" + Slug);
-        await AgentApiFx.Package(h, Me, "demo-tasks-" + Slug, OfferingKind.Tasks, total: 3);
+        await AgentApiFx.Package(h, Me, "demo-tasks-" + Slug, PackageKind.Tasks, total: 3);
         await AgentApiFx.Package(h, Me, "demo-used-" + Slug, total: 10, used: 10);
         await AgentApiFx.Package(h, Other, "demo-theirs-" + Slug);
 
@@ -115,7 +115,7 @@ public class ChatApiTests
         Assert.Equal(HttpStatusCode.NotFound, none.StatusCode);
         Assert.Equal("model_not_found", (await Error(none)).GetProperty("code").GetString());
 
-        await AgentApiFx.Package(h, Me, Slug, OfferingKind.Tasks, total: 5);
+        await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, total: 5);
         await AgentApiFx.Package(h, Other, Slug); // someone else's package
         Assert.Equal(HttpStatusCode.NotFound, (await api.PostAsync("/v1/chat/completions", Json(Chat()))).StatusCode);
     }
@@ -136,7 +136,7 @@ public class ChatApiTests
         var (rows, used) = await State(h, package);
         Assert.Equal(120, used);
         var row = Assert.Single(rows);
-        Assert.Equal(new UsageRow(120, keyId, OfferingKind.Chat), row);
+        Assert.Equal(new UsageRow(120, keyId, PackageKind.Chat), row);
     }
 
     [Fact]
@@ -272,7 +272,7 @@ public class ChatApiTests
 
         var (rows, used) = await State(h, package);
         Assert.Equal(120, used);
-        Assert.Equal(new UsageRow(120, keyId, OfferingKind.Chat), Assert.Single(rows));
+        Assert.Equal(new UsageRow(120, keyId, PackageKind.Chat), Assert.Single(rows));
     }
 
     [Fact]

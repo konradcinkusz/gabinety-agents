@@ -8,8 +8,8 @@ public enum ModerationEventKind { Created, Held, Published, Rejected, Replied }
 public sealed class Review
 {
     public Guid Id { get; set; }
-    public Guid BookingId { get; set; }
-    public Guid PractitionerId { get; set; }
+    public Guid AccessId { get; set; }
+    public Guid AgentId { get; set; }
     public string ClientUserId { get; set; } = "";
     public short Rating { get; set; }
     public string Text { get; set; } = "";
@@ -28,7 +28,7 @@ public sealed class Review
 /// <summary>CONTRACTS 5.1 rating_summaries; Version increments on every change, PushedVersion trails it until pushed to Directory.</summary>
 public sealed class RatingSummary
 {
-    public Guid PractitionerId { get; set; }
+    public Guid AgentId { get; set; }
     public int Count { get; set; }
     public int Sum { get; set; }
     public long Version { get; set; }

@@ -19,8 +19,8 @@ public class LedgerExportTests
     static DateTimeOffset At(DateOnly d, int h = 0, int m = 0, int s = 0) => new(d.Year, d.Month, d.Day, h, m, s, TimeSpan.Zero);
     static string D(DateOnly d) => d.ToString("yyyy-MM-dd");
 
-    static LedgerEntry Entry(Guid booking, LedgerKind kind, long amount, DateTimeOffset at, string? pair = null, Guid? id = null) =>
-        new() { Id = id ?? Guid.NewGuid(), BookingId = booking, Kind = kind, AmountMinor = amount, PairKey = pair, CreatedAt = at };
+    static LedgerEntry Entry(Guid access, LedgerKind kind, long amount, DateTimeOffset at, string? pair = null, Guid? id = null) =>
+        new() { Id = id ?? Guid.NewGuid(), AccessId = access, Kind = kind, AmountMinor = amount, PairKey = pair, CreatedAt = at };
 
     static Task<HttpResponseMessage> Get(CreateHost h, string query, string role = "Admin") =>
         h.ClientFor("demo-admin-1", role).GetAsync("/api/v1/admin/ledger.csv" + query);

@@ -9,8 +9,8 @@ public enum PayoutStatus { Pending, Sent, Failed }
 public sealed class Payout
 {
     public Guid Id { get; set; }
-    public Guid BookingId { get; set; }
-    public Guid PractitionerId { get; set; }
+    public Guid AccessId { get; set; }
+    public Guid AgentId { get; set; }
     public long AmountMinor { get; set; }
     public PayoutStatus Status { get; set; }
     public string? ProviderRef { get; set; }
@@ -29,8 +29,8 @@ sealed class PayoutConfiguration : IEntityTypeConfiguration<Payout>
         b.ToTable("payouts");
         b.HasKey(x => x.Id);
         b.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
-        b.Property(x => x.BookingId).HasColumnName("booking_id");
-        b.Property(x => x.PractitionerId).HasColumnName("practitioner_id");
+        b.Property(x => x.AccessId).HasColumnName("booking_id");
+        b.Property(x => x.AgentId).HasColumnName("practitioner_id");
         b.Property(x => x.AmountMinor).HasColumnName("amount_minor");
         b.Property(x => x.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
         b.Property(x => x.ProviderRef).HasColumnName("provider_ref").HasMaxLength(100);
@@ -38,6 +38,6 @@ sealed class PayoutConfiguration : IEntityTypeConfiguration<Payout>
         b.Property(x => x.SentAt).HasColumnName("sent_at");
         b.Property(x => x.AttemptCount).HasColumnName("attempt_count").HasDefaultValue(0);
         b.Property(x => x.NextAttemptAt).HasColumnName("next_attempt_at");
-        b.HasIndex(x => x.BookingId).IsUnique(); // one payout per booking
+        b.HasIndex(x => x.AccessId).IsUnique(); // one payout per booking
     }
 }

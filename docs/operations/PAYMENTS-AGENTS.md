@@ -12,7 +12,7 @@ Nazwy z kodu `src/Gabinety.Booking`, które dziś obsługują wypłaty i konta p
 
 - wypłaty: encja i tabela `Payout` (`Features/Payouts`), `PayoutJob` (`Jobs/Payout`), pole terminu wypłaty w zakupie (`PayoutDueAt`, dziś `EndUtc + 72 h`), wpisy księgi `PractitionerPayout`;
 - prowizja: `FeeHook`, `PairKey` (reguła „jedna prowizja na parę klient i dostawca”), wpisy `PlatformFee`, ustawienie `Billing__FirstConsultationFeeBps`, `Fees` w `Gabinety.Billing`;
-- konta połączone: `PaymentAccount`, `PaymentAccountFeature`, `IConnectedAccountProvider` i jego implementacje (Stripe, Mock), strona rejestracji konta wypłat w panelu dostawcy (`PaymentsLanding`, `/practitioner/payments`), warunek zakupu `practitioner_payments_not_ready` (w `CreateBookingFeature`, w kontraktach i w tekstach strony) oraz stan konta płatności w profilu dostawcy;
+- konta połączone: `PaymentAccount`, `PaymentAccountFeature`, `IConnectedAccountProvider` i jego implementacje (Stripe, Mock), strona rejestracji konta wypłat w panelu dostawcy (`PaymentsLanding`, `/practitioner/payments`), warunek zakupu `practitioner_payments_not_ready` (w `CreateAccessFeature`, w kontraktach i w tekstach strony) oraz stan konta płatności w profilu dostawcy;
 - w adapterze Stripe: obciążenia na koncie dostawcy i przelewy (`transfers`) zamiast zwykłego obciążenia konta platformy; zdarzenia i uprawnienia klucza ograniczonego (Transfers, Accounts, Account Links) przestają być potrzebne, zostają płatność, zwrot i webhook.
 
 Do przemyślenia razem z usunięciem (nie zakładam rozwiązania):

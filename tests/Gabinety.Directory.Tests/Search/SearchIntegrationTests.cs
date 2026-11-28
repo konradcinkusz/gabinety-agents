@@ -85,8 +85,8 @@ public class SearchIntegrationTests(PgSearchFixture pg) : IClassFixture<PgSearch
     }
 
     [Fact] public Task Paging_30_rows_with_ties_has_no_gaps_or_duplicates() => SearchScenarios.Paging_30_rows_with_ties_visits_every_row_once_in_ranking_order(F, SearchScenarios.PostgresOrder);
-    [Fact] public Task Tech_array_filter_returns_exactly_the_right_rows() => SearchScenarios.Tech_filter_returns_exactly_the_rows_whose_offering_has_that_tech(F);
-    [Fact] public Task Combined_filters_hold_on_the_same_offering() => SearchScenarios.Filters_must_all_hold_on_the_same_offering(F);
+    [Fact] public Task Tech_array_filter_returns_exactly_the_right_rows() => SearchScenarios.Tech_filter_returns_exactly_the_rows_whose_package_has_that_tech(F);
+    [Fact] public Task Combined_filters_hold_on_the_same_package() => SearchScenarios.Filters_must_all_hold_on_the_same_package(F);
     [Fact] public Task Ties_are_ordered_by_score_then_approved_at_then_id() => SearchScenarios.Ties_are_ordered_by_score_then_approved_at_then_id(F, SearchScenarios.PostgresOrder);
     [Fact] public Task Q_is_case_insensitive_and_treats_percent_literally() => SearchScenarios.Q_matches_name_or_headline_case_insensitively_and_treats_wildcards_literally(F);
 
@@ -99,7 +99,7 @@ public class SearchIntegrationTests(PgSearchFixture pg) : IClassFixture<PgSearch
         var c = F.Anon();
         Assert.Equal(HttpStatusCode.OK, (await c.GetAsync("/api/v1/practitioners/" + p.Slug)).StatusCode);
         var m = (await c.GetFromJsonAsync<Gabinety.Contracts.Directory.SitemapDto>("/api/v1/sitemap", Sk.J))!;
-        Assert.Equal(4, m.Practitioners.Count);
+        Assert.Equal(4, m.Agents.Count);
         Assert.Contains(new Gabinety.Contracts.Directory.SitemapCategory("/agenci/code-review/dotnet", 3, true), m.Categories);
         Assert.Contains(new Gabinety.Contracts.Directory.SitemapCategory("/agenci/audyt-kodu/csharp", 1, false), m.Categories);
     }

@@ -5,7 +5,7 @@ namespace Gabinety.Web.Tests.Pipeline;
 /// <summary>The sign-in states authservice has and DevIdentity never shows (429, lockout, two-factor), and the shell by session (DESIGN-CONTRACT 5.1, audit G-1 G-2 G-4).</summary>
 public class LoginStatesTests
 {
-    static WebFactory Web() { var w = new WebFactory(); w.Booking.Respond = _ => FakeBackend.Json(new Gabinety.Web.Api.PageDto<Gabinety.Web.Api.BookingViewDto>([], null)); return w; }
+    static WebFactory Web() { var w = new WebFactory(); w.Access.Respond = _ => FakeBackend.Json(new Gabinety.Web.Api.PageDto<Gabinety.Web.Api.AccessViewDto>([], null)); return w; }
     static Dictionary<string, string> Form(string password = FakeIdentity.Password) => new() { ["Model.Email"] = "demo-client@demo.example", ["Model.Password"] = password };
 
     [Fact]
@@ -195,7 +195,7 @@ public class ShellTests
     {
         var web = new WebFactory();
         web.Directory.Respond = r => r.RequestUri!.AbsolutePath switch { "/api/v1/taxonomy" => FakeBackend.Json(Sample.Taxonomy), "/api/v1/sitemap" => FakeBackend.Json(Sample.Sitemap()), "/api/v1/me" => FakeBackend.Json(new Gabinety.Web.Api.MeDto("user-1", null, null, false, false)), _ => FakeBackend.Json(Sample.Cards(2)) };
-        web.Booking.Respond = _ => FakeBackend.Json(new Gabinety.Web.Api.PageDto<Gabinety.Web.Api.BookingViewDto>([], null));
+        web.Access.Respond = _ => FakeBackend.Json(new Gabinety.Web.Api.PageDto<Gabinety.Web.Api.AccessViewDto>([], null));
         return web;
     }
 
@@ -299,10 +299,10 @@ public class ShellTests
     }
 
     [Fact]
-    public async Task A_practitioner_sees_the_panel_in_the_menu_and_the_footer_and_the_directory_is_asked_once_a_minute_per_session()
+    public async Task A_agent_sees_the_panel_in_the_menu_and_the_footer_and_the_directory_is_asked_once_a_minute_per_session()
     {
         await using var web = Web();
-        Practitioner(web, "018f0000-0000-7000-8000-0000000000e1");
+        Agent(web, "018f0000-0000-7000-8000-0000000000e1");
         var browser = web.NewBrowser();
         await SignIn.As(web, browser);
         var before = MeCalls(web);
@@ -333,7 +333,7 @@ public class ShellTests
     }
 
     /// <summary>Makes the Directory's <c>/api/v1/me</c> answer as a practitioner with that profile (or as a client when <paramref name="profileId"/> is null).</summary>
-    static void Practitioner(WebFactory web, string? profileId)
+    static void Agent(WebFactory web, string? profileId)
     {
         var inner = web.Directory.Respond;
         var id = profileId is null ? (Guid?)null : Guid.Parse(profileId);

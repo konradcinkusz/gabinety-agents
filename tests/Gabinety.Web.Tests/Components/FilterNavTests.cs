@@ -1,5 +1,5 @@
 using Bunit;
-using Gabinety.Web.Components.Pages.Practitioners;
+using Gabinety.Web.Components.Pages.Agents;
 
 namespace Gabinety.Web.Tests.Rendering;
 
@@ -81,7 +81,7 @@ public class FilterNavTests : BunitContext
     [Fact]
     public void The_scoped_sheet_shows_the_panel_from_52_rem_keeps_the_summary_inert_there_and_has_no_inline_flow_left()
     {
-        var css = File.ReadAllText(Path.Combine(Repo.Web, "Components", "Pages", "Practitioners", "FilterNav.razor.css"));
+        var css = File.ReadAllText(Path.Combine(Repo.Web, "Components", "Pages", "Agents", "FilterNav.razor.css"));
         Assert.Contains("@media (min-width: 52rem)", css);
         Assert.Contains(".filters:not([open]) > :not(summary) { display: block; }", css); // block, not grid: a grid sized the nav by its widest chip and the panel slid under the results
         Assert.Contains(".filters > summary { pointer-events: none; }", css);

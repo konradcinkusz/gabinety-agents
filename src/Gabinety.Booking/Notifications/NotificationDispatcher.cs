@@ -28,7 +28,7 @@ public sealed class NotificationDispatcher(IServiceScopeFactory scopes, TimeProv
         List<Guid> ids;
         using (var scope = scopes.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AccessDbContext>();
             var now = time.GetUtcNow();
             ids = await db.Notifications.AsNoTracking()
                 .Where(n => n.SentAt == null && n.Attempts < MaxAttempts && n.DueAt <= now)
@@ -54,15 +54,15 @@ public sealed class NotificationDispatcher(IServiceScopeFactory scopes, TimeProv
     {
         using var scope = scopes.CreateScope();
         var sp = scope.ServiceProvider;
-        var db = sp.GetRequiredService<BookingDbContext>();
+        var db = sp.GetRequiredService<AccessDbContext>();
         var now = time.GetUtcNow();
 
         var n = await db.Notifications.SingleOrDefaultAsync(x => x.Id == id, ct);
         if (n is null || n.SentAt != null || n.Attempts >= MaxAttempts || n.DueAt > now) return false;
 
-        var booking = await db.Bookings.AsNoTracking().Where(b => b.Id == n.BookingId)
-            .Select(b => new { b.StartUtc, b.PractitionerUserId, b.ClientEmail }).SingleOrDefaultAsync(ct);
-        if (booking is not null && IsReminder(n.Kind) && booking.StartUtc <= now)
+        var access = await db.Accesses.AsNoTracking().Where(b => b.Id == n.AccessId)
+            .Select(b => new { b.StartUtc, b.AgentUserId, b.ClientEmail }).SingleOrDefaultAsync(ct);
+        if (access is not null && IsReminder(n.Kind) && access.StartUtc <= now)
         {
             n.Attempts = MaxAttempts; // the give-up state: never selected again, sent_at stays null
             try { await db.SaveChangesAsync(ct); }
@@ -76,15 +76,15 @@ public sealed class NotificationDispatcher(IServiceScopeFactory scopes, TimeProv
         try { await db.SaveChangesAsync(ct); }
         catch (DbUpdateConcurrencyException) { return false; } // another dispatcher claimed it first, or it was cancelled meanwhile
 
-        if (booking is null) return Failed(n, "the booking does not exist");
+        if (access is null) return Failed(n, "the booking does not exist");
 
-        var forPractitioner = n.ToUserId == booking.PractitionerUserId;
+        var forAgent = n.ToUserId == access.AgentUserId;
         string? address;
-        try { address = await sp.GetRequiredService<IContactResolver>().ResolveAddressAsync(new ContactLookup(n.ToUserId, forPractitioner, booking.ClientEmail), ct); }
+        try { address = await sp.GetRequiredService<IContactResolver>().ResolveAddressAsync(new ContactLookup(n.ToUserId, forAgent, access.ClientEmail), ct); }
         catch (Exception ex) when (ex is not OperationCanceledException) { return Failed(n, "the address lookup failed: " + ex.GetType().Name); }
         if (string.IsNullOrWhiteSpace(address)) return Failed(n, "the user has no address");
 
-        var mail = NotificationTemplates.Render(n.Kind, SiteUrl.From(sp.GetRequiredService<IConfiguration>()), n.BookingId, booking.StartUtc, forPractitioner);
+        var mail = NotificationTemplates.Render(n.Kind, SiteUrl.From(sp.GetRequiredService<IConfiguration>()), n.AccessId, access.StartUtc, forAgent);
         try { await sp.GetRequiredService<IEmailSender>().SendAsync(new EmailMessage(address, n.ToUserId, n.Kind, mail.Subject, mail.Text, mail.Html), ct); }
         catch (Exception ex) when (ex is not OperationCanceledException) { return Failed(n, "the sender failed: " + ex.GetType().Name); }
 

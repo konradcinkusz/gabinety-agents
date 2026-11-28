@@ -7,7 +7,7 @@ using Gabinety.Contracts.Directory;
 using Gabinety.Directory.Features.Profiles;
 using Gabinety.Directory.Features.Verification;
 using Gabinety.Directory.Persistence;
-using Gabinety.Directory.Tests.Offerings;
+using Gabinety.Directory.Tests.Packages;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
@@ -41,7 +41,7 @@ public sealed class FakeGithub : IGithubProfileLookup
 }
 
 /// <summary>Directory host with role-bearing tokens (ProfileFactory's key is private), a hand-moved clock and the lookup double.</summary>
-public class VerificationFactory : OfferingFactory
+public class VerificationFactory : PackageFactory
 {
     public const string RoleClaim = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
     const string Audience = "directory-test", Issuer = "https://issuer.demo.invalid";
@@ -89,24 +89,24 @@ public class VerificationFactory : OfferingFactory
         return await work(scope.ServiceProvider.GetRequiredService<DirectoryDbContext>());
     }
 
-    public Task<Practitioner> Seed(PractitionerStatus status, Action<Practitioner>? configure = null, string? userId = null) => Db(async db =>
+    public Task<Agent> Seed(AgentStatus status, Action<Agent>? configure = null, string? userId = null) => Db(async db =>
     {
         var n = Guid.NewGuid().ToString("n");
-        var p = new Practitioner
+        var p = new Agent
         {
             Id = Guid.NewGuid(), UserId = userId ?? "demo-" + n, Slug = "demo-" + n[..16], DisplayName = "Demo " + n[..8], Headline = "Senior .NET reviewer",
             Status = status, CreatedAt = Clock.GetUtcNow(), UpdatedAt = Clock.GetUtcNow(),
         };
         configure?.Invoke(p);
-        db.Practitioners.Add(p);
+        db.Agents.Add(p);
         await db.SaveChangesAsync();
         return p;
     });
 
-    public Task<List<VerificationEvent>> Events(Guid practitionerId) =>
-        Db(db => db.VerificationEvents.AsNoTracking().Where(e => e.PractitionerId == practitionerId).OrderBy(e => e.At).ToListAsync());
+    public Task<List<VerificationEvent>> Events(Guid agentId) =>
+        Db(db => db.VerificationEvents.AsNoTracking().Where(e => e.AgentId == agentId).OrderBy(e => e.At).ToListAsync());
 
-    public Task<Practitioner> Load(Guid id) => Db(db => db.Practitioners.AsNoTracking().SingleAsync(p => p.Id == id));
+    public Task<Agent> Load(Guid id) => Db(db => db.Agents.AsNoTracking().SingleAsync(p => p.Id == id));
 }
 
 public static class Vk

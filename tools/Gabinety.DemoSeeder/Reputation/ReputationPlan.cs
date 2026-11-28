@@ -1,10 +1,10 @@
 namespace Gabinety.DemoSeeder;
 
 /// <summary>
-/// One demo review. <see cref="Key"/> is its stable name (starts with demo-); <see cref="BookingKey"/> names the Completed demo booking it is written on
+/// One demo review. <see cref="Key"/> is its stable name (starts with demo-); <see cref="AccessKey"/> names the Completed demo booking it is written on
 /// (the booking step's <c>demo-booking-completed-N</c>, a package whose one task was ordered and which the auto-complete job completed). The reviewer is whoever made that booking and the practitioner is whoever it was with, so neither is repeated here.
 /// </summary>
-public sealed record DemoReview(string Key, string BookingKey, int Rating, string Text);
+public sealed record DemoReview(string Key, string AccessKey, int Rating, string Text);
 
 public static class ReputationPlan
 {

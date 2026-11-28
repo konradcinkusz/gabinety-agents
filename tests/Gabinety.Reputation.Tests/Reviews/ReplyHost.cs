@@ -25,14 +25,14 @@ sealed class FakeDirectory : HttpMessageHandler
     public const string Key = "k-directory-DO-NOT-LEAK-9876";
     public const string BaseUrl = "http://directory.demo.invalid";
 
-    public readonly ConcurrentDictionary<string, Guid> Practitioners = new();
+    public readonly ConcurrentDictionary<string, Guid> Agents = new();
     public Func<HttpRequestMessage, int, HttpResponseMessage>? Override; // (request, call number from 1)
     public bool Down;
     public int Calls;
     public string? LastKeyHeader;
     public string? LastPath;
 
-    public Guid Add(string userId) => Practitioners[userId] = Guid.NewGuid();
+    public Guid Add(string userId) => Agents[userId] = Guid.NewGuid();
 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage r, CancellationToken ct)
     {
@@ -43,7 +43,7 @@ sealed class FakeDirectory : HttpMessageHandler
         if (Override is { } o) return Task.FromResult(o(r, n));
         const string prefix = "/internal/v1/practitioners/by-user/";
         var path = r.RequestUri!.AbsolutePath;
-        if (path.StartsWith(prefix) && Practitioners.TryGetValue(Uri.UnescapeDataString(path[prefix.Length..]), out var id))
+        if (path.StartsWith(prefix) && Agents.TryGetValue(Uri.UnescapeDataString(path[prefix.Length..]), out var id))
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { practitionerId = id, status = "Approved" }) });
         return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
     }
@@ -100,14 +100,14 @@ sealed class ReplyHost : WebApplicationFactory<Program>
 
     protected override void Dispose(bool disposing) { if (disposing) _rsa.Dispose(); base.Dispose(disposing); }
 
-    public async Task<Guid> SeedReview(Guid practitionerId, Gabinety.Contracts.Reputation.ReviewStatus status = Gabinety.Contracts.Reputation.ReviewStatus.Published, string? reply = null)
+    public async Task<Guid> SeedReview(Guid agentId, Gabinety.Contracts.Reputation.ReviewStatus status = Gabinety.Contracts.Reputation.ReviewStatus.Published, string? reply = null)
     {
         var id = Guid.NewGuid();
         using var scope = Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ReputationDbContext>();
         db.Reviews.Add(new Review
         {
-            Id = id, BookingId = Guid.NewGuid(), PractitionerId = practitionerId, ClientUserId = "demo-reviewer", Rating = 5,
+            Id = id, AccessId = Guid.NewGuid(), AgentId = agentId, ClientUserId = "demo-reviewer", Rating = 5,
             Text = "Synthetyczna opinia o długości powyżej dwudziestu znaków.", Status = status,
             CreatedAt = Clock.GetUtcNow(), PublishedAt = status == Gabinety.Contracts.Reputation.ReviewStatus.Published ? Clock.GetUtcNow() : null,
             ReplyText = reply, RepliedAt = reply is null ? null : Clock.GetUtcNow(),

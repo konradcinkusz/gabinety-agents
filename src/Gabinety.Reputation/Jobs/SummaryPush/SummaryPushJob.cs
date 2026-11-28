@@ -31,7 +31,7 @@ public sealed class SummaryPushJob(IServiceScopeFactory scopes, IDirectoryReputa
             {
                 using var scope = scopes.CreateScope();
                 due = await scope.ServiceProvider.GetRequiredService<ReputationDbContext>().RatingSummaries.AsNoTracking()
-                    .Where(s => s.Version > s.PushedVersion).OrderBy(s => s.PractitionerId).Take(BatchSize).ToListAsync(ct);
+                    .Where(s => s.Version > s.PushedVersion).OrderBy(s => s.AgentId).Take(BatchSize).ToListAsync(ct);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -44,29 +44,29 @@ public sealed class SummaryPushJob(IServiceScopeFactory scopes, IDirectoryReputa
             {
                 ct.ThrowIfCancellationRequested();
                 var now = time.GetUtcNow();
-                if (_unknown.TryGetValue(s.PractitionerId, out var u) && u.Version == s.Version && now < u.RetryAt) continue;
+                if (_unknown.TryGetValue(s.AgentId, out var u) && u.Version == s.Version && now < u.RetryAt) continue;
                 try
                 {
                     var avg = s.Count == 0 ? 0m : Math.Round((decimal)s.Sum / s.Count, 2);
-                    switch (await client.PushAsync(s.PractitionerId, new ReputationPush(s.Count, avg, s.Version), ct))
+                    switch (await client.PushAsync(s.AgentId, new ReputationPush(s.Count, avg, s.Version), ct))
                     {
                         case PushResult.Accepted:
-                            _unknown.Remove(s.PractitionerId);
-                            await MarkPushedAsync(s.PractitionerId, s.Version, ct);
+                            _unknown.Remove(s.AgentId);
+                            await MarkPushedAsync(s.AgentId, s.Version, ct);
                             pushed++;
                             break;
                         case PushResult.NotFound:
-                            _unknown[s.PractitionerId] = (s.Version, now + UnknownPause);
-                            log.LogWarning("SummaryPush: Directory does not know practitioner {PractitionerId}; paused", s.PractitionerId);
+                            _unknown[s.AgentId] = (s.Version, now + UnknownPause);
+                            log.LogWarning("SummaryPush: Directory does not know practitioner {PractitionerId}; paused", s.AgentId);
                             break;
                         default:
-                            log.LogWarning("SummaryPush gave up on practitioner {PractitionerId} until the next cycle", s.PractitionerId);
+                            log.LogWarning("SummaryPush gave up on practitioner {PractitionerId} until the next cycle", s.AgentId);
                             break;
                     }
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
-                    log.LogError("SummaryPush failed for practitioner {PractitionerId}: {ExceptionType}", s.PractitionerId, ex.GetType().Name);
+                    log.LogError("SummaryPush failed for practitioner {PractitionerId}: {ExceptionType}", s.AgentId, ex.GetType().Name);
                 }
             }
             if (pushed > 0) log.LogInformation("SummaryPush pushed {Count} of {Total} summaries", pushed, due.Count);
@@ -76,11 +76,11 @@ public sealed class SummaryPushJob(IServiceScopeFactory scopes, IDirectoryReputa
     }
 
     /// <summary>Touches only <c>pushed_version</c>, and only upwards, so a concurrent change of count, sum or version is never overwritten.</summary>
-    async Task MarkPushedAsync(Guid practitionerId, long version, CancellationToken ct)
+    async Task MarkPushedAsync(Guid agentId, long version, CancellationToken ct)
     {
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ReputationDbContext>();
-        var row = await db.RatingSummaries.SingleOrDefaultAsync(x => x.PractitionerId == practitionerId, ct);
+        var row = await db.RatingSummaries.SingleOrDefaultAsync(x => x.AgentId == agentId, ct);
         if (row is null || row.PushedVersion >= version) return;
         row.PushedVersion = version;
         await db.SaveChangesAsync(ct);

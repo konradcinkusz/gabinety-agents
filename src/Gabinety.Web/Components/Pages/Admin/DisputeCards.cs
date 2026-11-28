@@ -3,10 +3,10 @@ using Gabinety.Web.Api;
 namespace Gabinety.Web.Components.Pages.Admin;
 
 /// <summary>One dispute as its card shows it: the report, and what the page could read about the booking (offer, price, payment) and the practitioner's name. Missing pieces are null, and the card says so.</summary>
-public sealed record DisputeCard(AdminDisputeDto Dispute, AdminBookingDto? Booking, string? PractitionerName)
+public sealed record DisputeCard(AdminDisputeDto Dispute, AdminAccessDto? Access, string? AgentName)
 {
-    public Guid Id => Dispute.BookingId;
-    public long? PriceGrosz => Booking is { Price.AmountMinor: > 0 } b ? b.Price.AmountMinor : null;
+    public Guid Id => Dispute.AccessId;
+    public long? PriceGrosz => Access is { Price.AmountMinor: > 0 } b ? b.Price.AmountMinor : null;
 }
 
 public static class DisputeRules
@@ -23,15 +23,15 @@ public static class DisputeRules
     public static async Task<IReadOnlyList<DisputeCard>> LoadAsync(AdminApi api, IReadOnlyList<AdminDisputeDto> disputes, CancellationToken ct = default)
     {
         using var gate = new SemaphoreSlim(ReadParallelism);
-        var bookings = await Task.WhenAll(disputes.Select(async d =>
+        var accesses = await Task.WhenAll(disputes.Select(async d =>
         {
             await gate.WaitAsync(ct);
-            try { return await api.Booking(d.BookingId, ct); }
+            try { return await api.Access(d.AccessId, ct); }
             finally { gate.Release(); }
         }));
-        var views = bookings.Select(b => b.IsOk ? b.Value : null).ToList();
-        var missingNames = views.Where(b => b is not null && string.IsNullOrWhiteSpace(b.Practitioner.DisplayName)).Select(b => b!.Practitioner.Id);
-        var names = await api.PractitionerNames(missingNames, ct: ct);
-        return [.. disputes.Select((d, i) => new DisputeCard(d, views[i], views[i] is { } b ? (!string.IsNullOrWhiteSpace(b.Practitioner.DisplayName) ? b.Practitioner.DisplayName : names.GetValueOrDefault(b.Practitioner.Id)) : null))];
+        var views = accesses.Select(b => b.IsOk ? b.Value : null).ToList();
+        var missingNames = views.Where(b => b is not null && string.IsNullOrWhiteSpace(b.Agent.DisplayName)).Select(b => b!.Agent.Id);
+        var names = await api.AgentNames(missingNames, ct: ct);
+        return [.. disputes.Select((d, i) => new DisputeCard(d, views[i], views[i] is { } b ? (!string.IsNullOrWhiteSpace(b.Agent.DisplayName) ? b.Agent.DisplayName : names.GetValueOrDefault(b.Agent.Id)) : null))];
     }
 }

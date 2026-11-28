@@ -4,11 +4,11 @@ using System.Text.Json;
 using Gabinety.Contracts.Common;
 using Gabinety.Contracts.Directory;
 using Gabinety.Directory.Persistence;
-using Gabinety.Directory.Tests.Offerings;
+using Gabinety.Directory.Tests.Packages;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Testcontainers.PostgreSql;
-using static Gabinety.Directory.Tests.Offerings.Kit;
+using static Gabinety.Directory.Tests.Packages.Kit;
 
 namespace Gabinety.Directory.Tests.Profiles;
 
@@ -16,7 +16,7 @@ namespace Gabinety.Directory.Tests.Profiles;
 [Trait("tier", "integration")]
 public class MultiAgentIntegrationTests
 {
-    sealed class PgFactory(string cs) : OfferingFactory
+    sealed class PgFactory(string cs) : PackageFactory
     {
         protected override string Provider => "PostgreSQL";
         protected override string? ConnectionString => cs;
@@ -48,7 +48,7 @@ public class MultiAgentIntegrationTests
         var calls = clients.Select((c, i) => Task.Run(async () =>
         {
             gate.Wait();
-            return await c.PostAsJsonAsync(Me, new CreatePractitionerRequest($"Demo Wyścig {i} {Guid.NewGuid().ToString("n")[..6]}"));
+            return await c.PostAsJsonAsync(Me, new CreateAgentRequest($"Demo Wyścig {i} {Guid.NewGuid().ToString("n")[..6]}"));
         })).ToList();
         gate.Set();
         var results = await Task.WhenAll(calls);
@@ -66,13 +66,13 @@ public class MultiAgentIntegrationTests
     }
 
     [Fact]
-    public async Task Offerings_on_a_chosen_agent_lock_and_change_only_that_agents_row()
+    public async Task Packages_on_a_chosen_agent_lock_and_change_only_that_agents_row()
     {
         var (pg, f) = await Start();
         await using var _ = pg; using var __ = f;
         var c = f.ClientFor(Id());
-        var a = (await (await c.PostAsJsonAsync(Me, new CreatePractitionerRequest("Demo PG Alfa " + Guid.NewGuid().ToString("n")[..6]))).Content.ReadFromJsonAsync<PractitionerPrivate>(J))!;
-        var b = (await (await c.PostAsJsonAsync(Me, new CreatePractitionerRequest("Demo PG Beta " + Guid.NewGuid().ToString("n")[..6]))).Content.ReadFromJsonAsync<PractitionerPrivate>(J))!;
+        var a = (await (await c.PostAsJsonAsync(Me, new CreateAgentRequest("Demo PG Alfa " + Guid.NewGuid().ToString("n")[..6]))).Content.ReadFromJsonAsync<AgentPrivate>(J))!;
+        var b = (await (await c.PostAsJsonAsync(Me, new CreateAgentRequest("Demo PG Beta " + Guid.NewGuid().ToString("n")[..6]))).Content.ReadFromJsonAsync<AgentPrivate>(J))!;
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, (await c.PostAsJsonAsync($"{Me}/offerings", Valid())).StatusCode); // two agents, none named
         Assert.Equal(HttpStatusCode.Created, (await c.PostAsJsonAsync($"{Me}/offerings?agent={b.Slug}", Valid())).StatusCode);

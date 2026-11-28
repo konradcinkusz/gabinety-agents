@@ -13,7 +13,7 @@ public enum MoneyEvent
     DisputeRefundPartial,
 }
 
-public readonly record struct Settlement(Money Refund, Money PractitionerShare, Money Fee);
+public readonly record struct Settlement(Money Refund, Money AgentShare, Money Fee);
 
 /// <summary>CONTRACTS 9.2 as pure functions. No clock: the caller passes <c>now</c>.</summary>
 public static class RefundPolicy

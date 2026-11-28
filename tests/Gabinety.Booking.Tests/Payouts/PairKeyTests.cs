@@ -3,8 +3,8 @@ using System.Text;
 using Gabinety.Billing;
 using Gabinety.Booking.Features.Lifecycle.Core;
 using Gabinety.Booking.Features.Payouts;
-using BookingStatus = Gabinety.Billing.BookingStatus;
-using BookingTrigger = Gabinety.Billing.BookingTrigger;
+using AccessStatus = Gabinety.Billing.AccessStatus;
+using AccessTrigger = Gabinety.Billing.AccessTrigger;
 
 namespace Gabinety.Booking.Tests;
 
@@ -47,19 +47,19 @@ public class PairKeyTests
     }
 
     [Fact]
-    public async Task A_second_booking_of_a_long_id_pair_gets_fee_zero_and_the_first_the_fee()
+    public async Task A_second_access_of_a_long_id_pair_gets_fee_zero_and_the_first_the_fee()
     {
         await using var h = Life.Host(new RecordingProvider());
         var client = "demo-" + Guid.NewGuid().ToString("N") + new string('z', 27); // 64 characters
-        var a = await Fee.Seed(h, BookingStatus.Confirmed, client, h.Practitioner, 25000, TimeSpan.FromDays(2));
-        var b = await Fee.Seed(h, BookingStatus.Confirmed, client, h.Practitioner, 25000, TimeSpan.FromDays(3));
-        await Fee.Apply(h, a, BookingTrigger.CompletionWindowElapsed);
-        await Fee.Apply(h, b, BookingTrigger.CompletionWindowElapsed);
+        var a = await Fee.Seed(h, AccessStatus.Confirmed, client, h.Agent, 25000, TimeSpan.FromDays(2));
+        var b = await Fee.Seed(h, AccessStatus.Confirmed, client, h.Agent, 25000, TimeSpan.FromDays(3));
+        await Fee.Apply(h, a, AccessTrigger.CompletionWindowElapsed);
+        await Fee.Apply(h, b, AccessTrigger.CompletionWindowElapsed);
         Assert.Equal((3750L, 21250L), await Fee.Amounts(h, a));
         Assert.Equal((0L, 25000L), await Fee.Amounts(h, b));
         var rows = await h.Query(db => Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(
-            db.LedgerEntries.Where(l => l.PairKey == PairKey.For(client, h.Practitioner))));
-        Assert.Equal(a, Assert.Single(rows).BookingId);
+            db.LedgerEntries.Where(l => l.PairKey == PairKey.For(client, h.Agent))));
+        Assert.Equal(a, Assert.Single(rows).AccessId);
     }
 
     [Fact]
@@ -68,10 +68,10 @@ public class PairKeyTests
         await using var h = Adm.Host(new RecordingProvider());
         var (id, _) = await Adm.Seed(h);
         var client = "demo-" + Guid.NewGuid().ToString("N") + new string('z', 27);
-        await h.Seed(db => db.Bookings.Single(x => x.Id == id).ClientUserId = client);
+        await h.Seed(db => db.Accesses.Single(x => x.Id == id).ClientUserId = client);
         var r = await Adm.Resolve(h, id, Adm.Body("release"));
         Assert.Equal(System.Net.HttpStatusCode.OK, r.StatusCode);
         var row = await Life.Row(h, id);
-        Assert.Equal((BookingStatus.Resolved, 1500L, 8500L), (row.Status, row.FeeMinor, row.PayoutMinor));
+        Assert.Equal((AccessStatus.Resolved, 1500L, 8500L), (row.Status, row.FeeMinor, row.PayoutMinor));
     }
 }

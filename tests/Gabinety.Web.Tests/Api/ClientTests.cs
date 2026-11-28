@@ -26,7 +26,7 @@ public class ClientTests : IClassFixture<WebFactory>
         Assert.Equal("Audyt kodu", taxonomy.Value!.Problems[0].NamePl);
 
         var before = _web.Directory.Calls;
-        var page = await client.PractitionersAsync(new PractitionerQuery("audyt-kodu", "dotnet", "a&b c", 30, 15000, "CUR+/="));
+        var page = await client.AgentsAsync(new AgentQuery("audyt-kodu", "dotnet", "a&b c", 30, 15000, "CUR+/="));
         Assert.True(page.IsOk);
         Assert.Equal(2, page.Value!.Items.Count);
         Assert.Equal("NEXT", page.Value.NextCursor);
@@ -40,14 +40,14 @@ public class ClientTests : IClassFixture<WebFactory>
         using var _ = scope;
 
         _web.Directory.Respond = _ => FakeBackend.Problem(HttpStatusCode.UnprocessableEntity, "invalid_input");
-        var refused = await client.PractitionersAsync(new PractitionerQuery(Cursor: "forged"));
+        var refused = await client.AgentsAsync(new AgentQuery(Cursor: "forged"));
         Assert.Equal(new ApiFailure(422, "invalid_input"), refused.Failure);
 
         _web.Directory.Respond = _ => new HttpResponseMessage(HttpStatusCode.NotFound) { Content = new StringContent("<html>not json</html>") };
         Assert.Equal(new ApiFailure(404, "http_404"), (await client.TaxonomyAsync()).Failure);
 
         _web.Directory.Respond = _ => FakeBackend.Raw("{\"items\": 12}"); // a body that is not the contract
-        Assert.Equal(new ApiFailure(502, ApiFailure.InvalidResponse), (await client.PractitionersAsync(new PractitionerQuery())).Failure);
+        Assert.Equal(new ApiFailure(502, ApiFailure.InvalidResponse), (await client.AgentsAsync(new AgentQuery())).Failure);
 
         _web.Directory.Respond = FakeBackend.Throw(new HttpRequestException("connect ECONNREFUSED 10.0.0.1:5101")); // the cause is dropped
         Assert.Equal(ApiFailure.NoAnswer, (await client.TaxonomyAsync()).Failure);
@@ -164,7 +164,7 @@ public class ClientTests : IClassFixture<WebFactory>
     }
 
     [Theory]
-    [InlineData(Backend.Directory)] [InlineData(Backend.Booking)] [InlineData(Backend.Reputation)] [InlineData(Backend.Assistant)] [InlineData(Backend.Auth)]
+    [InlineData(Backend.Directory)] [InlineData(Backend.Access)] [InlineData(Backend.Reputation)] [InlineData(Backend.Assistant)] [InlineData(Backend.Auth)]
     public void Every_backend_client_has_exactly_one_resilience_handler(string name)
     {
         // ServiceDefaults adds the standard handler to every client; a second AddStandardResilienceHandler multiplies the attempts (BLAZOR-WEB-APP section 5).

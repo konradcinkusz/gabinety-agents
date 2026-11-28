@@ -4,16 +4,16 @@ using Gabinety.Booking.Jobs.Base;
 using Gabinety.Booking.Persistence;
 using Gabinety.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessEntity = Gabinety.Booking.Features.Accesses.Entities.Access;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Jobs.AutoComplete;
 
 /// <summary>
 /// Completes the packages nobody disputed (A-03: <c>Confirmed</c> to <c>Completed</c> once <c>end_utc</c> has passed or the units are used up, see <see cref="IsDue"/>).
 /// The effects: <c>ended_at</c> (the earlier of <c>end_utc</c> and now) and <c>payout_due_at = max(end_utc + 48 h, start_utc + 72 h)</c>; the fee hook (T-04.08c) computes
-/// <c>fee_minor</c>/<c>payout_minor</c> in the same transaction. Each booking is its own transaction through <see cref="BookingTransitions"/> (trigger
-/// <see cref="BookingTrigger.CompletionWindowElapsed"/>), which re-checks status and time under the row lock: a booking disputed, completed or cancelled meanwhile
+/// <c>fee_minor</c>/<c>payout_minor</c> in the same transaction. Each booking is its own transaction through <see cref="AccessTransitions"/> (trigger
+/// <see cref="AccessTrigger.CompletionWindowElapsed"/>), which re-checks status and time under the row lock: a booking disputed, completed or cancelled meanwhile
 /// (by a client, another run or another instance) is no longer <c>Confirmed</c>, so it is a no-op, not an error. A disputed booking therefore can never be completed.
 /// Each cycle takes the due bookings oldest first in batches (<c>Jobs:AutoComplete:BatchSize</c>, 50) until none are left or <c>Jobs:AutoComplete:MaxPerRun</c> (500) were handled.
 /// Idempotent, and safe in two processes at once.
@@ -39,7 +39,7 @@ public class AutoCompleteJob(IServiceScopeFactory scopes, TimeProvider time, ICo
     /// A package is done when its validity ended or its units are used up (A-03). <c>UnitsTotal &gt; 0</c> guards the rows that predate the units (they hold 0 of 0) and must not complete at once.
     /// The 48 h window <see cref="WindowKey"/> no longer applies to this condition.
     /// </summary>
-    public static bool IsDue(BookingEntity b, DateTimeOffset now) => b.EndUtc <= now || (b.UnitsTotal > 0 && b.UnitsUsed >= b.UnitsTotal);
+    public static bool IsDue(AccessEntity b, DateTimeOffset now) => b.EndUtc <= now || (b.UnitsTotal > 0 && b.UnitsUsed >= b.UnitsTotal);
 
     /// <summary>Completes every due booking up to the per-run cap and returns how many this call completed. Failures are counted, every other booking is still handled, then <see cref="JobFailedException"/> is thrown. A booking that fails is not tried again within the run.</summary>
     public async Task<int> CompleteDueAsync(DateTimeOffset now, CancellationToken ct)
@@ -71,13 +71,13 @@ public class AutoCompleteJob(IServiceScopeFactory scopes, TimeProvider time, ICo
     }
 
     /// <summary>Narrows what the job looks at. The default is everything; a test sharing a database with other tests restricts it to its own rows.</summary>
-    protected virtual IQueryable<BookingEntity> Scope(IQueryable<BookingEntity> bookings) => bookings;
+    protected virtual IQueryable<AccessEntity> Scope(IQueryable<AccessEntity> accesses) => accesses;
 
     async Task<List<Guid>> SelectDueAsync(DateTimeOffset now, List<Guid> exclude, int take, CancellationToken ct)
     {
         using var scope = scopes.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
-        var due = Scope(db.Bookings.AsNoTracking()).Where(b => b.Status == BookingStatus.Confirmed && (b.EndUtc <= now || (b.UnitsTotal > 0 && b.UnitsUsed >= b.UnitsTotal)));
+        var db = scope.ServiceProvider.GetRequiredService<AccessDbContext>();
+        var due = Scope(db.Accesses.AsNoTracking()).Where(b => b.Status == AccessStatus.Confirmed && (b.EndUtc <= now || (b.UnitsTotal > 0 && b.UnitsUsed >= b.UnitsTotal)));
         if (exclude.Count > 0) due = due.Where(b => !exclude.Contains(b.Id));
         return await due.OrderBy(b => b.EndUtc).ThenBy(b => b.Id).Select(b => b.Id).Take(take).ToListAsync(ct);
     }
@@ -90,14 +90,14 @@ public class AutoCompleteJob(IServiceScopeFactory scopes, TimeProvider time, ICo
             try
             {
                 using var scope = scopes.CreateScope(); // one context, one transaction per booking
-                var transitions = scope.ServiceProvider.GetRequiredService<BookingTransitions>();
-                var result = await transitions.ApplyAsync(new TransitionRequest(id, BookingTrigger.CompletionWindowElapsed, now)
+                var transitions = scope.ServiceProvider.GetRequiredService<AccessTransitions>();
+                var result = await transitions.ApplyAsync(new TransitionRequest(id, AccessTrigger.CompletionWindowElapsed, now)
                 {
                     Precondition = b => IsDue(b, now),
                     Effects = c =>
                     {
-                        c.Booking.EndedAt = c.Booking.EndUtc < now ? c.Booking.EndUtc : now; // when it really ended: the validity, or the moment the last unit went
-                        c.Booking.PayoutDueAt = PayoutDueAt(c.Booking.StartUtc, c.Booking.EndUtc);
+                        c.Access.EndedAt = c.Access.EndUtc < now ? c.Access.EndUtc : now; // when it really ended: the validity, or the moment the last unit went
+                        c.Access.PayoutDueAt = PayoutDueAt(c.Access.StartUtc, c.Access.EndUtc);
                     },
                 }, ct);
                 if (result.Applied) applied++; // Invalid (disputed, cancelled or completed meanwhile; not due) and NotFound are no-ops

@@ -1,5 +1,5 @@
 using Gabinety.Web.Api;
-using Gabinety.Web.Components.Pages.Practitioners;
+using Gabinety.Web.Components.Pages.Agents;
 using Gabinety.Web.Components.Shared;
 
 namespace Gabinety.Web.Tests.Models;

@@ -60,23 +60,23 @@ public sealed class PaymentWebhookFeature : IServiceFeature
         return await RunAsync(handler, payments.Name, verified, http, ct);
     }
 
-    static async Task<IResult> SimulateAsync(SimulatePaymentRequest? req, IPaymentProvider payments, BookingDbContext db, PaymentEventHandler handler,
+    static async Task<IResult> SimulateAsync(SimulatePaymentRequest? req, IPaymentProvider payments, AccessDbContext db, PaymentEventHandler handler,
         ClaimsPrincipal user, HttpContext http, CancellationToken ct)
     {
         if (!IsMock(payments)) return Problem(ErrorCodes.Forbidden, "Forbidden", 403, "Payments are not simulated outside Mock mode.");
         var outcome = req?.Outcome?.ToLowerInvariant();
-        if (req is null || req.BookingId == Guid.Empty || outcome is not ("succeeded" or "failed"))
+        if (req is null || req.AccessId == Guid.Empty || outcome is not ("succeeded" or "failed"))
             return Problem(ErrorCodes.ValidationFailed, "Validation failed", 422, null,
                 new() { ["outcome"] = ["outcome must be succeeded or failed"] });
 
-        var payment = await db.Payments.AsNoTracking().SingleOrDefaultAsync(p => p.BookingId == req.BookingId, ct);
-        var booking = payment is null ? null : await db.Bookings.AsNoTracking().SingleOrDefaultAsync(b => b.Id == req.BookingId, ct);
+        var payment = await db.Payments.AsNoTracking().SingleOrDefaultAsync(p => p.AccessId == req.AccessId, ct);
+        var access = payment is null ? null : await db.Accesses.AsNoTracking().SingleOrDefaultAsync(b => b.Id == req.AccessId, ct);
         // Only the client of the booking drives its mock checkout; anybody else gets the answer of an unknown id (F-01).
         var sub = user.FindFirst("sub")?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (payment is null || booking is null || sub is null || booking.ClientUserId != sub) return Problem(ErrorCodes.NotFound, "Not found", 404);
+        if (payment is null || access is null || sub is null || access.ClientUserId != sub) return Problem(ErrorCodes.NotFound, "Not found", 404);
 
         var kind = outcome == "succeeded" ? WebhookEventKind.PaymentSucceeded : WebhookEventKind.PaymentFailed;
-        var e = new ProviderEvent($"sim_{req.BookingId:N}_{outcome}", kind, payment.ProviderPaymentId, booking.PriceMinor, PaymentEventHandler.Currency);
+        var e = new ProviderEvent($"sim_{req.AccessId:N}_{outcome}", kind, payment.ProviderPaymentId, access.PriceMinor, PaymentEventHandler.Currency);
         return await RunAsync(handler, payments.Name, e, http, ct);
     }
 

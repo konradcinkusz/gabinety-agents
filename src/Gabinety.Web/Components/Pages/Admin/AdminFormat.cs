@@ -37,8 +37,8 @@ public static class AdminFormat
 
     static string Label(IReadOnlyDictionary<string, string> labels, string? key, string fallback) => key is not null && labels.TryGetValue(key, out var text) ? text : fallback;
 
-    public static string PractitionerStatus(string? s) => Label(PlAdmin.Verification.Statuses, s, PlAdmin.Common.Unknown);
-    public static BadgeKind PractitionerStatusKind(string? s) => s switch
+    public static string AgentStatus(string? s) => Label(PlAdmin.Verification.Statuses, s, PlAdmin.Common.Unknown);
+    public static BadgeKind AgentStatusKind(string? s) => s switch
     {
         "Approved" => BadgeKind.Success, "Submitted" => BadgeKind.Warning, "Rejected" or "Suspended" => BadgeKind.Danger, _ => BadgeKind.Neutral,
     };
@@ -71,7 +71,7 @@ public static class AdminFormat
     public static string LedgerKind(string? kind) => kind switch
     {
         "ClientCharge" => PlAdmin.Ledger.KindClientCharge, "Refund" => PlAdmin.Ledger.KindRefund, "PlatformFee" => PlAdmin.Ledger.KindPlatformFee,
-        "PractitionerPayout" => PlAdmin.Ledger.KindPractitionerPayout, "PayoutReversal" => PlAdmin.Ledger.KindPayoutReversal, _ => PlAdmin.Ledger.KindUnknown,
+        "PractitionerPayout" => PlAdmin.Ledger.KindAgentPayout, "PayoutReversal" => PlAdmin.Ledger.KindPayoutReversal, _ => PlAdmin.Ledger.KindUnknown,
     };
 
     /// <summary>Only an http(s) address is ever a link (a portfolio address is user text).</summary>

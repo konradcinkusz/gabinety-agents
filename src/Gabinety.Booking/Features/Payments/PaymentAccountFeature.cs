@@ -22,35 +22,35 @@ public sealed class PaymentAccountFeature : IServiceFeature
     public sealed record OnboardingDto(string Provider, string State, string? OnboardingUrl);
     const string UniqueViolation = "23505";
 
-    public void Add(IHostApplicationBuilder builder) => builder.Services.AddSingleton<PractitionerResolver>();
+    public void Add(IHostApplicationBuilder builder) => builder.Services.AddSingleton<AgentResolver>();
 
     public void Map(IEndpointRouteBuilder endpoints)
     {
         var g = endpoints.MapGroup("/api/v1/me/payments/account").RequireAuthorization("Authenticated");
-        g.MapGet("", (string? agent, ClaimsPrincipal user, PractitionerResolver who, BookingDbContext db, IPaymentProvider payments, TimeProvider time, ILogger<PaymentAccountFeature> log, CancellationToken ct) =>
-            AsPractitioner(user, agent, who, payments, log, async (id, accounts) =>
+        g.MapGet("", (string? agent, ClaimsPrincipal user, AgentResolver who, AccessDbContext db, IPaymentProvider payments, TimeProvider time, ILogger<PaymentAccountFeature> log, CancellationToken ct) =>
+            AsAgent(user, agent, who, payments, log, async (id, accounts) =>
             {
-                var row = await db.PaymentAccounts.SingleOrDefaultAsync(a => a.PractitionerId == id && a.Provider == payments.Name, ct);
+                var row = await db.PaymentAccounts.SingleOrDefaultAsync(a => a.AgentId == id && a.Provider == payments.Name, ct);
                 if (row is null) return Results.Ok(new AccountStateDto(payments.Name, "none"));
                 if (!row.Ready) await RefreshAsync(db, accounts, row, time.GetUtcNow(), ct);
                 return Results.Ok(new AccountStateDto(payments.Name, row.Ready ? "ready" : "pending"));
             }, ct));
 
-        g.MapPost("/onboarding", (string? agent, ClaimsPrincipal user, PractitionerResolver who, BookingDbContext db, IPaymentProvider payments, IConfiguration config, TimeProvider time,
+        g.MapPost("/onboarding", (string? agent, ClaimsPrincipal user, AgentResolver who, AccessDbContext db, IPaymentProvider payments, IConfiguration config, TimeProvider time,
             ILogger<PaymentAccountFeature> log, CancellationToken ct) =>
-            AsPractitioner(user, agent, who, payments, log, async (id, accounts) =>
+            AsAgent(user, agent, who, payments, log, async (id, accounts) =>
             {
                 var now = time.GetUtcNow();
-                var row = await db.PaymentAccounts.SingleOrDefaultAsync(a => a.PractitionerId == id && a.Provider == payments.Name, ct);
+                var row = await db.PaymentAccounts.SingleOrDefaultAsync(a => a.AgentId == id && a.Provider == payments.Name, ct);
                 if (row is null)
                 {
                     var accountId = await accounts.CreateAccountAsync(id, ct); // idempotent at the provider: the key is the practitioner
-                    db.PaymentAccounts.Add(row = new PaymentAccount { PractitionerId = id, Provider = payments.Name, ProviderAccountId = accountId, Ready = false, CreatedAt = now, UpdatedAt = now });
+                    db.PaymentAccounts.Add(row = new PaymentAccount { AgentId = id, Provider = payments.Name, ProviderAccountId = accountId, Ready = false, CreatedAt = now, UpdatedAt = now });
                     try { await db.SaveChangesAsync(ct); }
                     catch (DbUpdateException e) when (IsUnique(e))
                     {
                         db.ChangeTracker.Clear(); // a concurrent request stored the same account first (same id: the provider call was idempotent)
-                        row = await db.PaymentAccounts.SingleAsync(a => a.PractitionerId == id && a.Provider == payments.Name, ct);
+                        row = await db.PaymentAccounts.SingleAsync(a => a.AgentId == id && a.Provider == payments.Name, ct);
                     }
                     log.LogInformation("Payment account created for practitioner {PractitionerId}", id);
                 }
@@ -63,7 +63,7 @@ public sealed class PaymentAccountFeature : IServiceFeature
             }, ct));
     }
 
-    static async Task RefreshAsync(BookingDbContext db, IConnectedAccountProvider accounts, PaymentAccount row, DateTimeOffset now, CancellationToken ct)
+    static async Task RefreshAsync(AccessDbContext db, IConnectedAccountProvider accounts, PaymentAccount row, DateTimeOffset now, CancellationToken ct)
     {
         var status = await accounts.GetAccountStatusAsync(row.ProviderAccountId, ct);
         var ready = status.State == ConnectedAccountState.Ready;
@@ -73,7 +73,7 @@ public sealed class PaymentAccountFeature : IServiceFeature
         await db.SaveChangesAsync(ct);
     }
 
-    static async Task<IResult> AsPractitioner(ClaimsPrincipal user, string? agent, PractitionerResolver who, IPaymentProvider payments, ILogger log,
+    static async Task<IResult> AsAgent(ClaimsPrincipal user, string? agent, AgentResolver who, IPaymentProvider payments, ILogger log,
         Func<Guid, IConnectedAccountProvider, Task<IResult>> run, CancellationToken ct)
     {
         if (payments is not IConnectedAccountProvider accounts) return Problem(ErrorCodes.NotFound, "Not found", 404);
@@ -85,8 +85,8 @@ public sealed class PaymentAccountFeature : IServiceFeature
             if (resolved.Ambiguous)
                 return Results.Json(ApiProblem.Of(ErrorCodes.ValidationFailed, "Validation failed", 422, null,
                     new Dictionary<string, string[]> { ["agent"] = ["required when the account has more than one agent"] }), statusCode: 422, contentType: "application/problem+json");
-            if (resolved.PractitionerId is not { } practitioner) return Problem(ErrorCodes.Forbidden, "Forbidden", 403, "The caller is not a practitioner of that agent.");
-            return await run(practitioner, accounts);
+            if (resolved.AgentId is not { } agentId) return Problem(ErrorCodes.Forbidden, "Forbidden", 403, "The caller is not a practitioner of that agent.");
+            return await run(agentId, accounts);
         }
         catch (DirectoryUnavailableException) { return Unavailable(); }
         catch (PaymentProviderException e)

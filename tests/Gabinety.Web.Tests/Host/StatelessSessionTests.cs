@@ -19,9 +19,9 @@ public sealed class StatelessSessionTests : IDisposable
     WebFactory Process(FakeIdentity? identity = null, string? keysPath = null)
     {
         var web = new WebFactory().SharingIdentity(identity).With("DataProtection:KeysPath", keysPath ?? _keys.FullName);
-        web.Booking.Respond = r => r.Headers.Authorization is null // the real service: no bearer, no bookings
+        web.Access.Respond = r => r.Headers.Authorization is null // the real service: no bearer, no bookings
             ? FakeBackend.Problem(HttpStatusCode.Unauthorized, "unauthenticated")
-            : FakeBackend.Json(new PageDto<BookingViewDto>([Sample.Booking("Konsultacja demo")], null));
+            : FakeBackend.Json(new PageDto<AccessViewDto>([Sample.Access("Konsultacja demo")], null));
         return web;
     }
 
@@ -61,7 +61,7 @@ public sealed class StatelessSessionTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Equal("Moje dostępy", page.TextOf("h1"));
         Assert.Equal(["refresh-1"], identity.SpentRefreshTokens); // exactly the refresh token the sign-in put in the cookie, once
-        Assert.StartsWith("Bearer eyJ", after.Booking.Requests.Last().Authorization);
+        Assert.StartsWith("Bearer eyJ", after.Access.Requests.Last().Authorization);
         Assert.Equal(1, identity.RefreshCalls);
     }
 

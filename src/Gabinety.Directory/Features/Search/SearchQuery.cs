@@ -2,16 +2,16 @@ using System.Buffers.Text;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
-using Gabinety.Directory.Features.Offerings;
+using Gabinety.Directory.Features.Packages;
 
 namespace Gabinety.Directory.Features.Search;
 
 /// <summary>One active offering must satisfy every given filter at once (CONTRACTS 3.2).</summary>
-public sealed record OfferingFilter(string? Problem, string? Tech, int? Duration, long? MaxPriceMinor)
+public sealed record PackageFilter(string? Problem, string? Tech, int? Duration, long? MaxPriceMinor)
 {
-    public IQueryable<Offering> Apply(IQueryable<Offering> offerings)
+    public IQueryable<Package> Apply(IQueryable<Package> packages)
     {
-        var q = offerings.Where(o => o.IsActive);
+        var q = packages.Where(o => o.IsActive);
         if (Problem is { } p) q = q.Where(o => o.ProblemSlug == p);
         if (Tech is { } t) q = q.Where(o => o.TechSlugs.Contains(t)); // `@>`/ANY on text[] in Npgsql, a list on InMemory
         if (Duration is { } d) { var dm = (short)d; q = q.Where(o => o.DurationMinutes == dm); }
@@ -20,7 +20,7 @@ public sealed record OfferingFilter(string? Problem, string? Tech, int? Duration
     }
 
     /// <summary>The same rule in memory, for the page's already loaded offerings (fromPrice).</summary>
-    public bool Matches(Offering o) => o.IsActive && (Problem is null || o.ProblemSlug == Problem) && (Tech is null || o.TechSlugs.Contains(Tech))
+    public bool Matches(Package o) => o.IsActive && (Problem is null || o.ProblemSlug == Problem) && (Tech is null || o.TechSlugs.Contains(Tech))
         && (Duration is null || o.DurationMinutes == Duration) && (MaxPriceMinor is null || o.PriceMinor <= MaxPriceMinor);
 }
 
@@ -51,7 +51,7 @@ public sealed class SearchQuery
     public const int DefaultLimit = 12, MaxLimit = 24, MaxQ = 60;
     static readonly Regex Slug = new("^[a-z0-9]+(-[a-z0-9]+)*$", RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100));
 
-    public OfferingFilter Filter { get; private set; } = new(null, null, null, null);
+    public PackageFilter Filter { get; private set; } = new(null, null, null, null);
     public string? Q { get; private set; }
     public Cursor? After { get; private set; }
     public int Limit { get; private set; } = DefaultLimit;
@@ -103,7 +103,7 @@ public sealed class SearchQuery
             if (!Cursor.TryDecode(cursor, out var c)) { s.Fail("cursor", "not a cursor of this list"); return s; }
             s.After = c;
         }
-        s.Filter = new OfferingFilter(problem, tech, duration, max);
+        s.Filter = new PackageFilter(problem, tech, duration, max);
         return s;
     }
 

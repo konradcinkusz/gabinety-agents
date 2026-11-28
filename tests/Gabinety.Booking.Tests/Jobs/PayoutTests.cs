@@ -6,7 +6,7 @@ using Gabinety.Booking.Jobs.AutoComplete;
 using Gabinety.Booking.Jobs.Payout;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -18,20 +18,20 @@ public class PayoutTests : IDisposable
     public void Dispose() => h.Dispose();
 
     [Fact]
-    public async Task A_due_completed_booking_is_paid_once_with_the_stable_key_and_ends_Sent_with_one_ledger_entry()
+    public async Task A_due_completed_access_is_paid_once_with_the_stable_key_and_ends_Sent_with_one_ledger_entry()
     {
         var id = await PayJob.Seed(h);
 
         Assert.Equal(1, await PayJob.Job(h, provider).PayDueAsync(h.Clock.GetUtcNow(), default));
 
         var req = Assert.Single(provider.Payouts);
-        Assert.Equal(new(h.Practitioner, 8500, "PLN", $"payout:{id:N}", null, $"pay_{id:N}", id), req); // no connected account in the fake profile; the payment and booking ids ride along
+        Assert.Equal(new(h.Agent, 8500, "PLN", $"payout:{id:N}", null, $"pay_{id:N}", id), req); // no connected account in the fake profile; the payment and booking ids ride along
         var row = Assert.Single(await PayJob.PayoutRows(h, id));
         Assert.Equal(PayoutStatus.Sent, row.Status);
         Assert.Equal($"mockpayout_payout:{id:N}", row.ProviderRef);
         Assert.Equal(h.Clock.GetUtcNow(), row.SentAt);
         Assert.Equal(8500, row.AmountMinor);
-        Assert.Equal(h.Practitioner, row.PractitionerId);
+        Assert.Equal(h.Agent, row.AgentId);
         var entry = Assert.Single(await PayJob.PayoutLedger(h, id));
         Assert.Equal(8500, entry.AmountMinor);
     }
@@ -66,12 +66,12 @@ public class PayoutTests : IDisposable
     }
 
     [Theory]
-    [InlineData(BookingStatus.Completed, null)]
-    [InlineData(BookingStatus.ClientNoShow, null)]
-    [InlineData(BookingStatus.LateCancelledByClient, null)]
-    [InlineData(BookingStatus.Resolved, "release")]
-    [InlineData(BookingStatus.Resolved, "refund_partial")]
-    public async Task Each_money_complete_status_is_paid(BookingStatus status, string? resolution)
+    [InlineData(AccessStatus.Completed, null)]
+    [InlineData(AccessStatus.ClientNoShow, null)]
+    [InlineData(AccessStatus.LateCancelledByClient, null)]
+    [InlineData(AccessStatus.Resolved, "release")]
+    [InlineData(AccessStatus.Resolved, "refund_partial")]
+    public async Task Each_money_complete_status_is_paid(AccessStatus status, string? resolution)
     {
         var id = await PayJob.Seed(h, status, resolution);
         Assert.Equal(1, await PayJob.Job(h, provider).PayDueAsync(h.Clock.GetUtcNow(), default));
@@ -80,14 +80,14 @@ public class PayoutTests : IDisposable
     }
 
     [Theory]
-    [InlineData(BookingStatus.CancelledByClient, null)]
-    [InlineData(BookingStatus.CancelledByPractitioner, null)]
-    [InlineData(BookingStatus.Expired, null)]
-    [InlineData(BookingStatus.PendingPayment, null)]
-    [InlineData(BookingStatus.Confirmed, null)]
-    [InlineData(BookingStatus.Disputed, null)]
-    [InlineData(BookingStatus.Resolved, "refund_full")]
-    public async Task No_other_status_is_ever_paid_even_with_an_amount_and_a_past_due_date(BookingStatus status, string? resolution)
+    [InlineData(AccessStatus.CancelledByClient, null)]
+    [InlineData(AccessStatus.CancelledByPractitioner, null)]
+    [InlineData(AccessStatus.Expired, null)]
+    [InlineData(AccessStatus.PendingPayment, null)]
+    [InlineData(AccessStatus.Confirmed, null)]
+    [InlineData(AccessStatus.Disputed, null)]
+    [InlineData(AccessStatus.Resolved, "refund_full")]
+    public async Task No_other_status_is_ever_paid_even_with_an_amount_and_a_past_due_date(AccessStatus status, string? resolution)
     {
         var id = await PayJob.Seed(h, status, resolution); // the amount is seeded on purpose: only the status must stop the payout
         Assert.Equal(0, await PayJob.Job(h, provider).PayDueAsync(h.Clock.GetUtcNow(), default));
@@ -97,9 +97,9 @@ public class PayoutTests : IDisposable
     }
 
     [Fact]
-    public async Task A_booking_disputed_between_selection_and_payout_is_skipped()
+    public async Task A_access_disputed_between_selection_and_payout_is_skipped()
     {
-        var id = await PayJob.Seed(h, BookingStatus.Disputed);
+        var id = await PayJob.Seed(h, AccessStatus.Disputed);
         Assert.Equal(0, await PayJob.Job(h, provider).PayAsync([id], h.Clock.GetUtcNow(), default)); // selected earlier, disputed since
         Assert.Empty(provider.Payouts);
         Assert.Empty(await PayJob.PayoutRows(h, id));
@@ -117,9 +117,9 @@ public class PayoutTests : IDisposable
     }
 
     [Fact]
-    public async Task A_resolved_booking_without_payout_due_at_falls_due_at_its_resolution_time()
+    public async Task A_resolved_access_without_payout_due_at_falls_due_at_its_resolution_time()
     {
-        var id = await PayJob.Seed(h, BookingStatus.Resolved, "release", setDue: false); // T-04.07c sets no payout_due_at on resolve
+        var id = await PayJob.Seed(h, AccessStatus.Resolved, "release", setDue: false); // T-04.07c sets no payout_due_at on resolve
         Assert.Equal(1, await PayJob.Job(h, provider).PayDueAsync(h.Clock.GetUtcNow(), default));
         Assert.Single(await PayJob.PayoutLedger(h, id));
     }
@@ -174,8 +174,8 @@ public class PayoutTests : IDisposable
         var fresh = await PayJob.Seed(h);
         await h.Seed(db =>
         {
-            db.Payouts.Add(new Payout { Id = Guid.NewGuid(), BookingId = stale, PractitionerId = h.Practitioner, AmountMinor = 8500, Status = PayoutStatus.Pending, CreatedAt = h.Clock.GetUtcNow() - TimeSpan.FromMinutes(30), AttemptCount = 1, NextAttemptAt = h.Clock.GetUtcNow() - TimeSpan.FromMinutes(28) });
-            db.Payouts.Add(new Payout { Id = Guid.NewGuid(), BookingId = fresh, PractitionerId = h.Practitioner, AmountMinor = 8500, Status = PayoutStatus.Pending, CreatedAt = h.Clock.GetUtcNow() - TimeSpan.FromSeconds(5), AttemptCount = 1, NextAttemptAt = h.Clock.GetUtcNow() + TimeSpan.FromSeconds(115) });
+            db.Payouts.Add(new Payout { Id = Guid.NewGuid(), AccessId = stale, AgentId = h.Agent, AmountMinor = 8500, Status = PayoutStatus.Pending, CreatedAt = h.Clock.GetUtcNow() - TimeSpan.FromMinutes(30), AttemptCount = 1, NextAttemptAt = h.Clock.GetUtcNow() - TimeSpan.FromMinutes(28) });
+            db.Payouts.Add(new Payout { Id = Guid.NewGuid(), AccessId = fresh, AgentId = h.Agent, AmountMinor = 8500, Status = PayoutStatus.Pending, CreatedAt = h.Clock.GetUtcNow() - TimeSpan.FromSeconds(5), AttemptCount = 1, NextAttemptAt = h.Clock.GetUtcNow() + TimeSpan.FromSeconds(115) });
         }); // a crash after the row was created, or after the provider call and before the second transaction
 
         Assert.Equal(1, await PayJob.Job(h, provider).PayDueAsync(h.Clock.GetUtcNow(), default));
@@ -205,8 +205,8 @@ public class PayoutTests : IDisposable
         var id = await PayJob.Seed(h);
         provider.Before = async _ => await h.Seed(db => // what a second instance does between our step 1 and step 3: same key, same provider result, its own step 3
         {
-            db.Payouts.Single(x => x.BookingId == id).Status = PayoutStatus.Sent;
-            db.LedgerEntries.Add(new LedgerEntry { Id = Guid.NewGuid(), BookingId = id, Kind = LedgerKind.PractitionerPayout, AmountMinor = 8500, CreatedAt = h.Clock.GetUtcNow() });
+            db.Payouts.Single(x => x.AccessId == id).Status = PayoutStatus.Sent;
+            db.LedgerEntries.Add(new LedgerEntry { Id = Guid.NewGuid(), AccessId = id, Kind = LedgerKind.PractitionerPayout, AmountMinor = 8500, CreatedAt = h.Clock.GetUtcNow() });
         });
 
         Assert.Equal(0, await PayJob.Job(h, provider).PayDueAsync(h.Clock.GetUtcNow(), default)); // not ours to count: the other instance completed it
@@ -216,7 +216,7 @@ public class PayoutTests : IDisposable
     }
 
     [Fact]
-    public async Task Two_job_instances_at_once_pay_each_booking_exactly_once_whatever_the_interleaving()
+    public async Task Two_job_instances_at_once_pay_each_access_exactly_once_whatever_the_interleaving()
     {
         var ids = new List<Guid>();
         for (var i = 0; i < 8; i++) ids.Add(await PayJob.Seed(h));
@@ -240,7 +240,7 @@ public class PayoutTests : IDisposable
     public async Task The_provider_is_never_called_while_a_database_scope_or_transaction_is_open_and_gets_a_cancellable_token()
     {
         await PayJob.Seed(h);
-        await PayJob.Seed(h, BookingStatus.ClientNoShow);
+        await PayJob.Seed(h, AccessStatus.ClientNoShow);
         provider.FailNext = 1;
         var job = PayJob.Job(h, provider);
         await Assert.ThrowsAsync<JobFailedException>(() => job.RunOnceAsync(h.Clock.GetUtcNow(), default));
@@ -251,7 +251,7 @@ public class PayoutTests : IDisposable
     }
 
     [Fact]
-    public async Task Logs_carry_the_booking_id_and_never_the_key_the_practitioner_or_the_user_ids()
+    public async Task Logs_carry_the_access_id_and_never_the_key_the_agent_or_the_user_ids()
     {
         var id = await PayJob.Seed(h);
         provider.FailNext = 1;
@@ -263,7 +263,7 @@ public class PayoutTests : IDisposable
         var all = string.Join("\n", h.Logs.Lines.Where(l => !l.StartsWith("Microsoft")));
         Assert.Contains(id.ToString(), all);
         Assert.Contains("HttpRequestException", all);
-        foreach (var forbidden in new[] { "payout:", id.ToString("N"), "provider down", "mockpayout", h.Practitioner.ToString(), h.OwnerUserId, Life.Client, "demo-brief" })
+        foreach (var forbidden in new[] { "payout:", id.ToString("N"), "provider down", "mockpayout", h.Agent.ToString(), h.OwnerUserId, Life.Client, "demo-brief" })
             Assert.DoesNotContain(forbidden, all);
     }
 
@@ -331,13 +331,13 @@ public class PayoutTests : IDisposable
     }
 
     [Fact]
-    public async Task A_completed_booking_is_not_paid_before_the_claim_window_has_closed()
+    public async Task A_completed_access_is_not_paid_before_the_claim_window_has_closed()
     {
         // payout_due_at = end + 72 h: the dispute window of a package closes then, and the money has not moved before it
-        var id = await Life.Seed(h, BookingStatus.Completed, TimeSpan.FromHours(-1)); // starts one hour ago, ends now
+        var id = await Life.Seed(h, AccessStatus.Completed, TimeSpan.FromHours(-1)); // starts one hour ago, ends now
         await h.Seed(db =>
         {
-            var b = db.Bookings.Single(x => x.Id == id);
+            var b = db.Accesses.Single(x => x.Id == id);
             (b.FeeMinor, b.PayoutMinor) = (1500, 8500);
             b.PayoutDueAt = AutoCompleteJob.PayoutDueAt(b.StartUtc, b.EndUtc);
         });

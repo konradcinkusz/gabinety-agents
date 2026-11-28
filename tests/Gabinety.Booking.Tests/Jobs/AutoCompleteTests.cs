@@ -1,4 +1,4 @@
-using Gabinety.Booking.Features.Bookings.Create;
+using Gabinety.Booking.Features.Accesses.Create;
 using Gabinety.Contracts.Booking;
 using Gabinety.Booking.Features.Payments;
 using Gabinety.Booking.Jobs.AutoComplete;
@@ -6,7 +6,7 @@ using Gabinety.Booking.Jobs.Base;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -22,11 +22,11 @@ public class AutoCompleteTests : IDisposable
         var job = Auto.Job(h);
 
         Assert.Equal(0, await job.CompleteDueAsync(h.Clock.GetUtcNow(), default));
-        Assert.Equal(BookingStatus.Confirmed, await Hold.StatusOf(h, id));
+        Assert.Equal(AccessStatus.Confirmed, await Hold.StatusOf(h, id));
 
         h.Clock.Advance(TimeSpan.FromSeconds(1));
         Assert.Equal(1, await job.CompleteDueAsync(h.Clock.GetUtcNow(), default));
-        Assert.Equal(BookingStatus.Completed, await Hold.StatusOf(h, id));
+        Assert.Equal(AccessStatus.Completed, await Hold.StatusOf(h, id));
     }
 
     [Fact]
@@ -37,7 +37,7 @@ public class AutoCompleteTests : IDisposable
         Assert.Equal(1, await Auto.Job(h).CompleteDueAsync(h.Clock.GetUtcNow(), default));
 
         var b = await Life.Row(h, id);
-        Assert.Equal(BookingStatus.Completed, b.Status);
+        Assert.Equal(AccessStatus.Completed, b.Status);
         Assert.Equal(b.EndUtc, b.EndedAt);
         Assert.Equal(b.EndUtc + TimeSpan.FromHours(72), b.PayoutDueAt); // end + 72 h: the dispute window of a package has closed (owner decision, A-03)
         Assert.Equal(1500, b.FeeMinor);    // 15 % of 10000, first consultation of the pair
@@ -52,7 +52,7 @@ public class AutoCompleteTests : IDisposable
         using var h48 = Auto.Host(("Booking:CompleteAfterHours", "48"));
         var id = await Auto.Seed(h48, TimeSpan.FromHours(1)); // ended an hour ago: used to wait for end + 48 h
         Assert.Equal(1, await Auto.Job(h48).CompleteDueAsync(h48.Clock.GetUtcNow(), default));
-        Assert.Equal(BookingStatus.Completed, await Hold.StatusOf(h48, id));
+        Assert.Equal(AccessStatus.Completed, await Hold.StatusOf(h48, id));
     }
 
     [Fact]
@@ -64,23 +64,23 @@ public class AutoCompleteTests : IDisposable
 
         Assert.Equal(1, await Auto.Job(h).CompleteDueAsync(h.Clock.GetUtcNow(), default));
 
-        Assert.Equal(BookingStatus.Completed, await Hold.StatusOf(h, used));
-        Assert.Equal(BookingStatus.Confirmed, await Hold.StatusOf(h, partly));
-        Assert.Equal(BookingStatus.Confirmed, await Hold.StatusOf(h, noUnits));
+        Assert.Equal(AccessStatus.Completed, await Hold.StatusOf(h, used));
+        Assert.Equal(AccessStatus.Confirmed, await Hold.StatusOf(h, partly));
+        Assert.Equal(AccessStatus.Confirmed, await Hold.StatusOf(h, noUnits));
         var row = await Life.Row(h, used);
         Assert.Equal(h.Clock.GetUtcNow(), row.EndedAt);                       // it ended now, not at the end of its validity
         Assert.Equal(row.EndUtc + TimeSpan.FromHours(72), row.PayoutDueAt); // end + 72 h of the validity, also when the units ran out earlier
     }
 
     [Fact]
-    public async Task A_disputed_booking_is_never_completed_even_when_its_id_comes_from_a_stale_selection()
+    public async Task A_disputed_access_is_never_completed_even_when_its_id_comes_from_a_stale_selection()
     {
-        var disputed = await Auto.Seed(h, Auto.Window + TimeSpan.FromHours(5), BookingStatus.Disputed);
+        var disputed = await Auto.Seed(h, Auto.Window + TimeSpan.FromHours(5), AccessStatus.Disputed);
         var job = Auto.Job(h);
 
         Assert.Equal(0, await job.CompleteDueAsync(h.Clock.GetUtcNow(), default));
         Assert.Equal(0, await job.CompleteAsync([disputed], h.Clock.GetUtcNow(), default)); // selected while Confirmed, disputed meanwhile
-        Assert.Equal(BookingStatus.Disputed, await Hold.StatusOf(h, disputed));
+        Assert.Equal(AccessStatus.Disputed, await Hold.StatusOf(h, disputed));
         Assert.Null((await Life.Row(h, disputed)).FeeMinor);
     }
 
@@ -89,14 +89,14 @@ public class AutoCompleteTests : IDisposable
     {
         var early = await Auto.Seed(h, -TimeSpan.FromHours(10)); // not due: it ends in ten hours
         Assert.Equal(0, await Auto.Job(h).CompleteAsync([early, Guid.NewGuid()], h.Clock.GetUtcNow(), default));
-        Assert.Equal(BookingStatus.Confirmed, await Hold.StatusOf(h, early));
+        Assert.Equal(AccessStatus.Confirmed, await Hold.StatusOf(h, early));
     }
 
     [Fact]
     public async Task Other_statuses_are_left_alone()
     {
         var ids = new List<Guid>();
-        foreach (var s in new[] { BookingStatus.CancelledByClient, BookingStatus.ClientNoShow, BookingStatus.Completed, BookingStatus.Resolved })
+        foreach (var s in new[] { AccessStatus.CancelledByClient, AccessStatus.ClientNoShow, AccessStatus.Completed, AccessStatus.Resolved })
             ids.Add(await Auto.Seed(h, Auto.Window + TimeSpan.FromDays(1), s));
         var before = await Hold.Snapshot(h);
         Assert.Equal(0, await Auto.Job(h).CompleteDueAsync(h.Clock.GetUtcNow(), default));
@@ -138,12 +138,12 @@ public class AutoCompleteTests : IDisposable
 
         await Assert.ThrowsAsync<JobFailedException>(() => Auto.Job(fh).RunOnceAsync(fh.Clock.GetUtcNow(), default));
 
-        Assert.Equal(BookingStatus.Completed, await Hold.StatusOf(fh, a));
-        Assert.Equal(BookingStatus.Confirmed, await Hold.StatusOf(fh, bad));
-        Assert.Equal(BookingStatus.Completed, await Hold.StatusOf(fh, c));
+        Assert.Equal(AccessStatus.Completed, await Hold.StatusOf(fh, a));
+        Assert.Equal(AccessStatus.Confirmed, await Hold.StatusOf(fh, bad));
+        Assert.Equal(AccessStatus.Completed, await Hold.StatusOf(fh, c));
         var all = string.Join("\n", fh.Logs.Lines.Where(l => !l.StartsWith("Microsoft")));
         Assert.Contains(bad.ToString(), all);
-        foreach (var forbidden in new[] { "demo-brief", "boom", Life.Client, fh.OwnerUserId, fh.Practitioner.ToString() }) Assert.DoesNotContain(forbidden, all);
+        foreach (var forbidden in new[] { "demo-brief", "boom", Life.Client, fh.OwnerUserId, fh.Agent.ToString() }) Assert.DoesNotContain(forbidden, all);
     }
 
     [Fact]

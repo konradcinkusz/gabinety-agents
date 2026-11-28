@@ -6,7 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Testcontainers.PostgreSql;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -48,8 +48,8 @@ public class HoldExpiryIntegrationTests : IAsyncLifetime
 
             // For every interleaving: no exception, every hold is Expired, and the two runs' applied counts add up to the number of holds (no double transition).
             Assert.Equal(ids.Count, applied.Sum());
-            await using var db = new BookingDbContext(new DbContextOptionsBuilder<BookingDbContext>().UseNpgsql(pg.GetConnectionString()).Options);
-            Assert.All(await db.Bookings.Where(x => ids.Contains(x.Id)).Select(x => x.Status).ToListAsync(), s => Assert.Equal(BookingStatus.Expired, s));
+            await using var db = new AccessDbContext(new DbContextOptionsBuilder<AccessDbContext>().UseNpgsql(pg.GetConnectionString()).Options);
+            Assert.All(await db.Accesses.Where(x => ids.Contains(x.Id)).Select(x => x.Status).ToListAsync(), s => Assert.Equal(AccessStatus.Expired, s));
             var moved = host.Logs.Lines.Count(l => l.Contains("PendingPayment -> Expired", StringComparison.Ordinal)) - before;
             Assert.Equal(ids.Count, moved);
             foreach (var id in ids) Assert.Equal(1, host.Logs.Lines.Count(l => l.Contains(id.ToString()) && l.Contains("PendingPayment -> Expired", StringComparison.Ordinal)));

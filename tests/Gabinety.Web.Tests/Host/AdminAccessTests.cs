@@ -19,7 +19,7 @@ public class AdminAccessTests
         Assert.Equal(HttpStatusCode.Redirect, page.Status);
         Assert.StartsWith("/logowanie?redirect=", page.Location);
         Assert.Equal(route, Uri.UnescapeDataString(page.Location!["/logowanie?redirect=".Length..]));
-        Assert.All([web.Directory, web.Booking, web.Reputation], b => Assert.Equal(0, b.CallsExceptShellCheck));
+        Assert.All([web.Directory, web.Access, web.Reputation], b => Assert.Equal(0, b.CallsExceptShellCheck));
     }
 
     [Theory, MemberData(nameof(Routes))]
@@ -38,7 +38,7 @@ public class AdminAccessTests
         Assert.Equal("/", page.One("[data-testid=forbidden] a")!.GetAttribute("href"));
         Assert.Contains("noindex", page.One("meta[name=robots]")!.GetAttribute("content"));
         Assert.DoesNotContain("Weryfikacja agentów", page.TextOf("main")); // nothing of the area is rendered
-        Assert.All([host.Web.Directory, host.Web.Booking, host.Web.Reputation], b => Assert.Equal(0, b.CallsExceptShellCheck));
+        Assert.All([host.Web.Directory, host.Web.Access, host.Web.Reputation], b => Assert.Equal(0, b.CallsExceptShellCheck));
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class AdminAccessTests
     public async Task An_administrator_or_a_super_administrator_gets_the_page(string role)
     {
         await using var host = await AdminHost.StartAsync([role]);
-        host.Web.Directory.Respond = _ => AdminHost.Paged<Gabinety.Web.Api.AdminPractitionerRowDto>();
+        host.Web.Directory.Respond = _ => AdminHost.Paged<Gabinety.Web.Api.AdminAgentRowDto>();
         var page = await host.Browser.GetAsync("/admin/weryfikacja");
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Null(page.One("[data-testid=forbidden]"));
@@ -68,7 +68,7 @@ public class AdminAccessTests
     public async Task A_user_with_several_roles_one_of_them_Admin_is_an_administrator()
     {
         await using var host = await AdminHost.StartAsync(["Client", "Admin"]);
-        host.Web.Directory.Respond = _ => AdminHost.Paged<Gabinety.Web.Api.AdminPractitionerRowDto>();
+        host.Web.Directory.Respond = _ => AdminHost.Paged<Gabinety.Web.Api.AdminAgentRowDto>();
         Assert.Equal(HttpStatusCode.OK, (await host.Browser.GetAsync("/admin/weryfikacja")).Status);
     }
 
@@ -88,7 +88,7 @@ public class AdminAccessTests
     public async Task The_area_has_one_h1_a_labelled_tab_strip_with_the_current_section_marked_and_is_not_indexed()
     {
         await using var host = await AdminHost.StartAsync();
-        host.Web.Booking.Respond = _ => AdminHost.Paged<Gabinety.Web.Api.AdminDisputeDto>();
+        host.Web.Access.Respond = _ => AdminHost.Paged<Gabinety.Web.Api.AdminDisputeDto>();
         var page = await host.Browser.GetAsync("/admin/spory");
         Assert.Single(page.All("h1"));
         var tabs = page.All("nav[aria-label='Sekcje administracji'] a");
@@ -107,7 +107,7 @@ public class AdminAccessTests
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Equal("Administracja", Assert.Single(page.All("h1")).TextContent);
         Assert.Equal(["/admin/weryfikacja", "/admin/spory", "/admin/ksiega", "/admin/opinie", "/admin/podejrzane"], page.All("main ul[aria-label] h2 a").Select(a => a.GetAttribute("href")));
-        Assert.All([host.Web.Directory, host.Web.Booking, host.Web.Reputation], b => Assert.Equal(0, b.CallsExceptShellCheck));
+        Assert.All([host.Web.Directory, host.Web.Access, host.Web.Reputation], b => Assert.Equal(0, b.CallsExceptShellCheck));
     }
 
     [Fact]

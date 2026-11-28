@@ -11,21 +11,21 @@ namespace Gabinety.Reputation.Tests;
 /// <summary>Stands in for <see cref="IDirectoryReputationClient"/>: records every push; <see cref="Result"/> answers, <see cref="Throw"/> simulates a client bug, <see cref="OnPush"/> runs inside the push.</summary>
 sealed class RecordingReputationClient : IDirectoryReputationClient
 {
-    public readonly List<(Guid Practitioner, ReputationPush Body)> Pushes = new();
+    public readonly List<(Guid Agent, ReputationPush Body)> Pushes = new();
     public Func<Guid, PushResult> Result = _ => PushResult.Accepted;
     public Func<Guid, bool> Throw = _ => false;
     public Func<Guid, Task>? OnPush;
 
-    public async Task<PushResult> PushAsync(Guid practitionerId, ReputationPush body, CancellationToken ct)
+    public async Task<PushResult> PushAsync(Guid agentId, ReputationPush body, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        if (Throw(practitionerId)) throw new InvalidOperationException("boom");
-        lock (Pushes) Pushes.Add((practitionerId, body));
-        if (OnPush != null) await OnPush(practitionerId);
-        return Result(practitionerId);
+        if (Throw(agentId)) throw new InvalidOperationException("boom");
+        lock (Pushes) Pushes.Add((agentId, body));
+        if (OnPush != null) await OnPush(agentId);
+        return Result(agentId);
     }
 
-    public List<ReputationPush> For(Guid id) { lock (Pushes) return Pushes.Where(p => p.Practitioner == id).Select(p => p.Body).ToList(); }
+    public List<ReputationPush> For(Guid id) { lock (Pushes) return Pushes.Where(p => p.Agent == id).Select(p => p.Body).ToList(); }
 }
 
 public class SummaryPushJobTests
@@ -34,7 +34,7 @@ public class SummaryPushJobTests
         new(h.Services.GetRequiredService<IServiceScopeFactory>(), client, h.Clock, log ?? NullLogger<SummaryPushJob>.Instance);
 
     static Task Summary(InternalHost h, Guid p, int count, int sum, long version, long pushed) =>
-        h.Seed(db => db.RatingSummaries.Add(new RatingSummary { PractitionerId = p, Count = count, Sum = sum, Version = version, PushedVersion = pushed }));
+        h.Seed(db => db.RatingSummaries.Add(new RatingSummary { AgentId = p, Count = count, Sum = sum, Version = version, PushedVersion = pushed }));
 
     [Fact]
     public async Task Only_summaries_with_a_version_above_the_pushed_one_are_sent_and_the_pushed_version_is_recorded()
@@ -82,7 +82,7 @@ public class SummaryPushJobTests
         var client = new RecordingReputationClient();
         var job = Job(h, client);
         await job.RunOnceAsync(default);
-        await h.Seed(db => { var s = db.RatingSummaries.Single(x => x.PractitionerId == p); s.Count = 2; s.Sum = 7; s.Version = 2; });
+        await h.Seed(db => { var s = db.RatingSummaries.Single(x => x.AgentId == p); s.Count = 2; s.Sum = 7; s.Version = 2; });
         await job.RunOnceAsync(default);
 
         var sent = client.For(p);
@@ -103,7 +103,7 @@ public class SummaryPushJobTests
             {
                 if (bumped) return;
                 bumped = true;
-                await h.Seed(db => { var s = db.RatingSummaries.Single(x => x.PractitionerId == p); s.Count = 2; s.Sum = 9; s.Version = 2; });
+                await h.Seed(db => { var s = db.RatingSummaries.Single(x => x.AgentId == p); s.Count = 2; s.Sum = 9; s.Version = 2; });
             },
         };
         var job = Job(h, client);
@@ -166,7 +166,7 @@ public class SummaryPushJobTests
     }
 
     [Fact]
-    public async Task An_unknown_practitioner_is_not_pushed_again_in_a_tight_loop_but_is_retried_later_or_when_it_changes()
+    public async Task An_unknown_agent_is_not_pushed_again_in_a_tight_loop_but_is_retried_later_or_when_it_changes()
     {
         await using var h = new InternalHost();
         var p = Guid.NewGuid();
@@ -182,7 +182,7 @@ public class SummaryPushJobTests
         Assert.Single(client.For(p)); // two more cycles later, still one call
         Assert.Equal(0, (await h.SummaryOf(p))!.PushedVersion);
 
-        await h.Seed(db => { var s = db.RatingSummaries.Single(x => x.PractitionerId == p); s.Count = 2; s.Sum = 9; s.Version = 2; });
+        await h.Seed(db => { var s = db.RatingSummaries.Single(x => x.AgentId == p); s.Count = 2; s.Sum = 9; s.Version = 2; });
         await job.RunOnceAsync(default);
         Assert.Equal(2, client.For(p).Count); // new data: tried at once
 

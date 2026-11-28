@@ -15,7 +15,7 @@ namespace Gabinety.Booking.Tests;
 /// </summary>
 public class RecipientAddressTests
 {
-    const string Client = "demo-client-1", ClientAddress = "demo-klient@demo.invalid", PractitionerAddress = "demo-praktyk@demo.invalid";
+    const string Client = "demo-client-1", ClientAddress = "demo-klient@demo.invalid", AgentAddress = "demo-praktyk@demo.invalid";
     const string Brief = "demo-brief: BARDZO-TAJNY-OPIS-PROBLEMU w moim planie", SmtpPassword = "demo-smtp-password-DO-NOT-LEAK";
 
     static MimeKit.MimeMessage Parse(ReceivedMail m)
@@ -28,7 +28,7 @@ public class RecipientAddressTests
     {
         public readonly FakeSmtpServer Smtp = new();
         public readonly CreateHost Host = new();
-        public string? PractitionerEmail = PractitionerAddress;
+        public string? AgentEmail = AgentAddress;
         public int ContactCalls;
         public NotificationDispatcher Dispatcher => Host.Services.GetRequiredService<NotificationDispatcher>();
 
@@ -37,7 +37,7 @@ public class RecipientAddressTests
             Host.Emails[Client] = ClientAddress;
             // Its OWN in-memory database: on the shared one another test's dispatcher would claim these rows (and this one theirs).
             var db = "recipients-" + Guid.NewGuid().ToString("N");
-            Host.Configure = s => s.AddDbContext<BookingDbContext>(o => o.UseInMemoryDatabase(db));
+            Host.Configure = s => s.AddDbContext<AccessDbContext>(o => o.UseInMemoryDatabase(db));
             if (smtp)
             {
                 Host.Settings["Notifications:Provider"] = "Smtp";
@@ -48,17 +48,17 @@ public class RecipientAddressTests
                 Host.Settings["Notifications:Smtp:Password"] = SmtpPassword;
                 Host.Settings["Notifications:Smtp:FromAddress"] = "powiadomienia@demo.invalid";
             }
-            var offering = Host.Directory.Override!;
+            var package = Host.Directory.Override!;
             Host.Directory.Override = (r, n) =>
             {
-                if (r.RequestUri!.AbsolutePath != $"/internal/v1/practitioners/{Host.OwnerUserId}/contact") return offering(r, n);
+                if (r.RequestUri!.AbsolutePath != $"/internal/v1/practitioners/{Host.OwnerUserId}/contact") return package(r, n);
                 Interlocked.Increment(ref ContactCalls);
-                return PractitionerEmail is null ? new HttpResponseMessage(HttpStatusCode.NotFound) : FakeDirectory.Json(new { email = PractitionerEmail });
+                return AgentEmail is null ? new HttpResponseMessage(HttpStatusCode.NotFound) : FakeDirectory.Json(new { email = AgentEmail });
             };
         }
 
         /// <summary>Creates a booking as the client with the secret brief and confirms it by the payment simulation: two confirmations, two reminders, a review request.</summary>
-        public async Task<Guid> ConfirmedBooking()
+        public async Task<Guid> ConfirmedAccess()
         {
             var r = await CreateHost.Post(Host.ClientFor(Client), Host.Req(text: Brief), CreateHost.Key());
             Assert.Equal(HttpStatusCode.Created, r.StatusCode);
@@ -67,24 +67,24 @@ public class RecipientAddressTests
             return id;
         }
 
-        public Task<List<Notification>> Rows(Guid booking) => Host.Query(db => db.Notifications.AsNoTracking().Where(n => n.BookingId == booking).ToListAsync());
+        public Task<List<Notification>> Rows(Guid access) => Host.Query(db => db.Notifications.AsNoTracking().Where(n => n.AccessId == access).ToListAsync());
         public void Dispose() { Host.Dispose(); Smtp.Dispose(); }
     }
 
     [Fact]
-    public async Task The_confirmation_reaches_the_client_at_the_token_address_and_the_practitioner_at_the_Directory_address()
+    public async Task The_confirmation_reaches_the_client_at_the_token_address_and_the_agent_at_the_Directory_address()
     {
         using var t = new Rig();
-        var id = await t.ConfirmedBooking();
+        var id = await t.ConfirmedAccess();
 
         Assert.Equal(2, await t.Dispatcher.RunOnceAsync(default)); // only the two confirmations are due now
 
         var mails = t.Smtp.Mails;
         Assert.Equal(2, mails.Count);
         var toClient = Assert.Single(mails, m => m.RcptTo.SequenceEqual([$"<{ClientAddress}>"]));
-        var toPractitioner = Assert.Single(mails, m => m.RcptTo.SequenceEqual([$"<{PractitionerAddress}>"]));
+        var toAgent = Assert.Single(mails, m => m.RcptTo.SequenceEqual([$"<{AgentAddress}>"]));
         Assert.Equal("Rezerwacja potwierdzona", Parse(toClient).Subject);
-        Assert.Equal("Masz nową rezerwację", Parse(toPractitioner).Subject);
+        Assert.Equal("Masz nową rezerwację", Parse(toAgent).Subject);
         Assert.All(mails, m => { Assert.DoesNotContain("BARDZO-TAJNY", Parse(m).TextBody); Assert.DoesNotContain("BARDZO-TAJNY", Parse(m).HtmlBody); });
         Assert.All(mails, m => { Assert.DoesNotContain("BARDZO-TAJNY", m.Data); Assert.DoesNotContain(Brief, m.Data); });
         Assert.All(await t.Rows(id), n => Assert.Equal(n.Kind == NotificationKind.BookingConfirmed ? 1 : 0, n.Attempts));
@@ -93,19 +93,19 @@ public class RecipientAddressTests
     }
 
     [Fact]
-    public async Task Confirming_a_booking_by_payment_schedules_the_two_confirmations_and_the_review_request()
+    public async Task Confirming_a_access_by_payment_schedules_the_two_confirmations_and_the_review_request()
     {
         using var t = new Rig(smtp: false);
-        var id = await t.ConfirmedBooking();
+        var id = await t.ConfirmedAccess();
         var kinds = (await t.Rows(id)).Select(n => n.Kind).Order().ToList();
         Assert.Equal(new[] { NotificationKind.BookingConfirmed, NotificationKind.BookingConfirmed, NotificationKind.ReviewRequest }.Order(), kinds); // a package starts at purchase: nothing to remind of (A-02)
     }
 
     [Fact]
-    public async Task A_Directory_outage_costs_the_practitioner_one_attempt_and_the_message_is_delivered_after_recovery_while_the_client_is_not_delayed()
+    public async Task A_Directory_outage_costs_the_agent_one_attempt_and_the_message_is_delivered_after_recovery_while_the_client_is_not_delayed()
     {
         using var t = new Rig();
-        var id = await t.ConfirmedBooking();
+        var id = await t.ConfirmedAccess();
         var contact = t.Host.Directory.Override!;
         t.Host.Directory.Override = (r, n) => r.RequestUri!.AbsolutePath.EndsWith("/contact") ? throw new HttpRequestException("demo directory down") : contact(r, n);
 
@@ -119,14 +119,14 @@ public class RecipientAddressTests
         t.Host.Clock.Advance(NotificationDispatcher.Backoff[0]);
         Assert.Equal(1, await t.Dispatcher.RunOnceAsync(default));
         Assert.Equal(2, t.Smtp.Mails.Count);
-        Assert.Contains(t.Smtp.Mails, m => m.RcptTo.SequenceEqual([$"<{PractitionerAddress}>"]));
+        Assert.Contains(t.Smtp.Mails, m => m.RcptTo.SequenceEqual([$"<{AgentAddress}>"]));
     }
 
     [Fact]
-    public async Task A_practitioner_without_a_held_address_is_retried_then_given_up_and_never_sent_anywhere_else()
+    public async Task A_agent_without_a_held_address_is_retried_then_given_up_and_never_sent_anywhere_else()
     {
-        using var t = new Rig { PractitionerEmail = null };
-        var id = await t.ConfirmedBooking();
+        using var t = new Rig { AgentEmail = null };
+        var id = await t.ConfirmedAccess();
         for (var i = 0; i < NotificationDispatcher.MaxAttempts + 1; i++)
         {
             await t.Dispatcher.RunOnceAsync(default);
@@ -138,15 +138,15 @@ public class RecipientAddressTests
     }
 
     [Fact]
-    public async Task A_booking_without_a_client_address_is_given_up_for_the_client_but_the_practitioner_is_still_notified()
+    public async Task A_access_without_a_client_address_is_given_up_for_the_client_but_the_agent_is_still_notified()
     {
         using var t = new Rig();
         t.Host.Emails[Client] = ""; // a token with no email claim
-        var id = await t.ConfirmedBooking();
+        var id = await t.ConfirmedAccess();
         await t.Dispatcher.RunOnceAsync(default);
         var mails = t.Smtp.Mails;
         Assert.Single(mails);
-        Assert.Equal([$"<{PractitionerAddress}>"], mails[0].RcptTo);
+        Assert.Equal([$"<{AgentAddress}>"], mails[0].RcptTo);
         Assert.Null((await t.Rows(id)).Single(n => n.Kind == NotificationKind.BookingConfirmed && n.ToUserId == Client).SentAt);
     }
 
@@ -154,7 +154,7 @@ public class RecipientAddressTests
     public async Task No_log_line_of_the_whole_flow_carries_an_address_the_brief_or_the_smtp_password()
     {
         using var t = new Rig();
-        await t.ConfirmedBooking();
+        await t.ConfirmedAccess();
         await t.Dispatcher.RunOnceAsync(default);
         t.Host.Directory.Override = (_, _) => throw new HttpRequestException("demo directory down");
         t.Host.Clock.Advance(TimeSpan.FromDays(2));
@@ -164,7 +164,7 @@ public class RecipientAddressTests
         foreach (var line in t.Host.Logs.Lines)
         {
             Assert.DoesNotContain(ClientAddress, line);
-            Assert.DoesNotContain(PractitionerAddress, line);
+            Assert.DoesNotContain(AgentAddress, line);
             Assert.DoesNotContain("demo-klient", line);
             Assert.DoesNotContain("demo-praktyk", line);
             Assert.DoesNotContain("TAJNY", line);
@@ -179,7 +179,7 @@ public class RecipientAddressTests
         using var t = new Rig(smtp: false); // GABINETY_FAKE=1, Notifications:Provider unset
         Assert.IsType<ContactResolver>(t.Host.Services.GetRequiredService<IContactResolver>());
         Assert.IsType<LogEmailSender>(t.Host.Services.GetRequiredService<IEmailSender>());
-        var id = await t.ConfirmedBooking();
+        var id = await t.ConfirmedAccess();
 
         Assert.Equal(2, await t.Dispatcher.RunOnceAsync(default));
 
@@ -187,7 +187,7 @@ public class RecipientAddressTests
         Assert.All((await t.Rows(id)).Where(n => n.Kind == NotificationKind.BookingConfirmed), n => Assert.NotNull(n.SentAt));
         var lines = t.Host.Logs.Lines.Where(l => l.StartsWith("Gabinety.Booking.Notifications.LogEmailSender")).ToList();
         Assert.Equal(2, lines.Count);
-        Assert.All(t.Host.Logs.Lines, l => { Assert.DoesNotContain(ClientAddress, l); Assert.DoesNotContain(PractitionerAddress, l); });
+        Assert.All(t.Host.Logs.Lines, l => { Assert.DoesNotContain(ClientAddress, l); Assert.DoesNotContain(AgentAddress, l); });
     }
 
     [Fact]

@@ -22,8 +22,8 @@
                 <thead>
                     <tr>
                         <th scope="col">@PlAdmin.Suspicious.ColClient</th>
-                        <th scope="col">@PlAdmin.Suspicious.ColPractitioner</th>
-                        <th scope="col" class="num">@PlAdmin.Suspicious.ColBookings</th>
+                        <th scope="col">@PlAdmin.Suspicious.ColAgent</th>
+                        <th scope="col" class="num">@PlAdmin.Suspicious.ColAccesses</th>
                         <th scope="col" class="num">@PlAdmin.Suspicious.ColReviews</th>
                     </tr>
                 </thead>
@@ -32,8 +32,8 @@
                     {
                         <tr>
                             <td data-label="@PlAdmin.Suspicious.ColClient"><span title="@p.ClientUserId">@string.Format(PlAdmin.Common.ClientRef, AdminFormat.ShortRef(p.ClientUserId))</span></td>
-                            <td data-label="@PlAdmin.Suspicious.ColPractitioner"><span title="@p.PractitionerId">@(_names.TryGetValue(p.PractitionerId, out var name) ? name : string.Format(PlAdmin.Common.PractitionerRef, AdminFormat.ShortRef(p.PractitionerId)))</span></td>
-                            <td data-label="@PlAdmin.Suspicious.ColBookings" class="num">@p.Bookings</td>
+                            <td data-label="@PlAdmin.Suspicious.ColAgent"><span title="@p.AgentId">@(_names.TryGetValue(p.AgentId, out var name) ? name : string.Format(PlAdmin.Common.AgentRef, AdminFormat.ShortRef(p.AgentId)))</span></td>
+                            <td data-label="@PlAdmin.Suspicious.ColAccesses" class="num">@p.Accesses</td>
                             <td data-label="@PlAdmin.Suspicious.ColReviews" class="num">@p.Reviews</td>
                         </tr>
                     }
@@ -63,6 +63,6 @@
         (_failure, _next) = (result.Failure, result.Value?.NextCursor);
         if (!result.IsOk) return;
         _items.AddRange(result.Value!.Items);
-        _names = await Api.PractitionerNames(_items.Select(p => p.PractitionerId));
+        _names = await Api.AgentNames(_items.Select(p => p.AgentId));
     }
 }

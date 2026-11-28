@@ -22,16 +22,16 @@ public static class ErrorCodes
 {
     public const string ValidationFailed = "validation_failed", Unauthenticated = "unauthenticated", Forbidden = "forbidden",
         NotFound = "not_found", InvalidTransition = "invalid_transition", SlotTaken = "slot_taken",
-        IdempotencyConflict = "idempotency_conflict", PractitionerExists = "practitioner_exists",
+        IdempotencyConflict = "idempotency_conflict", AgentExists = "practitioner_exists",
         AlreadyReviewed = "already_reviewed", AlreadyReplied = "already_replied", SlotUnavailable = "slot_unavailable",
-        OfferingInactive = "offering_inactive", OwnOffering = "own_offering", PractitionerNotBookable = "practitioner_not_bookable",
-        SubmitIncomplete = "submit_incomplete", TooManyOfferings = "too_many_offerings",
+        PackageInactive = "offering_inactive", OwnPackage = "own_offering", AgentNotBookable = "practitioner_not_bookable",
+        SubmitIncomplete = "submit_incomplete", TooManyPackages = "too_many_offerings",
         ContactDetailsNotAllowed = "contact_details_not_allowed", GithubNotLinked = "github_not_linked",
         NotReviewable = "not_reviewable", InvalidInput = "invalid_input", RateLimited = "rate_limited",
         AssistantUnavailable = "assistant_unavailable", DependencyUnavailable = "dependency_unavailable",
         CrossSiteRequest = "cross_site_request",
-        /// <summary>The provider account already runs the most agents it may (<c>Directory:MaxAgentsPerProvider</c>, E-04); 422 in the shape of <see cref="TooManyOfferings"/>.</summary>
+        /// <summary>The provider account already runs the most agents it may (<c>Directory:MaxAgentsPerProvider</c>, E-04); 422 in the shape of <see cref="TooManyPackages"/>.</summary>
         TooManyAgents = "too_many_agents",
         /// <summary>The practitioner has no connected payment account that can receive money yet (T-09.05, ADR proposal 0011); CONTRACTS 10.1 does not list it yet.</summary>
-        PractitionerPaymentsNotReady = "practitioner_payments_not_ready";
+        AgentPaymentsNotReady = "practitioner_payments_not_ready";
 }

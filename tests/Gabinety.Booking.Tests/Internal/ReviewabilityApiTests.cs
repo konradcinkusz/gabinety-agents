@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text.Json;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessEntity = Gabinety.Booking.Features.Accesses.Entities.Access;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -24,14 +24,14 @@ public class ReviewabilityApiTests
         return await h.CreateClient().SendAsync(req);
     }
 
-    static async Task<Guid> Seed(CreateHost h, BookingStatus status, string? resolution = null, DateTimeOffset? endedAt = null, DateTimeOffset? endUtc = null, long unitsUsed = 1)
+    static async Task<Guid> Seed(CreateHost h, AccessStatus status, string? resolution = null, DateTimeOffset? endedAt = null, DateTimeOffset? endUtc = null, long unitsUsed = 1)
     {
         var id = Guid.NewGuid();
         var end = endUtc ?? h.Clock.GetUtcNow().AddDays(-1);
-        await h.Seed(db => db.Bookings.Add(new BookingEntity
+        await h.Seed(db => db.Accesses.Add(new AccessEntity
         {
-            Id = id, ClientUserId = "demo-client-rev", PractitionerId = h.Practitioner, PractitionerUserId = "demo-practitioner-user",
-            OfferingId = h.Offering, OfferingTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 12345,
+            Id = id, ClientUserId = "demo-client-rev", AgentId = h.Agent, AgentUserId = "demo-practitioner-user",
+            PackageId = h.Package, PackageTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 12345,
             StartUtc = end.AddHours(-1), EndUtc = end, Status = status, BriefText = "demo-brief-SECRET-TEXT",
             IdempotencyKey = Guid.NewGuid(), CreatedAt = end.AddDays(-2), EndedAt = endedAt, DisputeResolution = resolution, UnitsTotal = 10, UnitsUsed = unitsUsed,
         }));
@@ -41,20 +41,20 @@ public class ReviewabilityApiTests
     static async Task<JsonElement> Json(HttpResponseMessage r) => JsonDocument.Parse(await r.Content.ReadAsStringAsync()).RootElement.Clone();
 
     [Theory]
-    [InlineData(BookingStatus.Completed, null, true)]
-    [InlineData(BookingStatus.Resolved, "release", true)]
-    [InlineData(BookingStatus.Resolved, "refund_full", false)]
-    [InlineData(BookingStatus.Resolved, "refund_partial", false)]
-    [InlineData(BookingStatus.Resolved, null, false)]
-    [InlineData(BookingStatus.CancelledByClient, null, false)]
-    [InlineData(BookingStatus.LateCancelledByClient, null, false)]
-    [InlineData(BookingStatus.CancelledByPractitioner, null, false)]
-    [InlineData(BookingStatus.ClientNoShow, null, false)]
-    [InlineData(BookingStatus.Expired, null, false)]
-    [InlineData(BookingStatus.PendingPayment, null, false)]
-    [InlineData(BookingStatus.Confirmed, null, true)]  // A-03: a used package may be reviewed before it ends
-    [InlineData(BookingStatus.Disputed, null, false)]
-    public async Task Reviewable_depends_on_status_and_resolution(BookingStatus status, string? resolution, bool expected)
+    [InlineData(AccessStatus.Completed, null, true)]
+    [InlineData(AccessStatus.Resolved, "release", true)]
+    [InlineData(AccessStatus.Resolved, "refund_full", false)]
+    [InlineData(AccessStatus.Resolved, "refund_partial", false)]
+    [InlineData(AccessStatus.Resolved, null, false)]
+    [InlineData(AccessStatus.CancelledByClient, null, false)]
+    [InlineData(AccessStatus.LateCancelledByClient, null, false)]
+    [InlineData(AccessStatus.CancelledByPractitioner, null, false)]
+    [InlineData(AccessStatus.ClientNoShow, null, false)]
+    [InlineData(AccessStatus.Expired, null, false)]
+    [InlineData(AccessStatus.PendingPayment, null, false)]
+    [InlineData(AccessStatus.Confirmed, null, true)]  // A-03: a used package may be reviewed before it ends
+    [InlineData(AccessStatus.Disputed, null, false)]
+    public async Task Reviewable_depends_on_status_and_resolution(AccessStatus status, string? resolution, bool expected)
     {
         using var h = NewHost();
         var ended = h.Clock.GetUtcNow().AddDays(-1);
@@ -64,7 +64,7 @@ public class ReviewabilityApiTests
         var body = await Json(r);
         Assert.Equal(expected, body.GetProperty("reviewable").GetBoolean());
         Assert.Equal("demo-client-rev", body.GetProperty("clientUserId").GetString());
-        Assert.Equal(h.Practitioner, body.GetProperty("practitionerId").GetGuid());
+        Assert.Equal(h.Agent, body.GetProperty("practitionerId").GetGuid());
         Assert.Equal(ended, body.GetProperty("completedAt").GetDateTimeOffset());
     }
 
@@ -72,9 +72,9 @@ public class ReviewabilityApiTests
     public async Task A_package_with_no_unit_used_is_never_reviewable()
     {
         using var h = NewHost();
-        foreach (var status in new[] { BookingStatus.Confirmed, BookingStatus.Completed })
+        foreach (var status in new[] { AccessStatus.Confirmed, AccessStatus.Completed })
             Assert.False((await Json(await Get(h, await Seed(h, status, unitsUsed: 0)))).GetProperty("reviewable").GetBoolean(), status.ToString());
-        Assert.False((await Json(await Get(h, await Seed(h, BookingStatus.Resolved, "release", unitsUsed: 0)))).GetProperty("reviewable").GetBoolean());
+        Assert.False((await Json(await Get(h, await Seed(h, AccessStatus.Resolved, "release", unitsUsed: 0)))).GetProperty("reviewable").GetBoolean());
     }
 
     [Theory]
@@ -84,7 +84,7 @@ public class ReviewabilityApiTests
     public async Task Window_edge_is_fourteen_days_after_end_utc(int secondsPastWindow, bool expected)
     {
         using var h = NewHost();
-        var id = await Seed(h, BookingStatus.Completed, endUtc: h.Clock.GetUtcNow() - Window - TimeSpan.FromSeconds(secondsPastWindow));
+        var id = await Seed(h, AccessStatus.Completed, endUtc: h.Clock.GetUtcNow() - Window - TimeSpan.FromSeconds(secondsPastWindow));
         Assert.Equal(expected, (await Json(await Get(h, id))).GetProperty("reviewable").GetBoolean());
     }
 
@@ -93,15 +93,15 @@ public class ReviewabilityApiTests
     {
         using var h = NewHost();
         var now = h.Clock.GetUtcNow();
-        var inside = await Seed(h, BookingStatus.Completed, endUtc: now - Window + TimeSpan.FromSeconds(1));
-        var outside = await Seed(h, BookingStatus.Completed, endUtc: now - Window - TimeSpan.FromSeconds(1));
+        var inside = await Seed(h, AccessStatus.Completed, endUtc: now - Window + TimeSpan.FromSeconds(1));
+        var outside = await Seed(h, AccessStatus.Completed, endUtc: now - Window - TimeSpan.FromSeconds(1));
         var a = await Json(await Get(h, inside));
         Assert.True(a.GetProperty("reviewable").GetBoolean());
         Assert.Equal(now - Window + TimeSpan.FromSeconds(1), a.GetProperty("completedAt").GetDateTimeOffset());
         Assert.False((await Json(await Get(h, outside))).GetProperty("reviewable").GetBoolean());
 
         // A recent ended_at does not reopen the window of a package whose validity ended long ago.
-        var stale = await Seed(h, BookingStatus.Completed, endedAt: now.AddDays(-1), endUtc: now.AddDays(-30));
+        var stale = await Seed(h, AccessStatus.Completed, endedAt: now.AddDays(-1), endUtc: now.AddDays(-30));
         Assert.False((await Json(await Get(h, stale))).GetProperty("reviewable").GetBoolean());
     }
 
@@ -109,14 +109,14 @@ public class ReviewabilityApiTests
     public async Task Window_follows_the_clock()
     {
         using var h = NewHost();
-        var id = await Seed(h, BookingStatus.Completed, endUtc: h.Clock.GetUtcNow().AddDays(-13));
+        var id = await Seed(h, AccessStatus.Completed, endUtc: h.Clock.GetUtcNow().AddDays(-13));
         Assert.True((await Json(await Get(h, id))).GetProperty("reviewable").GetBoolean());
         h.Clock.Advance(TimeSpan.FromDays(2));
         Assert.False((await Json(await Get(h, id))).GetProperty("reviewable").GetBoolean());
     }
 
     [Fact]
-    public async Task Unknown_booking_is_404_not_found()
+    public async Task Unknown_access_is_404_not_found()
     {
         using var h = NewHost();
         var r = await Get(h, Guid.NewGuid());
@@ -130,7 +130,7 @@ public class ReviewabilityApiTests
     public async Task Missing_or_wrong_internal_key_is_rejected(string? key)
     {
         using var h = NewHost();
-        var id = await Seed(h, BookingStatus.Completed, endedAt: h.Clock.GetUtcNow());
+        var id = await Seed(h, AccessStatus.Completed, endedAt: h.Clock.GetUtcNow());
         var r = await Get(h, id, key);
         Assert.Contains(r.StatusCode, new[] { HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden });
     }
@@ -139,7 +139,7 @@ public class ReviewabilityApiTests
     public async Task A_user_token_does_not_open_the_internal_endpoint()
     {
         using var h = NewHost();
-        var id = await Seed(h, BookingStatus.Completed, endedAt: h.Clock.GetUtcNow());
+        var id = await Seed(h, AccessStatus.Completed, endedAt: h.Clock.GetUtcNow());
         var r = await h.ClientFor("demo-client-rev").GetAsync($"/internal/v1/bookings/{id}/reviewability");
         Assert.Contains(r.StatusCode, new[] { HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden });
     }
@@ -148,7 +148,7 @@ public class ReviewabilityApiTests
     public async Task Response_has_no_brief_and_no_price()
     {
         using var h = NewHost();
-        var id = await Seed(h, BookingStatus.Completed, endedAt: h.Clock.GetUtcNow().AddDays(-1));
+        var id = await Seed(h, AccessStatus.Completed, endedAt: h.Clock.GetUtcNow().AddDays(-1));
         var raw = await (await Get(h, id)).Content.ReadAsStringAsync();
         Assert.DoesNotContain("SECRET-TEXT", raw);
         Assert.DoesNotContain("12345", raw);

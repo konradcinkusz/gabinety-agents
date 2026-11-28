@@ -8,7 +8,7 @@ public class SignInTests
     static WebFactory Web()
     {
         var web = new WebFactory();
-        web.Booking.Respond = _ => FakeBackend.Json(new Gabinety.Web.Api.PageDto<Gabinety.Web.Api.BookingViewDto>([Sample.Booking("Konsultacja demo"), Sample.Booking("Druga konsultacja", "PendingPayment")], null));
+        web.Access.Respond = _ => FakeBackend.Json(new Gabinety.Web.Api.PageDto<Gabinety.Web.Api.AccessViewDto>([Sample.Access("Konsultacja demo"), Sample.Access("Druga konsultacja", "PendingPayment")], null));
         return web;
     }
 
@@ -78,7 +78,7 @@ public class SignInTests
         Assert.Contains("250,00 zł", page.TextOf("[data-testid=booking-row]"));
         Assert.Equal("Aktywny", page.One("[data-testid=booking-row] .badge:not([data-testid=ai-badge])")!.TextContent);
 
-        var seen = web.Booking.Requests.Last();
+        var seen = web.Access.Requests.Last();
         Assert.Equal("/api/v1/me/bookings?role=client", seen.PathAndQuery);
         Assert.StartsWith("Bearer eyJ", seen.Authorization);
         Assert.DoesNotContain("eyJ", page.Html); // and no token anywhere in the page, prerendered state included
@@ -94,9 +94,9 @@ public class SignInTests
         var browser = web.NewBrowser();
         await SignIn.As(web, browser);
         await browser.GetAsync("/moje/dostepy?role=practitioner&status=Confirmed");
-        Assert.Equal("/api/v1/me/bookings?role=practitioner&status=Confirmed", web.Booking.Requests.Last().PathAndQuery);
+        Assert.Equal("/api/v1/me/bookings?role=practitioner&status=Confirmed", web.Access.Requests.Last().PathAndQuery);
         await browser.GetAsync("/moje/dostepy?role=admin&status=Hacked%26x");
-        Assert.Equal("/api/v1/me/bookings?role=client", web.Booking.Requests.Last().PathAndQuery); // anything else is the default view
+        Assert.Equal("/api/v1/me/bookings?role=client", web.Access.Requests.Last().PathAndQuery); // anything else is the default view
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public class SignInTests
         var page = await web.NewBrowser().GetAsync("/moje/dostepy?role=practitioner&status=Confirmed");
         Assert.Equal(HttpStatusCode.Found, page.Status);
         Assert.Equal("/logowanie?redirect=%2Fmoje%2Fdostepy%3Frole%3Dpractitioner%26status%3DConfirmed", page.Location);
-        Assert.Empty(web.Booking.Requests); // nothing was asked of the backend for an anonymous visitor
+        Assert.Empty(web.Access.Requests); // nothing was asked of the backend for an anonymous visitor
     }
 
     [Theory]
@@ -224,12 +224,12 @@ public class SignInTests
     }
 
     [Fact]
-    public async Task The_authenticated_page_says_so_in_an_alert_when_the_booking_service_is_down_and_the_shell_stays()
+    public async Task The_authenticated_page_says_so_in_an_alert_when_the_access_service_is_down_and_the_shell_stays()
     {
         await using var web = Web();
         var browser = web.NewBrowser();
         await SignIn.As(web, browser);
-        web.Booking.Respond = FakeBackend.Throw(new HttpRequestException("down"));
+        web.Access.Respond = FakeBackend.Throw(new HttpRequestException("down"));
         var page = await browser.GetAsync("/moje/dostepy");
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Equal("Brak połączenia z usługą dostępów. Spróbuj ponownie za chwilę.", page.TextOf("[data-testid=unavailable] p"));

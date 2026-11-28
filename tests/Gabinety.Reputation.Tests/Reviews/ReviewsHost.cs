@@ -48,22 +48,22 @@ sealed class ReviewsLogSink : ILoggerProvider
 }
 
 /// <summary>Stands in for Booking: reviewability answers per booking id, plus switches for "down" and a free-form override.</summary>
-sealed class FakeBooking : HttpMessageHandler
+sealed class FakeAccess : HttpMessageHandler
 {
     public const string Key = "k-test-DO-NOT-LEAK-5678";
     public const string BaseUrl = "http://booking.demo.invalid";
 
-    public readonly ConcurrentDictionary<Guid, (bool Reviewable, string ClientUserId, Guid PractitionerId)> Bookings = new();
+    public readonly ConcurrentDictionary<Guid, (bool Reviewable, string ClientUserId, Guid AgentId)> Accesses = new();
     public Func<HttpRequestMessage, int, HttpResponseMessage>? Override; // (request, call number from 1)
     public bool Down;
     public int Calls;
     public string? LastKeyHeader;
     public string? LastPath;
 
-    public Guid Add(string clientUserId, Guid practitionerId, bool reviewable = true)
+    public Guid Add(string clientUserId, Guid agentId, bool reviewable = true)
     {
         var id = Guid.NewGuid();
-        Bookings[id] = (reviewable, clientUserId, practitionerId);
+        Accesses[id] = (reviewable, clientUserId, agentId);
         return id;
     }
 
@@ -76,8 +76,8 @@ sealed class FakeBooking : HttpMessageHandler
         if (Override is { } o) return Task.FromResult(o(r, n));
         const string prefix = "/internal/v1/bookings/", suffix = "/reviewability";
         var path = r.RequestUri!.AbsolutePath;
-        if (path.StartsWith(prefix) && path.EndsWith(suffix) && Guid.TryParse(path[prefix.Length..^suffix.Length], out var id) && Bookings.TryGetValue(id, out var b))
-            return Task.FromResult(Json(new { reviewable = b.Reviewable, clientUserId = b.ClientUserId, practitionerId = b.PractitionerId, completedAt = "2026-11-15T10:00:00Z" }));
+        if (path.StartsWith(prefix) && path.EndsWith(suffix) && Guid.TryParse(path[prefix.Length..^suffix.Length], out var id) && Accesses.TryGetValue(id, out var b))
+            return Task.FromResult(Json(new { reviewable = b.Reviewable, clientUserId = b.ClientUserId, practitionerId = b.AgentId, completedAt = "2026-11-15T10:00:00Z" }));
         return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
     }
 
@@ -90,7 +90,7 @@ sealed class ReviewsHost : WebApplicationFactory<Program>
     public const string Audience = "reputation-test", Issuer = "https://issuer.demo.invalid";
     public const string GoodText = "Synthetyczna opinia: spotkanie było rzeczowe i pomocne, polecam.";
     readonly RSA _rsa = RSA.Create(2048);
-    public FakeBooking Booking { get; } = new();
+    public FakeAccess Access { get; } = new();
     public ReviewsClock Clock { get; } = new();
     /// <summary>Stands in for Directory: records the pushes the job makes (the real client has no address here).</summary>
     public RecordingReputationClient Directory { get; } = new();
@@ -114,14 +114,14 @@ sealed class ReviewsHost : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseSetting("Identity:Audience", Audience);
-        builder.UseSetting("Backend:Booking", FakeBooking.BaseUrl);
-        builder.UseSetting("Internal:Keys:Booking", FakeBooking.Key);
+        builder.UseSetting("Backend:Booking", FakeAccess.BaseUrl);
+        builder.UseSetting("Internal:Keys:Booking", FakeAccess.Key);
         foreach (var (k, v) in Settings) builder.UseSetting(k, v);
         builder.ConfigureServices(s =>
         {
-            s.RemoveAll<IBookingClient>();
-            s.AddSingleton<IBookingClient>(new BookingClient(
-                new HttpClient(Booking) { BaseAddress = new Uri(FakeBooking.BaseUrl) }, FakeBooking.Key, retryDelay: TimeSpan.Zero));
+            s.RemoveAll<IAccessClient>();
+            s.AddSingleton<IAccessClient>(new AccessClient(
+                new HttpClient(Access) { BaseAddress = new Uri(FakeAccess.BaseUrl) }, FakeAccess.Key, retryDelay: TimeSpan.Zero));
             s.RemoveAll<IDirectoryReputationClient>();
             s.AddSingleton<IDirectoryReputationClient>(Directory);
             s.RemoveAll<TimeProvider>();
@@ -152,9 +152,9 @@ sealed class ReviewsHost : WebApplicationFactory<Program>
         return await q(scope.ServiceProvider.GetRequiredService<ReputationDbContext>());
     }
 
-    public Task<List<Review>> ReviewsOf(Guid practitionerId) => Query(db => db.Reviews.AsNoTracking().Where(r => r.PractitionerId == practitionerId).ToListAsync());
-    public Task<RatingSummary?> SummaryOf(Guid practitionerId) => Query(db => db.RatingSummaries.AsNoTracking().SingleOrDefaultAsync(s => s.PractitionerId == practitionerId));
+    public Task<List<Review>> ReviewsOf(Guid agentId) => Query(db => db.Reviews.AsNoTracking().Where(r => r.AgentId == agentId).ToListAsync());
+    public Task<RatingSummary?> SummaryOf(Guid agentId) => Query(db => db.RatingSummaries.AsNoTracking().SingleOrDefaultAsync(s => s.AgentId == agentId));
 
-    public static Task<HttpResponseMessage> Post(HttpClient c, Guid bookingId, int rating = 5, string? text = null) =>
-        c.PostAsJsonAsync("/api/v1/reviews", new { bookingId, rating, text = text ?? GoodText });
+    public static Task<HttpResponseMessage> Post(HttpClient c, Guid accessId, int rating = 5, string? text = null) =>
+        c.PostAsJsonAsync("/api/v1/reviews", new { bookingId = accessId, rating, text = text ?? GoodText });
 }

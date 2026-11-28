@@ -70,7 +70,7 @@ public sealed class RealAuthProductTests(RealAuthFixture auth, ITestOutputHelper
     }
 
     // The three admin surfaces of the services (docs/operations/ROUTE-AUTH.md): each is behind the "Admin" policy, role Admin or SuperAdmin.
-    const string DirectoryAdmin = "/api/v1/admin/practitioners", BookingAdmin = "/api/v1/admin/disputes?status=open", ReputationAdmin = "/api/v1/admin/reviews";
+    const string DirectoryAdmin = "/api/v1/admin/practitioners", AccessAdmin = "/api/v1/admin/disputes?status=open", ReputationAdmin = "/api/v1/admin/reviews";
 
     async Task<HttpStatusCode> Get(string service, string path, string? token)
     {
@@ -85,7 +85,7 @@ public sealed class RealAuthProductTests(RealAuthFixture auth, ITestOutputHelper
 
     [Theory]
     [InlineData("directory", DirectoryAdmin)]
-    [InlineData("booking", BookingAdmin)]
+    [InlineData("booking", AccessAdmin)]
     [InlineData("reputation", ReputationAdmin)]
     public async Task The_admin_routes_admit_a_real_Admin_a_real_SuperAdmin_and_a_user_with_two_roles_and_refuse_everyone_else(string service, string path)
     {
@@ -128,7 +128,7 @@ public sealed class RealAuthProductTests(RealAuthFixture auth, ITestOutputHelper
         var parts = admin.AccessToken.Split('.');
         var altered = string.Join('.', parts[0], parts[1], parts[2][..10] + (parts[2][10] == 'A' ? 'B' : 'A') + parts[2][11..]);
 
-        foreach (var (service, path) in new[] { ("directory", DirectoryAdmin), ("booking", BookingAdmin), ("reputation", ReputationAdmin) })
+        foreach (var (service, path) in new[] { ("directory", DirectoryAdmin), ("booking", AccessAdmin), ("reputation", ReputationAdmin) })
         {
             Assert.Equal(HttpStatusCode.OK, await Get(service, path, admin.AccessToken)); // control: the unaltered token passes
             Assert.Equal(HttpStatusCode.Unauthorized, await Get(service, path, altered));
@@ -156,8 +156,8 @@ public sealed class RealAuthProductTests(RealAuthFixture auth, ITestOutputHelper
         // Directory's erasure first asks Booking to cancel the practitioner's future bookings (ADR-0012): here it reaches the Booking host in process, with Booking's key.
         using var directory = new Service<DirectoryApp::Program>(auth.Main.Url, Key, s =>
         {
-            s.RemoveAll<IBookingClient>();
-            s.AddSingleton<IBookingClient>(_ => new BookingClient(_booking.CreateClient(), Key));
+            s.RemoveAll<IAccessClient>();
+            s.AddSingleton<IAccessClient>(_ => new AccessClient(_booking.CreateClient(), Key));
         });
         using var asUser = Client(directory, user.AccessToken);
         Assert.True((await asUser.PostAsJsonAsync("/api/v1/me/practitioner", new { displayName = "Demo Erased Person" })).IsSuccessStatusCode);
@@ -190,11 +190,11 @@ public sealed class RealAuthProductTests(RealAuthFixture auth, ITestOutputHelper
     [Fact]
     public async Task The_hooks_refuse_a_call_without_the_internal_key()
     {
-        using var booking = _booking.CreateClient();
+        using var access = _booking.CreateClient();
         using var reputation = _reputation.CreateClient();
         using var directory = _directory.CreateClient();
 
-        Assert.Equal(HttpStatusCode.Unauthorized, (await booking.DeleteAsync("/internal/v1/subjects/someone")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await access.DeleteAsync("/internal/v1/subjects/someone")).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await reputation.DeleteAsync("/internal/v1/subjects/someone")).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await directory.DeleteAsync("/internal/v1/subjects/someone")).StatusCode);
     }

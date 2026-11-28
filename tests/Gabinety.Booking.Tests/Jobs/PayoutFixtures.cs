@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Transactions;
-using Gabinety.Booking.Features.Bookings.Create;
+using Gabinety.Booking.Features.Accesses.Create;
 using Gabinety.Contracts.Booking;
 using Gabinety.Booking.Features.Payments;
 using Gabinety.Booking.Features.Payouts;
@@ -13,8 +13,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessEntity = Gabinety.Booking.Features.Accesses.Entities.Access;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -66,10 +66,10 @@ sealed class PayoutProvider : IPaymentProvider
     }
 }
 
-sealed class ScopedPayoutJob(IServiceScopeFactory scopes, IPaymentProvider provider, TimeProvider time, IConfiguration config, JobMetrics metrics, ILogger<PayoutJob> log, Guid practitioner)
+sealed class ScopedPayoutJob(IServiceScopeFactory scopes, IPaymentProvider provider, TimeProvider time, IConfiguration config, JobMetrics metrics, ILogger<PayoutJob> log, Guid agent)
     : PayoutJob(scopes, provider, time, config, metrics, log)
 {
-    protected override IQueryable<BookingEntity> Scope(IQueryable<BookingEntity> q) => q.Where(b => b.PractitionerId == practitioner);
+    protected override IQueryable<AccessEntity> Scope(IQueryable<AccessEntity> q) => q.Where(b => b.AgentId == agent);
 }
 
 static class PayJob
@@ -89,37 +89,37 @@ static class PayJob
         var scopes = new CountingScopeFactory(h.Services.GetRequiredService<IServiceScopeFactory>());
         provider.Scopes = scopes;
         return new(scopes, provider, h.Clock, h.Services.GetRequiredService<IConfiguration>(), h.Services.GetRequiredService<JobMetrics>(),
-            h.Services.GetRequiredService<ILogger<PayoutJob>>(), h.Practitioner);
+            h.Services.GetRequiredService<ILogger<PayoutJob>>(), h.Agent);
     }
 
     /// <summary>A booking in <paramref name="status"/> whose payout fell due <paramref name="dueAgo"/> before the host clock (the fee hook's result is seeded directly).</summary>
-    public static async Task<Guid> Seed(CreateHost h, BookingStatus status = BookingStatus.Completed, string? resolution = null, TimeSpan? dueAgo = null,
+    public static async Task<Guid> Seed(CreateHost h, AccessStatus status = AccessStatus.Completed, string? resolution = null, TimeSpan? dueAgo = null,
         long? payoutMinor = 8500, bool setDue = true, int slot = 0)
     {
         var id = await Life.Seed(h, status, startIn: TimeSpan.FromDays(-3) - TimeSpan.FromHours(3 * slot), duration: TimeSpan.FromHours(1));
         await h.Seed(db =>
         {
-            var b = db.Bookings.Single(x => x.Id == id);
+            var b = db.Accesses.Single(x => x.Id == id);
             b.DisputeResolution = resolution;
             b.PayoutMinor = payoutMinor;
             b.FeeMinor = payoutMinor is null ? null : h.PriceMinor - payoutMinor;
             b.PayoutDueAt = setDue ? h.Clock.GetUtcNow() - (dueAgo ?? TimeSpan.FromMinutes(1)) : null;
-            if (status == BookingStatus.Resolved) b.ResolvedAt = h.Clock.GetUtcNow() - TimeSpan.FromMinutes(5);
+            if (status == AccessStatus.Resolved) b.ResolvedAt = h.Clock.GetUtcNow() - TimeSpan.FromMinutes(5);
         });
         return id;
     }
 
     public static string Key(Guid id) => $"payout:{id:N}";
-    public static Task<List<Payout>> PayoutRows(CreateHost h, Guid id) => h.Query(db => db.Payouts.AsNoTracking().Where(p => p.BookingId == id).ToListAsync());
+    public static Task<List<Payout>> PayoutRows(CreateHost h, Guid id) => h.Query(db => db.Payouts.AsNoTracking().Where(p => p.AccessId == id).ToListAsync());
     public static async Task<List<LedgerEntry>> PayoutLedger(CreateHost h, Guid id) => (await Life.Ledger(h, id)).Where(l => l.Kind == LedgerKind.PractitionerPayout).ToList();
 
     /// <summary>Every row a payout run could touch, as text, so "changes nothing" is an equality.</summary>
     public static Task<string> Snapshot(CreateHost h) => h.Query(async db =>
     {
-        var ids = await db.Bookings.AsNoTracking().Where(b => b.PractitionerId == h.Practitioner).Select(b => b.Id).ToListAsync();
-        var bookings = await db.Bookings.AsNoTracking().Where(b => ids.Contains(b.Id)).OrderBy(b => b.Id).ToListAsync();
-        var payouts = await db.Payouts.AsNoTracking().Where(p => ids.Contains(p.BookingId)).OrderBy(p => p.Id).ToListAsync();
-        var ledger = await db.LedgerEntries.AsNoTracking().Where(l => ids.Contains(l.BookingId)).OrderBy(l => l.Id).ToListAsync();
-        return JsonSerializer.Serialize(new { bookings, payouts, ledger });
+        var ids = await db.Accesses.AsNoTracking().Where(b => b.AgentId == h.Agent).Select(b => b.Id).ToListAsync();
+        var accesses = await db.Accesses.AsNoTracking().Where(b => ids.Contains(b.Id)).OrderBy(b => b.Id).ToListAsync();
+        var payouts = await db.Payouts.AsNoTracking().Where(p => ids.Contains(p.AccessId)).OrderBy(p => p.Id).ToListAsync();
+        var ledger = await db.LedgerEntries.AsNoTracking().Where(l => ids.Contains(l.AccessId)).OrderBy(l => l.Id).ToListAsync();
+        return JsonSerializer.Serialize(new { bookings = accesses, payouts, ledger });
     });
 }

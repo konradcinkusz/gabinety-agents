@@ -16,7 +16,7 @@ else if (_state == State.Ready)
         <p><a href="/admin/weryfikacja">@PlAdmin.Verification.BackToQueue</a></p>
         <div class="admin-row__head">
             <h1>@_detail!.DisplayName</h1>
-            <AdminBadge Kind="AdminFormat.PractitionerStatusKind(_detail.Status)">@AdminFormat.PractitionerStatus(_detail.Status)</AdminBadge>
+            <AdminBadge Kind="AdminFormat.AgentStatusKind(_detail.Status)">@AdminFormat.AgentStatus(_detail.Status)</AdminBadge>
         </div>
         <p class="admin-lead">@_detail.Headline</p>
         <div class="card">
@@ -92,12 +92,12 @@ else if (_state != State.Loading)
     [CascadingParameter] HttpContext HttpContext { get; set; } = default!;
 
     State _state;
-    AdminPractitionerDetailDto? _detail;
+    AdminAgentDetailDto? _detail;
     IReadOnlyList<AdminVerificationEventDto>? _events; // null: the history could not be read
 
     protected override async Task OnInitializedAsync()
     {
-        var (detail, history) = (Api.Practitioner(Id), Api.VerificationEvents(Id));
+        var (detail, history) = (Api.Agent(Id), Api.VerificationEvents(Id));
         var d = await detail;
         if (d.Failure is { Status: 404 }) { Navigation.NotFound(); return; } // an unknown profile is a 404 page and status
         if (d.Failure is { Status: 403 }) { HttpContext.Response.StatusCode = StatusCodes.Status403Forbidden; _state = State.Forbidden; return; } // the service refuses what the page let through

@@ -2,7 +2,7 @@ using Gabinety.ServiceDefaults;
 using Gabinety.Web.Api;
 using Gabinety.Web.Auth;
 using Gabinety.Web.Components.Layout;
-using Gabinety.Web.Components.Pages.Bookings;
+using Gabinety.Web.Components.Pages.Accesses;
 using Gabinety.Web.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -121,26 +121,26 @@ public class FlashKeyTests
     public void Text_from_the_query_string_is_never_rendered(string uri) => Assert.Null(FlashKey.Resolve(uri));
 }
 
-public class BookingFormatTests
+public class AccessFormatTests
 {
     [Fact]
     public void Times_are_shown_in_Warsaw_in_winter_and_in_summer()
     {
-        Assert.Equal("wtorek, 1 grudnia, 13:00–14:00", BookingFormat.When(Sample.Booking())); // 12:00Z, UTC+1
-        var summer = Sample.Booking() with { StartUtc = new DateTimeOffset(2026, 7, 14, 12, 30, 0, TimeSpan.Zero), EndUtc = new DateTimeOffset(2026, 7, 14, 13, 0, 0, TimeSpan.Zero) };
-        Assert.Equal("wtorek, 14 lipca, 14:30–15:00", BookingFormat.When(summer)); // UTC+2
+        Assert.Equal("wtorek, 1 grudnia, 13:00–14:00", AccessFormat.When(Sample.Access())); // 12:00Z, UTC+1
+        var summer = Sample.Access() with { StartUtc = new DateTimeOffset(2026, 7, 14, 12, 30, 0, TimeSpan.Zero), EndUtc = new DateTimeOffset(2026, 7, 14, 13, 0, 0, TimeSpan.Zero) };
+        Assert.Equal("wtorek, 14 lipca, 14:30–15:00", AccessFormat.When(summer)); // UTC+2
     }
 
-    [Fact] public void Every_contract_status_has_a_polish_label_and_an_unknown_one_says_so() { foreach (var s in BookingFormat.Statuses) Assert.NotEqual("Status nieznany", BookingFormat.StatusLabel(s)); Assert.Equal("Status nieznany", BookingFormat.StatusLabel("Whatever")); Assert.Equal(10, BookingFormat.Statuses.Length); }
+    [Fact] public void Every_contract_status_has_a_polish_label_and_an_unknown_one_says_so() { foreach (var s in AccessFormat.Statuses) Assert.NotEqual("Status nieznany", AccessFormat.StatusLabel(s)); Assert.Equal("Status nieznany", AccessFormat.StatusLabel("Whatever")); Assert.Equal(10, AccessFormat.Statuses.Length); }
 
     [Fact]
     public void The_other_party_is_named_or_neutral()
     {
-        var b = Sample.Booking();
-        Assert.Equal("Anna Demowska", BookingFormat.OtherParty(b, "client"));
-        Assert.Equal("demo-client", BookingFormat.OtherParty(b, "practitioner"));
-        Assert.Equal("Klient", BookingFormat.OtherParty(b with { Client = null }, "practitioner"));
-        Assert.Equal("Agent", BookingFormat.OtherParty(b with { Practitioner = b.Practitioner with { DisplayName = " " } }, "client"));
+        var b = Sample.Access();
+        Assert.Equal("Anna Demowska", AccessFormat.OtherParty(b, "client"));
+        Assert.Equal("demo-client", AccessFormat.OtherParty(b, "practitioner"));
+        Assert.Equal("Klient", AccessFormat.OtherParty(b with { Client = null }, "practitioner"));
+        Assert.Equal("Agent", AccessFormat.OtherParty(b with { Agent = b.Agent with { DisplayName = " " } }, "client"));
     }
 
     [Theory]
@@ -149,8 +149,8 @@ public class BookingFormatTests
     [InlineData(429, "rate_limited", "Zbyt wiele zapytań. Spróbuj ponownie za chwilę.")]
     [InlineData(403, "forbidden", "Nie masz dostępu do tych dostępów.")]
     [InlineData(500, "http_500", "Nie udało się wczytać dostępów.")]
-    public void A_failure_is_told_from_its_code_never_from_the_servers_text(int status, string code, string text) => Assert.Equal(text, BookingFormat.FailureText(new ApiFailure(status, code)));
+    public void A_failure_is_told_from_its_code_never_from_the_servers_text(int status, string code, string text) => Assert.Equal(text, AccessFormat.FailureText(new ApiFailure(status, code)));
 
     [Theory] [InlineData("practitioner", "practitioner")] [InlineData("client", "client")] [InlineData("admin", "client")] [InlineData(null, "client")]
-    public void The_role_is_one_of_two(string? raw, string expected) => Assert.Equal(expected, BookingFormat.Role(raw));
+    public void The_role_is_one_of_two(string? raw, string expected) => Assert.Equal(expected, AccessFormat.Role(raw));
 }

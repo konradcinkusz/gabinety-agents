@@ -22,8 +22,8 @@ sealed class ReviewConfiguration : IEntityTypeConfiguration<Review>
         b.ToTable("reviews");
         b.HasKey(x => x.Id);
         b.Property(x => x.Id).HasColumnName("id");
-        b.Property(x => x.BookingId).HasColumnName("booking_id");
-        b.Property(x => x.PractitionerId).HasColumnName("practitioner_id");
+        b.Property(x => x.AccessId).HasColumnName("booking_id");
+        b.Property(x => x.AgentId).HasColumnName("practitioner_id");
         b.Property(x => x.ClientUserId).HasColumnName("client_user_id").IsRequired();
         b.Property(x => x.Rating).HasColumnName("rating");
         b.Property(x => x.Text).HasColumnName("text").HasMaxLength(2000).IsRequired();
@@ -39,8 +39,8 @@ sealed class ReviewConfiguration : IEntityTypeConfiguration<Review>
         b.Property(x => x.ReplyText).HasColumnName("reply_text").HasMaxLength(1000);
         b.Property(x => x.RepliedAt).HasColumnName("replied_at");
         b.ToTable(t => t.HasCheckConstraint("ck_reviews_rating", "rating between 1 and 5"));
-        b.HasIndex(x => x.BookingId).IsUnique().HasDatabaseName("ux_reviews_booking_id");
-        b.HasIndex(x => new { x.PractitionerId, x.Status, x.PublishedAt, x.Id }).IsDescending(false, false, true, false)
+        b.HasIndex(x => x.AccessId).IsUnique().HasDatabaseName("ux_reviews_booking_id");
+        b.HasIndex(x => new { x.AgentId, x.Status, x.PublishedAt, x.Id }).IsDescending(false, false, true, false)
             .HasDatabaseName("ix_reviews_practitioner_status_published");
     }
 }
@@ -50,8 +50,8 @@ sealed class RatingSummaryConfiguration : IEntityTypeConfiguration<RatingSummary
     public void Configure(EntityTypeBuilder<RatingSummary> b)
     {
         b.ToTable("rating_summaries");
-        b.HasKey(x => x.PractitionerId);
-        b.Property(x => x.PractitionerId).HasColumnName("practitioner_id").ValueGeneratedNever();
+        b.HasKey(x => x.AgentId);
+        b.Property(x => x.AgentId).HasColumnName("practitioner_id").ValueGeneratedNever();
         b.Property(x => x.Count).HasColumnName("count");
         b.Property(x => x.Sum).HasColumnName("sum");
         b.Property(x => x.Version).HasColumnName("version");

@@ -19,7 +19,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Gabinety.Booking.Tests;
 
-using Booking = Gabinety.Booking.Features.Bookings.Entities.Booking;
+using Access = Gabinety.Booking.Features.Accesses.Entities.Access;
 
 /// <summary>Collects every log line (message, structured values and exception) so a test can assert what was NOT logged.</summary>
 sealed class LogSink : ILoggerProvider
@@ -58,8 +58,8 @@ sealed class CreateHost : WebApplicationFactory<Program>
     /// <summary>Starts in the fake profile (<c>GABINETY_FAKE=1</c>), the only one that may run the Mock payment provider (F-01); a test of a deployed profile calls <see cref="AsDeployed"/>.</summary>
     public Dictionary<string, string?> Settings { get; } = new() { ["GABINETY_FAKE"] = "1" };
 
-    public Guid Practitioner { get; } = Guid.NewGuid();
-    public Guid Offering { get; } = Guid.NewGuid();
+    public Guid Agent { get; } = Guid.NewGuid();
+    public Guid Package { get; } = Guid.NewGuid();
     public string OwnerUserId = "demo-practitioner-user";
     public string Title = "demo-offering";
     public int Minutes = 60;
@@ -70,7 +70,7 @@ sealed class CreateHost : WebApplicationFactory<Program>
     public bool Active = true;
     public string? MeetingUrl;
     public Action<IServiceCollection>? Configure;
-    public string PractitionerName = "Demo Practitioner", PractitionerSlug = "demo-practitioner";
+    public string AgentName = "Demo Practitioner", AgentSlug = "demo-practitioner";
     /// <summary>The <c>name</c> claim the tokens carry (authservice puts the e-mail there); null: no such claim.</summary>
     public string? NameClaim;
     public bool DirectoryDown;
@@ -91,16 +91,16 @@ sealed class CreateHost : WebApplicationFactory<Program>
 
     public CreateHost()
     {
-        Directory.Override = (r, _) => r.RequestUri!.AbsolutePath == $"/internal/v1/offerings/{Offering}"
+        Directory.Override = (r, _) => r.RequestUri!.AbsolutePath == $"/internal/v1/offerings/{Package}"
             ? FakeDirectory.Json(new
             {
-                offeringId = Offering, practitionerId = Practitioner, practitionerUserId = OwnerUserId, practitionerStatus = Status,
+                offeringId = Package, practitionerId = Agent, practitionerUserId = OwnerUserId, practitionerStatus = Status,
                 title = Title, durationMinutes = Minutes, price = new { amountMinor = PriceMinor, currency = "PLN" },
-                meetingUrl = MeetingUrl, isActive = Active, kind = Kind, units = Units, practitionerSlug = PractitionerSlug,
+                meetingUrl = MeetingUrl, isActive = Active, kind = Kind, units = Units, practitionerSlug = AgentSlug,
             })
-            : r.RequestUri!.AbsolutePath == $"/internal/v1/practitioners/{Practitioner}"
+            : r.RequestUri!.AbsolutePath == $"/internal/v1/practitioners/{Agent}"
                 ? (DirectoryDown ? new HttpResponseMessage(System.Net.HttpStatusCode.ServiceUnavailable)
-                    : FakeDirectory.Json(new { practitionerId = Practitioner, displayName = PractitionerName, slug = PractitionerSlug }))
+                    : FakeDirectory.Json(new { practitionerId = Agent, displayName = AgentName, slug = AgentSlug }))
             : new HttpResponseMessage(System.Net.HttpStatusCode.NotFound);
     }
 
@@ -153,21 +153,21 @@ sealed class CreateHost : WebApplicationFactory<Program>
 
     protected override void Dispose(bool disposing) { if (disposing) _rsa.Dispose(); base.Dispose(disposing); }
 
-    public async Task Seed(Action<BookingDbContext> act)
+    public async Task Seed(Action<AccessDbContext> act)
     {
         using var scope = Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<AccessDbContext>();
         act(db);
         await db.SaveChangesAsync();
     }
 
-    public async Task<T> Query<T>(Func<BookingDbContext, Task<T>> q)
+    public async Task<T> Query<T>(Func<AccessDbContext, Task<T>> q)
     {
         using var scope = Services.CreateScope();
-        return await q(scope.ServiceProvider.GetRequiredService<BookingDbContext>());
+        return await q(scope.ServiceProvider.GetRequiredService<AccessDbContext>());
     }
 
-    public Task<List<Booking>> Bookings() => Query(db => db.Bookings.AsNoTracking().Where(b => b.PractitionerId == Practitioner).ToListAsync());
+    public Task<List<Access>> Accesses() => Query(db => db.Accesses.AsNoTracking().Where(b => b.AgentId == Agent).ToListAsync());
 
     public static async Task<HttpResponseMessage> Post(HttpClient c, object body, string? key)
     {
@@ -177,9 +177,9 @@ sealed class CreateHost : WebApplicationFactory<Program>
     }
 
     /// <summary>The body of a purchase; <c>start</c> is only sent when a test asks for it (the server ignores it).</summary>
-    public object Req(string? start = null, string? text = null, Guid? offering = null) => new
+    public object Req(string? start = null, string? text = null, Guid? package = null) => new
     {
-        offeringId = offering ?? Offering, startUtc = start,
+        offeringId = package ?? Package, startUtc = start,
         brief = new { text = text ?? "demo-brief: I need help with a first review of my plan", problemSlug = (string?)null, aiAssisted = false },
     };
 

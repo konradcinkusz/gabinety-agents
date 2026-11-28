@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Gabinety.Reputation.Features.Moderation;
 
 /// <summary>One row of the moderator's queue. The reviewer's identity is not part of it: moderating needs the text and the reasons, not the author.</summary>
-public sealed record AdminReviewRow(Guid Id, Guid PractitionerId, int Rating, string Text, ReviewStatus Status, IReadOnlyList<string> HoldReasons,
+public sealed record AdminReviewRow(Guid Id, [property: JsonPropertyName("practitionerId")] Guid AgentId, int Rating, string Text, ReviewStatus Status, IReadOnlyList<string> HoldReasons,
     string TriageFlag, string? TriageModelId,
     [property: JsonConverter(typeof(UtcInstantConverter))] DateTimeOffset CreatedAt,
     [property: JsonConverter(typeof(UtcInstantNullableConverter))] DateTimeOffset? PublishedAt,
@@ -50,13 +50,13 @@ public sealed class ModerationFeature : IServiceFeature
         var actor = user.FindFirst("sub")?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (actor is null) return Results.Unauthorized();
 
-        var (outcome, practitionerId, status) = await ReviewModerator.ApplyAsync(db, id, action, actor, note, time.GetUtcNow(), ct);
+        var (outcome, agentId, status) = await ReviewModerator.ApplyAsync(db, id, action, actor, note, time.GetUtcNow(), ct);
         switch (outcome)
         {
             case ModerationOutcome.NotFound: return Problem(404, ErrorCodes.NotFound, "Not found");
             case ModerationOutcome.InvalidTransition: return Problem(409, ErrorCodes.InvalidTransition, "Invalid transition");
         }
-        log.LogInformation("Review {ReviewId} of practitioner {PractitionerId} moved to {Status} by {Actor}", id, practitionerId, status, actor); // ids and a status only
+        log.LogInformation("Review {ReviewId} of practitioner {PractitionerId} moved to {Status} by {Actor}", id, agentId, status, actor); // ids and a status only
         return Results.NoContent();
     }
 
@@ -77,7 +77,7 @@ public sealed class ModerationFeature : IServiceFeature
         var rows = await q.OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).Take(take + 1).ToListAsync(ct);
         var more = rows.Count > take;
         if (more) rows.RemoveAt(take);
-        var items = rows.Select(x => new AdminReviewRow(x.Id, x.PractitionerId, x.Rating, x.Text, x.Status, x.HoldReasons, x.TriageFlag.ToString().ToLowerInvariant(),
+        var items = rows.Select(x => new AdminReviewRow(x.Id, x.AgentId, x.Rating, x.Text, x.Status, x.HoldReasons, x.TriageFlag.ToString().ToLowerInvariant(),
             x.TriageModelId, x.CreatedAt, x.PublishedAt, x.ModeratedBy, x.ModerationNote)).ToList();
         return Results.Json(new Page<AdminReviewRow>(items, more ? Encode(rows[^1].CreatedAt, rows[^1].Id) : null));
     }

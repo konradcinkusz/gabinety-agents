@@ -23,10 +23,10 @@ public class AdminLedgerViewTests
     static string Money(string text) => text.Replace(' ', ' ');
 
     [Fact]
-    public async Task The_booking_column_shows_the_random_tail_with_the_whole_id_in_a_title_and_no_link()
+    public async Task The_access_column_shows_the_random_tail_with_the_whole_id_in_a_title_and_no_link()
     {
         await using var host = await AdminHost.StartAsync();
-        host.Web.Booking.Respond = _ => CsvOf(Header + Row("ClientCharge", 18000, 1) + Row("Refund", 10000, 2));
+        host.Web.Access.Respond = _ => CsvOf(Header + Row("ClientCharge", 18000, 1) + Row("Refund", 10000, 2));
         var page = await host.Browser.GetAsync($"/admin/ksiega?{Period}");
 
         var refs = page.All("tbody td[data-label=Dostęp] span.ledger-ref");
@@ -36,11 +36,11 @@ public class AdminLedgerViewTests
     }
 
     [Fact]
-    public async Task Two_bookings_made_in_the_same_moment_still_read_differently()
+    public async Task Two_accesses_made_in_the_same_moment_still_read_differently()
     {
         await using var host = await AdminHost.StartAsync();
         // the same timestamp prefix (0b9e1d2c) for every row: the old column read the same eight characters on each row
-        host.Web.Booking.Respond = _ => CsvOf(Header + Row("ClientCharge", 18000, 1) + Row("ClientCharge", 18000, 9));
+        host.Web.Access.Respond = _ => CsvOf(Header + Row("ClientCharge", 18000, 1) + Row("ClientCharge", 18000, 9));
         var page = await host.Browser.GetAsync($"/admin/ksiega?{Period}");
         var texts = page.All("tbody td[data-label=Dostęp] span.ledger-ref").Select(r => r.TextContent).ToList();
         Assert.Equal(2, texts.Distinct().Count());
@@ -51,7 +51,7 @@ public class AdminLedgerViewTests
     public async Task The_totals_per_kind_are_summed_in_grosz_and_shown_above_the_table()
     {
         await using var host = await AdminHost.StartAsync();
-        host.Web.Booking.Respond = _ => CsvOf(Header + Row("ClientCharge", 18000, 1) + Row("ClientCharge", 9000, 2) + Row("Refund", 10000, 3));
+        host.Web.Access.Respond = _ => CsvOf(Header + Row("ClientCharge", 18000, 1) + Row("ClientCharge", 9000, 2) + Row("Refund", 10000, 3));
         var page = await host.Browser.GetAsync($"/admin/ksiega?{Period}");
 
         var totals = page.One(".ledger-totals")!;
@@ -66,7 +66,7 @@ public class AdminLedgerViewTests
     {
         await using var host = await AdminHost.StartAsync();
         var rows = string.Concat(Enumerable.Range(1, 60).Select(i => Row("ClientCharge", 100, (i % 9) + 1)));
-        host.Web.Booking.Respond = _ => CsvOf(Header + rows);
+        host.Web.Access.Respond = _ => CsvOf(Header + rows);
         var page = await host.Browser.GetAsync($"/admin/ksiega?{Period}");
 
         Assert.Equal(50, page.All("tbody tr").Count);
@@ -78,7 +78,7 @@ public class AdminLedgerViewTests
     public async Task The_period_line_is_in_Polish_and_the_table_is_a_labelled_scroller_with_the_table_classes()
     {
         await using var host = await AdminHost.StartAsync();
-        host.Web.Booking.Respond = _ => CsvOf(Header);
+        host.Web.Access.Respond = _ => CsvOf(Header);
         var page = await host.Browser.GetAsync($"/admin/ksiega?{Period}");
 
         Assert.Equal("Wybrany okres: 1–15 grudnia 2026.", page.All("main p").Single(p => p.TextContent.StartsWith("Wybrany okres")).TextContent);
@@ -89,7 +89,7 @@ public class AdminLedgerViewTests
     public async Task The_table_names_its_columns_and_scrolls_inside_its_region()
     {
         await using var host = await AdminHost.StartAsync();
-        host.Web.Booking.Respond = _ => CsvOf(Header + Row("ClientCharge", 18000, 1));
+        host.Web.Access.Respond = _ => CsvOf(Header + Row("ClientCharge", 18000, 1));
         var page = await host.Browser.GetAsync($"/admin/ksiega?{Period}");
 
         var wrap = page.One(".table-wrap.ledger-table")!;

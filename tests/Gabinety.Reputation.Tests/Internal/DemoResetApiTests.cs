@@ -20,9 +20,9 @@ public class DemoResetApiTests
         {
             db.Reviews.AddRange(d1, d2, r3, r4, erased);
             db.RatingSummaries.AddRange(
-                new RatingSummary { PractitionerId = onlyDemo, Count = 2, Sum = 7, Version = 4, PushedVersion = 4 },
-                new RatingSummary { PractitionerId = mixed, Count = 2, Sum = 5, Version = 6, PushedVersion = 6 },
-                new RatingSummary { PractitionerId = untouched, Count = 1, Sum = 3, Version = 9, PushedVersion = 8 });
+                new RatingSummary { AgentId = onlyDemo, Count = 2, Sum = 7, Version = 4, PushedVersion = 4 },
+                new RatingSummary { AgentId = mixed, Count = 2, Sum = 5, Version = 6, PushedVersion = 6 },
+                new RatingSummary { AgentId = untouched, Count = 1, Sum = 3, Version = 9, PushedVersion = 8 });
             db.ModerationEvents.AddRange(InternalHost.NewEvent(d1.Id, ModerationEventKind.Created), InternalHost.NewEvent(d2.Id, ModerationEventKind.Created),
                 InternalHost.NewEvent(d2.Id, ModerationEventKind.Published), InternalHost.NewEvent(r3.Id, ModerationEventKind.Created), InternalHost.NewEvent(r4.Id, ModerationEventKind.Created),
                 InternalHost.NewEvent(erased.Id, ModerationEventKind.Created));

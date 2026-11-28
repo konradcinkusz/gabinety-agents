@@ -179,7 +179,7 @@ public class AdminLogicTests
     [Fact]
     public void An_unknown_status_is_never_shown_as_its_wire_value()
     {
-        Assert.Equal(PlAdmin.Common.Unknown, AdminFormat.PractitionerStatus("Banana"));
+        Assert.Equal(PlAdmin.Common.Unknown, AdminFormat.AgentStatus("Banana"));
         Assert.Equal(PlAdmin.Verification.EventUnknown, AdminFormat.VerificationEvent("Banana"));
         Assert.Equal(PlAdmin.Disputes.KindUnknown, AdminFormat.DisputeKind("Banana"));
         Assert.Equal(PlAdmin.Reviews.TriageUnknown, AdminFormat.Triage("Banana"));
@@ -193,7 +193,7 @@ public class AdminLogicTests
     [InlineData("Rejected", BadgeKind.Danger)]
     [InlineData("Suspended", BadgeKind.Danger)]
     [InlineData("Draft", BadgeKind.Neutral)]
-    public void Verification_states_get_the_badge_kind_of_the_design_contract(string status, BadgeKind kind) => Assert.Equal(kind, AdminFormat.PractitionerStatusKind(status));
+    public void Verification_states_get_the_badge_kind_of_the_design_contract(string status, BadgeKind kind) => Assert.Equal(kind, AdminFormat.AgentStatusKind(status));
 
     [Fact]
     public void A_link_is_only_made_from_an_http_address_and_a_plausible_github_login()

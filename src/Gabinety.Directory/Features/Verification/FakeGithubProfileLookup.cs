@@ -20,7 +20,7 @@ public sealed class FakeGithubProfileLookup(DirectoryDbContext db) : IGithubProf
     {
         if (!GithubHandle.IsValid(login)) throw new ArgumentException("not a GitHub handle", nameof(login)); // same contract as the real lookup
         if (!login.StartsWith(Prefix, StringComparison.Ordinal)) return GithubProfile.NotFound;
-        var code = await db.Practitioners.AsNoTracking()
+        var code = await db.Agents.AsNoTracking()
             .Where(p => p.GithubChallengeLogin == login && p.GithubChallengeCode != null)
             .OrderByDescending(p => p.GithubChallengeExpiresAt)
             .Select(p => p.GithubChallengeCode).FirstOrDefaultAsync(ct);

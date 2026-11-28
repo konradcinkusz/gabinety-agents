@@ -98,17 +98,17 @@ public class SiteNavigationTests
     {
         Assert.Equal(["/agenci", "/jak-to-dziala", "/cennik"], SiteNavigation.For(null, "/").Links.Select(i => i.Href));
         Assert.Equal(["Agenci", "Jak to działa", "Cennik"], SiteNavigation.For(null, "/").Links.Select(i => i.Label));
-        Assert.Equal(["/agenci", "/jak-to-dziala", "/cennik"], SiteNavigation.For(User("User"), "/", practitioner: true).Links.Select(i => i.Href));
+        Assert.Equal(["/agenci", "/jak-to-dziala", "/cennik"], SiteNavigation.For(User("User"), "/", agent: true).Links.Select(i => i.Href));
         Assert.DoesNotContain(SiteNavigation.For(null, "/").Flat, i => i.Href == "/zasady-rankingu");
         Assert.Equal(["/agenci", "/jak-to-dziala", "/cennik", "/zasady-rankingu"], SiteNavigation.Product.Select(i => i.Href));
     }
 
     [Fact]
-    public void The_practitioner_panel_is_for_practitioners_and_everybody_else_signed_in_is_offered_the_way_in()
+    public void The_agent_panel_is_for_agents_and_everybody_else_signed_in_is_offered_the_way_in()
     {
-        var practitioner = SiteNavigation.For(User("User"), "/", practitioner: true);
-        Assert.Contains(practitioner.AccountMenu, i => i.Label == "Panel dostawcy" && i.Href == "/panel-agenta");
-        Assert.DoesNotContain(practitioner.AccountMenu, i => i.Label == "Zostań dostawcą");
+        var agent = SiteNavigation.For(User("User"), "/", agent: true);
+        Assert.Contains(agent.AccountMenu, i => i.Label == "Panel dostawcy" && i.Href == "/panel-agenta");
+        Assert.DoesNotContain(agent.AccountMenu, i => i.Label == "Zostań dostawcą");
 
         var client = SiteNavigation.For(User("User"), "/");
         Assert.Contains(client.AccountMenu, i => i.Label == "Zostań dostawcą" && i.Href == "/panel-agenta");
@@ -117,12 +117,12 @@ public class SiteNavigationTests
     }
 
     [Fact]
-    public void The_footer_offers_the_way_in_to_a_visitor_and_to_a_client_and_the_panel_to_a_practitioner()
+    public void The_footer_offers_the_way_in_to_a_visitor_and_to_a_client_and_the_panel_to_a_agent()
     {
-        var visitor = SiteNavigation.Footer(null, practitioner: false);
-        Assert.Equal(("/rejestracja", "Zostań dostawcą"), (visitor.Practitioner.Href, visitor.Practitioner.Label));
-        Assert.Equal(("/panel-agenta", "Zostań dostawcą"), (SiteNavigation.Footer(User("User"), false).Practitioner.Href, SiteNavigation.Footer(User("User"), false).Practitioner.Label));
-        var member = SiteNavigation.Footer(User("User"), practitioner: true).Practitioner;
+        var visitor = SiteNavigation.Footer(null, agent: false);
+        Assert.Equal(("/rejestracja", "Zostań dostawcą"), (visitor.Agent.Href, visitor.Agent.Label));
+        Assert.Equal(("/panel-agenta", "Zostań dostawcą"), (SiteNavigation.Footer(User("User"), false).Agent.Href, SiteNavigation.Footer(User("User"), false).Agent.Label));
+        var member = SiteNavigation.Footer(User("User"), agent: true).Agent;
         Assert.Equal(("/panel-agenta", "Panel dostawcy"), (member.Href, member.Label));
         Assert.Equal(["/regulamin", "/polityka-prywatnosci"], visitor.Legal.Select(i => i.Href));
     }
@@ -150,7 +150,7 @@ public class SiteNavigationTests
     }
 
     [Fact]
-    public void A_client_gets_bookings_the_account_menu_and_sign_out_always_and_no_administration()
+    public void A_client_gets_accesses_the_account_menu_and_sign_out_always_and_no_administration()
     {
         var m = SiteNavigation.For(User("User"), "/");
         Assert.True(m.SignedIn);

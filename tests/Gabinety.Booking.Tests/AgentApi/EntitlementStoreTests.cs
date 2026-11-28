@@ -22,7 +22,7 @@ public class EntitlementStoreTests
         await using var h = new CreateHost();
         var newer = await AgentApiFx.Package(h, Me, Slug, created: TimeSpan.FromHours(2));
         var oldest = await AgentApiFx.Package(h, Me, Slug, created: TimeSpan.FromHours(1));
-        var found = await InStore(h, s => s.FindAsync(Me, Slug, OfferingKind.Chat, null, default));
+        var found = await InStore(h, s => s.FindAsync(Me, Slug, PackageKind.Chat, null, default));
         Assert.Equal(oldest, found!.Id);
         Assert.NotEqual(newer, found.Id);
     }
@@ -31,45 +31,45 @@ public class EntitlementStoreTests
     public async Task Find_skips_what_is_not_usable_and_returns_null_when_nothing_is()
     {
         await using var h = new CreateHost();
-        await AgentApiFx.Package(h, Me, Slug, status: BookingStatus.PendingPayment);
-        await AgentApiFx.Package(h, Me, Slug, status: BookingStatus.CancelledByClient);
-        await AgentApiFx.Package(h, Me, Slug, status: BookingStatus.Completed);
+        await AgentApiFx.Package(h, Me, Slug, status: AccessStatus.PendingPayment);
+        await AgentApiFx.Package(h, Me, Slug, status: AccessStatus.CancelledByClient);
+        await AgentApiFx.Package(h, Me, Slug, status: AccessStatus.Completed);
         await AgentApiFx.Package(h, Me, Slug, validFor: TimeSpan.Zero);            // EndUtc == now: over
         await AgentApiFx.Package(h, Me, Slug, total: 10, used: 10);                // used up
-        await AgentApiFx.Package(h, Me, Slug, kind: OfferingKind.Tasks, total: 5); // other kind
+        await AgentApiFx.Package(h, Me, Slug, kind: PackageKind.Tasks, total: 5); // other kind
         await AgentApiFx.Package(h, Me, Slug + "x");                               // other agent
         await AgentApiFx.Package(h, Other, Slug);                                  // other client
-        Assert.Null(await InStore(h, s => s.FindAsync(Me, Slug, OfferingKind.Chat, null, default)));
+        Assert.Null(await InStore(h, s => s.FindAsync(Me, Slug, PackageKind.Chat, null, default)));
     }
 
     [Fact]
-    public async Task Find_can_ask_for_one_offering()
+    public async Task Find_can_ask_for_one_package()
     {
         await using var h = new CreateHost();
         var wanted = Guid.NewGuid();
-        await AgentApiFx.Package(h, Me, Slug, OfferingKind.Tasks, total: 3, offering: Guid.NewGuid(), created: TimeSpan.FromMinutes(1));
-        var id = await AgentApiFx.Package(h, Me, Slug, OfferingKind.Tasks, total: 3, offering: wanted, created: TimeSpan.FromMinutes(2));
-        Assert.Equal(id, (await InStore(h, s => s.FindAsync(Me, Slug, OfferingKind.Tasks, wanted, default)))!.Id);
-        Assert.Null(await InStore(h, s => s.FindAsync(Me, Slug, OfferingKind.Tasks, Guid.NewGuid(), default)));
+        await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, total: 3, package: Guid.NewGuid(), created: TimeSpan.FromMinutes(1));
+        var id = await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, total: 3, package: wanted, created: TimeSpan.FromMinutes(2));
+        Assert.Equal(id, (await InStore(h, s => s.FindAsync(Me, Slug, PackageKind.Tasks, wanted, default)))!.Id);
+        Assert.Null(await InStore(h, s => s.FindAsync(Me, Slug, PackageKind.Tasks, Guid.NewGuid(), default)));
     }
 
     [Fact]
     public async Task A_package_that_ran_out_is_exhausted_until_it_expires_whether_the_job_completed_it_or_not()
     {
         await using var h = new CreateHost();
-        Assert.False(await InStore(h, s => s.HasExhaustedAsync(Me, Slug, OfferingKind.Chat, null, default)));
+        Assert.False(await InStore(h, s => s.HasExhaustedAsync(Me, Slug, PackageKind.Chat, null, default)));
         await AgentApiFx.Package(h, Me, Slug, total: 10, used: 12);
-        Assert.True(await InStore(h, s => s.HasExhaustedAsync(Me, Slug, OfferingKind.Chat, null, default)));
-        Assert.False(await InStore(h, s => s.HasExhaustedAsync(Other, Slug, OfferingKind.Chat, null, default)));
-        Assert.False(await InStore(h, s => s.HasExhaustedAsync(Me, Slug, OfferingKind.Tasks, null, default)));
+        Assert.True(await InStore(h, s => s.HasExhaustedAsync(Me, Slug, PackageKind.Chat, null, default)));
+        Assert.False(await InStore(h, s => s.HasExhaustedAsync(Other, Slug, PackageKind.Chat, null, default)));
+        Assert.False(await InStore(h, s => s.HasExhaustedAsync(Me, Slug, PackageKind.Tasks, null, default)));
 
         var completed = AgentApiFx.NewUser();
-        await AgentApiFx.Package(h, completed, Slug, total: 10, used: 10, status: BookingStatus.Completed);
-        Assert.True(await InStore(h, s => s.HasExhaustedAsync(completed, Slug, OfferingKind.Chat, null, default)));
+        await AgentApiFx.Package(h, completed, Slug, total: 10, used: 10, status: AccessStatus.Completed);
+        Assert.True(await InStore(h, s => s.HasExhaustedAsync(completed, Slug, PackageKind.Chat, null, default)));
 
         var expired = AgentApiFx.NewUser();
         await AgentApiFx.Package(h, expired, Slug, total: 10, used: 10, validFor: TimeSpan.Zero);
-        Assert.False(await InStore(h, s => s.HasExhaustedAsync(expired, Slug, OfferingKind.Chat, null, default)));
+        Assert.False(await InStore(h, s => s.HasExhaustedAsync(expired, Slug, PackageKind.Chat, null, default)));
     }
 
     [Fact]
@@ -79,10 +79,10 @@ public class EntitlementStoreTests
         await AgentApiFx.Package(h, Me, "demo-b-" + Slug);
         await AgentApiFx.Package(h, Me, "demo-b-" + Slug);
         await AgentApiFx.Package(h, Me, "demo-a-" + Slug);
-        await AgentApiFx.Package(h, Me, "demo-tasks-" + Slug, OfferingKind.Tasks, total: 5);
+        await AgentApiFx.Package(h, Me, "demo-tasks-" + Slug, PackageKind.Tasks, total: 5);
         await AgentApiFx.Package(h, Me, "demo-used-" + Slug, total: 5, used: 5);
         await AgentApiFx.Package(h, Other, "demo-theirs-" + Slug);
-        Assert.Equal(["demo-a-" + Slug, "demo-b-" + Slug], await InStore(h, s => s.UsableSlugsAsync(Me, OfferingKind.Chat, default)));
+        Assert.Equal(["demo-a-" + Slug, "demo-b-" + Slug], await InStore(h, s => s.UsableSlugsAsync(Me, PackageKind.Chat, default)));
     }
 
     [Fact]
@@ -91,7 +91,7 @@ public class EntitlementStoreTests
         await using var h = new CreateHost();
         var id = await AgentApiFx.Package(h, Me, Slug, total: 1000);
         await Task.WhenAll(Enumerable.Range(0, 20).Select(_ => Task.Run(() => InStore(h, async s => { await s.ConsumeAsync(id, 1, default); return 0; }))));
-        Assert.Equal(20, (await h.Query(db => db.Bookings.AsNoTracking().SingleAsync(b => b.Id == id))).UnitsUsed);
+        Assert.Equal(20, (await h.Query(db => db.Accesses.AsNoTracking().SingleAsync(b => b.Id == id))).UnitsUsed);
     }
 
     [Fact]
@@ -100,11 +100,11 @@ public class EntitlementStoreTests
         await using var h = new CreateHost();
         var id = await AgentApiFx.Package(h, Me, Slug, total: 10, used: 8);
         await InStore(h, async s => { await s.ConsumeAsync(id, 5, default); return 0; });
-        Assert.Equal(13, (await h.Query(db => db.Bookings.AsNoTracking().SingleAsync(b => b.Id == id))).UnitsUsed);
+        Assert.Equal(13, (await h.Query(db => db.Accesses.AsNoTracking().SingleAsync(b => b.Id == id))).UnitsUsed);
         await InStore(h, async s => { await s.RefundUnitsAsync(id, 3, default); return 0; });
-        Assert.Equal(10, (await h.Query(db => db.Bookings.AsNoTracking().SingleAsync(b => b.Id == id))).UnitsUsed);
+        Assert.Equal(10, (await h.Query(db => db.Accesses.AsNoTracking().SingleAsync(b => b.Id == id))).UnitsUsed);
         await InStore(h, async s => { await s.RefundUnitsAsync(id, 50, default); return 0; });
-        Assert.Equal(0, (await h.Query(db => db.Bookings.AsNoTracking().SingleAsync(b => b.Id == id))).UnitsUsed);
+        Assert.Equal(0, (await h.Query(db => db.Accesses.AsNoTracking().SingleAsync(b => b.Id == id))).UnitsUsed);
     }
 
     [Fact]

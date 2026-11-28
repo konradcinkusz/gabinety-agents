@@ -1,0 +1,35 @@
+@page "/panel-agenta/nowy"
+@attribute [Authorize]
+@layout AgentLayout
+@inherits AgentPage
+@* E-04: one more agent for the signed-in provider account. A plain post (antiforgery, no JavaScript): the Directory creates the agent (422 too_many_agents at the account's limit) and the provider lands in
+   that agent's panel, with the agent in the address. *@
+<PageTitle>@PlAgent.Agents.NewMeta</PageTitle>
+<h1>@PlAgent.Agents.NewTitle</h1>
+<p class="lead">@PlAgent.Agents.NewIntro</p>
+@if (_general is not null) {<Alert Variant="AlertVariant.Danger" TestId="create-error">@_general</Alert>}
+<form method="post" @onsubmit="CreateAsync" @formname="create-agent" class="form stack form-narrow" novalidate>
+    <AntiforgeryToken />
+    <FormField Id="displayName" Label="@PlAgent.Create.DisplayName" Hint="@PlAgent.Create.DisplayNameHint" Error="@_nameError" Max="80" Length="_name.Length">
+        <input id="@context.Id" name="displayName" value="@_name" maxlength="80" autocomplete="off" aria-describedby="@context.DescribedBy" aria-invalid="@(context.Invalid ? "true" : null)" />
+    </FormField>
+    <div class="form-actions">
+        <button class="btn btn--primary" type="submit">@PlAgent.Agents.NewSubmit</button>
+        <a class="btn btn--ghost" href="@AgentPaths.Home">@PlAgent.Offers.Cancel</a>
+    </div>
+</form>
+
+@code {
+    string _name = "";
+    string? _nameError, _general;
+
+    async Task CreateAsync()
+    {
+        _name = Posted.Text("displayName");
+        if (_name.Length is < 2 or > 80) { _nameError = FieldErrors.From(new ApiFailure(422, "validation_failed", ["displayName"]), new Dictionary<string, string?>())["displayName"]; return; }
+        var r = await Agent.CreateProfileAsync(_name);
+        if (r.IsOk) { Navigation.NavigateTo($"{AgentPaths.Home}?agent={Uri.EscapeDataString(r.Value!.Slug)}&{FlashKey.Parameter}={FlashKey.GabinetCreated}"); return; }
+        if (r.Failure!.Names("displayName")) _nameError = FieldErrors.From(r.Failure, new Dictionary<string, string?>())["displayName"];
+        else _general = r.Failure.Code == "too_many_agents" ? PlAgent.Agents.TooMany : r.Failure.Status is 0 or 503 ? PlAgent.Common.Unavailable : PlAgent.Agents.Failed;
+    }
+}

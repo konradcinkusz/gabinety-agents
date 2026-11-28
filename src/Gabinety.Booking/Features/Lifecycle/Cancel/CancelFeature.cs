@@ -7,15 +7,15 @@ using Gabinety.Contracts.Booking;
 using Gabinety.Contracts.Common;
 using Gabinety.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessEntity = Gabinety.Booking.Features.Accesses.Entities.Access;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Features.Lifecycle.Cancel;
 
 /// <summary>
 /// POST /api/v1/bookings/{id}/cancel (CONTRACTS 4.2, 8.1, 9.2). Only the client or the practitioner of the booking; anyone else gets 404.
 /// The reason is user free text: it is stored in <c>status_reason</c> and nowhere else (no log, no exception, no metric).
-/// Order: read and decide, ask the provider for the refund, then one transaction in <see cref="BookingTransitions"/>.
+/// Order: read and decide, ask the provider for the refund, then one transaction in <see cref="AccessTransitions"/>.
 /// </summary>
 public sealed class CancelFeature : IServiceFeature
 {
@@ -26,14 +26,14 @@ public sealed class CancelFeature : IServiceFeature
     public void Map(IEndpointRouteBuilder endpoints) =>
         endpoints.MapPost("/api/v1/bookings/{id:guid}/cancel", CancelAsync).RequireAuthorization("Authenticated");
 
-    static async Task<IResult> CancelAsync(Guid id, CancelRequest? body, ClaimsPrincipal user, BookingDbContext db, BookingTransitions transitions,
+    static async Task<IResult> CancelAsync(Guid id, CancelRequest? body, ClaimsPrincipal user, AccessDbContext db, AccessTransitions transitions,
         RefundCoordinator refunds, PartyNamesLookup names, TimeProvider time, CancellationToken ct)
     {
         var sub = user.FindFirst("sub")?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (sub is null) return Results.Unauthorized();
 
-        var booking = await db.Bookings.AsNoTracking().SingleOrDefaultAsync(b => b.Id == id, ct);
-        if (booking is null || (booking.ClientUserId != sub && booking.PractitionerUserId != sub))
+        var access = await db.Accesses.AsNoTracking().SingleOrDefaultAsync(b => b.Id == id, ct);
+        if (access is null || (access.ClientUserId != sub && access.AgentUserId != sub))
             return PaymentWebhookFeature.Problem(ErrorCodes.NotFound, "Not found", 404); // a stranger learns nothing about whether it exists
 
         var reason = body?.Reason?.Trim();
@@ -42,18 +42,18 @@ public sealed class CancelFeature : IServiceFeature
                 new() { ["reason"] = [$"The reason is at most {MaxReasonLength} characters."] });
         if (string.IsNullOrEmpty(reason)) reason = null;
 
-        var byClient = booking.ClientUserId == sub;
+        var byClient = access.ClientUserId == sub;
         var trigger = CancelPlanner.TriggerFor(byClient);
         var now = time.GetUtcNow();
-        Func<BookingEntity, bool> precondition = b => CancelPlanner.TimeRuleAllows(b, byClient, now);
+        Func<AccessEntity, bool> precondition = b => CancelPlanner.TimeRuleAllows(b, byClient, now);
 
-        var plan = CancelPlanner.Plan(booking, byClient, now); // the same call that builds `cancelOutcome` in the booking view
+        var plan = CancelPlanner.Plan(access, byClient, now); // the same call that builds `cancelOutcome` in the booking view
         if (plan is null) return PaymentWebhookFeature.Problem(ErrorCodes.InvalidTransition, "Invalid transition", 409);
 
         RefundTicket? ticket = null;
         if (plan.Value.Refund > 0)
         {
-            var payment = await db.Payments.AsNoTracking().SingleOrDefaultAsync(p => p.BookingId == id, ct);
+            var payment = await db.Payments.AsNoTracking().SingleOrDefaultAsync(p => p.AccessId == id, ct);
             if (payment is null) return PaymentWebhookFeature.Problem(ErrorCodes.NotFound, "Not found", 404);
             // Lost a race: the booking was read as Confirmed, but the winning cancel has refunded the payment since. The transition is gone: 409, no provider call.
             if (payment.RefundedMinor + plan.Value.Refund > payment.AmountMinor)
@@ -68,11 +68,11 @@ public sealed class CancelFeature : IServiceFeature
             Precondition = precondition,
             Effects = c =>
             {
-                c.Booking.StatusReason = reason;
+                c.Access.StatusReason = reason;
                 if (ticket is not null) RefundCoordinator.Record(c, ticket);
             },
         }, ct);
-        return result.ToErrorResult() ?? Results.Ok(BookingViewFeature.ToView(result.Booking!, result.Payment, sub, admin: false, names: (await names.ForAsync([result.Booking!], ct))[result.Booking!.Id]));
+        return result.ToErrorResult() ?? Results.Ok(AccessViewFeature.ToView(result.Access!, result.Payment, sub, admin: false, names: (await names.ForAsync([result.Access!], ct))[result.Access!.Id]));
     }
 
     static IResult Unavailable() =>

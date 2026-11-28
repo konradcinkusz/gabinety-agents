@@ -7,16 +7,16 @@ namespace Gabinety.Web.Tests.AdminPages;
 /// <summary>/admin/opinie, /admin/podejrzane and the verification detail through the real host.</summary>
 public class AdminReviewsAndPairsTests
 {
-    static readonly Guid ReviewId = Guid.Parse("11111111-2222-3333-4444-555555555555"), PractitionerId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+    static readonly Guid ReviewId = Guid.Parse("11111111-2222-3333-4444-555555555555"), AgentId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 
     static AdminReviewDto Review(string status = "Held", string? text = "Opinia testowa, dane syntetyczne, wstrzymana przez asystenta.") =>
-        new(ReviewId, PractitionerId, 4, text, status, ["personal_data", "banana"], "hold", "model-demo", new DateTimeOffset(2026, 11, 24, 12, 0, 9, TimeSpan.Zero), null, null, null);
+        new(ReviewId, AgentId, 4, text, status, ["personal_data", "banana"], "hold", "model-demo", new DateTimeOffset(2026, 11, 24, 12, 0, 9, TimeSpan.Zero), null, null, null);
 
     static async Task<AdminHost> HostAsync(string status = "Held")
     {
         var host = await AdminHost.StartAsync();
         host.Web.Reputation.Respond = r => r.Method == HttpMethod.Post ? AdminHost.NoContent() : AdminHost.Paged(Review(status));
-        host.Web.Directory.Respond = r => r.RequestUri!.AbsolutePath == $"/api/v1/admin/practitioners/{PractitionerId}" ? FakeBackend.Json(AdminHost.DetailOf(PractitionerId)) : new HttpResponseMessage(HttpStatusCode.NotFound);
+        host.Web.Directory.Respond = r => r.RequestUri!.AbsolutePath == $"/api/v1/admin/practitioners/{AgentId}" ? FakeBackend.Json(AdminHost.DetailOf(AgentId)) : new HttpResponseMessage(HttpStatusCode.NotFound);
         return host;
     }
 
@@ -140,11 +140,11 @@ public class AdminReviewsAndPairsTests
 
     // ---- suspicious pairs
     [Fact]
-    public async Task Suspicious_pairs_are_a_table_with_a_named_practitioner_and_a_short_client_reference()
+    public async Task Suspicious_pairs_are_a_table_with_a_named_agent_and_a_short_client_reference()
     {
         await using var host = await AdminHost.StartAsync();
-        host.Web.Reputation.Respond = _ => AdminHost.Paged("NEXT_cursor-1", new SuspiciousPairDto("pair-1", "demo-client-9", PractitionerId, 4, 4));
-        host.Web.Directory.Respond = r => r.RequestUri!.AbsolutePath == $"/api/v1/admin/practitioners/{PractitionerId}" ? FakeBackend.Json(AdminHost.DetailOf(PractitionerId)) : new HttpResponseMessage(HttpStatusCode.NotFound);
+        host.Web.Reputation.Respond = _ => AdminHost.Paged("NEXT_cursor-1", new SuspiciousPairDto("pair-1", "demo-client-9", AgentId, 4, 4));
+        host.Web.Directory.Respond = r => r.RequestUri!.AbsolutePath == $"/api/v1/admin/practitioners/{AgentId}" ? FakeBackend.Json(AdminHost.DetailOf(AgentId)) : new HttpResponseMessage(HttpStatusCode.NotFound);
         var page = await host.Browser.GetAsync("/admin/podejrzane");
         Assert.Equal("Podejrzane pary", Assert.Single(page.All("h1")).TextContent);
         Assert.Equal(["Klient", "Agent", "Opłacone pakiety", "Opinie (wszystkie 5/5)"], page.All("table thead th[scope=col]").Select(t => t.TextContent));
@@ -159,7 +159,7 @@ public class AdminReviewsAndPairsTests
     public async Task Suspicious_pairs_without_a_name_fall_back_to_a_short_reference_and_an_outage_is_the_unavailable_alert()
     {
         await using var host = await AdminHost.StartAsync();
-        host.Web.Reputation.Respond = _ => AdminHost.Paged(new SuspiciousPairDto("pair-1", "demo-client-9", PractitionerId, 3, 3));
+        host.Web.Reputation.Respond = _ => AdminHost.Paged(new SuspiciousPairDto("pair-1", "demo-client-9", AgentId, 3, 3));
         host.Web.Directory.Respond = _ => FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable");
         Assert.Contains("Agent aaaaaaaa", (await host.Browser.GetAsync("/admin/podejrzane")).Text);
 
@@ -174,7 +174,7 @@ public class AdminReviewsAndPairsTests
     public async Task The_detail_has_the_h1_the_data_and_a_history_region_with_one_listitem_per_event_the_J2_hooks()
     {
         await using var host = await AdminHost.StartAsync();
-        var id = PractitionerId;
+        var id = AgentId;
         host.Web.Directory.Respond = r => r.RequestUri!.AbsolutePath.EndsWith("/verification-events")
             ? FakeBackend.Json(new AdminVerificationEventsDto([new(Guid.NewGuid(), "Submitted", "demo-practitioner-1", null, new DateTimeOffset(2026, 11, 21, 8, 0, 0, TimeSpan.Zero)), new(Guid.NewGuid(), "Approved", "demo-admin", "Profil kompletny, wszystko w porządku.", new DateTimeOffset(2026, 11, 22, 8, 0, 0, TimeSpan.Zero)), new(Guid.NewGuid(), "Surprise", "demo-admin", null, new DateTimeOffset(2026, 11, 23, 8, 0, 0, TimeSpan.Zero))]))
             : FakeBackend.Json(AdminHost.DetailOf(id));
@@ -199,7 +199,7 @@ public class AdminReviewsAndPairsTests
     public async Task A_failing_history_does_not_hide_the_profile_a_portfolio_that_is_not_http_is_text_and_an_unknown_profile_is_a_404()
     {
         await using var host = await AdminHost.StartAsync();
-        var id = PractitionerId;
+        var id = AgentId;
         host.Web.Directory.Respond = r => r.RequestUri!.AbsolutePath.EndsWith("/verification-events") ? FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable")
             : FakeBackend.Json(AdminHost.DetailOf(id) with { PortfolioUrl = "javascript:alert(1)" });
         var page = await host.Browser.GetAsync($"/admin/weryfikacja/{id}");

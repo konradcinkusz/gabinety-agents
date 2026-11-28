@@ -1,0 +1,82 @@
+using Gabinety.Billing;
+using S = Gabinety.Billing.AccessStatus;
+using T = Gabinety.Billing.AccessTrigger;
+
+namespace Gabinety.Billing.Tests;
+
+public class AccessStateMachineTests
+{
+    private static readonly DateTimeOffset Start = new(2030, 1, 10, 12, 0, 0, TimeSpan.Zero);
+    private static readonly DateTimeOffset Early = Start.AddHours(-24);
+    private static readonly DateTimeOffset Late = Start.AddHours(-24).AddSeconds(1);
+
+    [Fact]
+    public void Create_gives_PendingPayment() => Assert.Equal(S.PendingPayment, AccessStateMachine.Create());
+
+    // Every legal row of §8.1. Everything else must be rejected.
+    private static readonly (S From, T Trigger, DateTimeOffset Now, S To)[] Legal =
+    [
+        (S.PendingPayment, T.PaymentSucceeded, Early, S.Confirmed),
+        (S.PendingPayment, T.HoldExpired, Early, S.Expired),
+        (S.PendingPayment, T.PaymentFailed, Early, S.Expired),
+        (S.Confirmed, T.ClientCancels, Early, S.CancelledByClient),
+        (S.Confirmed, T.ClientCancels, Late, S.CancelledByClient), // A-03: no late cancellation any more
+        (S.Confirmed, T.PractitionerCancels, Early, S.CancelledByPractitioner),
+        (S.Confirmed, T.CompletionWindowElapsed, Early, S.Completed),
+        (S.Confirmed, T.ClientNoShowReported, Early, S.ClientNoShow),
+        (S.Confirmed, T.ClientDisputes, Early, S.Disputed),
+        (S.Completed, T.ClientDisputes, Early, S.Disputed), // the caller bounds it by start + 72 h
+        (S.Completed, T.UnitRefunded, Early, S.Confirmed), // owner decision 2 (ADR-0013): a refunded unit reopens a package completed by exhaustion; the caller checks the rest
+        (S.Disputed, T.AdminResolves, Early, S.Resolved),
+    ];
+
+    [Fact]
+    public void Every_legal_transition()
+    {
+        foreach (var (from, trigger, now, to) in Legal)
+        {
+            var r = AccessStateMachine.Next(from, trigger, Start, now);
+            Assert.True(r.Allowed, $"{from}+{trigger}");
+            Assert.Equal(to, r.Next);
+        }
+    }
+
+    [Fact]
+    public void Every_other_pair_is_rejected_exhaustively()
+    {
+        var legal = Legal.Select(l => (l.From, l.Trigger)).ToHashSet();
+        var rejected = 0;
+        foreach (var from in Enum.GetValues<S>())
+            foreach (var trigger in Enum.GetValues<T>())
+            {
+                if (legal.Contains((from, trigger))) continue;
+                foreach (var now in new[] { Early, Late, Start.AddDays(1) })
+                {
+                    var r = AccessStateMachine.Next(from, trigger, Start, now);
+                    Assert.False(r.Allowed, $"{from}+{trigger}");
+                    Assert.Null(r.Next);
+                }
+                rejected++;
+            }
+        Assert.Equal(Enum.GetValues<S>().Length * Enum.GetValues<T>().Length - legal.Count, rejected);
+    }
+
+    [Fact]
+    public void Terminal_statuses_accept_nothing()
+    {
+        S[] terminal = [S.CancelledByClient, S.LateCancelledByClient, S.CancelledByPractitioner, S.Expired, S.ClientNoShow, S.Resolved];
+        foreach (var from in terminal)
+            foreach (var trigger in Enum.GetValues<T>())
+                Assert.False(AccessStateMachine.Next(from, trigger, Start, Early).Allowed);
+        // Completed accepts two things: the client's dispute (the caller bounds it by start + 72 h, ADR proposal 0011) and a refunded unit (reopens the package, ADR-0013)
+        foreach (var trigger in Enum.GetValues<T>().Where(t => t != T.ClientDisputes && t != T.UnitRefunded))
+            Assert.False(AccessStateMachine.Next(S.Completed, trigger, Start, Early).Allowed);
+    }
+
+    [Fact]
+    public void Client_cancel_is_always_CancelledByClient_whatever_the_time()
+    {
+        foreach (var now in new[] { Start.AddDays(-30), Start.AddHours(-24), Start.AddHours(-24).AddSeconds(1), Start, Start.AddDays(5) })
+            Assert.Equal(S.CancelledByClient, AccessStateMachine.Next(S.Confirmed, T.ClientCancels, Start, now).Next);
+    }
+}

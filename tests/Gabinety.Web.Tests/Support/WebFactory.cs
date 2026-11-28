@@ -16,7 +16,7 @@ public sealed class WebFactory : WebApplicationFactory<Program>
 
     public const string TrustedKey = "test-trusted-proxy-key-0123456789abcdef0123456789";
     public FakeBackend Directory { get; } = new();
-    public FakeBackend Booking { get; } = new();
+    public FakeBackend Access { get; } = new();
     public FakeBackend Reputation { get; } = new();
     public FakeBackend Assistant { get; } = new();
     /// <summary>The identity service. Pass one in to start a second process (a deploy) against the same service.</summary>
@@ -51,13 +51,13 @@ public sealed class WebFactory : WebApplicationFactory<Program>
         foreach (var provider in _logProviders) builder.ConfigureLogging(l => l.AddProvider(provider));
         builder.ConfigureServices(services =>
         {
-            (string Name, FakeBackend Handler)[] all = [(Gabinety.Web.Api.Backend.Directory, Directory), (Gabinety.Web.Api.Backend.Booking, Booking), (Gabinety.Web.Api.Backend.Reputation, Reputation), (Gabinety.Web.Api.Backend.Assistant, Assistant), (Gabinety.Web.Api.Backend.Auth, Identity.Backend)];
+            (string Name, FakeBackend Handler)[] all = [(Gabinety.Web.Api.Backend.Directory, Directory), (Gabinety.Web.Api.Backend.Access, Access), (Gabinety.Web.Api.Backend.Reputation, Reputation), (Gabinety.Web.Api.Backend.Assistant, Assistant), (Gabinety.Web.Api.Backend.Auth, Identity.Backend)];
             foreach (var (name, handler) in all)
             {
                 services.AddHttpClient(name).ConfigurePrimaryHttpMessageHandler(() => handler);
             }
             // The /v1 proxy has its own client (no resilience handler); in a test it also talks to the fake Booking.
-            services.AddHttpClient(Gabinety.Web.Hosting.AgentApiProxy.ClientName).ConfigurePrimaryHttpMessageHandler(() => Booking);
+            services.AddHttpClient(Gabinety.Web.Hosting.AgentApiProxy.ClientName).ConfigurePrimaryHttpMessageHandler(() => Access);
             // The kernel's one resilience handler stays; only the wait between attempts is removed so a failing backend does not make a test slow.
             foreach (var configure in _services) configure(services);
             services.PostConfigureAll<HttpStandardResilienceOptions>(o => { o.Retry.Delay = TimeSpan.Zero; o.Retry.UseJitter = false; o.Retry.BackoffType = Polly.DelayBackoffType.Constant; o.Retry.MaxDelay = null; });

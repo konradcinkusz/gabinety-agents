@@ -16,7 +16,7 @@ public sealed class MockPaymentProvider(string siteBaseUrl, string? webhookSecre
     public string Name => "Mock";
 
     public Task<CheckoutResult> CreateCheckoutAsync(CheckoutRequest request, CancellationToken ct) =>
-        Task.FromResult(new CheckoutResult($"mock_{Guid.NewGuid():N}", $"{siteBaseUrl.TrimEnd('/')}/checkout/mock/{request.BookingId}"));
+        Task.FromResult(new CheckoutResult($"mock_{Guid.NewGuid():N}", $"{siteBaseUrl.TrimEnd('/')}/checkout/mock/{request.AccessId}"));
 
     public Task<RefundResult> RefundAsync(RefundRequest request, CancellationToken ct) =>
         Task.FromResult(new RefundResult($"mockrefund_{request.IdempotencyKey}"));

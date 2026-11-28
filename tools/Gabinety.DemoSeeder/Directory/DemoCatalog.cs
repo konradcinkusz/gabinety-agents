@@ -10,13 +10,13 @@ public static class DemoKind
 /// One package. Categories are slots into the taxonomy read from the Directory (slot n is the n-th problem or tech of the list, wrapping), so no slug is hard-coded.
 /// <see cref="Kind"/> is <see cref="DemoKind.Tasks"/> (<see cref="Units"/> tasks) or <see cref="DemoKind.Chat"/> (<see cref="Units"/> thousand tokens). <see cref="Minutes"/> is the typical time of one task.
 /// </summary>
-public sealed record DemoOffering(string Title, string Description, int Minutes, long PriceMinor, int ProblemSlot, int[] TechSlots, string Kind = DemoKind.Tasks, int Units = 1);
+public sealed record DemoPackage(string Title, string Description, int Minutes, long PriceMinor, int ProblemSlot, int[] TechSlots, string Kind = DemoKind.Tasks, int Units = 1);
 
 /// <summary>The ranking inputs the internal pushes carry (CONTRACTS 3.6). Reviews and Average go to /reputation, the rest to /booking-stats.</summary>
 public sealed record DemoStats(int Reviews, decimal Average, int Completed, int Cancellations, int NoShows, int OpenSlots);
 
-public sealed record DemoPractitioner(int Number, string DisplayName, string Slug, DemoStatus Target, string Headline, string Bio,
-    DemoOffering[] Offerings, DemoStats? Stats, string? Reason = null)
+public sealed record DemoAgent(int Number, string DisplayName, string Slug, DemoStatus Target, string Headline, string Bio,
+    DemoPackage[] Packages, DemoStats? Stats, string? Reason = null)
 {
     /// <summary>demo-practitioner-1 to 8 exist in the DevIdentity; 9 and above are registered by the seeder.</summary>
     public string UserName => $"demo-practitioner-{Number}";
@@ -56,25 +56,25 @@ public static class DemoCatalog
     public static IEnumerable<string> ClientNames => Enumerable.Range(1, ClientCount).Select(i => i == 1 ? "demo-client" : $"demo-client-{i}");
 
     /// <summary>
-    /// The ranking inputs of the booking side. Reviews and Average are left empty here on purpose: <see cref="Practitioners"/> fills them from what the seeder really creates
-    /// (<see cref="ReputationPlan"/> on the used packages of <see cref="BookingPlan"/>), so a profile never shows more reviews than exist.
+    /// The ranking inputs of the booking side. Reviews and Average are left empty here on purpose: <see cref="Agents"/> fills them from what the seeder really creates
+    /// (<see cref="ReputationPlan"/> on the used packages of <see cref="AccessPlan"/>), so a profile never shows more reviews than exist.
     /// </summary>
     static DemoStats Stats(int completed, int cancellations, int noShows, int openSlots) => new(0, 0m, completed, cancellations, noShows, openSlots);
 
     /// <summary>The reviews the seeder creates on one practitioner, as the rating summary Reputation would push for them: (count, mean).</summary>
-    static (int Count, decimal Average) SeededReviews(DemoPractitioner p, DemoPractitioner[] approvedByKey)
+    static (int Count, decimal Average) SeededReviews(DemoAgent p, DemoAgent[] approvedByKey)
     {
         if (p.Target != DemoStatus.Approved && p.Target != DemoStatus.Suspended) return (0, 0m);
         // the Booking step makes bookings with the Approved practitioners that have an offering, ordered by key (a Suspended one is not Approved when it runs)
         var ratings = ReputationPlan.All
-            .Where(r => approvedByKey[BookingPlan.All.Single(b => b.Key == r.BookingKey).Practitioner % approvedByKey.Length].Number == p.Number)
+            .Where(r => approvedByKey[AccessPlan.All.Single(b => b.Key == r.AccessKey).Agent % approvedByKey.Length].Number == p.Number)
             .Select(r => r.Rating).ToList();
         return ratings.Count == 0 ? (0, 0m) : (ratings.Count, (decimal)ratings.Sum() / ratings.Count);
     }
 
-    static DemoPractitioner[] WithSeededReviews(DemoPractitioner[] raw)
+    static DemoAgent[] WithSeededReviews(DemoAgent[] raw)
     {
-        var approved = raw.Where(p => p.Target == DemoStatus.Approved && p.Offerings.Length > 0).OrderBy(p => p.UserName, StringComparer.Ordinal).ToArray();
+        var approved = raw.Where(p => p.Target == DemoStatus.Approved && p.Packages.Length > 0).OrderBy(p => p.UserName, StringComparer.Ordinal).ToArray();
         return raw.Select(p =>
         {
             if (p.Stats is null) return p;
@@ -84,12 +84,12 @@ public static class DemoCatalog
     }
 
     /// <summary>The package of chat access every Approved agent sells (PLAN D-01): 500 thousand tokens for 99 zl.</summary>
-    static DemoOffering Chat(string description, int problemSlot, int[] techSlots) =>
+    static DemoPackage Chat(string description, int problemSlot, int[] techSlots) =>
         new("Dostęp do API czatu, 500 tys. tokenów", description, 30, 9900, problemSlot, techSlots, DemoKind.Chat, 500);
 
     const string ChatNote = " Rozmawiasz ze mną przez API zgodne z OpenAI, na przykład z GitHub Copilot. Pula to 500 tys. tokenów, ważna 30 dni.";
 
-    static readonly DemoPractitioner[] Raw =
+    static readonly DemoAgent[] Raw =
     [
         new(1, "Anna Demowska", "demo-anna-demowska", DemoStatus.Approved,
             "Agent AI do audytów kodu .NET i przeglądu architektury przed wdrożeniem",
@@ -155,5 +155,5 @@ public static class DemoCatalog
     ];
 
     /// <summary>Declared after <see cref="Raw"/>: static fields initialise in text order.</summary>
-    public static readonly DemoPractitioner[] Practitioners = WithSeededReviews(Raw);
+    public static readonly DemoAgent[] Agents = WithSeededReviews(Raw);
 }

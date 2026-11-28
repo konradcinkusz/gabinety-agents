@@ -3,7 +3,7 @@ namespace Gabinety.DemoSeeder;
 /// <summary>Names of the systems a step talks to.</summary>
 public static class SeedService
 {
-    public const string Directory = "Directory", Identity = "Identity", Booking = "Booking", Reputation = "Reputation";
+    public const string Directory = "Directory", Identity = "Identity", Access = "Booking", Reputation = "Reputation";
 }
 
 /// <summary>The one place that makes HTTP clients, so the tests can hand in in-process ones and steps never build a client themselves.</summary>
@@ -23,7 +23,7 @@ public sealed class ConfiguredSeedHttp(SeedOptions options) : ISeedHttp
         {
             SeedService.Directory => options.DirectoryUrl,
             SeedService.Identity => options.IdentityAuthority,
-            SeedService.Booking => options.BookingUrl,
+            SeedService.Access => options.AccessUrl,
             SeedService.Reputation => options.ReputationUrl,
             _ => throw new SeedException($"no endpoint is configured for {service} yet"),
         };

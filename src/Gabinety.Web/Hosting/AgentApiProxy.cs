@@ -42,7 +42,7 @@ public static class AgentApiProxy
 #pragma warning disable EXTEXP0001 // the one experimental call: Microsoft.Extensions.Http.Resilience has no stable way to opt one client out of the kernel's default handler
         services.AddHttpClient(ClientName, c =>
             {
-                c.BaseAddress = new Uri(Backend.BaseAddress(Backend.Booking));
+                c.BaseAddress = new Uri(Backend.BaseAddress(Backend.Access));
                 c.Timeout = TimeSpan.FromMinutes(15); // up to the response headers; the platform call itself is bounded by Agents:Upstream:TimeoutSeconds in Booking
             })
             .RemoveAllResilienceHandlers() // a streamed body cannot be replayed and a stream must not be cut at 15 s: no retry, no total timeout (the kernel's default handler)

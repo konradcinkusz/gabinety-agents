@@ -23,15 +23,15 @@ public sealed class EchoGithub(IServiceProvider services) : IGithubProfileLookup
     {
         using var scope = services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<DirectoryDbContext>();
-        var code = await db.Practitioners.AsNoTracking().Where(p => p.GithubChallengeLogin == login).Select(p => p.GithubChallengeCode).FirstOrDefaultAsync(ct);
+        var code = await db.Agents.AsNoTracking().Where(p => p.GithubChallengeLogin == login).Select(p => p.GithubChallengeCode).FirstOrDefaultAsync(ct);
         return code is null ? GithubProfile.NotFound : GithubProfile.Found("demo bio " + code);
     }
 }
 
 /// <summary>Suspending a practitioner asks Booking to cancel their bookings; this host has no Booking and the demo Suspended practitioner has none, so the call is accepted.</summary>
-public sealed class NoBookings : DirectoryApp::Gabinety.Directory.Clients.IBookingClient
+public sealed class NoAccesses : DirectoryApp::Gabinety.Directory.Clients.IAccessClient
 {
-    public Task CancelFutureBookingsAsync(Guid practitionerId, CancellationToken ct) => Task.CompletedTask;
+    public Task CancelFutureAccessesAsync(Guid agentId, CancellationToken ct) => Task.CompletedTask;
 }
 
 public sealed class DirectoryHost : WebApplicationFactory<DirectoryApp::Program>
@@ -53,7 +53,7 @@ public sealed class DirectoryHost : WebApplicationFactory<DirectoryApp::Program>
             s.RemoveAll<DbContextOptions>();
             s.AddDbContext<DirectoryDbContext>(o => o.UseInMemoryDatabase(dbName));
             s.AddSingleton<IGithubProfileLookup>(sp => new EchoGithub(sp));
-            s.AddSingleton<DirectoryApp::Gabinety.Directory.Clients.IBookingClient, NoBookings>();
+            s.AddSingleton<DirectoryApp::Gabinety.Directory.Clients.IAccessClient, NoAccesses>();
             s.PostConfigure<RateLimiterOptions>(o => o.GlobalLimiter = null); // a whole seeding run and its second run exceed 60 requests a minute from one address
             s.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o => o.BackchannelHttpHandler = _identity.Server.CreateHandler());
             s.AddHttpClient(nameof(IEmailVerifiedLookup)).ConfigurePrimaryHttpMessageHandler(() => _identity.Server.CreateHandler());

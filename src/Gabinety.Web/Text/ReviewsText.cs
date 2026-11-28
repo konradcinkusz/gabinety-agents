@@ -28,8 +28,8 @@ public static class ReviewsText
 
     public static class List
     {
-        public const string Loading = "Ładowanie opinii…", EmptyTitle = "Brak opinii", Empty = "Nie masz jeszcze opublikowanych opinii.", NotPractitionerTitle = "Opinie widzą tu dostawcy";
-        public const string NotPractitioner = "Tę stronę mają dostawcy z profilem agenta. Jeśli chcesz oferować pakiety agenta, utwórz profil w panelu dostawcy.", CreateProfile = "Utwórz profil agenta";
+        public const string Loading = "Ładowanie opinii…", EmptyTitle = "Brak opinii", Empty = "Nie masz jeszcze opublikowanych opinii.", NotAgentTitle = "Opinie widzą tu dostawcy";
+        public const string NotAgent = "Tę stronę mają dostawcy z profilem agenta. Jeśli chcesz oferować pakiety agenta, utwórz profil w panelu dostawcy.", CreateProfile = "Utwórz profil agenta";
         public const string Reviewer = "Zweryfikowany klient", Rating = "Ocena: {0} z 5", More = "Pokaż kolejne opinie", ReplyHeading = "Twoja odpowiedź";
     }
 

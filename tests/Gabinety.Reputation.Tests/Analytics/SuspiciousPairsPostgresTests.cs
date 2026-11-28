@@ -45,7 +45,7 @@ public class SuspiciousPairsPostgresTests
             AnalyticsHost.NewReview("demo-pgp-mixed", p, 5), AnalyticsHost.NewReview("demo-pgp-mixed", p, 4),
             AnalyticsHost.NewReview(longClient, p, 5));
         var hashed = "h:" + new string('a', 64);
-        h.Booking.Add(
+        h.Access.Add(
             AnalyticsHost.Pair("demo-pgp-farmer", p, 3), AnalyticsHost.Pair("demo-pgp-held", p, 4), AnalyticsHost.Pair("demo-pgp-lone4", p, 3),
             AnalyticsHost.Pair("demo-pgp-mixed", p, 3), AnalyticsHost.Pair("demo-pgp-silent", p, 3),
             new Gabinety.Contracts.Booking.PairCountDto(hashed, longClient, p, 3));

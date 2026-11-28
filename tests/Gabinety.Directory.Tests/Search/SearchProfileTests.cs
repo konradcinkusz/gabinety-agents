@@ -1,9 +1,10 @@
+using System.Text.Json.Serialization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Gabinety.Contracts.Common;
 using Gabinety.Contracts.Directory;
-using Gabinety.Directory.Tests.Offerings;
+using Gabinety.Directory.Tests.Packages;
 using Microsoft.Net.Http.Headers;
 
 namespace Gabinety.Directory.Tests.Search;
@@ -13,14 +14,14 @@ public class SearchProfileTests(SearchFactory f)
 {
     static string Url(string slug) => "/api/v1/practitioners/" + slug;
 
-    record Extras(string Bio, string? PortfolioUrl, IReadOnlyList<Offering> Offerings, int CompletedCount, DateTimeOffset MemberSince);
+    record Extras(string Bio, string? PortfolioUrl, [property: JsonPropertyName("offerings")] IReadOnlyList<Package> Packages, int CompletedCount, DateTimeOffset MemberSince);
 
     /// <summary>Reads the flat wire body (the card's fields and the extras side by side) back into the contract record.</summary>
-    static PractitionerProfile Flat(string json)
+    static AgentProfile Flat(string json)
     {
-        var card = JsonSerializer.Deserialize<PractitionerCard>(json, Sk.J)!;
+        var card = JsonSerializer.Deserialize<AgentCard>(json, Sk.J)!;
         var x = JsonSerializer.Deserialize<Extras>(json, Sk.J)!;
-        return new PractitionerProfile(card, x.Bio, x.PortfolioUrl, x.Offerings, x.CompletedCount, x.MemberSince);
+        return new AgentProfile(card, x.Bio, x.PortfolioUrl, x.Packages, x.CompletedCount, x.MemberSince);
     }
 
     [Fact]
@@ -29,7 +30,7 @@ public class SearchProfileTests(SearchFactory f)
         await f.Reset();
         var p = await f.Approved(x => { x.Bio = "Demo bio"; x.PortfolioUrl = "https://portfolio.example.test/me"; x.RatingCount = 3; x.RatingAvg = 4.5m; x.GithubLinked = true; x.GithubLogin = "demo-gh"; },
             new Spec("code-review", ["dotnet"], 30, 12000));
-        await f.Db(async db => { db.Offerings.Where(o => o.PractitionerId == p.Id).ToList().ForEach(o => o.MeetingUrl = "https://meet.example.test/x"); await db.SaveChangesAsync(); return 0; });
+        await f.Db(async db => { db.Packages.Where(o => o.AgentId == p.Id).ToList().ForEach(o => o.MeetingUrl = "https://meet.example.test/x"); await db.SaveChangesAsync(); return 0; });
         using var doc = JsonDocument.Parse(await f.Anon().GetStringAsync(Url(p.Slug)));
         var root = doc.RootElement;
         Assert.Equal(
@@ -44,7 +45,7 @@ public class SearchProfileTests(SearchFactory f)
     }
 
     [Fact]
-    public async Task An_Approved_profile_is_public_and_carries_the_card_the_bio_and_only_active_offerings()
+    public async Task An_Approved_profile_is_public_and_carries_the_card_the_bio_and_only_active_packages()
     {
         await f.Reset();
         var p = await f.Approved(x => { x.Bio = "Demo bio text"; x.PortfolioUrl = "https://portfolio.example.test/me"; x.CompletedCount = 7; x.RatingCount = 3; x.RatingAvg = 4.5m; },
@@ -58,19 +59,19 @@ public class SearchProfileTests(SearchFactory f)
         Assert.Equal(7, body.CompletedCount);
         Assert.Equal(p.ApprovedAt, body.MemberSince);
         Assert.Equal(new RatingDto(4.5, 3), body.Card.Rating);
-        Assert.Equal(2, body.Offerings.Count);                                   // the 5 zl offering is inactive
-        Assert.Equal(new MoneyDto(12000, "PLN"), body.Offerings[0].Price);
-        Assert.Equal(["csharp", "azure"], body.Offerings[1].TechSlugs);
+        Assert.Equal(2, body.Packages.Count);                                   // the 5 zl offering is inactive
+        Assert.Equal(new MoneyDto(12000, "PLN"), body.Packages[0].Price);
+        Assert.Equal(["csharp", "azure"], body.Packages[1].TechSlugs);
         Assert.Equal(12000, body.Card.FromPrice.AmountMinor);
         Assert.Equal("public, max-age=300, stale-while-revalidate=3600", r.Headers.CacheControl?.ToString());
     }
 
     [Theory]
-    [InlineData(PractitionerStatus.Draft)]
-    [InlineData(PractitionerStatus.Submitted)]
-    [InlineData(PractitionerStatus.Rejected)]
-    [InlineData(PractitionerStatus.Suspended)]
-    public async Task Any_status_other_than_Approved_is_404_not_found_and_not_cached(PractitionerStatus status)
+    [InlineData(AgentStatus.Draft)]
+    [InlineData(AgentStatus.Submitted)]
+    [InlineData(AgentStatus.Rejected)]
+    [InlineData(AgentStatus.Suspended)]
+    public async Task Any_status_other_than_Approved_is_404_not_found_and_not_cached(AgentStatus status)
     {
         await f.Reset();
         var p = await f.Seed(status, null, new Spec());
@@ -90,12 +91,12 @@ public class SearchProfileTests(SearchFactory f)
     }
 
     [Fact]
-    public async Task An_Approved_profile_without_an_active_offering_answers_200_with_no_offerings_and_a_zero_price()
+    public async Task An_Approved_profile_without_an_active_package_answers_200_with_no_packages_and_a_zero_price()
     {
         await f.Reset();
-        var p = await f.Seed(PractitionerStatus.Approved, null, new Spec(Active: false));
+        var p = await f.Seed(AgentStatus.Approved, null, new Spec(Active: false));
         var body = Flat(await f.Anon().GetStringAsync(Url(p.Slug)));
-        Assert.Empty(body.Offerings);
+        Assert.Empty(body.Packages);
         Assert.Equal(new MoneyDto(0, "PLN"), body.Card.FromPrice);
         Assert.Empty(body.Card.ProblemSlugs);
         Assert.Empty(await Sk.Ids(f.Anon()));                                  // ...and the list never shows it
@@ -123,7 +124,7 @@ public class SearchProfileTests(SearchFactory f)
         weak.Headers.TryAddWithoutValidation(HeaderNames.IfNoneMatch, "\"other\", W/" + tag);
         Assert.Equal(HttpStatusCode.NotModified, (await c.SendAsync(weak)).StatusCode);
 
-        await f.Db(async db => { var row = await db.Practitioners.FindAsync(p.Id); row!.Bio = "A changed bio"; await db.SaveChangesAsync(); return 0; });
+        await f.Db(async db => { var row = await db.Agents.FindAsync(p.Id); row!.Bio = "A changed bio"; await db.SaveChangesAsync(); return 0; });
         var stale = new HttpRequestMessage(HttpMethod.Get, Url(p.Slug));
         stale.Headers.TryAddWithoutValidation(HeaderNames.IfNoneMatch, tag);
         var third = await c.SendAsync(stale);
@@ -140,12 +141,12 @@ public class SearchLeakTests(SearchFactory f)
     {
         await f.Reset();
         const string Nip = "5260250995", User = "demo-user-LEAKUSER-7f3a", Meet = "https://meet.example.test/LEAKMEET-abc", Reason = "LEAKREASON suspended earlier";
-        var p = await f.Seed(PractitionerStatus.Approved, x =>
+        var p = await f.Seed(AgentStatus.Approved, x =>
         {
             x.UserId = User; x.Nip = Nip; x.NipValid = true; x.MeetingUrlDefault = Meet; x.StatusReason = Reason; x.GithubLinked = true; x.GithubLogin = "demo-dev";
             x.GithubChallengeCode = "gabinety-verify-LEAKCODE"; x.GithubChallengeLogin = "demo-dev"; x.Bio = "Contact-free bio";
         }, new Spec());
-        await f.Db(async db => { db.Offerings.Where(o => o.PractitionerId == p.Id).ToList().ForEach(o => o.MeetingUrl = Meet); await db.SaveChangesAsync(); return 0; });
+        await f.Db(async db => { db.Packages.Where(o => o.AgentId == p.Id).ToList().ForEach(o => o.MeetingUrl = Meet); await db.SaveChangesAsync(); return 0; });
 
         var c = f.Anon();
         var bodies = new Dictionary<string, string>

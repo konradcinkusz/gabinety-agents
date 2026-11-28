@@ -26,10 +26,10 @@ public static class OwnAgents
     };
 
     /// <summary>The caller's agent for this call tracked for update, or the answer to send.</summary>
-    public static async Task<(Practitioner? Agent, IResult? Rejected)> FindAsync(DirectoryDbContext db, string userId, string? slug, CancellationToken ct)
+    public static async Task<(Agent? Agent, IResult? Rejected)> FindAsync(DirectoryDbContext db, string userId, string? slug, CancellationToken ct)
     {
         slug = string.IsNullOrWhiteSpace(slug) ? null : slug.Trim();
-        var q = db.Practitioners.Where(x => x.UserId == userId);
+        var q = db.Agents.Where(x => x.UserId == userId);
         if (slug is not null) q = q.Where(x => x.Slug == slug);
         var rows = await q.OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).Take(2).ToListAsync(ct);
         var rejected = Reject(rows.Count, slug);

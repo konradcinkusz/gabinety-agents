@@ -13,7 +13,7 @@ public class GithubLinkTests(VerificationFactory f) : IClassFixture<Verification
 
     async Task<(HttpClient C, Guid Id)> Draft()
     {
-        var p = await f.Seed(PractitionerStatus.Draft);
+        var p = await f.Seed(AgentStatus.Draft);
         return (f.As(p.UserId), p.Id);
     }
 
@@ -64,7 +64,7 @@ public class GithubLinkTests(VerificationFactory f) : IClassFixture<Verification
     }
 
     [Fact]
-    public async Task User_without_a_practitioner_gets_404_on_both_endpoints()
+    public async Task User_without_a_agent_gets_404_on_both_endpoints()
     {
         var c = f.As("demo-nobody-" + Guid.NewGuid().ToString("n"));
         Assert.Equal(HttpStatusCode.NotFound, (await c.PostAsJsonAsync(Link, new GithubLinkRequest("demo-dev"))).StatusCode);
@@ -98,7 +98,7 @@ public class GithubLinkTests(VerificationFactory f) : IClassFixture<Verification
         f.Github.Exists = true; f.Github.Bio = $"I review .NET code. {ch.Code} Warsaw";
         Assert.Equal(HttpStatusCode.NoContent, (await c.PostAsync(Verify, null)).StatusCode);
 
-        var me = (await c.GetFromJsonAsync<PractitionerPrivate>("/api/v1/me/practitioner", J))!;
+        var me = (await c.GetFromJsonAsync<AgentPrivate>("/api/v1/me/practitioner", J))!;
         Assert.True(me.GithubLinked);
         Assert.StartsWith("Demo-Dev-", me.GithubLogin);
         var row = await f.Load(id);
@@ -195,9 +195,9 @@ public class GithubLinkTests(VerificationFactory f) : IClassFixture<Verification
     }
 
     [Fact]
-    public async Task A_handle_already_linked_to_another_practitioner_is_refused_case_insensitively()
+    public async Task A_handle_already_linked_to_another_agent_is_refused_case_insensitively()
     {
-        await f.Seed(PractitionerStatus.Draft, p => { p.GithubLinked = true; p.GithubLogin = "Demo-Taken"; });
+        await f.Seed(AgentStatus.Draft, p => { p.GithubLinked = true; p.GithubLogin = "Demo-Taken"; });
         var (c, id) = await Draft();
         var ch = await Challenge(c, "demo-taken");
         f.Github.Exists = true; f.Github.Bio = ch.Code;

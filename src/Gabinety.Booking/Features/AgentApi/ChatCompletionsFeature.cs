@@ -5,7 +5,7 @@ using System.Text.Json.Nodes;
 using Gabinety.Booking.Agents.Abstractions;
 using Gabinety.Contracts.Directory;
 using Gabinety.ServiceDefaults;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
+using AccessEntity = Gabinety.Booking.Features.Accesses.Entities.Access;
 
 namespace Gabinety.Booking.Features.AgentApi;
 
@@ -33,9 +33,9 @@ public sealed class ChatCompletionsFeature : IServiceFeature
             return OpenAiError.BadRequest("The model field is required.");
 
         var sub = user.FindFirst("sub")!.Value;
-        var package = await entitlements.FindAsync(sub, model, OfferingKind.Chat, null, ct);
+        var package = await entitlements.FindAsync(sub, model, PackageKind.Chat, null, ct);
         if (package is null)
-            return await entitlements.HasExhaustedAsync(sub, model, OfferingKind.Chat, null, ct) ? OpenAiError.QuotaExhausted() : OpenAiError.ModelNotFound_();
+            return await entitlements.HasExhaustedAsync(sub, model, PackageKind.Chat, null, ct) ? OpenAiError.QuotaExhausted() : OpenAiError.ModelNotFound_();
 
         Guid.TryParse(user.FindFirst(ApiKeyAuthentication.KeyIdClaim)?.Value, out var keyId);
         var apiKeyId = keyId == Guid.Empty ? (Guid?)null : keyId;
@@ -46,11 +46,11 @@ public sealed class ChatCompletionsFeature : IServiceFeature
             : await NonStreamAsync(package, apiKeyId, body, entitlements, upstream, log, clock, ct);
     }
 
-    static async Task<IResult> NonStreamAsync(BookingEntity package, Guid? apiKeyId, JsonObject body, EntitlementStore entitlements, IAgentUpstream upstream,
+    static async Task<IResult> NonStreamAsync(AccessEntity package, Guid? apiKeyId, JsonObject body, EntitlementStore entitlements, IAgentUpstream upstream,
         ILogger log, Stopwatch clock, CancellationToken ct)
     {
         UpstreamResult result;
-        try { result = await upstream.CompleteAsync(package.PractitionerSlug, body, ct); }
+        try { result = await upstream.CompleteAsync(package.AgentSlug, body, ct); }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
             LogOutcome(log, package, 0, 502, clock, ex.GetType().Name);
@@ -69,7 +69,7 @@ public sealed class ChatCompletionsFeature : IServiceFeature
         return Results.Content(result.Json, "application/json", System.Text.Encoding.UTF8, result.StatusCode);
     }
 
-    static async Task<IResult> StreamAsync(HttpContext http, BookingEntity package, Guid? apiKeyId, JsonObject body, EntitlementStore entitlements,
+    static async Task<IResult> StreamAsync(HttpContext http, AccessEntity package, Guid? apiKeyId, JsonObject body, EntitlementStore entitlements,
         IAgentUpstream upstream, ILogger log, Stopwatch clock, CancellationToken ct)
     {
         var response = http.Response;
@@ -80,7 +80,7 @@ public sealed class ChatCompletionsFeature : IServiceFeature
 
         long tokens = 0;
         string? failure = null;
-        try { tokens = await upstream.StreamAsync(package.PractitionerSlug, body, response.Body, ct); }
+        try { tokens = await upstream.StreamAsync(package.AgentSlug, body, response.Body, ct); }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { failure = "ClientDisconnected"; }
         catch (Exception ex) { failure = ex.GetType().Name; }
         finally
@@ -119,7 +119,7 @@ public sealed class ChatCompletionsFeature : IServiceFeature
         return (null, OpenAiError.BadRequest("The request body must be a JSON object."));
     }
 
-    static void LogOutcome(ILogger log, BookingEntity package, long tokens, int status, Stopwatch clock, string? failure) =>
+    static void LogOutcome(ILogger log, AccessEntity package, long tokens, int status, Stopwatch clock, string? failure) =>
         log.LogInformation("Chat completion for package {BookingId} agent {AgentSlug}: {Tokens} tokens, status {Status}, {ElapsedMs} ms, failure {Failure}",
-            package.Id, package.PractitionerSlug, tokens, status, clock.ElapsedMilliseconds, failure ?? "none");
+            package.Id, package.AgentSlug, tokens, status, clock.ElapsedMilliseconds, failure ?? "none");
 }

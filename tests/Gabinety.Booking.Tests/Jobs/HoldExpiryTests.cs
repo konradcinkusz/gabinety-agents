@@ -6,7 +6,7 @@ using Gabinety.Booking.Jobs.HoldExpiry;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -27,11 +27,11 @@ public class HoldExpiryTests : IDisposable
 
         h.Clock.Advance(Hold10 - TimeSpan.FromSeconds(1));
         Assert.Equal(0, await job.ExpireDueAsync(h.Clock.GetUtcNow(), default));
-        Assert.Equal(BookingStatus.PendingPayment, await Hold.StatusOf(h, id));
+        Assert.Equal(AccessStatus.PendingPayment, await Hold.StatusOf(h, id));
 
         h.Clock.Advance(TimeSpan.FromSeconds(1));
         Assert.Equal(1, await job.ExpireDueAsync(h.Clock.GetUtcNow(), default));
-        Assert.Equal(BookingStatus.Expired, await Hold.StatusOf(h, id));
+        Assert.Equal(AccessStatus.Expired, await Hold.StatusOf(h, id));
     }
 
     [Fact]
@@ -44,8 +44,8 @@ public class HoldExpiryTests : IDisposable
 
         Assert.Equal(5, await Hold.Job(h).ExpireDueAsync(h.Clock.GetUtcNow(), default));
 
-        foreach (var id in due) Assert.Equal(BookingStatus.Expired, await Hold.StatusOf(h, id));
-        Assert.Equal(BookingStatus.PendingPayment, await Hold.StatusOf(h, later));
+        foreach (var id in due) Assert.Equal(AccessStatus.Expired, await Hold.StatusOf(h, id));
+        Assert.Equal(AccessStatus.PendingPayment, await Hold.StatusOf(h, later));
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public class HoldExpiryTests : IDisposable
         small.Clock.Advance(TimeSpan.FromHours(1));
 
         Assert.Equal(7, await Hold.Job(small).ExpireDueAsync(small.Clock.GetUtcNow(), default));
-        foreach (var id in ids) Assert.Equal(BookingStatus.Expired, await Hold.StatusOf(small, id));
+        foreach (var id in ids) Assert.Equal(AccessStatus.Expired, await Hold.StatusOf(small, id));
     }
 
     [Fact]
@@ -71,26 +71,26 @@ public class HoldExpiryTests : IDisposable
         var job = Hold.Job(capped);
 
         Assert.Equal(3, await job.ExpireDueAsync(capped.Clock.GetUtcNow(), default));
-        for (var i = 0; i < 3; i++) Assert.Equal(BookingStatus.Expired, await Hold.StatusOf(capped, byAge[i]));
-        for (var i = 3; i < 5; i++) Assert.Equal(BookingStatus.PendingPayment, await Hold.StatusOf(capped, byAge[i]));
+        for (var i = 0; i < 3; i++) Assert.Equal(AccessStatus.Expired, await Hold.StatusOf(capped, byAge[i]));
+        for (var i = 3; i < 5; i++) Assert.Equal(AccessStatus.PendingPayment, await Hold.StatusOf(capped, byAge[i]));
 
         Assert.Equal(2, await job.ExpireDueAsync(capped.Clock.GetUtcNow(), default));
-        for (var i = 3; i < 5; i++) Assert.Equal(BookingStatus.Expired, await Hold.StatusOf(capped, byAge[i]));
+        for (var i = 3; i < 5; i++) Assert.Equal(AccessStatus.Expired, await Hold.StatusOf(capped, byAge[i]));
     }
 
     [Fact]
-    public async Task A_booking_paid_between_selection_and_transition_is_left_Confirmed()
+    public async Task A_access_paid_between_selection_and_transition_is_left_Confirmed()
     {
-        var (id, _) = await Pay.CreateBooking(h);
+        var (id, _) = await Pay.CreateAccess(h);
         Assert.Equal(HttpStatusCode.OK, (await Pay.Simulate(h.ClientFor("demo-client-1"), id, "succeeded")).StatusCode);
-        Assert.Equal(BookingStatus.Confirmed, await Hold.StatusOf(h, id));
+        Assert.Equal(AccessStatus.Confirmed, await Hold.StatusOf(h, id));
         h.Clock.Advance(Hold10 + TimeSpan.FromMinutes(1));
 
         // the job selected this id while the booking was still PendingPayment: the list is stale by the time the transition runs
         var applied = await Hold.Job(h).ExpireAsync([id], h.Clock.GetUtcNow(), default);
 
         Assert.Equal(0, applied);
-        Assert.Equal(BookingStatus.Confirmed, await Hold.StatusOf(h, id));
+        Assert.Equal(AccessStatus.Confirmed, await Hold.StatusOf(h, id));
         Assert.Equal(PaymentStatus.Succeeded, (await Life.PaymentOf(h, id)).Status);
     }
 
@@ -100,7 +100,7 @@ public class HoldExpiryTests : IDisposable
         var live = await Hold.Seed(h, Hold10);
         var applied = await Hold.Job(h).ExpireAsync([live, Guid.NewGuid()], h.Clock.GetUtcNow(), default);
         Assert.Equal(0, applied);
-        Assert.Equal(BookingStatus.PendingPayment, await Hold.StatusOf(h, live));
+        Assert.Equal(AccessStatus.PendingPayment, await Hold.StatusOf(h, live));
     }
 
     [Fact]
@@ -126,7 +126,7 @@ public class HoldExpiryTests : IDisposable
     [Fact]
     public async Task Expiry_keeps_the_payment_Created_so_a_late_success_is_refunded_in_full()
     {
-        var (id, pid) = await Pay.CreateBooking(h);
+        var (id, pid) = await Pay.CreateAccess(h);
         h.Clock.Advance(Hold10);
         Assert.Equal(1, await Hold.Job(h).ExpireDueAsync(h.Clock.GetUtcNow(), default));
         Assert.Equal(PaymentStatus.Created, (await Life.PaymentOf(h, id)).Status);
@@ -134,22 +134,22 @@ public class HoldExpiryTests : IDisposable
         var late = await Pay.Simulate(h.ClientFor("demo-client-1"), id, "succeeded");
 
         Assert.Equal(HttpStatusCode.OK, late.StatusCode);
-        Assert.Equal(BookingStatus.Expired, await Hold.StatusOf(h, id));
+        Assert.Equal(AccessStatus.Expired, await Hold.StatusOf(h, id));
         Assert.Single(await Life.RefundRows(h, id));
         Assert.Equal(PaymentStatus.Refunded, (await Life.PaymentOf(h, id)).Status);
         _ = pid;
     }
 
     [Fact]
-    public async Task After_expiry_a_new_purchase_of_the_same_offering_succeeds()
+    public async Task After_expiry_a_new_purchase_of_the_same_package_succeeds()
     {
-        var (first, _) = await Pay.CreateBooking(h, "demo-client-1");
+        var (first, _) = await Pay.CreateAccess(h, "demo-client-1");
         var other = await CreateHost.Post(h.ClientFor("demo-client-2"), h.Req(), CreateHost.Key());
         Assert.Equal(HttpStatusCode.Created, other.StatusCode); // a live hold blocks nothing: there are no slots (A-02)
 
         h.Clock.Advance(Hold10);
         Assert.Equal(2, await Hold.Job(h).ExpireDueAsync(h.Clock.GetUtcNow(), default));
-        Assert.Equal(BookingStatus.Expired, await Hold.StatusOf(h, first));
+        Assert.Equal(AccessStatus.Expired, await Hold.StatusOf(h, first));
 
         var second = await CreateHost.Post(h.ClientFor("demo-client-2"), h.Req(), CreateHost.Key());
         Assert.Equal(HttpStatusCode.Created, second.StatusCode);
@@ -166,13 +166,13 @@ public class HoldExpiryTests : IDisposable
 
         await Assert.ThrowsAsync<JobFailedException>(() => Hold.Job(h).RunOnceAsync(h.Clock.GetUtcNow(), default));
 
-        Assert.Equal(BookingStatus.Expired, await Hold.StatusOf(h, a));
-        Assert.Equal(BookingStatus.PendingPayment, await Hold.StatusOf(h, bad)); // rolled back, retried next cycle
-        Assert.Equal(BookingStatus.Expired, await Hold.StatusOf(h, c));
+        Assert.Equal(AccessStatus.Expired, await Hold.StatusOf(h, a));
+        Assert.Equal(AccessStatus.PendingPayment, await Hold.StatusOf(h, bad)); // rolled back, retried next cycle
+        Assert.Equal(AccessStatus.Expired, await Hold.StatusOf(h, c));
 
         failing.Clear();
         Assert.Equal(1, await Hold.Job(h).ExpireDueAsync(h.Clock.GetUtcNow(), default));
-        Assert.Equal(BookingStatus.Expired, await Hold.StatusOf(h, bad));
+        Assert.Equal(AccessStatus.Expired, await Hold.StatusOf(h, bad));
     }
 
     [Fact]
@@ -189,7 +189,7 @@ public class HoldExpiryTests : IDisposable
     }
 
     [Fact]
-    public async Task Logs_carry_the_booking_id_and_never_the_brief_or_any_other_id()
+    public async Task Logs_carry_the_access_id_and_never_the_brief_or_any_other_id()
     {
         var ok = await Hold.Seed(h, TimeSpan.FromMinutes(1), slot: 0);
         var bad = await Hold.Seed(h, TimeSpan.FromMinutes(2), slot: 1);
@@ -201,7 +201,7 @@ public class HoldExpiryTests : IDisposable
         Assert.Contains(ok.ToString(), all);
         Assert.Contains(bad.ToString(), all);
         Assert.Contains("InvalidOperationException", all);
-        foreach (var forbidden in new[] { "demo-brief", "a first review of my plan", "boom", Life.Client, h.OwnerUserId, h.Practitioner.ToString(), h.Offering.ToString() })
+        foreach (var forbidden in new[] { "demo-brief", "a first review of my plan", "boom", Life.Client, h.OwnerUserId, h.Agent.ToString(), h.Package.ToString() })
             Assert.DoesNotContain(forbidden, all);
     }
 
@@ -222,7 +222,7 @@ public class HoldExpiryTests : IDisposable
         Assert.Equal(1, capture.Runs("hold_expiry", "ok"));
         Assert.Equal(1, capture.Runs("hold_expiry", "error"));
         Assert.All(capture.Points, p => Assert.Equal("hold_expiry", p.Tags["job"]));
-        Assert.Equal(BookingStatus.Expired, await Hold.StatusOf(h, id));
+        Assert.Equal(AccessStatus.Expired, await Hold.StatusOf(h, id));
     }
 
     [Fact]

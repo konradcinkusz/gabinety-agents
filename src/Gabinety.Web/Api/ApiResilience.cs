@@ -19,7 +19,7 @@ public static class ApiResilience
         services.AddTransient<BackendHeadersHandler>();
         services.AddScoped<VisitorAddressAccessor>();
         Add<DirectoryClient>(services, Backend.Directory);
-        Add<BookingClient>(services, Backend.Booking);
+        Add<AccessClient>(services, Backend.Access);
         Add<ReputationClient>(services, Backend.Reputation);
         Add<AssistantClient>(services, Backend.Assistant); // status read (5 s) and the brief suggestion, which asks for its 35 s per request (SPEC 5.1)
         Add<BriefAssistantClient>(services, Backend.Assistant);   // the brief suggestion (35 s)
@@ -28,8 +28,8 @@ public static class ApiResilience
         Add<Auth.IdentityClient>(services, Backend.Auth);
         services.AddScoped<AdminApi>();      // the admin pages' calls with the administrator's own bearer (Api/Admin)
         Add<AccountClient>(services, Backend.Auth); // the signed-in user's own account calls (me, consents, export, delete)
-        Add<PractitionerClient>(services, Backend.Directory);              // the practitioner's own profile and offers (port 4)
-        Add<PractitionerSchedulingClient>(services, Backend.Booking);      // the payments account (port 4)
+        Add<AgentClient>(services, Backend.Directory);              // the practitioner's own profile and offers (port 4)
+        Add<AgentSchedulingClient>(services, Backend.Access);      // the payments account (port 4)
         // The options of the ONE handler the kernel added to every client. All backends share the SPEC 5.1 profile of a read: 5 s per attempt, ONE retry, and only for a GET or HEAD, so a login,
         // a refresh and every later write are never retried automatically (SPEC 5 rule 8), whatever the client. The wait before the retry follows Retry-After (the services answer 429 under
         // their per-client limit), at most 2 s. (Per-client names such as "directory-standard" are not what the kernel's default registration reads: ConfigureAll is.)

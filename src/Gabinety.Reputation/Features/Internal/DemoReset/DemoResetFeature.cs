@@ -31,15 +31,15 @@ public sealed class DemoResetFeature : IServiceFeature
         var reviews = await db.Reviews.Where(r => r.ClientUserId.StartsWith(Ns)).ToListAsync(ct);
         var ids = reviews.Select(r => r.Id).ToList();
         var events = await db.ModerationEvents.Where(e => ids.Contains(e.ReviewId)).ToListAsync(ct);
-        var affected = reviews.Select(r => r.PractitionerId).Distinct().ToList();
-        var summaries = await db.RatingSummaries.Where(s => affected.Contains(s.PractitionerId)).ToListAsync(ct);
-        var remaining = await db.Reviews.Where(r => affected.Contains(r.PractitionerId) && !r.ClientUserId.StartsWith(Ns))
-            .Select(r => new { r.PractitionerId, r.Status, r.Rating }).ToListAsync(ct);
+        var affected = reviews.Select(r => r.AgentId).Distinct().ToList();
+        var summaries = await db.RatingSummaries.Where(s => affected.Contains(s.AgentId)).ToListAsync(ct);
+        var remaining = await db.Reviews.Where(r => affected.Contains(r.AgentId) && !r.ClientUserId.StartsWith(Ns))
+            .Select(r => new { r.AgentId, r.Status, r.Rating }).ToListAsync(ct);
 
         int deleted = 0, recomputed = 0;
         foreach (var s in summaries)
         {
-            var left = remaining.Where(r => r.PractitionerId == s.PractitionerId).ToList();
+            var left = remaining.Where(r => r.AgentId == s.AgentId).ToList();
             if (left.Count == 0) { db.RatingSummaries.Remove(s); deleted++; continue; }
             var published = left.Where(r => r.Status == ReviewStatus.Published).ToList();
             var (count, sum) = (published.Count, published.Sum(r => (int)r.Rating));

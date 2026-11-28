@@ -50,11 +50,11 @@ public sealed class ReplyReviewFeature : IServiceFeature
                 new() { ["text"] = [.. tripped] }); // reason codes only, never the text
         }
 
-        Guid practitionerId;
+        Guid agentId;
         try
         {
-            if (await directory.GetPractitionerByUserAsync(sub, ct) is not { } found) return Problem(ErrorCodes.NotFound, "Not found", 404);
-            practitionerId = found.PractitionerId;
+            if (await directory.GetAgentByUserAsync(sub, ct) is not { } found) return Problem(ErrorCodes.NotFound, "Not found", 404);
+            agentId = found.AgentId;
         }
         catch (DirectoryUnavailableException)
         {
@@ -62,19 +62,19 @@ public sealed class ReplyReviewFeature : IServiceFeature
         }
 
         var now = time.GetUtcNow();
-        var outcome = await ApplyAsync(db, id, practitionerId, sub, text, now, ct);
+        var outcome = await ApplyAsync(db, id, agentId, sub, text, now, ct);
         switch (outcome)
         {
             case ReplyOutcome.NotFound: return Problem(ErrorCodes.NotFound, "Not found", 404);
             case ReplyOutcome.AlreadyReplied: return Problem(ErrorCodes.AlreadyReplied, "Already replied", 409);
         }
-        log.LogInformation("Review {ReviewId} of practitioner {PractitionerId} replied to", id, practitionerId); // ids only
+        log.LogInformation("Review {ReviewId} of practitioner {PractitionerId} replied to", id, agentId); // ids only
         return Results.Json(new ReplyDto(text, now), statusCode: 201);
     }
 
     enum ReplyOutcome { Done, NotFound, AlreadyReplied }
 
-    static async Task<ReplyOutcome> ApplyAsync(ReputationDbContext db, Guid id, Guid practitionerId, string actor, string text, DateTimeOffset now, CancellationToken ct)
+    static async Task<ReplyOutcome> ApplyAsync(ReputationDbContext db, Guid id, Guid agentId, string actor, string text, DateTimeOffset now, CancellationToken ct)
     {
         var @event = new ModerationEvent { Id = Guid.CreateVersion7(), ReviewId = id, Kind = ModerationEventKind.Replied, Actor = actor, Note = null, At = now };
 
@@ -85,7 +85,7 @@ public sealed class ReplyReviewFeature : IServiceFeature
             try
             {
                 var review = await db.Reviews.SingleOrDefaultAsync(x => x.Id == id, ct);
-                if (review is null || review.PractitionerId != practitionerId || review.Status != ReviewStatus.Published) return ReplyOutcome.NotFound;
+                if (review is null || review.AgentId != agentId || review.Status != ReviewStatus.Published) return ReplyOutcome.NotFound;
                 if (review.ReplyText is not null) return ReplyOutcome.AlreadyReplied;
                 review.ReplyText = text; review.RepliedAt = now;
                 db.ModerationEvents.Add(@event);
@@ -102,11 +102,11 @@ public sealed class ReplyReviewFeature : IServiceFeature
             await using var tx = await db.Database.BeginTransactionAsync(ct);
             // The WHERE clause is the decision: a concurrent reply (or rejection) that committed first makes this update match no row.
             var changed = await db.Reviews
-                .Where(x => x.Id == id && x.PractitionerId == practitionerId && x.Status == ReviewStatus.Published && x.ReplyText == null)
+                .Where(x => x.Id == id && x.AgentId == agentId && x.Status == ReviewStatus.Published && x.ReplyText == null)
                 .ExecuteUpdateAsync(s => s.SetProperty(x => x.ReplyText, text).SetProperty(x => x.RepliedAt, now), ct);
             if (changed == 0)
             {
-                var current = await db.Reviews.AsNoTracking().Where(x => x.Id == id && x.PractitionerId == practitionerId)
+                var current = await db.Reviews.AsNoTracking().Where(x => x.Id == id && x.AgentId == agentId)
                     .Select(x => new { x.ReplyText }).SingleOrDefaultAsync(ct);
                 outcome = current?.ReplyText is not null ? ReplyOutcome.AlreadyReplied : ReplyOutcome.NotFound;
                 return;

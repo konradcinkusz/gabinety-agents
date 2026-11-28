@@ -8,7 +8,7 @@ namespace Gabinety.Web.Tests.Pages;
 /// <summary>The review form of a client (J3, F-14) and the practitioner's list with its replies.</summary>
 public class ReviewsTests
 {
-    static readonly string Form = $"/moje/opinie/{BookingId}";
+    static readonly string Form = $"/moje/opinie/{AccessId}";
     const string Text = "Konsultacja przebiegła rzetelnie, dostałem konkretny plan prototypu.";
     static readonly Guid ReviewId = Guid.Parse("018f0000-0000-7000-8000-0000000000d1");
 
@@ -44,7 +44,7 @@ public class ReviewsTests
     public async Task A_visitor_is_sent_to_sign_in_and_back()
     {
         await using var f = await ClientAreaFixture.Visitor();
-        Assert.Equal($"/logowanie?redirect=%2Fmoje%2Fopinie%2F{BookingId}", (await f.Browser.GetAsync(Form)).Location);
+        Assert.Equal($"/logowanie?redirect=%2Fmoje%2Fopinie%2F{AccessId}", (await f.Browser.GetAsync(Form)).Location);
     }
 
     [Fact]
@@ -120,7 +120,7 @@ public class ReviewsTests
         Assert.Equal("/api/v1/reviews", call.PathAndQuery);
         Assert.StartsWith("Bearer eyJ", call.Authorization);
         var body = JsonDocument.Parse(call.Body!).RootElement;
-        Assert.Equal((BookingId.ToString(), 5, Text), (body.GetProperty("bookingId").GetString()!, body.GetProperty("rating").GetInt32(), body.GetProperty("text").GetString()!));
+        Assert.Equal((AccessId.ToString(), 5, Text), (body.GetProperty("bookingId").GetString()!, body.GetProperty("rating").GetInt32(), body.GetProperty("text").GetString()!));
 
         var page = await f.Browser.GetAsync(posted.Location!);
         Assert.Equal(["Wystaw opinię"], page.All("h1").Select(h => h.TextContent));
@@ -149,7 +149,7 @@ public class ReviewsTests
     [Theory]
     [InlineData("already_reviewed", "Ten dostęp ma już opinię")]
     [InlineData("not_reviewable", "Tego dostępu nie można ocenić")]
-    public async Task A_booking_that_has_a_review_or_cannot_have_one_gets_a_card_with_the_way_back(string code, string heading)
+    public async Task A_access_that_has_a_review_or_cannot_have_one_gets_a_card_with_the_way_back(string code, string heading)
     {
         await using var f = await Open(_ => FakeBackend.Problem(HttpStatusCode.Conflict, code));
         var page = await f.Post(Form, "review", ("Model.Rating", "5"), ("Model.Text", Text));
@@ -200,7 +200,7 @@ public class ReviewsTests
 
     // ---- the practitioner's list
 
-    static async Task<ClientAreaFixture> Practitioner(IReadOnlyList<ReviewDto> reviews, string? next = null, Func<HttpRequestMessage, HttpResponseMessage>? replies = null)
+    static async Task<ClientAreaFixture> Agent(IReadOnlyList<ReviewDto> reviews, string? next = null, Func<HttpRequestMessage, HttpResponseMessage>? replies = null)
     {
         var f = await ClientAreaFixture.SignedIn();
         f.Web.Directory.Respond = r => r.RequestUri!.AbsolutePath == "/api/v1/me" ? FakeBackend.Json(new MeDto("user-1", Guid.Parse("018f0000-0000-7000-8000-0000000000e1"), "Approved", false, false)) : new HttpResponseMessage(HttpStatusCode.NotFound);
@@ -225,7 +225,7 @@ public class ReviewsTests
     [Fact]
     public async Task The_list_shows_the_reviews_as_text_with_a_reply_link_for_the_ones_without_a_reply()
     {
-        await using var f = await Practitioner([Review("<b>Dobrze</b> bardzo"), Review("Druga opinia, z odpowiedzią.", 4, new ReplyDto("Dziękuję za opinię.", DateTimeOffset.UtcNow), Guid.NewGuid())]);
+        await using var f = await Agent([Review("<b>Dobrze</b> bardzo"), Review("Druga opinia, z odpowiedzią.", 4, new ReplyDto("Dziękuję za opinię.", DateTimeOffset.UtcNow), Guid.NewGuid())]);
         var page = await f.Browser.GetAsync("/moje/opinie");
         Assert.Equal("Opinie o mnie", page.TextOf("h1"));
         var items = page.All("main ul > li").ToList();
@@ -243,7 +243,7 @@ public class ReviewsTests
     [Fact]
     public async Task Opening_a_reply_shows_exactly_one_form_with_the_label_and_hint_and_counter()
     {
-        await using var f = await Practitioner([Review(), Review("Inna", 3, null, Guid.NewGuid())]);
+        await using var f = await Agent([Review(), Review("Inna", 3, null, Guid.NewGuid())]);
         var page = await f.Browser.GetAsync($"/moje/opinie?reply={ReviewId}");
         var form = Assert.Single(page.All("form[method=post]"));
         Assert.Equal("Odpowiedź na opinię", form.QuerySelector("label")!.TextContent);
@@ -255,7 +255,7 @@ public class ReviewsTests
     [Fact]
     public async Task A_reply_is_posted_to_the_review_and_the_page_says_it_was_added()
     {
-        await using var f = await Practitioner([Review()]);
+        await using var f = await Agent([Review()]);
         var posted = await f.Post($"/moje/opinie?reply={ReviewId}", "reply", ("Model.Text", "  Dziękuję za miłe słowa i zapraszam ponownie.  "));
         Assert.Equal("/moje/opinie?replied=1", posted.Location);
         var call = f.Web.Reputation.Requests.Single(r => r.Method == HttpMethod.Post);
@@ -268,7 +268,7 @@ public class ReviewsTests
     [Fact]
     public async Task A_short_reply_is_refused_inline_and_a_second_reply_is_said_to_exist_already()
     {
-        await using var f = await Practitioner([Review()], replies: _ => FakeBackend.Problem(HttpStatusCode.Conflict, "already_replied"));
+        await using var f = await Agent([Review()], replies: _ => FakeBackend.Problem(HttpStatusCode.Conflict, "already_replied"));
         var short_ = await f.Post($"/moje/opinie?reply={ReviewId}", "reply", ("Model.Text", "krótko"));
         Assert.Equal("Odpowiedź musi mieć co najmniej 10 znaków.", short_.TextOf(".form-summary a"));
         Assert.DoesNotContain(f.Web.Reputation.Requests, r => r.Method == HttpMethod.Post);
@@ -279,10 +279,10 @@ public class ReviewsTests
     [Fact]
     public async Task An_empty_list_says_so_with_a_heading_and_more_is_a_cursor_link()
     {
-        await using var empty = await Practitioner([]);
+        await using var empty = await Agent([]);
         var page = await empty.Browser.GetAsync("/moje/opinie");
         Assert.Equal("Brak opinii", page.TextOf(".empty-state h2"));
-        await using var more = await Practitioner([Review()], next: "C 2");
+        await using var more = await Agent([Review()], next: "C 2");
         Assert.Equal("/moje/opinie?cursor=C%202", (await more.Browser.GetAsync("/moje/opinie")).One("a[rel=next]")!.GetAttribute("href"));
         Assert.Contains("cursor=C2", more.Web.Reputation.Requests.Last().PathAndQuery.Length > 0 ? (await Cursor(more)) : "");
     }
@@ -294,7 +294,7 @@ public class ReviewsTests
     [InlineData(500, "Coś poszło nie tak. Spróbuj ponownie.")]
     public async Task A_list_that_cannot_be_read_is_an_alert_with_a_retry(int status, string text)
     {
-        await using var f = await Practitioner([]);
+        await using var f = await Agent([]);
         f.Web.Reputation.Respond = _ => FakeBackend.Problem((HttpStatusCode)status, "x");
         var page = await f.Browser.GetAsync("/moje/opinie");
         Assert.Equal(text, page.TextOf("[data-testid=unavailable] p"));

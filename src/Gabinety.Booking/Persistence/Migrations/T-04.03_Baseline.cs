@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Gabinety.Booking.Persistence.Migrations;
 
 /// <summary>Empty baseline (T-04.03): creates only __EFMigrationsHistory. The availability tables follow in T-04.03_Availability.</summary>
-[DbContext(typeof(BookingDbContext))]
+[DbContext(typeof(AccessDbContext))]
 [Migration("20261116000000_T-04.03_Baseline")]
 public sealed class Baseline : Migration
 {

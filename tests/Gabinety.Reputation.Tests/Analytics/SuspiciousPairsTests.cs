@@ -26,7 +26,7 @@ public class SuspiciousPairsTests
             AnalyticsHost.NewReview("demo-ap-farmer", p, 5), AnalyticsHost.NewReview("demo-ap-farmer", p, 5), AnalyticsHost.NewReview("demo-ap-farmer", p, 5),
             AnalyticsHost.NewReview("demo-ap-mixed", p, 5), AnalyticsHost.NewReview("demo-ap-mixed", p, 5), AnalyticsHost.NewReview("demo-ap-mixed", p, 4),
             AnalyticsHost.NewReview("demo-ap-lone4", p, 4));
-        h.Booking.Add(AnalyticsHost.Pair("demo-ap-farmer", p, 3), AnalyticsHost.Pair("demo-ap-lone4", p, 3), AnalyticsHost.Pair("demo-ap-mixed", p, 3), AnalyticsHost.Pair("demo-ap-silent", p, 3));
+        h.Access.Add(AnalyticsHost.Pair("demo-ap-farmer", p, 3), AnalyticsHost.Pair("demo-ap-lone4", p, 3), AnalyticsHost.Pair("demo-ap-mixed", p, 3), AnalyticsHost.Pair("demo-ap-silent", p, 3));
 
         var r = await h.As("demo-admin", "Admin").GetAsync(Url);
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
@@ -40,23 +40,23 @@ public class SuspiciousPairsTests
     }
 
     [Fact]
-    public async Task One_review_of_five_stars_on_a_pair_with_three_bookings_is_listed()
+    public async Task One_review_of_five_stars_on_a_pair_with_three_accesses_is_listed()
     {
         using var h = new AnalyticsHost();
         var p = Guid.NewGuid();
         await h.Seed(AnalyticsHost.NewReview("demo-ap-one5", p, 5));
-        h.Booking.Add(AnalyticsHost.Pair("demo-ap-one5", p, 3));
+        h.Access.Add(AnalyticsHost.Pair("demo-ap-one5", p, 3));
         Assert.Equal(["demo-ap-one5"], Clients(await Body(await h.As("demo-admin", "Admin").GetAsync(Url))));
     }
 
     [Fact]
-    public async Task The_join_is_by_the_pair_not_by_the_client_or_the_practitioner_alone()
+    public async Task The_join_is_by_the_pair_not_by_the_client_or_the_agent_alone()
     {
         using var h = new AnalyticsHost();
         var x = Guid.NewGuid(); var y = Guid.NewGuid();
         // The client gave 5 stars to X and 4 to Y: the pair (client, Y) must not borrow X's reviews, and the pair (client, X) must not see Y's 4.
         await h.Seed(AnalyticsHost.NewReview("demo-ap-cross", x, 5), AnalyticsHost.NewReview("demo-ap-cross", y, 4), AnalyticsHost.NewReview("demo-ap-other", y, 5));
-        h.Booking.Add(AnalyticsHost.Pair("demo-ap-cross", x, 3), AnalyticsHost.Pair("demo-ap-cross", y, 3), AnalyticsHost.Pair("demo-ap-other", x, 3));
+        h.Access.Add(AnalyticsHost.Pair("demo-ap-cross", x, 3), AnalyticsHost.Pair("demo-ap-cross", y, 3), AnalyticsHost.Pair("demo-ap-other", x, 3));
         var items = (await Body(await h.As("demo-admin", "Admin").GetAsync(Url))).GetProperty("items").EnumerateArray().ToList();
         var only = Assert.Single(items); // (cross, X): 5 stars. (cross, Y): a 4. (other, X): no review of its own
         Assert.Equal("demo-ap-cross", only.GetProperty("clientUserId").GetString());
@@ -72,30 +72,30 @@ public class SuspiciousPairsTests
             AnalyticsHost.NewReview("demo-ap-held", p, 5, ReviewStatus.Held),
             AnalyticsHost.NewReview("demo-ap-rej", p, 5, ReviewStatus.Rejected),
             AnalyticsHost.NewReview("demo-ap-rej4", p, 5), AnalyticsHost.NewReview("demo-ap-rej4", p, 4, ReviewStatus.Rejected));
-        h.Booking.Add(AnalyticsHost.Pair("demo-ap-held", p, 3), AnalyticsHost.Pair("demo-ap-rej", p, 3), AnalyticsHost.Pair("demo-ap-rej4", p, 3));
+        h.Access.Add(AnalyticsHost.Pair("demo-ap-held", p, 3), AnalyticsHost.Pair("demo-ap-rej", p, 3), AnalyticsHost.Pair("demo-ap-rej4", p, 3));
         var clients = Clients(await Body(await h.As("demo-admin", "Admin").GetAsync(Url)));
         Assert.Equal(["demo-ap-held", "demo-ap-rej4"], clients.Order().ToArray()); // a rejected review is not a live one: it neither lists nor clears a pair
     }
 
     [Fact]
-    public async Task A_pair_the_booking_side_reports_with_two_bookings_is_ignored_even_with_five_stars()
+    public async Task A_pair_the_access_side_reports_with_two_accesses_is_ignored_even_with_five_stars()
     {
         using var h = new AnalyticsHost();
         var p = Guid.NewGuid();
         await h.Seed(AnalyticsHost.NewReview("demo-ap-two", p, 5));
-        h.Booking.Add(AnalyticsHost.Pair("demo-ap-two", p, 2));
+        h.Access.Add(AnalyticsHost.Pair("demo-ap-two", p, 2));
         Assert.Empty(Clients(await Body(await h.As("demo-admin", "Admin").GetAsync(Url))));
     }
 
     [Fact]
-    public async Task Asks_Booking_for_more_than_two_bookings_with_the_page_limit_and_never_more_than_50()
+    public async Task Asks_Access_for_more_than_two_accesses_with_the_page_limit_and_never_more_than_50()
     {
         using var h = new AnalyticsHost();
-        h.Booking.Add();
+        h.Access.Add();
         await h.As("demo-admin", "Admin").GetAsync(Url);
         await h.As("demo-admin", "Admin").GetAsync(Url + "?limit=9999");
-        Assert.Equal((3, (string?)null, 20), h.Booking.Calls[0]);
-        Assert.Equal((3, (string?)null, 50), h.Booking.Calls[1]);
+        Assert.Equal((3, (string?)null, 20), h.Access.Calls[0]);
+        Assert.Equal((3, (string?)null, 50), h.Access.Calls[1]);
     }
 
     [Fact]
@@ -104,7 +104,7 @@ public class SuspiciousPairsTests
         using var h = new AnalyticsHost();
         var p = Guid.NewGuid();
         await h.Seed(AnalyticsHost.NewReview("demo-ap-priv", p, 5));
-        h.Booking.Add(AnalyticsHost.Pair("demo-ap-priv", p, 3));
+        h.Access.Add(AnalyticsHost.Pair("demo-ap-priv", p, 3));
         var r = await h.As("demo-admin", "Admin").GetAsync(Url);
         var raw = await r.Content.ReadAsStringAsync();
         Assert.DoesNotContain("PARY-TEKST", raw);
@@ -119,16 +119,16 @@ public class SuspiciousPairsTests
         using var h = new AnalyticsHost();
         var p = Guid.NewGuid();
         await h.Seed(AnalyticsHost.NewReview("demo-ap-deep", p, 5));
-        for (var i = 0; i < 2; i++) h.Booking.Add(AnalyticsHost.Pair($"demo-ap-nothing{i}", p, 3)); // pages 0 and 1: nobody reviewed
-        h.Booking.Add(AnalyticsHost.Pair("demo-ap-deep", p, 3)); // page 2 matches
-        h.Booking.Add(AnalyticsHost.Pair("demo-ap-later", p, 3)); // page 3 is not read: one match is enough for a response
+        for (var i = 0; i < 2; i++) h.Access.Add(AnalyticsHost.Pair($"demo-ap-nothing{i}", p, 3)); // pages 0 and 1: nobody reviewed
+        h.Access.Add(AnalyticsHost.Pair("demo-ap-deep", p, 3)); // page 2 matches
+        h.Access.Add(AnalyticsHost.Pair("demo-ap-later", p, 3)); // page 3 is not read: one match is enough for a response
         var page = await Body(await h.As("demo-admin", "Admin").GetAsync(Url));
         Assert.Equal(["demo-ap-deep"], Clients(page));
         Assert.Equal("p3", page.GetProperty("nextCursor").GetString());
-        Assert.Equal(new string?[] { null, "p1", "p2" }, h.Booking.Calls.Select(c => c.Cursor).ToArray());
+        Assert.Equal(new string?[] { null, "p1", "p2" }, h.Access.Calls.Select(c => c.Cursor).ToArray());
 
         var next = await Body(await h.As("demo-admin", "Admin").GetAsync(Url + "?cursor=p3"));
-        Assert.Equal("p3", h.Booking.Calls[^1].Cursor);
+        Assert.Equal("p3", h.Access.Calls[^1].Cursor);
         Assert.False(next.TryGetProperty("nextCursor", out var n) && n.ValueKind == JsonValueKind.String);
     }
 
@@ -137,10 +137,10 @@ public class SuspiciousPairsTests
     {
         using var h = new AnalyticsHost();
         var p = Guid.NewGuid();
-        for (var i = 0; i < 8; i++) h.Booking.Add(AnalyticsHost.Pair($"demo-ap-empty{i}", p, 3));
+        for (var i = 0; i < 8; i++) h.Access.Add(AnalyticsHost.Pair($"demo-ap-empty{i}", p, 3));
         var page = await Body(await h.As("demo-admin", "Admin").GetAsync(Url));
         Assert.Empty(Clients(page));
-        Assert.Equal(5, h.Booking.Calls.Count); // a hard cap on the work of one request
+        Assert.Equal(5, h.Access.Calls.Count); // a hard cap on the work of one request
         Assert.Equal("p5", page.GetProperty("nextCursor").GetString());
     }
 
@@ -149,21 +149,21 @@ public class SuspiciousPairsTests
     [InlineData("?limit=-5")]
     [InlineData("?cursor=has%20space")]
     [InlineData("?cursor=%3Cscript%3E")]
-    public async Task A_bad_limit_or_cursor_is_400_and_Booking_is_not_asked(string query)
+    public async Task A_bad_limit_or_cursor_is_400_and_Access_is_not_asked(string query)
     {
         using var h = new AnalyticsHost();
-        h.Booking.Add();
+        h.Access.Add();
         var r = await h.As("demo-admin", "Admin").GetAsync(Url + query);
         Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
         Assert.Equal("validation_failed", (await Body(r)).GetProperty("code").GetString());
-        Assert.Empty(h.Booking.Calls);
+        Assert.Empty(h.Access.Calls);
     }
 
     [Fact]
-    public async Task Booking_unavailable_is_503_dependency_unavailable_with_no_detail()
+    public async Task Access_unavailable_is_503_dependency_unavailable_with_no_detail()
     {
         using var h = new AnalyticsHost();
-        h.Booking.Unavailable = true;
+        h.Access.Unavailable = true;
         var r = await h.As("demo-admin", "Admin").GetAsync(Url);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, r.StatusCode);
         var body = await Body(r);
@@ -176,13 +176,13 @@ public class SuspiciousPairsTests
     [InlineData("User", HttpStatusCode.Forbidden)]
     [InlineData("Practitioner", HttpStatusCode.Forbidden)]
     [InlineData("", HttpStatusCode.Forbidden)]
-    public async Task Only_an_admin_gets_the_list_and_Booking_is_never_asked_for_anyone_else(string? role, HttpStatusCode expected)
+    public async Task Only_an_admin_gets_the_list_and_Access_is_never_asked_for_anyone_else(string? role, HttpStatusCode expected)
     {
         using var h = new AnalyticsHost();
-        h.Booking.Add();
+        h.Access.Add();
         var c = role is null ? h.As(null) : h.As("demo-user", role.Length == 0 ? null : role);
         Assert.Equal(expected, (await c.GetAsync(Url)).StatusCode);
-        Assert.Empty(h.Booking.Calls);
+        Assert.Empty(h.Access.Calls);
     }
 
     [Theory]
@@ -191,7 +191,7 @@ public class SuspiciousPairsTests
     public async Task Both_admin_roles_may_read_it(string role)
     {
         using var h = new AnalyticsHost();
-        h.Booking.Add();
+        h.Access.Add();
         Assert.Equal(HttpStatusCode.OK, (await h.As("demo-admin", role).GetAsync(Url)).StatusCode);
     }
 }

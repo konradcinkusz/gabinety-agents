@@ -1,6 +1,6 @@
 @page "/checkout/mock/{BookingId:guid}"
 @attribute [Authorize]
-@inject BookingClient Bookings
+@inject AccessClient Accesses
 @inject NavigationManager Navigation
 @inject Gabinety.Web.Hosting.WebOptions Site
 @inject TimeProvider Time
@@ -20,12 +20,12 @@
 }
 else if (_booking is { } b)
 {
-    <BookingSteps Current="1" />
+    <AccessSteps Current="1" />
     @if (b.Status != "PendingPayment")
     {
         <div class="callout callout--info" role="status">
             <p>@BookFlowText.Checkout.Closed</p>
-            @if (b.Status == "Confirmed") {<a class="btn btn--primary" href="@($"/dostep/potwierdzenie/{b.Id}")">@BookFlowText.Checkout.ToBooking</a>}
+            @if (b.Status == "Confirmed") {<a class="btn btn--primary" href="@($"/dostep/potwierdzenie/{b.Id}")">@BookFlowText.Checkout.ToAccess</a>}
             else {<a class="btn btn--secondary" href="@ProfileHref(b)">@BookFlowText.Checkout.ToProfile</a>}
         </div>
     }
@@ -34,7 +34,7 @@ else if (_booking is { } b)
         var expired = b.HoldExpiresAt is { } hold && HoldCountdown.Expired(HoldCountdown.Left(hold, Time.GetUtcNow()));
         <div class="checkout-layout">
             <div class="callout callout--info">@BookFlowText.Checkout.Demo</div>
-            <ConsultationSummary Offering="@b.OfferingTitle" Party="@BookingFormat.Name(b.Practitioner.DisplayName)" Units="@BookingFormat.UnitsLine(b.Kind, b.UnitsTotal)"
+            <ConsultationSummary Package="@b.PackageTitle" Party="@AccessFormat.Name(b.Agent.DisplayName)" Units="@AccessFormat.UnitsLine(b.Kind, b.UnitsTotal)"
                                  Validity="@string.Format(BookFlowText.Summary.ValidFor, PlPages.Profile.ValidityDays)" PriceMinor="b.Price.AmountMinor">
                 @if (b.HoldExpiresAt is { } until) {<HoldTimer @rendermode="InteractiveServer" ExpiresAt="until" />}
             </ConsultationSummary>
@@ -56,7 +56,7 @@ else if (_booking is { } b)
     [Parameter] public Guid BookingId { get; set; }
     [SupplyParameterFromForm(FormName = "checkout")] CheckoutForm? Model { get; set; }
 
-    BookingDetailDto? _booking;
+    AccessDetailDto? _booking;
     ApiFailure? _loadFailure;
     string? _problem;
     bool _declined;
@@ -64,13 +64,13 @@ else if (_booking is { } b)
     sealed class CheckoutForm { public string? Outcome { get; set; } }
 
     string CurrentPath => "/" + Navigation.ToBaseRelativePath(Navigation.Uri);
-    static string ProfileHref(BookingDetailDto b) => string.IsNullOrWhiteSpace(b.Practitioner.Slug) ? "/agenci" : "/agent/" + Uri.EscapeDataString(b.Practitioner.Slug);
+    static string ProfileHref(AccessDetailDto b) => string.IsNullOrWhiteSpace(b.Agent.Slug) ? "/agenci" : "/agent/" + Uri.EscapeDataString(b.Agent.Slug);
 
     protected override async Task OnInitializedAsync()
     {
         Model ??= new();
         if (!Site.MockPayments) { Navigation.NotFound(); return; } // fail closed, before any backend is asked
-        var result = await Bookings.GetAsync(BookingId);
+        var result = await Accesses.GetAsync(BookingId);
         if (result.IsOk) { _booking = result.Value; return; }
         if (result.Failure!.IsUnauthenticated) { Navigation.NavigateTo(ReturnTarget.LoginUrl(ReturnTarget.Safe(CurrentPath))); return; }
         if (result.Failure.Status is 404 or 403) { Navigation.NotFound(); return; } // not this user's booking: the answer of an unknown id
@@ -81,7 +81,7 @@ else if (_booking is { } b)
     {
         var outcome = Model?.Outcome;
         if (_booking is null || outcome is not ("succeeded" or "failed")) return;
-        var result = await Bookings.SimulatePaymentAsync(BookingId, outcome);
+        var result = await Accesses.SimulatePaymentAsync(BookingId, outcome);
         if (result.IsOk)
         {
             if (outcome == "succeeded") { Navigation.NavigateTo($"/dostep/potwierdzenie/{BookingId}"); return; }

@@ -1,7 +1,8 @@
+using System.Text.Json.Serialization;
 using System.Net;
 using System.Text.Json;
-using PractitionerStatus = Gabinety.Contracts.Directory.PractitionerStatus;
-using Gabinety.Directory.Features.Offerings;
+using AgentStatus = Gabinety.Contracts.Directory.AgentStatus;
+using Gabinety.Directory.Features.Packages;
 using Gabinety.Directory.Features.Profiles;
 using Gabinety.Directory.Features.Verification;
 using Microsoft.EntityFrameworkCore;
@@ -13,35 +14,35 @@ public class DemoResetApiTests
     const string Url = "/internal/v1/demo/reset";
     static readonly string[] Tables = ["practitioners", "offerings", "verificationEvents"];
 
-    sealed record Chain(Guid Practitioner, Guid Offering, Guid Event);
+    sealed record Chain([property: JsonPropertyName("practitioner")] Guid Agent, [property: JsonPropertyName("offering")] Guid Package, Guid Event);
 
     static async Task<Chain> SeedChain(DemoResetHost h, string slug, string userId)
     {
         var now = DateTimeOffset.UtcNow;
-        var p = new Practitioner
+        var p = new Agent
         {
-            Id = Guid.NewGuid(), UserId = userId, Slug = slug, DisplayName = "Demo", Headline = "h", Status = PractitionerStatus.Approved,
+            Id = Guid.NewGuid(), UserId = userId, Slug = slug, DisplayName = "Demo", Headline = "h", Status = AgentStatus.Approved,
             CreatedAt = now, UpdatedAt = now, RatingCount = 3, RatingAvg = 4.5m, CompletedCount = 2, OpenSlots14d = 4,
         };
-        var o = new Offering
+        var o = new Package
         {
-            Id = Guid.NewGuid(), PractitionerId = p.Id, Title = "Demo review", Description = "demo", DurationMinutes = 60, PriceMinor = 15000, Currency = "PLN",
+            Id = Guid.NewGuid(), AgentId = p.Id, Title = "Demo review", Description = "demo", DurationMinutes = 60, PriceMinor = 15000, Currency = "PLN",
             ProblemSlug = "code-review", TechSlugs = ["dotnet"], IsActive = true, CreatedAt = now,
         };
-        var e = new VerificationEvent { Id = Guid.NewGuid(), PractitionerId = p.Id, Kind = VerificationEventKind.Approved, ActorUserId = "demo-admin", At = now };
-        await h.Db(async db => { db.Practitioners.Add(p); db.Offerings.Add(o); db.VerificationEvents.Add(e); await db.SaveChangesAsync(); return 0; });
+        var e = new VerificationEvent { Id = Guid.NewGuid(), AgentId = p.Id, Kind = VerificationEventKind.Approved, ActorUserId = "demo-admin", At = now };
+        await h.Db(async db => { db.Agents.Add(p); db.Packages.Add(o); db.VerificationEvents.Add(e); await db.SaveChangesAsync(); return 0; });
         return new(p.Id, o.Id, e.Id);
     }
 
     static async Task<(int p, int o, int e)> Counts(DemoResetHost h) => await h.Db(async db =>
-        (await db.Practitioners.CountAsync(), await db.Offerings.CountAsync(), await db.VerificationEvents.CountAsync()));
+        (await db.Agents.CountAsync(), await db.Packages.CountAsync(), await db.VerificationEvents.CountAsync()));
 
     static Task<HttpResponseMessage> Reset(DemoResetHost h, string? key = DemoResetHost.Key) => h.Internal(key).PostAsync(Url, new StringContent("{}", System.Text.Encoding.UTF8, "application/json"));
 
     static async Task<JsonElement> Body(HttpResponseMessage r) => JsonDocument.Parse(await r.Content.ReadAsStringAsync()).RootElement;
 
     [Fact]
-    public async Task Reset_deletes_demo_slug_practitioners_with_their_offerings_and_events_and_keeps_every_other_row()
+    public async Task Reset_deletes_demo_slug_agents_with_their_packages_and_events_and_keeps_every_other_row()
     {
         await using var h = DemoResetHost.Fake();
         var tag = Guid.NewGuid().ToString("n")[..8];
@@ -57,13 +58,13 @@ public class DemoResetApiTests
         Assert.Equal(2, j.GetProperty("verificationEvents").GetInt32());
 
         Assert.Equal((1, 1, 1), await Counts(h));
-        Assert.Equal(other.Practitioner, await h.Db(db => db.Practitioners.Select(p => p.Id).SingleAsync()));
-        Assert.Equal(other.Offering, await h.Db(db => db.Offerings.Select(p => p.Id).SingleAsync()));
+        Assert.Equal(other.Agent, await h.Db(db => db.Agents.Select(p => p.Id).SingleAsync()));
+        Assert.Equal(other.Package, await h.Db(db => db.Packages.Select(p => p.Id).SingleAsync()));
         Assert.Equal(other.Event, await h.Db(db => db.VerificationEvents.Select(p => p.Id).SingleAsync()));
     }
 
     [Fact]
-    public async Task A_non_demo_practitioner_is_never_touched_even_when_the_only_row_present()
+    public async Task A_non_demo_agent_is_never_touched_even_when_the_only_row_present()
     {
         await using var h = DemoResetHost.Fake();
         await SeedChain(h, "real-" + Guid.NewGuid().ToString("n")[..8], "real-user");

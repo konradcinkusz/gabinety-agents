@@ -63,7 +63,7 @@ public class AdminLedgerTests
     public async Task With_no_period_the_page_shows_this_month_so_far_the_download_and_the_first_entries_as_a_table()
     {
         await using var host = await AdminHost.StartAsync();
-        host.Web.Booking.Respond = _ => CsvOf(Header + Row("ClientCharge", 18000, 1) + Row("Refund", 10000, 2) + Row("PractitionerPayout", 6000, 3));
+        host.Web.Access.Respond = _ => CsvOf(Header + Row("ClientCharge", 18000, 1) + Row("Refund", 10000, 2) + Row("PractitionerPayout", 6000, 3));
         var page = await host.Browser.GetAsync("/admin/ksiega");
 
         Assert.Equal(HttpStatusCode.OK, page.Status);
@@ -81,7 +81,7 @@ public class AdminLedgerTests
         Assert.Equal(["180,00 zł", "100,00 zł", "60,00 zł"], page.All("tbody tr").Select(r => r.QuerySelectorAll("td")[3].TextContent.Replace(' ', ' ')));
         Assert.Equal("Wpisów w okresie: 3.", page.One(".muted")!.TextContent);
         Assert.Equal("region", page.One(".table-wrap")!.GetAttribute("role"));
-        Assert.Contains("ledger.csv?from=", host.Web.Booking.Requests[0].PathAndQuery);
+        Assert.Contains("ledger.csv?from=", host.Web.Access.Requests[0].PathAndQuery);
     }
 
     [Fact]
@@ -89,7 +89,7 @@ public class AdminLedgerTests
     {
         await using var host = await AdminHost.StartAsync();
         var body = new ScriptedBody([ScriptedBody.Bytes(Header), .. Enumerable.Range(1, 500).Select(i => ScriptedBody.Bytes(Row("ClientCharge", 100 + i, 1)))]);
-        host.Web.Booking.Respond = _ => Csv(body);
+        host.Web.Access.Respond = _ => Csv(body);
         var page = await host.Browser.GetAsync($"/admin/ksiega?{Period}");
         Assert.Equal(50, page.All("tbody tr").Count);
         Assert.Contains("Pierwsze 50 wpisów okresu", page.One(".muted")!.TextContent);
@@ -110,14 +110,14 @@ public class AdminLedgerTests
         Assert.Contains(expected, page.TextOf("[data-testid=ledger-period-problem]"));
         Assert.Equal("alert", page.One("[data-testid=ledger-period-problem]")!.GetAttribute("role"));
         Assert.DoesNotContain(page.All("main a"), a => a.TextContent == "Pobierz CSV"); // no download link for a period that would be refused
-        Assert.Equal(0, host.Web.Booking.Calls);
+        Assert.Equal(0, host.Web.Access.Calls);
     }
 
     [Fact]
     public async Task The_presets_follow_the_clock_and_mark_the_chosen_one()
     {
         await using var host = await AdminHost.StartAsync();
-        host.Web.Booking.Respond = _ => CsvOf(Header);
+        host.Web.Access.Respond = _ => CsvOf(Header);
         var page = await host.Browser.GetAsync("/admin/ksiega");
         Assert.Equal(["Ten miesiąc", "Poprzedni miesiąc", "Ten rok"], page.All(".segmented a.chip").Select(a => a.TextContent));
         var last = page.All(".segmented a.chip")[1].GetAttribute("href")!;
@@ -132,7 +132,7 @@ public class AdminLedgerTests
     public async Task A_refused_preview_is_an_alert_with_its_own_words_and_the_page_still_renders(HttpStatusCode status, string expected)
     {
         await using var host = await AdminHost.StartAsync();
-        host.Web.Booking.Respond = _ => FakeBackend.Problem(status, "x_code");
+        host.Web.Access.Respond = _ => FakeBackend.Problem(status, "x_code");
         var page = await host.Browser.GetAsync($"/admin/ksiega?{Period}");
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Contains(expected, page.TextOf("[data-testid=unavailable]"));
@@ -149,7 +149,7 @@ public class AdminLedgerTests
     public async Task A_service_that_refuses_the_role_makes_the_list_a_403_with_the_forbidden_hook_and_no_server_text(string route)
     {
         await using var host = await AdminHost.StartAsync(); // the cookie says Admin; the service says no (a role withdrawn since sign-in): the service is the boundary
-        host.Web.Booking.Respond = host.Web.Reputation.Respond = host.Web.Directory.Respond = _ => FakeBackend.Problem(HttpStatusCode.Forbidden, "forbidden");
+        host.Web.Access.Respond = host.Web.Reputation.Respond = host.Web.Directory.Respond = _ => FakeBackend.Problem(HttpStatusCode.Forbidden, "forbidden");
         var page = await host.Browser.GetAsync(route);
         Assert.Equal(HttpStatusCode.Forbidden, page.Status);
         Assert.Equal(PlAdmin.Forbidden.Body, page.TextOf("[data-testid=forbidden]"));
@@ -162,7 +162,7 @@ public class AdminLedgerTests
     {
         await using var host = await AdminHost.StartAsync();
         var text = Header + Row("ClientCharge", 18000);
-        host.Web.Booking.Respond = _ => CsvOf(text);
+        host.Web.Access.Respond = _ => CsvOf(text);
         var response = await DownloadAsync(host);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -172,7 +172,7 @@ public class AdminLedgerTests
         Assert.Equal("nosniff", response.Headers.GetValues("X-Content-Type-Options").Single());
         Assert.Equal(text, await response.Content.ReadAsStringAsync());
         Assert.Equal("booking_id,kind,amount_minor,currency,created_at", (await response.Content.ReadAsStringAsync()).Split('\n')[0]);
-        var asked = Assert.Single(host.Web.Booking.Requests);
+        var asked = Assert.Single(host.Web.Access.Requests);
         Assert.Equal("/api/v1/admin/ledger.csv?from=2026-12-01&to=2026-12-15", asked.PathAndQuery);
         Assert.StartsWith("Bearer ", asked.Authorization);
         Assert.DoesNotContain(host.Web.Errors, e => e.Contains("Unhandled"));
@@ -185,7 +185,7 @@ public class AdminLedgerTests
         var gate = new TaskCompletionSource();
         // the backend sends two chunks and then waits: the first is read before the response starts, the SECOND goes through the copy loop, so a route that buffers the body hangs on the gate and never delivers it
         var body = new ScriptedBody([ScriptedBody.Bytes(Header + Row("ClientCharge", 18000, 1)), ScriptedBody.Bytes(Row("Refund", 10000, 2)), ScriptedBody.Wait(gate)]);
-        host.Web.Booking.Respond = _ => Csv(body);
+        host.Web.Access.Respond = _ => Csv(body);
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
 
         using var response = await DownloadAsync(host, ct: timeout.Token);
@@ -209,7 +209,7 @@ public class AdminLedgerTests
     public async Task A_backend_that_fails_before_the_first_byte_is_a_503_problem_the_browser_can_show_and_leaks_nothing()
     {
         await using var host = await AdminHost.StartAsync();
-        host.Web.Booking.Respond = _ => Csv(new ScriptedBody(ScriptedBody.Fail()));
+        host.Web.Access.Respond = _ => Csv(new ScriptedBody(ScriptedBody.Fail()));
         var response = await DownloadAsync(host);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType!.MediaType);
@@ -224,7 +224,7 @@ public class AdminLedgerTests
     public async Task A_backend_that_dies_in_the_middle_makes_the_download_FAIL_it_never_ends_as_a_complete_looking_file()
     {
         await using var host = await AdminHost.StartAsync();
-        host.Web.Booking.Respond = _ => Csv(new ScriptedBody(ScriptedBody.Bytes(Header + Row("ClientCharge", 18000)), ScriptedBody.Fail()));
+        host.Web.Access.Respond = _ => Csv(new ScriptedBody(ScriptedBody.Bytes(Header + Row("ClientCharge", 18000)), ScriptedBody.Fail()));
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
         using var response = await DownloadAsync(host, ct: timeout.Token);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode); // the status line was already sent: all the route can do is break the transfer
@@ -250,7 +250,7 @@ public class AdminLedgerTests
         await using var host = await AdminHost.StartAsync();
         var gate = new TaskCompletionSource();
         var body = new ScriptedBody(ScriptedBody.Bytes(Header + Row("ClientCharge", 18000)), ScriptedBody.Wait(gate));
-        host.Web.Booking.Respond = _ => Csv(body);
+        host.Web.Access.Respond = _ => Csv(body);
         using var cancel = new CancellationTokenSource(TimeSpan.FromSeconds(20));
         var response = await DownloadAsync(host, ct: cancel.Token);
         var stream = await response.Content.ReadAsStreamAsync(cancel.Token);
@@ -277,7 +277,7 @@ public class AdminLedgerTests
     public async Task The_backends_refusal_is_mapped_by_status_and_its_own_text_is_never_echoed(HttpStatusCode upstream, HttpStatusCode ours, string code)
     {
         await using var host = await AdminHost.StartAsync();
-        host.Web.Booking.Respond = _ => FakeBackend.Problem(upstream, "upstream_code");
+        host.Web.Access.Respond = _ => FakeBackend.Problem(upstream, "upstream_code");
         var response = await DownloadAsync(host);
         Assert.Equal(ours, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
@@ -299,7 +299,7 @@ public class AdminLedgerTests
         var response = await DownloadAsync(host, query);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Contains("validation_failed", await response.Content.ReadAsStringAsync());
-        Assert.Equal(0, host.Web.Booking.Calls);
+        Assert.Equal(0, host.Web.Access.Calls);
         Assert.False(response.Headers.Contains("Set-Cookie"));
     }
 
@@ -307,7 +307,7 @@ public class AdminLedgerTests
     public async Task A_circuit_open_or_unreachable_backend_is_the_same_503_without_the_cause()
     {
         await using var host = await AdminHost.StartAsync();
-        host.Web.Booking.Respond = FakeBackend.Throw(new HttpRequestException("connect ECONNREFUSED secret-backend-address.internal:5432"));
+        host.Web.Access.Respond = FakeBackend.Throw(new HttpRequestException("connect ECONNREFUSED secret-backend-address.internal:5432"));
         var response = await DownloadAsync(host);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         Assert.DoesNotContain("secret-backend-address", await response.Content.ReadAsStringAsync());

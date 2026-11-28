@@ -13,15 +13,15 @@ public static class Pl
         public const string Copyright = "© {0} Gabinety Tech";
         public const string Terms = "Regulamin", Privacy = "Polityka prywatności", FooterLabel = "Informacje prawne";
         // UX-010: the footer's column titles (the legal column is named by FooterLabel for assistive technology).
-        public const string ProductColumn = "Produkt", PractitionersColumn = "Dla dostawców", LegalColumn = "Prawne";
+        public const string ProductColumn = "Produkt", AgentsColumn = "Dla dostawców", LegalColumn = "Prawne";
     }
 
     public static class Nav
     {
-        public const string Label = "Menu główne", Search = "Agenci", SignIn = "Zaloguj się", Register = "Załóż konto", MyBookings = "Moje dostępy", SignOut = "Wyloguj się";
-        public const string Account = "Konto", ApiKeys = "Klucze API", PractitionerArea = "Panel dostawcy", Admin = "Administracja", Menu = "Menu", AccountMenu = "Twoje konto";
+        public const string Label = "Menu główne", Search = "Agenci", SignIn = "Zaloguj się", Register = "Załóż konto", MyAccesses = "Moje dostępy", SignOut = "Wyloguj się";
+        public const string Account = "Konto", ApiKeys = "Klucze API", AgentArea = "Panel dostawcy", Admin = "Administracja", Menu = "Menu", AccountMenu = "Twoje konto";
         // UX-010: the public links of the header and footer, and the account menu's entry for a signed-in user without a practitioner profile (D-2).
-        public const string HowItWorks = "Jak to działa", Pricing = "Cennik", RankingRules = "Zasady rankingu", BecomePractitioner = "Zostań dostawcą";
+        public const string HowItWorks = "Jak to działa", Pricing = "Cennik", RankingRules = "Zasady rankingu", BecomeAgent = "Zostań dostawcą";
     }
 
     public static class A11y
@@ -57,7 +57,7 @@ public static class Pl
         public const string SearchLabel = "Czego szukasz?", SearchPlaceholder = "np. migracja bazy danych", SearchButton = "Szukaj", SearchRegion = "Wyszukiwarka agentów";
         public const string CategoriesTitle = "Wybierz problem", CategoriesLabel = "Kategorie problemów";
         public const string CategoriesUnavailable = "Nie udało się teraz wczytać kategorii. Możesz przejść do pełnej listy agentów.";
-        public const string AllPractitioners = "Wszyscy agenci";
+        public const string AllAgents = "Wszyscy agenci";
         public const string StepsTitle = "Jak to działa";
         public const string Step1Title = "Znajdź", Step1Body = "Wybierz problem i technologię, a potem porównaj agentów AI.";
         public const string Step2Title = "Wykup dostęp", Step2Body = "Wybierz pakiet, opisz, do czego chcesz użyć agenta, i zapłać z góry. Pakiet jest ważny 30 dni.";
@@ -74,7 +74,7 @@ public static class Pl
         public const string CategoryTechIntro = "Agenci AI w kategorii „{0}”. Przeglądasz wyniki zawężone do wybranej technologii.";
         public const string Count = "Wyniki: {0}", ClearFilters = "Wyczyść filtry", ResultsLabel = "Lista agentów";
         /// <summary>The count line of the result header: <c>6 agentów</c>, <c>1 agent</c>. Numerals 2 to 4 take the genitive plural too: the noun is masculine personal.</summary>
-        public const string CountPhrase = "{0} {1}", PractitionerOne = "agent", PractitionerMany = "agentów";
+        public const string CountPhrase = "{0} {1}", AgentOne = "agent", AgentMany = "agentów";
         public const string EmptyTitle = "Nie ma agentów dla tych filtrów", EmptyBody = "Zmień albo usuń filtry, żeby zobaczyć agentów z innymi kryteriami.";
         public const string ActiveFilters = "Aktywne filtry", RemoveFilter = "usuń filtr", SearchChip = "Szukaj: „{0}”";
         public const string Unavailable = "Nie udało się teraz wczytać listy agentów. Spróbuj ponownie za chwilę.";
@@ -112,7 +112,7 @@ public static class Pl
         public const string Github = "Zaloguj się przez GitHub", Or = "albo", NoAccount = "Nie masz konta?", Summary = "Popraw dane logowania";
         public const string EmailRequired = "Podaj adres e-mail.", PasswordRequired = "Podaj hasło.", EmailInvalid = "Podaj poprawny adres e-mail.";
         public const string SessionExpired = "Sesja wygasła. Zaloguj się ponownie.";
-        public const string BookingContext = "Zaloguj się, aby dokończyć wykup dostępu.", ShowPassword = "Pokaż hasło";
+        public const string AccessContext = "Zaloguj się, aby dokończyć wykup dostępu.", ShowPassword = "Pokaż hasło";
     }
 
     /// <summary>The second step of a two-factor sign-in (<c>/logowanie/kod</c>). The challenge itself is a sealed cookie; nothing of it is shown.</summary>
@@ -132,7 +132,7 @@ public static class Pl
     public static class Register
     {
         public const string Title = "Załóż konto", MetaTitle = "Załóż konto | Gabinety Tech", Email = "Adres e-mail", Password = "Hasło", Submit = "Załóż konto";
-        public const string BookingContext = "Załóż konto, aby dokończyć wykup dostępu.", ShowPassword = "Pokaż hasło";
+        public const string AccessContext = "Załóż konto, aby dokończyć wykup dostępu.", ShowPassword = "Pokaż hasło";
         public const string RuleLength = "co najmniej 8 znaków", RuleCase = "mała i wielka litera", RuleDigit = "cyfra", RuleSymbol = "znak specjalny";
         public const string ConsentPrefix = "Akceptuję ", ConsentAnd = " i ", ConsentSuffix = ".", Terms = "Regulamin", Privacy = "Politykę prywatności";
         public const string VersionTitle = "Wersja z dnia {0}";
@@ -171,13 +171,13 @@ public static class Pl
         public const string Title = "Wylogowanie", MetaTitle = "Wylogowanie | Gabinety Tech", Body = "Czy chcesz się wylogować?", Submit = "Wyloguj się";
     }
 
-    public static class Bookings
+    public static class Accesses
     {
         public const string Title = "Moje dostępy", MetaTitle = "Moje dostępy | Gabinety Tech";
         public const string Upcoming = "Aktywne", Past = "Zakończone", Today = "dziś", Tomorrow = "jutro", InDays = "za {0} dni", StatusFilterLabel = "Filtruj według statusu";
-        public const string RoleLabel = "Pokaż dostępy jako", Client = "Klient", Practitioner = "Dostawca";
+        public const string RoleLabel = "Pokaż dostępy jako", Client = "Klient", Agent = "Dostawca";
         public const string StatusLabel = "Status", AllStatuses = "Wszystkie", Loading = "Ładowanie dostępów…", Empty = "Brak dostępów w tym widoku.", More = "Pokaż więcej";
-        public const string PartyPractitioner = "Agent", PartyClient = "Klient";
+        public const string PartyAgent = "Agent", PartyClient = "Klient";
         public const string SignedOut = "Sesja wygasła. Zaloguj się ponownie.", SignInAgain = "Zaloguj się";
         public const string ErrorNetwork = "Brak połączenia z usługą dostępów. Spróbuj ponownie za chwilę.", ErrorUnavailable = "Dostępy są chwilowo niedostępne. Spróbuj ponownie za chwilę.";
         public const string ErrorRateLimited = "Zbyt wiele zapytań. Spróbuj ponownie za chwilę.", ErrorForbidden = "Nie masz dostępu do tych dostępów.", ErrorGeneric = "Nie udało się wczytać dostępów.";

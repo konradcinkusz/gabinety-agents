@@ -49,8 +49,8 @@ public sealed class StripeMockIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task Create_checkout_is_accepted_by_the_API_shape_and_returns_a_session_id_and_a_url()
     {
-        var booking = Guid.NewGuid();
-        var r = await provider.CreateCheckoutAsync(new CheckoutRequest(booking, 12500, "PLN", "demo-offering ć", "https://demo.invalid/bookings/" + booking), default);
+        var access = Guid.NewGuid();
+        var r = await provider.CreateCheckoutAsync(new CheckoutRequest(access, 12500, "PLN", "demo-offering ć", "https://demo.invalid/bookings/" + access), default);
         Assert.StartsWith("cs_", r.ProviderPaymentId);
         Assert.StartsWith("http", r.CheckoutUrl);
         Assert.Contains((HttpMethod.Post, "/v1/checkout/sessions", HttpStatusCode.OK), recorder.Calls);

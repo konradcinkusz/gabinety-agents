@@ -37,7 +37,7 @@ public sealed class MigrationHostedService(IServiceProvider services, MigrationS
             await started.Task.WaitAsync(stoppingToken);
 
             using var scope = services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AccessDbContext>();
             if (!db.Database.IsRelational()) { state.Set(MigrationStatus.Done); return; } // InMemory: nothing to migrate
 
             state.Set(MigrationStatus.Migrating);

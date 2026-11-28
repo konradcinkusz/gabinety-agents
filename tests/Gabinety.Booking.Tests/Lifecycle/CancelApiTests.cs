@@ -3,7 +3,7 @@ using Gabinety.Billing;
 using Gabinety.Booking.Features.Lifecycle.Core;
 using Gabinety.Booking.Features.Payments;
 using Gabinety.Contracts.Booking;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -18,7 +18,7 @@ public class CancelApiTests
     {
         var p = new RecordingProvider();
         await using var h = Life.Host(p);
-        var id = await Life.Seed(h, BookingStatus.Confirmed, H24);
+        var id = await Life.Seed(h, AccessStatus.Confirmed, H24);
         var r = await Life.Cancel(h, id, Life.Client);
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
         var view = await r.Body();
@@ -27,7 +27,7 @@ public class CancelApiTests
         Assert.Equal("Refunded", view.GetProperty("payment").GetProperty("status").GetString());
 
         var row = await Life.Row(h, id);
-        Assert.Equal(BookingStatus.CancelledByClient, row.Status);
+        Assert.Equal(AccessStatus.CancelledByClient, row.Status);
         Assert.Equal(h.Clock.GetUtcNow(), row.CancelledAt);
         Assert.Null(row.PayoutDueAt);
         var pay = await Life.PaymentOf(h, id);
@@ -50,7 +50,7 @@ public class CancelApiTests
     {
         var p = new RecordingProvider();
         await using var h = Life.Host(p);
-        var id = await Life.Seed(h, BookingStatus.Confirmed, TimeSpan.FromSeconds(startInSeconds), TimeSpan.FromDays(30));
+        var id = await Life.Seed(h, AccessStatus.Confirmed, TimeSpan.FromSeconds(startInSeconds), TimeSpan.FromDays(30));
         var r = await Life.Cancel(h, id, Life.Client);
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
         Assert.Equal("CancelledByClient", (await r.Body()).GetProperty("status").GetString());
@@ -65,25 +65,25 @@ public class CancelApiTests
     {
         var p = new RecordingProvider();
         await using var h = Life.Host(p);
-        var id = await Life.Seed(h, BookingStatus.Confirmed, TimeSpan.Zero, TimeSpan.FromDays(30), unitsUsed: 1);
+        var id = await Life.Seed(h, AccessStatus.Confirmed, TimeSpan.Zero, TimeSpan.FromDays(30), unitsUsed: 1);
         var r = await Life.Cancel(h, id, Life.Client);
         Assert.Equal(HttpStatusCode.Conflict, r.StatusCode);
         Assert.Equal("invalid_transition", await Code(r));
         Assert.Empty(p.Refunds);
-        Assert.Equal(BookingStatus.Confirmed, (await Life.Row(h, id)).Status);
+        Assert.Equal(AccessStatus.Confirmed, (await Life.Row(h, id)).Status);
         Assert.Equal(PaymentStatus.Succeeded, (await Life.PaymentOf(h, id)).Status);
     }
 
     [Fact]
-    public async Task The_practitioner_may_still_withdraw_a_package_that_was_used()
+    public async Task The_agent_may_still_withdraw_a_package_that_was_used()
     {
         var p = new RecordingProvider();
         await using var h = Life.Host(p);
-        var id = await Life.Seed(h, BookingStatus.Confirmed, TimeSpan.Zero, TimeSpan.FromDays(30), unitsUsed: 2);
-        var r = await Life.Cancel(h, id, Life.Practitioner);
+        var id = await Life.Seed(h, AccessStatus.Confirmed, TimeSpan.Zero, TimeSpan.FromDays(30), unitsUsed: 2);
+        var r = await Life.Cancel(h, id, Life.Agent);
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
         Assert.Equal(10000, Assert.Single(p.Refunds).AmountMinor);
-        Assert.Equal(BookingStatus.CancelledByPractitioner, (await Life.Row(h, id)).Status);
+        Assert.Equal(AccessStatus.CancelledByPractitioner, (await Life.Row(h, id)).Status);
     }
 
     [Theory]
@@ -91,12 +91,12 @@ public class CancelApiTests
     [InlineData(60 * 60 * 2)]       // two hours ahead
     [InlineData(-30 * 60)]          // in progress
     [InlineData(-(60 * 60 - 1))]    // 1 s before the end of a 1 h session that started 59 m 59 s ago
-    public async Task A_practitioner_cancel_always_refunds_in_full_before_the_end(int startInSeconds)
+    public async Task A_agent_cancel_always_refunds_in_full_before_the_end(int startInSeconds)
     {
         var p = new RecordingProvider();
         await using var h = Life.Host(p);
-        var id = await Life.Seed(h, BookingStatus.Confirmed, TimeSpan.FromSeconds(startInSeconds));
-        var r = await Life.Cancel(h, id, Life.Practitioner, "demo-reason");
+        var id = await Life.Seed(h, AccessStatus.Confirmed, TimeSpan.FromSeconds(startInSeconds));
+        var r = await Life.Cancel(h, id, Life.Agent, "demo-reason");
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
         Assert.Equal("CancelledByPractitioner", (await r.Body()).GetProperty("status").GetString());
         var pay = await Life.PaymentOf(h, id);
@@ -107,16 +107,16 @@ public class CancelApiTests
     }
 
     [Fact]
-    public async Task A_practitioner_cancel_at_or_after_the_end_is_409()
+    public async Task A_agent_cancel_at_or_after_the_end_is_409()
     {
         var p = new RecordingProvider();
         await using var h = Life.Host(p);
-        var id = await Life.Seed(h, BookingStatus.Confirmed, -TimeSpan.FromHours(1)); // ends exactly now
-        var r = await Life.Cancel(h, id, Life.Practitioner);
+        var id = await Life.Seed(h, AccessStatus.Confirmed, -TimeSpan.FromHours(1)); // ends exactly now
+        var r = await Life.Cancel(h, id, Life.Agent);
         Assert.Equal(HttpStatusCode.Conflict, r.StatusCode);
         Assert.Equal("invalid_transition", await Code(r));
         Assert.Empty(p.Refunds);
-        Assert.Equal(BookingStatus.Confirmed, (await Life.Row(h, id)).Status);
+        Assert.Equal(AccessStatus.Confirmed, (await Life.Row(h, id)).Status);
     }
 
     [Fact]
@@ -124,24 +124,24 @@ public class CancelApiTests
     {
         var p = new RecordingProvider();
         await using var h = Life.Host(p);
-        var id = await Life.Seed(h, BookingStatus.Confirmed, H24);
+        var id = await Life.Seed(h, AccessStatus.Confirmed, H24);
         var r = await Life.Cancel(h, id, "demo-someone-else");
         Assert.Equal(HttpStatusCode.NotFound, r.StatusCode);
         Assert.Equal("not_found", await Code(r));
         Assert.Equal(HttpStatusCode.NotFound, (await Life.Cancel(h, Guid.NewGuid(), Life.Client)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await Life.Cancel(h, id, null)).StatusCode);
         Assert.Empty(p.Refunds);
-        Assert.Equal(BookingStatus.Confirmed, (await Life.Row(h, id)).Status);
+        Assert.Equal(AccessStatus.Confirmed, (await Life.Row(h, id)).Status);
     }
 
     [Theory]
     [MemberData(nameof(IllegalPairs))]
-    public async Task Cancelling_from_any_status_but_Confirmed_is_409_invalid_transition(BookingStatus status, bool byClient)
+    public async Task Cancelling_from_any_status_but_Confirmed_is_409_invalid_transition(AccessStatus status, bool byClient)
     {
         var p = new RecordingProvider();
         await using var h = Life.Host(p);
         var id = await Life.Seed(h, status, H24 * 2);
-        var r = await Life.Cancel(h, id, byClient ? Life.Client : Life.Practitioner);
+        var r = await Life.Cancel(h, id, byClient ? Life.Client : Life.Agent);
         Assert.Equal(HttpStatusCode.Conflict, r.StatusCode);
         Assert.Equal("invalid_transition", await Code(r));
         Assert.Empty(p.Refunds);
@@ -149,10 +149,10 @@ public class CancelApiTests
         Assert.DoesNotContain(await Life.Ledger(h, id), l => l.Kind == LedgerKind.Refund);
     }
 
-    public static TheoryData<BookingStatus, bool> IllegalPairs()
+    public static TheoryData<AccessStatus, bool> IllegalPairs()
     {
-        var d = new TheoryData<BookingStatus, bool>();
-        foreach (var s in Enum.GetValues<BookingStatus>().Where(s => s != BookingStatus.Confirmed))
+        var d = new TheoryData<AccessStatus, bool>();
+        foreach (var s in Enum.GetValues<AccessStatus>().Where(s => s != AccessStatus.Confirmed))
         { d.Add(s, true); d.Add(s, false); }
         return d; // nine statuses, both callers; the tenth (Confirmed) is the legal one covered above
     }
@@ -162,21 +162,21 @@ public class CancelApiTests
     {
         var p = new RecordingProvider();
         await using var h = Life.Host(p);
-        var id = await Life.Seed(h, BookingStatus.Confirmed, H24);
+        var id = await Life.Seed(h, AccessStatus.Confirmed, H24);
         Assert.Equal(HttpStatusCode.OK, (await Life.Cancel(h, id, Life.Client)).StatusCode);
         var again = await Life.Cancel(h, id, Life.Client);
         Assert.Equal(HttpStatusCode.Conflict, again.StatusCode);
-        Assert.Equal(HttpStatusCode.Conflict, (await Life.Cancel(h, id, Life.Practitioner)).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await Life.Cancel(h, id, Life.Agent)).StatusCode);
         Assert.Single(p.Refunds);
         Assert.Single(await Life.RefundRows(h, id));
     }
 
     [Fact]
-    public async Task The_idempotency_key_is_stable_per_booking_and_reason_and_a_replayed_provider_confirmation_does_not_double_record()
+    public async Task The_idempotency_key_is_stable_per_access_and_reason_and_a_replayed_provider_confirmation_does_not_double_record()
     {
         var p = new RecordingProvider();
         await using var h = Life.Host(p);
-        var id = await Life.Seed(h, BookingStatus.Confirmed, H24);
+        var id = await Life.Seed(h, AccessStatus.Confirmed, H24);
         Assert.Equal(HttpStatusCode.OK, (await Life.Cancel(h, id, Life.Client)).StatusCode);
         var key = Assert.Single(p.Refunds).IdempotencyKey;
         Assert.Equal(key, RefundCoordinator.IdempotencyKey(id, RefundReason.ClientCancelledEarly));
@@ -195,11 +195,11 @@ public class CancelApiTests
     {
         var p = new RecordingProvider("Acme", "whsec-demo");
         await using var h = Life.Host(p, x => x.Settings["Payments:WebhookSecret"] = "whsec-demo");
-        var id = await Life.Seed(h, BookingStatus.Confirmed, H24, provider: "Acme");
-        var r = await Life.Cancel(h, id, Life.Practitioner);
+        var id = await Life.Seed(h, AccessStatus.Confirmed, H24, provider: "Acme");
+        var r = await Life.Cancel(h, id, Life.Agent);
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
         Assert.Single(p.Refunds);
-        Assert.Equal(BookingStatus.CancelledByPractitioner, (await Life.Row(h, id)).Status);
+        Assert.Equal(AccessStatus.CancelledByPractitioner, (await Life.Row(h, id)).Status);
         Assert.Equal(0, (await Life.PaymentOf(h, id)).RefundedMinor);
         Assert.DoesNotContain(await Life.Ledger(h, id), l => l.Kind == LedgerKind.Refund);
 
@@ -215,13 +215,13 @@ public class CancelApiTests
         const string secret = "demo-private-reason-ZXQ-98765";
         var p = new RecordingProvider();
         await using var h = Life.Host(p);
-        var id = await Life.Seed(h, BookingStatus.Confirmed, H24);
+        var id = await Life.Seed(h, AccessStatus.Confirmed, H24);
         var r = await Life.Cancel(h, id, Life.Client, $"   {secret}   ");
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
         Assert.Equal(secret, (await Life.Row(h, id)).StatusReason);
 
         // A rejected cancel (409) and a too-long reason must not leak it either.
-        var id2 = await Life.Seed(h, BookingStatus.Completed, H24);
+        var id2 = await Life.Seed(h, AccessStatus.Completed, H24);
         Assert.Equal(HttpStatusCode.Conflict, (await Life.Cancel(h, id2, Life.Client, secret)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await Life.Cancel(h, id2, "demo-other", secret)).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await Life.Cancel(h, id, Life.Client, secret + new string('x', 500))).StatusCode);
@@ -233,8 +233,8 @@ public class CancelApiTests
     public async Task A_blank_reason_is_stored_as_null_and_a_500_char_reason_is_accepted()
     {
         await using var h = Life.Host(new RecordingProvider());
-        var a = await Life.Seed(h, BookingStatus.Confirmed, H24);
-        var b = await Life.Seed(h, BookingStatus.Confirmed, H24);
+        var a = await Life.Seed(h, AccessStatus.Confirmed, H24);
+        var b = await Life.Seed(h, AccessStatus.Confirmed, H24);
         Assert.Equal(HttpStatusCode.OK, (await Life.Cancel(h, a, Life.Client, "   ")).StatusCode);
         Assert.Null((await Life.Row(h, a)).StatusReason);
         Assert.Equal(HttpStatusCode.OK, (await Life.Cancel(h, b, Life.Client, new string('r', 500))).StatusCode);
@@ -245,17 +245,17 @@ public class CancelApiTests
     public async Task A_cancel_with_no_body_at_all_works()
     {
         await using var h = Life.Host(new RecordingProvider());
-        var id = await Life.Seed(h, BookingStatus.Confirmed, H24);
+        var id = await Life.Seed(h, AccessStatus.Confirmed, H24);
         var r = await h.ClientFor(Life.Client).PostAsync($"/api/v1/bookings/{id}/cancel", null);
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
     }
 
     [Fact]
-    public async Task The_full_path_works_from_a_booking_created_and_paid_through_the_API()
+    public async Task The_full_path_works_from_a_access_created_and_paid_through_the_API()
     {
         var p = new RecordingProvider();
         await using var h = Life.Host(p);
-        var (id, _) = await Pay.CreateBooking(h, Life.Client); // valid from now for 30 days, nothing used
+        var (id, _) = await Pay.CreateAccess(h, Life.Client); // valid from now for 30 days, nothing used
         Assert.Equal(HttpStatusCode.OK, (await Pay.Simulate(h.ClientFor(Life.Client), id, "succeeded")).StatusCode);
         var r = await Life.Cancel(h, id, Life.Client);
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
@@ -268,26 +268,26 @@ public class CancelApiTests
     {
         var hook = new CapturingHook();
         var p = new RecordingProvider();
-        await using var h = Life.Host(p, x => x.Configure += s => s.AddSingleton<IBookingTransitionHook>(hook));
-        var id = await Life.Seed(h, BookingStatus.Confirmed, H24);
+        await using var h = Life.Host(p, x => x.Configure += s => s.AddSingleton<IAccessTransitionHook>(hook));
+        var id = await Life.Seed(h, AccessStatus.Confirmed, H24);
         Assert.Equal(HttpStatusCode.OK, (await Life.Cancel(h, id, Life.Client)).StatusCode);
         var seen = Assert.Single(hook.Seen);
-        Assert.Equal((id, BookingStatus.Confirmed, BookingStatus.CancelledByClient, BookingTrigger.ClientCancels), seen);
+        Assert.Equal((id, AccessStatus.Confirmed, AccessStatus.CancelledByClient, AccessTrigger.ClientCancels), seen);
 
         hook.Fail = true;
-        var id2 = await Life.Seed(h, BookingStatus.Confirmed, H24);
+        var id2 = await Life.Seed(h, AccessStatus.Confirmed, H24);
         await Assert.ThrowsAnyAsync<Exception>(async () => { var r = await Life.Cancel(h, id2, Life.Client); r.EnsureSuccessStatusCode(); });
-        Assert.Equal(BookingStatus.Confirmed, (await Life.Row(h, id2)).Status);
+        Assert.Equal(AccessStatus.Confirmed, (await Life.Row(h, id2)).Status);
     }
 
-    sealed class CapturingHook : IBookingTransitionHook
+    sealed class CapturingHook : IAccessTransitionHook
     {
-        public List<(Guid, BookingStatus, BookingStatus, BookingTrigger)> Seen { get; } = [];
+        public List<(Guid, AccessStatus, AccessStatus, AccessTrigger)> Seen { get; } = [];
         public bool Fail { get; set; }
-        public Task OnTransitionAsync(BookingTransitionContext c, CancellationToken ct)
+        public Task OnTransitionAsync(AccessTransitionContext c, CancellationToken ct)
         {
             if (Fail) throw new InvalidOperationException("demo hook failure");
-            Seen.Add((c.Booking.Id, c.From, c.To, c.Trigger));
+            Seen.Add((c.Access.Id, c.From, c.To, c.Trigger));
             return Task.CompletedTask;
         }
     }

@@ -4,8 +4,8 @@ using Gabinety.Booking.Jobs.Base;
 using Gabinety.Booking.Persistence;
 using Gabinety.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessEntity = Gabinety.Booking.Features.Accesses.Entities.Access;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Jobs.HoldExpiry;
 
@@ -13,7 +13,7 @@ namespace Gabinety.Booking.Jobs.HoldExpiry;
 /// Expires the holds that ran out (CONTRACTS 8.1: <c>PendingPayment</c> to <c>Expired</c> when <c>hold_expires_at &lt;= now</c>). The slot is free from then on because
 /// <c>Expired</c> is outside the no-overlap constraint's status set. Each cycle takes the due bookings oldest first in batches (<c>Jobs:HoldExpiry:BatchSize</c>, 50) until none
 /// are left or <c>Jobs:HoldExpiry:MaxPerRun</c> (500) were handled; the rest waits for the next cycle.
-/// Every booking is its own transaction through <see cref="BookingTransitions"/>, so one failing row never blocks another, and the transition re-checks status and hold under the row
+/// Every booking is its own transaction through <see cref="AccessTransitions"/>, so one failing row never blocks another, and the transition re-checks status and hold under the row
 /// lock: a booking paid or expired meanwhile (by another run, another instance or the webhook) is a no-op, not an error. The payment stays <c>Created</c>, so a payment that succeeds later is
 /// refunded in full by the webhook handler. Idempotent, and safe in two processes at once.
 /// </summary>
@@ -60,13 +60,13 @@ public class HoldExpiryJob(IServiceScopeFactory scopes, TimeProvider time, IConf
     }
 
     /// <summary>Narrows what the job looks at. The default is everything; a test sharing a database with other tests restricts it to its own rows.</summary>
-    protected virtual IQueryable<BookingEntity> Scope(IQueryable<BookingEntity> bookings) => bookings;
+    protected virtual IQueryable<AccessEntity> Scope(IQueryable<AccessEntity> accesses) => accesses;
 
     async Task<List<Guid>> SelectDueAsync(DateTimeOffset now, List<Guid> exclude, int take, CancellationToken ct)
     {
         using var scope = scopes.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
-        var due = Scope(db.Bookings.AsNoTracking()).Where(b => b.Status == BookingStatus.PendingPayment && b.HoldExpiresAt <= now);
+        var db = scope.ServiceProvider.GetRequiredService<AccessDbContext>();
+        var due = Scope(db.Accesses.AsNoTracking()).Where(b => b.Status == AccessStatus.PendingPayment && b.HoldExpiresAt <= now);
         if (exclude.Count > 0) due = due.Where(b => !exclude.Contains(b.Id));
         return await due.OrderBy(b => b.HoldExpiresAt).ThenBy(b => b.Id).Select(b => b.Id).Take(take).ToListAsync(ct);
     }
@@ -79,8 +79,8 @@ public class HoldExpiryJob(IServiceScopeFactory scopes, TimeProvider time, IConf
             try
             {
                 using var scope = scopes.CreateScope(); // one context, one transaction per booking
-                var transitions = scope.ServiceProvider.GetRequiredService<BookingTransitions>();
-                var result = await transitions.ApplyAsync(new TransitionRequest(id, BookingTrigger.HoldExpired, now) { Precondition = b => b.HoldExpiresAt <= now }, ct);
+                var transitions = scope.ServiceProvider.GetRequiredService<AccessTransitions>();
+                var result = await transitions.ApplyAsync(new TransitionRequest(id, AccessTrigger.HoldExpired, now) { Precondition = b => b.HoldExpiresAt <= now }, ct);
                 if (result.Applied) applied++; // Invalid (moved meanwhile, or the hold is not due) and NotFound are no-ops
             }
             catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)

@@ -69,7 +69,7 @@
                         <tr>
                             <th scope="col">@PlAdmin.Ledger.ColDate</th>
                             <th scope="col">@PlAdmin.Ledger.ColKind</th>
-                            <th scope="col">@PlAdmin.Ledger.ColBooking</th>
+                            <th scope="col">@PlAdmin.Ledger.ColAccess</th>
                             <th scope="col" class="num">@PlAdmin.Ledger.ColAmount</th>
                         </tr>
                     </thead>
@@ -79,7 +79,7 @@
                             <tr>
                                 <td data-label="@PlAdmin.Ledger.ColDate"><time datetime="@row.CreatedAt.ToString("O")">@AdminFormat.When(row.CreatedAt)</time></td>
                                 <td data-label="@PlAdmin.Ledger.ColKind">@AdminFormat.LedgerKind(row.Kind)</td>
-                                <td data-label="@PlAdmin.Ledger.ColBooking"><span class="ledger-ref" title="@row.BookingId.ToString("D")">@AdminFormat.IdTail(row.BookingId)</span></td>
+                                <td data-label="@PlAdmin.Ledger.ColAccess"><span class="ledger-ref" title="@row.AccessId.ToString("D")">@AdminFormat.IdTail(row.AccessId)</span></td>
                                 <td data-label="@PlAdmin.Ledger.ColAmount" class="num">@AdminFormat.Pln(row.AmountMinor)</td>
                             </tr>
                         }

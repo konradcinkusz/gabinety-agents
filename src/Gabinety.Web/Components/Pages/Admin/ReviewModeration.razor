@@ -32,8 +32,8 @@
                         <AdminBadge Kind="AdminFormat.ReviewStatusKind(r.Status)">@AdminFormat.ReviewStatus(r.Status)</AdminBadge>
                     </div>
                     <dl class="admin-facts">
-                        <dt>@PlAdmin.Reviews.Practitioner</dt>
-                        <dd><span title="@r.PractitionerId">@(_names.TryGetValue(r.PractitionerId, out var name) ? name : string.Format(PlAdmin.Common.PractitionerRef, AdminFormat.ShortRef(r.PractitionerId)))</span></dd>
+                        <dt>@PlAdmin.Reviews.Agent</dt>
+                        <dd><span title="@r.AgentId">@(_names.TryGetValue(r.AgentId, out var name) ? name : string.Format(PlAdmin.Common.AgentRef, AdminFormat.ShortRef(r.AgentId)))</span></dd>
                         @if (r.CreatedAt is { } created) {<dt>@PlAdmin.Reviews.Created</dt><dd><time datetime="@created.ToString("O")">@AdminFormat.When(created)</time></dd>}
                         @if (_status == ReviewRules.Published && r.PublishedAt is { } published) {<dt>@PlAdmin.Reviews.PublishedAt</dt><dd><time datetime="@published.ToString("O")">@AdminFormat.When(published)</time></dd>}
                         <dt>@PlAdmin.Reviews.Triage</dt><dd>@AdminFormat.Triage(r.TriageFlag)</dd>
@@ -122,7 +122,7 @@
         (_failure, _next) = (result.Failure, result.Value?.NextCursor);
         if (!result.IsOk) return;
         _items.AddRange(result.Value!.Items);
-        _names = await Api.PractitionerNames(_items.Select(r => r.PractitionerId));
+        _names = await Api.AgentNames(_items.Select(r => r.AgentId));
     }
 
     Task PublishAsync(Guid id) => DecideAsync(id, () => Api.PublishReview(id), "admin-review-published");

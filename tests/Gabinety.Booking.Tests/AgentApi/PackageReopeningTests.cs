@@ -10,8 +10,8 @@ using Gabinety.Contracts.Directory;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessEntity = Gabinety.Booking.Features.Accesses.Entities.Access;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -32,7 +32,7 @@ static class Reopen
     /// <summary>A confirmed <c>Tasks</c> package of <paramref name="total"/> units with every unit ordered through the real endpoint (so each has a queued task and a used unit).</summary>
     public static async Task<(Guid Package, List<Guid> Tasks)> Ordered(CreateHost h, string client, string slug, Guid offer, long total = 1, TimeSpan? validFor = null)
     {
-        var package = await AgentApiFx.Package(h, client, slug, OfferingKind.Tasks, total, offering: offer, validFor: validFor);
+        var package = await AgentApiFx.Package(h, client, slug, PackageKind.Tasks, total, package: offer, validFor: validFor);
         var tasks = new List<Guid>();
         for (var i = 0; i < total; i++)
             tasks.Add((await (await h.ClientFor(client).PostAsJsonAsync($"/api/v1/bookings/{package}/tasks", new { input = Input })).Body()).GetProperty("id").GetGuid());
@@ -57,10 +57,10 @@ public class PackageReopeningTests
 
     // ---- the rule on the row (pure)
 
-    static BookingEntity Row(Action<BookingEntity>? tweak = null)
+    static AccessEntity Row(Action<AccessEntity>? tweak = null)
     {
         var now = new DateTimeOffset(2026, 12, 1, 9, 0, 0, TimeSpan.Zero);
-        var b = new BookingEntity { Status = BookingStatus.Completed, Kind = OfferingKind.Tasks, UnitsTotal = 3, UnitsUsed = 2, StartUtc = now.AddDays(-1), EndUtc = now.AddDays(29) };
+        var b = new AccessEntity { Status = AccessStatus.Completed, Kind = PackageKind.Tasks, UnitsTotal = 3, UnitsUsed = 2, StartUtc = now.AddDays(-1), EndUtc = now.AddDays(29) };
         tweak?.Invoke(b);
         return b;
     }
@@ -84,10 +84,10 @@ public class PackageReopeningTests
         {
             switch (what)
             {
-                case "status-confirmed": x.Status = BookingStatus.Confirmed; break;
-                case "status-disputed": x.Status = BookingStatus.Disputed; break;
-                case "status-resolved": x.Status = BookingStatus.Resolved; break;
-                case "chat": x.Kind = OfferingKind.Chat; break;
+                case "status-confirmed": x.Status = AccessStatus.Confirmed; break;
+                case "status-disputed": x.Status = AccessStatus.Disputed; break;
+                case "status-resolved": x.Status = AccessStatus.Resolved; break;
+                case "chat": x.Kind = PackageKind.Chat; break;
                 case "no-free-unit": x.UnitsUsed = 3; break;
                 case "legacy-no-units": x.UnitsTotal = 0; x.UnitsUsed = 0; break;
                 case "ended": x.EndUtc = Now; break; // the end itself is already too late
@@ -107,7 +107,7 @@ public class PackageReopeningTests
 
         Assert.Equal(1, await Reopen.Complete(h)); // the unit is used up: the job completes the package
         var done = await Life.Row(h, package);
-        Assert.Equal(BookingStatus.Completed, done.Status);
+        Assert.Equal(AccessStatus.Completed, done.Status);
         Assert.NotNull(done.FeeMinor); Assert.NotNull(done.PayoutMinor); Assert.NotNull(done.PayoutDueAt); Assert.NotNull(done.EndedAt);
         Assert.Single(await Reopen.Ledger(h, package), l => l.Kind == LedgerKind.PlatformFee);
 
@@ -115,7 +115,7 @@ public class PackageReopeningTests
         Assert.Equal(AgentTaskStatus.Failed, (await TaskFx.Task(h, tasks[0])).Status);
 
         var b = await Life.Row(h, package);
-        Assert.Equal((BookingStatus.Confirmed, 0L), (b.Status, b.UnitsUsed)); // the client has the unit back and may use it
+        Assert.Equal((AccessStatus.Confirmed, 0L), (b.Status, b.UnitsUsed)); // the client has the unit back and may use it
         Assert.Equal((null, null, null, null), (b.FeeMinor, b.PayoutMinor, b.PayoutDueAt, b.EndedAt));
         Assert.DoesNotContain(await Reopen.Ledger(h, package), l => l.Kind == LedgerKind.PlatformFee);
         Assert.Equal(0, await Reopen.Complete(h)); // not due any more: the unit is free
@@ -133,7 +133,7 @@ public class PackageReopeningTests
         Assert.Equal(HttpStatusCode.Accepted, again.StatusCode);
         Assert.Equal(1, await Reopen.Complete(h));
         var b = await Life.Row(h, package);
-        Assert.Equal(BookingStatus.Completed, b.Status);
+        Assert.Equal(AccessStatus.Completed, b.Status);
         Assert.NotNull(b.FeeMinor);
         Assert.Single(await Reopen.Ledger(h, package), l => l.Kind == LedgerKind.PlatformFee); // the pair was free again: exactly one fee row, not zero and not two
     }
@@ -154,7 +154,7 @@ public class PackageReopeningTests
         await Reopen.FailAll(h, Me);
 
         var b = await Life.Row(h, package);
-        Assert.Equal((BookingStatus.Confirmed, 1L), (b.Status, b.UnitsUsed)); // one unit is free again
+        Assert.Equal((AccessStatus.Confirmed, 1L), (b.Status, b.UnitsUsed)); // one unit is free again
         Assert.Equal(AgentTaskStatus.Failed, (await TaskFx.Task(h, tasks[1])).Status);
         Assert.Equal((AgentTaskStatus.Succeeded, "demo-answer"), ((await TaskFx.Task(h, tasks[0])).Status, (await TaskFx.Task(h, tasks[0])).OutputText));
     }
@@ -170,7 +170,7 @@ public class PackageReopeningTests
         await Reopen.FailAll(h, Me);
 
         var b = await Life.Row(h, package);
-        Assert.Equal((BookingStatus.Completed, 0L), (b.Status, b.UnitsUsed));
+        Assert.Equal((AccessStatus.Completed, 0L), (b.Status, b.UnitsUsed));
         Assert.Equal((before.FeeMinor, before.PayoutMinor, before.PayoutDueAt, before.EndedAt), (b.FeeMinor, b.PayoutMinor, b.PayoutDueAt, b.EndedAt));
         Assert.Single(await Reopen.Ledger(h, package), l => l.Kind == LedgerKind.PlatformFee);
     }
@@ -187,28 +187,28 @@ public class PackageReopeningTests
         var before = await Life.Row(h, package);
         await h.Seed(db =>
         {
-            db.Payouts.Add(new Payout { Id = Guid.NewGuid(), BookingId = package, PractitionerId = h.Practitioner, AmountMinor = before.PayoutMinor!.Value, Status = status, ProviderRef = "demo-ref", CreatedAt = h.Clock.GetUtcNow(), SentAt = h.Clock.GetUtcNow() });
-            if (withLedgerEntry) db.LedgerEntries.Add(new LedgerEntry { Id = Guid.NewGuid(), BookingId = package, Kind = LedgerKind.PractitionerPayout, AmountMinor = before.PayoutMinor!.Value, CreatedAt = h.Clock.GetUtcNow() });
+            db.Payouts.Add(new Payout { Id = Guid.NewGuid(), AccessId = package, AgentId = h.Agent, AmountMinor = before.PayoutMinor!.Value, Status = status, ProviderRef = "demo-ref", CreatedAt = h.Clock.GetUtcNow(), SentAt = h.Clock.GetUtcNow() });
+            if (withLedgerEntry) db.LedgerEntries.Add(new LedgerEntry { Id = Guid.NewGuid(), AccessId = package, Kind = LedgerKind.PractitionerPayout, AmountMinor = before.PayoutMinor!.Value, CreatedAt = h.Clock.GetUtcNow() });
         });
         await Reopen.FailAll(h, Me);
 
         var b = await Life.Row(h, package);
-        Assert.Equal((BookingStatus.Completed, 0L), (b.Status, b.UnitsUsed));
+        Assert.Equal((AccessStatus.Completed, 0L), (b.Status, b.UnitsUsed));
         Assert.Equal((before.FeeMinor, before.PayoutMinor, before.PayoutDueAt), (b.FeeMinor, b.PayoutMinor, b.PayoutDueAt));
         Assert.Single(await Reopen.Ledger(h, package), l => l.Kind == LedgerKind.PlatformFee);
         Assert.Equal(withLedgerEntry ? 1 : 0, (await Reopen.Ledger(h, package)).Count(l => l.Kind == LedgerKind.PractitionerPayout));
     }
 
     [Theory]
-    [InlineData(BookingStatus.Disputed)]
-    [InlineData(BookingStatus.Resolved)]
-    [InlineData(BookingStatus.CancelledByPractitioner)]
-    public async Task A_package_in_a_claim_or_cancelled_keeps_its_status_and_gets_its_unit_back(BookingStatus status)
+    [InlineData(AccessStatus.Disputed)]
+    [InlineData(AccessStatus.Resolved)]
+    [InlineData(AccessStatus.CancelledByPractitioner)]
+    public async Task A_package_in_a_claim_or_cancelled_keeps_its_status_and_gets_its_unit_back(AccessStatus status)
     {
         await using var h = Reopen.Host();
-        var package = await AgentApiFx.Package(h, Me, Slug, OfferingKind.Tasks, total: 1, used: 1, status: status, offering: Offer);
+        var package = await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, total: 1, used: 1, status: status, package: Offer);
         var task = Guid.NewGuid();
-        await h.Seed(db => db.AgentTasks.Add(new AgentTask { Id = task, BookingId = package, ClientUserId = Me, PractitionerSlug = Slug, OfferingId = Offer, Status = AgentTaskStatus.Queued, InputText = Reopen.Input, CreatedAt = h.Clock.GetUtcNow() }));
+        await h.Seed(db => db.AgentTasks.Add(new AgentTask { Id = task, AccessId = package, ClientUserId = Me, AgentSlug = Slug, PackageId = Offer, Status = AgentTaskStatus.Queued, InputText = Reopen.Input, CreatedAt = h.Clock.GetUtcNow() }));
         await Reopen.FailAll(h, Me);
         var b = await Life.Row(h, package);
         Assert.Equal((status, 0L), (b.Status, b.UnitsUsed));
@@ -224,7 +224,7 @@ public class PackageReopeningTests
         Assert.Equal(HttpStatusCode.OK, dispute.StatusCode);
         await Reopen.FailAll(h, Me);
         var b = await Life.Row(h, package);
-        Assert.Equal((BookingStatus.Disputed, 0L, (long?)null), (b.Status, b.UnitsUsed, b.FeeMinor));
+        Assert.Equal((AccessStatus.Disputed, 0L, (long?)null), (b.Status, b.UnitsUsed, b.FeeMinor));
     }
 
     // ---- the race with AutoCompleteJob (InMemory: both go through the shared gate; PostgreSQL: PackageReopeningIntegrationTests)
@@ -236,19 +236,19 @@ public class PackageReopeningTests
         for (var round = 0; round < 40; round++)
         {
             var client = AgentApiFx.NewUser();
-            var package = await AgentApiFx.Package(h, client, Slug, OfferingKind.Tasks, total: 1, used: 1, offering: Offer);
+            var package = await AgentApiFx.Package(h, client, Slug, PackageKind.Tasks, total: 1, used: 1, package: Offer);
             var now = h.Clock.GetUtcNow();
             // a task on its last start that has already timed out: the next run counts it as failed (Attempts = 3, Running for more than the timeout)
             await h.Seed(db => db.AgentTasks.Add(new AgentTask
             {
-                Id = Guid.NewGuid(), BookingId = package, ClientUserId = client, PractitionerSlug = Slug, OfferingId = Offer, Status = AgentTaskStatus.Running, InputText = Reopen.Input,
+                Id = Guid.NewGuid(), AccessId = package, ClientUserId = client, AgentSlug = Slug, PackageId = Offer, Status = AgentTaskStatus.Running, InputText = Reopen.Input,
                 Attempts = 3, CreatedAt = now.AddHours(-2), StartedAt = now.AddHours(-1),
             }));
 
             await Task.WhenAll(Task.Run(() => Reopen.Complete(h)), Task.Run(() => TaskFx.Job(h, client).RunOnceAsync(now, default)));
 
             var b = await Life.Row(h, package);
-            Assert.True((b.Status, b.UnitsUsed) == (BookingStatus.Confirmed, 0L), $"round {round}: {b.Status}, used {b.UnitsUsed}");
+            Assert.True((b.Status, b.UnitsUsed) == (AccessStatus.Confirmed, 0L), $"round {round}: {b.Status}, used {b.UnitsUsed}");
             Assert.Null(b.FeeMinor);
             Assert.DoesNotContain(await Reopen.Ledger(h, package), l => l.Kind == LedgerKind.PlatformFee);
         }

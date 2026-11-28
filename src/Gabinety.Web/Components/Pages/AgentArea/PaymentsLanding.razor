@@ -1,0 +1,18 @@
+@page "/practitioner/payments"
+@attribute [Authorize]
+@inject NavigationManager Navigation
+@* The addresses Booking gives the payment provider (<c>{Site__BaseUrl}/practitioner/payments?return=1</c> and <c>?refresh=1</c>, PR #127) are fixed in the Booking service; the page of this host is
+   /panel-agenta/platnosci. This route only forwards, keeping the two flags it knows. *@
+@code {
+    [SupplyParameterFromQuery(Name = "return")] public string? ReturnParam { get; set; }
+    [SupplyParameterFromQuery(Name = "refresh")] public string? RefreshParam { get; set; }
+    [SupplyParameterFromQuery(Name = "agent")] public string? AgentParam { get; set; } // E-04: Booking puts the agent whose account was set up into the provider's return addresses
+
+    protected override void OnInitialized()
+    {
+        var query = new List<string>();
+        if (!string.IsNullOrWhiteSpace(AgentParam)) query.Add("agent=" + Uri.EscapeDataString(AgentParam.Trim()));
+        if (ReturnParam == "1") query.Add("return=1"); else if (RefreshParam == "1") query.Add("refresh=1");
+        Navigation.NavigateTo(AgentPaths.Payments + (query.Count > 0 ? "?" + string.Join('&', query) : ""));
+    }
+}

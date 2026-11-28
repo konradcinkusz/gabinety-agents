@@ -14,7 +14,7 @@ public static class SearchScenarios
     public static async Task Paging_30_rows_with_ties_visits_every_row_once_in_ranking_order(SearchFactory f, IComparer<Guid> idOrder)
     {
         await f.Reset();
-        var rows = new List<Practitioner_>();
+        var rows = new List<Agent_>();
         for (var i = 0; i < 30; i++)
         {
             var score = 90m - i % 5 * 5;                      // six rows per score
@@ -38,7 +38,7 @@ public static class SearchScenarios
         Assert.Equal(12, (await Sk.Get(c)).Items.Count);       // default limit
     }
 
-    public static async Task Tech_filter_returns_exactly_the_rows_whose_offering_has_that_tech(SearchFactory f)
+    public static async Task Tech_filter_returns_exactly_the_rows_whose_package_has_that_tech(SearchFactory f)
     {
         await f.Reset();
         var both = await f.Approved(null, new Spec(Techs: ["dotnet", "csharp"]));
@@ -56,7 +56,7 @@ public static class SearchScenarios
         Assert.Equal(5, (await Sk.Ids(c, "?limit=24")).Count);
     }
 
-    public static async Task Filters_must_all_hold_on_the_same_offering(SearchFactory f)
+    public static async Task Filters_must_all_hold_on_the_same_package(SearchFactory f)
     {
         await f.Reset();
         // A: code-review for 200 zl and audyt-kodu for 50 zl, so "problem=code-review AND max 100 zl" is satisfied by two different offerings.
@@ -115,5 +115,5 @@ public static class SearchScenarios
         Assert.Equal(4, (await Sk.Ids(c, "?q=")).Count);
     }
 
-    sealed record Practitioner_(Guid Id, decimal Score, DateTimeOffset ApprovedAt);
+    sealed record Agent_(Guid Id, decimal Score, DateTimeOffset ApprovedAt);
 }

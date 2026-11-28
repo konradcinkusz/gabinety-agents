@@ -18,7 +18,7 @@ namespace Gabinety.Booking.Tests;
 public class SmtpMailpitIntegrationTests
 {
     const string Image = "axllent/mailpit:v1.29.7";
-    const string ClientAddress = "demo-klient@demo.invalid", PractitionerAddress = "demo-praktyk@demo.invalid", Client = "demo-client-mailpit";
+    const string ClientAddress = "demo-klient@demo.invalid", AgentAddress = "demo-praktyk@demo.invalid", Client = "demo-client-mailpit";
     const string Secret = "TAJNY-OPIS-PROBLEMU-NIE-DO-MAILA", SmtpPassword = "demo-smtp-password-DO-NOT-LEAK";
 
     static async Task<IContainer> Mailpit()
@@ -50,7 +50,7 @@ public class SmtpMailpitIntegrationTests
         JsonDocument.Parse(await api.GetStringAsync($"/api/v1/message/{summary.GetProperty("ID").GetString()}")).RootElement.Clone();
 
     [Fact]
-    public async Task The_confirmation_of_a_created_and_confirmed_booking_arrives_at_both_parties_in_correct_Polish_without_secrets_or_brief_text()
+    public async Task The_confirmation_of_a_created_and_confirmed_access_arrives_at_both_parties_in_correct_Polish_without_secrets_or_brief_text()
     {
         await using var mailpit = await Mailpit();
         using var api = new HttpClient { BaseAddress = new Uri($"http://{mailpit.Hostname}:{mailpit.GetMappedPublicPort(8025)}") };
@@ -58,7 +58,7 @@ public class SmtpMailpitIntegrationTests
         using var host = new CreateHost();
         host.Emails[Client] = ClientAddress;
         var db = "mailpit-" + Guid.NewGuid().ToString("N"); // its own in-memory database: no other test's dispatcher may claim these rows
-        host.Configure = s => s.AddDbContext<Gabinety.Booking.Persistence.BookingDbContext>(o => Microsoft.EntityFrameworkCore.InMemoryDbContextOptionsExtensions.UseInMemoryDatabase(o, db));
+        host.Configure = s => s.AddDbContext<Gabinety.Booking.Persistence.AccessDbContext>(o => Microsoft.EntityFrameworkCore.InMemoryDbContextOptionsExtensions.UseInMemoryDatabase(o, db));
         host.Settings["Notifications:Provider"] = "Smtp";
         host.Settings["Notifications:Smtp:Host"] = mailpit.Hostname;
         host.Settings["Notifications:Smtp:Port"] = mailpit.GetMappedPublicPort(1025).ToString();
@@ -66,10 +66,10 @@ public class SmtpMailpitIntegrationTests
         host.Settings["Notifications:Smtp:User"] = "demo-smtp-user";
         host.Settings["Notifications:Smtp:Password"] = SmtpPassword;
         host.Settings["Notifications:Smtp:FromAddress"] = "powiadomienia@demo.invalid";
-        var offering = host.Directory.Override!;
+        var package = host.Directory.Override!;
         host.Directory.Override = (r, n) => r.RequestUri!.AbsolutePath == $"/internal/v1/practitioners/{host.OwnerUserId}/contact"
-            ? FakeDirectory.Json(new { email = PractitionerAddress })
-            : offering(r, n);
+            ? FakeDirectory.Json(new { email = AgentAddress })
+            : package(r, n);
         Assert.IsType<SmtpEmailSender>(host.Services.GetRequiredService<IEmailSender>());
         Assert.IsType<ContactResolver>(host.Services.GetRequiredService<IContactResolver>());
 
@@ -83,19 +83,19 @@ public class SmtpMailpitIntegrationTests
         var messages = await Messages(api, 2);
         Assert.Equal(2, messages.Count);
         string Recipient(JsonElement m) => m.GetProperty("To").EnumerateArray().Single().GetProperty("Address").GetString()!;
-        Assert.Equal(new[] { ClientAddress, PractitionerAddress }.Order(), messages.Select(Recipient).Order());
+        Assert.Equal(new[] { ClientAddress, AgentAddress }.Order(), messages.Select(Recipient).Order());
 
         var toClient = await Detail(api, messages.Single(m => Recipient(m) == ClientAddress));
-        var toPractitioner = await Detail(api, messages.Single(m => Recipient(m) == PractitionerAddress));
+        var toAgent = await Detail(api, messages.Single(m => Recipient(m) == AgentAddress));
         Assert.Equal("Rezerwacja potwierdzona", toClient.GetProperty("Subject").GetString());
-        Assert.Equal("Masz nową rezerwację", toPractitioner.GetProperty("Subject").GetString()); // ą and ę survive the wire
+        Assert.Equal("Masz nową rezerwację", toAgent.GetProperty("Subject").GetString()); // ą and ę survive the wire
         Assert.Contains("Twoja rezerwacja została potwierdzona.", toClient.GetProperty("Text").GetString());
-        Assert.Contains("Masz nową rezerwację.", toPractitioner.GetProperty("Text").GetString());
+        Assert.Contains("Masz nową rezerwację.", toAgent.GetProperty("Text").GetString());
         Assert.Contains("Szczegóły rezerwacji", toClient.GetProperty("HTML").GetString());
         Assert.DoesNotContain('�', toClient.GetProperty("Text").GetString()!); // no replacement character: the encoding is right end to end
         Assert.Equal("powiadomienia@demo.invalid", toClient.GetProperty("From").GetProperty("Address").GetString());
 
-        foreach (var m in new[] { toClient, toPractitioner })
+        foreach (var m in new[] { toClient, toAgent })
         {
             var all = m.GetRawText();
             Assert.DoesNotContain(Secret, all);
@@ -108,7 +108,7 @@ public class SmtpMailpitIntegrationTests
 
         Assert.All(host.Logs.Lines, l =>
         {
-            Assert.DoesNotContain(ClientAddress, l); Assert.DoesNotContain(PractitionerAddress, l);
+            Assert.DoesNotContain(ClientAddress, l); Assert.DoesNotContain(AgentAddress, l);
             Assert.DoesNotContain(SmtpPassword, l); Assert.DoesNotContain(Secret, l);
         });
     }

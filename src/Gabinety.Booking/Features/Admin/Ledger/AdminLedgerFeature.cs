@@ -30,7 +30,7 @@ public sealed class AdminLedgerFeature : IServiceFeature
     public void Map(IEndpointRouteBuilder endpoints) =>
         endpoints.MapGet("/api/v1/admin/ledger.csv", Export).RequireAuthorization("Admin");
 
-    static IResult Export(string? from, string? to, HttpContext http, BookingDbContext db)
+    static IResult Export(string? from, string? to, HttpContext http, AccessDbContext db)
     {
         var errors = new Dictionary<string, string[]>();
         var f = ParseDay(from, "from", errors);
@@ -48,7 +48,7 @@ public sealed class AdminLedgerFeature : IServiceFeature
         return Results.Stream(s => WriteAsync(s, db, start, end, http.RequestAborted), "text/csv; charset=utf-8");
     }
 
-    static async Task WriteAsync(Stream body, BookingDbContext db, DateTimeOffset start, DateTimeOffset end, CancellationToken ct)
+    static async Task WriteAsync(Stream body, AccessDbContext db, DateTimeOffset start, DateTimeOffset end, CancellationToken ct)
     {
         await using var text = new StreamWriter(body, new UTF8Encoding(false), 16 * 1024, leaveOpen: true);
         var csv = new CsvWriter(text);
@@ -61,9 +61,9 @@ public sealed class AdminLedgerFeature : IServiceFeature
             var q = db.LedgerEntries.AsNoTracking().Where(e => e.CreatedAt >= start && e.CreatedAt < end);
             if (lastAt is { } at) q = q.Where(e => e.CreatedAt > at || (e.CreatedAt == at && e.Id.CompareTo(lastId) > 0));
             var page = await q.OrderBy(e => e.CreatedAt).ThenBy(e => e.Id).Take(PageSize)
-                .Select(e => new { e.Id, e.BookingId, e.Kind, e.AmountMinor, e.CreatedAt }).ToListAsync(ct);
+                .Select(e => new { e.Id, e.AccessId, e.Kind, e.AmountMinor, e.CreatedAt }).ToListAsync(ct);
             foreach (var e in page)
-                await csv.WriteRowAsync(e.BookingId.ToString("D"), e.Kind.ToString(), e.AmountMinor.ToString(CultureInfo.InvariantCulture), Currency,
+                await csv.WriteRowAsync(e.AccessId.ToString("D"), e.Kind.ToString(), e.AmountMinor.ToString(CultureInfo.InvariantCulture), Currency,
                     e.CreatedAt.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.FFFFFFF'Z'", CultureInfo.InvariantCulture));
             if (page.Count < PageSize) break;
             (lastAt, lastId) = (page[^1].CreatedAt, page[^1].Id);

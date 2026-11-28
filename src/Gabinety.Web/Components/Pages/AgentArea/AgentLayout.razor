@@ -1,0 +1,33 @@
+@inherits LayoutComponentBase
+@layout MainLayout
+@inject NavigationManager Navigation
+@* The area's shell: noindex (SPEC 6.5: nothing under /panel-agenta is for a crawler) and the one section navigation of the design contract (5.9): .tabs with aria-current on the current section. *@
+<HeadContent><meta name="robots" content="noindex,nofollow" /></HeadContent>
+@if (Agent is not null)
+{
+    @* E-04: the section links keep the agent the provider chose; this line says which one it is, and leads back to the overview of all of them. *@
+    <p class="muted" data-testid="agent-bar">@PlAgent.Agents.Current: <strong>@Agent</strong> · <a href="@AgentPaths.Home">@PlAgent.Agents.All</a></p>
+}
+<nav class="tabs" aria-label="@PlAgent.SectionsLabel">
+    <ul>
+        @foreach (var (href, label) in Sections)
+        {
+            <li><a class="tabs__link" href="@(Agent is null ? href : $"{href}?agent={Uri.EscapeDataString(Agent)}")" aria-current="@(IsCurrent(href) ? "page" : null)">@label</a></li>
+        }
+    </ul>
+</nav>
+@Body
+
+@code {
+    static readonly (string Href, string Label)[] Sections =
+    [
+        (AgentPaths.Home, PlAgent.Tabs.Overview), (AgentPaths.Profile, PlAgent.Tabs.Profile), (AgentPaths.Offers, PlAgent.Tabs.Offers),
+        (AgentPaths.Payments, PlAgent.Tabs.Payments),
+    ];
+
+    /// <summary>The slug in <c>?agent=</c> of the current address, or null.</summary>
+    string? Agent => Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Navigation.Uri).Query).TryGetValue("agent", out var v) && v.ToString().Trim() is { Length: > 0 } slug ? slug : null;
+
+    /// <summary>The section whose path is the current one (query and fragment ignored); <c>Start</c> only on the dashboard itself.</summary>
+    bool IsCurrent(string href) => string.Equals(new Uri(Navigation.Uri).AbsolutePath.TrimEnd('/'), href, StringComparison.OrdinalIgnoreCase);
+}

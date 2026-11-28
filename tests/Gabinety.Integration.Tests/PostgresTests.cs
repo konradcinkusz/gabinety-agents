@@ -13,7 +13,7 @@ public class PostgresTests : IAsyncLifetime
     public Task DisposeAsync() => _pg.DisposeAsync().AsTask();
 
     [Fact]
-    public async Task Exclusion_constraint_rejects_overlapping_ranges_for_one_practitioner()
+    public async Task Exclusion_constraint_rejects_overlapping_ranges_for_one_agent()
     {
         await using var c = new NpgsqlConnection(_pg.GetConnectionString());
         await c.OpenAsync();

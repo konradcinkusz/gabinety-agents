@@ -30,7 +30,7 @@ public class PairCountsClientTests
         Assert.Equal("?minBookings=3&limit=20&cursor=a.b-c_d", req.RequestUri.Query);
         Assert.Equal("k-demo-pairs", req.Headers.GetValues("X-Internal-Key").Single());
         Assert.Equal("next-1", page.NextCursor);
-        Assert.Equal(3, Assert.Single(page.Items).Bookings);
+        Assert.Equal(3, Assert.Single(page.Items).Accesses);
     }
 
     [Theory]
@@ -39,7 +39,7 @@ public class PairCountsClientTests
     [InlineData(HttpStatusCode.InternalServerError)]
     public async Task A_non_success_answer_is_one_exception_without_the_key_or_url(HttpStatusCode code)
     {
-        var ex = await Assert.ThrowsAsync<BookingUnavailableForAnalyticsException>(() =>
+        var ex = await Assert.ThrowsAsync<AccessUnavailableForAnalyticsException>(() =>
             Client(new Stub(_ => Task.FromResult(new HttpResponseMessage(code)))).GetAsync(3, null, 20, default));
         Assert.DoesNotContain("k-demo-pairs", ex.ToString());
         Assert.DoesNotContain("booking.demo.invalid", ex.Message);
@@ -48,11 +48,11 @@ public class PairCountsClientTests
     [Fact]
     public async Task A_connection_failure_a_timeout_and_a_garbage_body_are_the_same_exception()
     {
-        await Assert.ThrowsAsync<BookingUnavailableForAnalyticsException>(() => Client(new Stub(_ => throw new HttpRequestException("boom"))).GetAsync(3, null, 20, default));
-        await Assert.ThrowsAsync<BookingUnavailableForAnalyticsException>(() =>
+        await Assert.ThrowsAsync<AccessUnavailableForAnalyticsException>(() => Client(new Stub(_ => throw new HttpRequestException("boom"))).GetAsync(3, null, 20, default));
+        await Assert.ThrowsAsync<AccessUnavailableForAnalyticsException>(() =>
             Client(new Stub(async (r, ct) => { await Task.Delay(Timeout.Infinite, ct); return new HttpResponseMessage(); }),
                 timeout: TimeSpan.FromMilliseconds(50)).GetAsync(3, null, 20, default));
-        await Assert.ThrowsAsync<BookingUnavailableForAnalyticsException>(() =>
+        await Assert.ThrowsAsync<AccessUnavailableForAnalyticsException>(() =>
             Client(new Stub(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("not json") }))).GetAsync(3, null, 20, default));
     }
 }

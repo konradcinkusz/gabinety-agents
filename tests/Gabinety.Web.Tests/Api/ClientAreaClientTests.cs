@@ -13,18 +13,18 @@ public class ClientAreaClientTests
 {
     sealed class Token(string? value) : IAccessTokenSource { public Task<string?> AccessTokenAsync(CancellationToken ct = default) => Task.FromResult(value); }
 
-    static (BookingClient Client, FakeBackend Backend) Bookings(string? token = "tok")
+    static (AccessClient Client, FakeBackend Backend) Accesses(string? token = "tok")
     {
         var backend = new FakeBackend();
-        return (new BookingClient(new HttpClient(backend) { BaseAddress = new Uri("http://booking.test") }, new VisitorAddressAccessor(new HttpContextAccessor()), new Token(token)), backend);
+        return (new AccessClient(new HttpClient(backend) { BaseAddress = new Uri("http://booking.test") }, new VisitorAddressAccessor(new HttpContextAccessor()), new Token(token)), backend);
     }
 
     static readonly Guid Id = Guid.Parse("018f0000-0000-7000-8000-0000000000b1");
 
     [Fact]
-    public async Task The_task_list_is_read_in_the_snake_case_shape_Booking_writes_with_both_dates()
+    public async Task The_task_list_is_read_in_the_snake_case_shape_Access_writes_with_both_dates()
     {
-        var (client, backend) = Bookings();
+        var (client, backend) = Accesses();
         backend.Respond = _ => FakeBackend.Raw("""[{"id":"018f0000-0000-7000-8000-0000000000c1","status":"succeeded","output":"Gotowe.","created_at":"2026-11-23T18:26:00.2989739Z","completed_at":"2026-11-23T18:26:00.6302108Z"},{"id":"018f0000-0000-7000-8000-0000000000c2","status":"queued","output":null,"created_at":"2026-11-23T18:27:00Z","completed_at":null}]""");
 
         var result = await client.TasksAsync(Id);
@@ -40,17 +40,17 @@ public class ClientAreaClientTests
     [Fact]
     public async Task Create_posts_the_json_the_service_reads_with_the_key_in_the_header_and_no_start()
     {
-        var (client, backend) = Bookings();
-        backend.Respond = _ => FakeBackend.Json(new CreateBookingResponseDto(Id, "PendingPayment", DateTimeOffset.UtcNow, "/checkout/mock/x"), HttpStatusCode.Created);
+        var (client, backend) = Accesses();
+        backend.Respond = _ => FakeBackend.Json(new CreateAccessResponseDto(Id, "PendingPayment", DateTimeOffset.UtcNow, "/checkout/mock/x"), HttpStatusCode.Created);
         var key = Guid.NewGuid();
-        var offering = Guid.NewGuid();
-        var result = await client.CreateAsync(key, new CreateBookingRequestDto(offering, new BriefDto("Opis problemu demo, syntetyczny.", "audyt-kodu", true)));
+        var package = Guid.NewGuid();
+        var result = await client.CreateAsync(key, new CreateAccessRequestDto(package, new BriefDto("Opis problemu demo, syntetyczny.", "audyt-kodu", true)));
         Assert.True(result.IsOk);
         Assert.Equal("/checkout/mock/x", result.Value!.CheckoutUrl);
         var sent = Assert.Single(backend.Requests);
         Assert.Equal((HttpMethod.Post, "/api/v1/bookings"), (sent.Method, sent.PathAndQuery));
         using var body = JsonDocument.Parse(sent.Body!);
-        Assert.Equal(offering.ToString(), body.RootElement.GetProperty("offeringId").GetString());
+        Assert.Equal(package.ToString(), body.RootElement.GetProperty("offeringId").GetString());
         Assert.True(body.RootElement.GetProperty("brief").GetProperty("aiAssisted").GetBoolean());
         Assert.Equal(["offeringId", "brief"], body.RootElement.EnumerateObject().Select(p => p.Name)); // camelCase, nothing extra
     }
@@ -58,11 +58,11 @@ public class ClientAreaClientTests
     [Fact]
     public async Task The_idempotency_key_is_a_header_never_in_the_body_or_the_url()
     {
-        var (client, backend) = Bookings();
+        var (client, backend) = Accesses();
         string? header = null;
-        backend.Respond = r => { header = r.Headers.GetValues("Idempotency-Key").Single(); return FakeBackend.Json(new CreateBookingResponseDto(Id, "PendingPayment", DateTimeOffset.UtcNow, "/x"), HttpStatusCode.Created); };
+        backend.Respond = r => { header = r.Headers.GetValues("Idempotency-Key").Single(); return FakeBackend.Json(new CreateAccessResponseDto(Id, "PendingPayment", DateTimeOffset.UtcNow, "/x"), HttpStatusCode.Created); };
         var key = Guid.NewGuid();
-        await client.CreateAsync(key, new CreateBookingRequestDto(Guid.NewGuid(), new BriefDto("Opis problemu demo, syntetyczny.", null, false)));
+        await client.CreateAsync(key, new CreateAccessRequestDto(Guid.NewGuid(), new BriefDto("Opis problemu demo, syntetyczny.", null, false)));
         Assert.Equal(key.ToString("D"), header);
         Assert.DoesNotContain(key.ToString(), backend.Requests.Single().PathAndQuery + backend.Requests.Single().Body);
     }
@@ -70,7 +70,7 @@ public class ClientAreaClientTests
     [Fact]
     public async Task A_failure_carries_the_status_the_code_and_the_names_of_the_refused_fields_never_a_message()
     {
-        var (client, backend) = Bookings();
+        var (client, backend) = Accesses();
         backend.Respond = _ => FakeBackend.Raw("""{"title":"SERVER-TITLE","detail":"SERVER-DETAIL","code":"validation_failed","status":422,"errors":{"brief.text":["brief.text must be 20 to 2000 characters"],"Reason":["too long"]}}""", HttpStatusCode.UnprocessableEntity);
         var result = await client.CancelAsync(Id, "powód");
         var failure = result.Failure!;
@@ -90,7 +90,7 @@ public class ClientAreaClientTests
     [InlineData("""not json""", null)]
     public async Task Field_names_are_kept_only_when_they_look_like_field_names(string json, string[]? expected)
     {
-        var (client, backend) = Bookings();
+        var (client, backend) = Accesses();
         backend.Respond = _ => FakeBackend.Raw(json, HttpStatusCode.BadRequest);
         Assert.Equal(expected, (await client.GetAsync(Id)).Failure!.Fields);
     }
@@ -98,7 +98,7 @@ public class ClientAreaClientTests
     [Fact]
     public async Task The_code_of_a_problem_answer_is_kept_only_when_it_is_a_plain_code()
     {
-        var (client, backend) = Bookings();
+        var (client, backend) = Accesses();
         backend.Respond = _ => FakeBackend.Raw("""{"code":"SERVER-TITLE: <b>x</b>"}""", HttpStatusCode.Conflict);
         Assert.Equal("http_409", (await client.GetAsync(Id)).Failure!.Code);
     }
@@ -106,7 +106,7 @@ public class ClientAreaClientTests
     [Fact]
     public async Task Cancel_sends_the_trimmed_reason_or_an_empty_object()
     {
-        var (client, backend) = Bookings();
+        var (client, backend) = Accesses();
         backend.Respond = _ => FakeBackend.Json(ClientAreaFixture.Detail());
         await client.CancelAsync(Id, "  Zmiana planów  ");
         await client.CancelAsync(Id, null);
@@ -119,7 +119,7 @@ public class ClientAreaClientTests
     [Fact]
     public async Task Dispute_sends_the_wire_kind_and_the_trimmed_text()
     {
-        var (client, backend) = Bookings();
+        var (client, backend) = Accesses();
         backend.Respond = _ => FakeBackend.Json(ClientAreaFixture.Detail());
         await client.DisputeAsync(Id, "not_as_described", "  Opis sporu.  ");
         Assert.Equal("""{"kind":"not_as_described","text":"Opis sporu."}""", backend.Requests[0].Body);
@@ -128,7 +128,7 @@ public class ClientAreaClientTests
     [Fact]
     public async Task Simulate_needs_no_body_to_read_back_and_a_403_is_a_failure()
     {
-        var (client, backend) = Bookings();
+        var (client, backend) = Accesses();
         backend.Respond = _ => new HttpResponseMessage(HttpStatusCode.NoContent);
         Assert.True((await client.SimulatePaymentAsync(Id, "succeeded")).IsOk);
         Assert.Equal($$"""{"bookingId":"{{Id}}","outcome":"succeeded"}""", backend.Requests.Single().Body);
@@ -139,7 +139,7 @@ public class ClientAreaClientTests
     [Fact]
     public async Task Without_a_session_no_bearer_is_sent_and_the_service_answers_401()
     {
-        var (client, backend) = Bookings(token: null);
+        var (client, backend) = Accesses(token: null);
         backend.Respond = _ => FakeBackend.Problem(HttpStatusCode.Unauthorized, "unauthenticated");
         var result = await client.GetAsync(Id);
         Assert.Null(backend.Requests.Single().Authorization);
@@ -149,9 +149,9 @@ public class ClientAreaClientTests
     [Fact]
     public async Task A_backend_that_is_down_is_a_failure_with_status_0_not_an_exception()
     {
-        var (client, backend) = Bookings();
+        var (client, backend) = Accesses();
         backend.Respond = FakeBackend.Throw(new HttpRequestException("down"));
-        var result = await client.CreateAsync(Guid.NewGuid(), new CreateBookingRequestDto(Guid.NewGuid(), new BriefDto("x", null, false)));
+        var result = await client.CreateAsync(Guid.NewGuid(), new CreateAccessRequestDto(Guid.NewGuid(), new BriefDto("x", null, false)));
         Assert.Equal((0, "unavailable"), (result.Failure!.Status, result.Failure.Code));
     }
 
@@ -173,7 +173,7 @@ public class ClientAreaClientTests
     {
         var backend = new FakeBackend { Respond = _ => FakeBackend.Json(ClientAreaFixture.Profile()) };
         var directory = new DirectoryClient(new HttpClient(backend) { BaseAddress = new Uri("http://d.test") }, new VisitorAddressAccessor(new HttpContextAccessor()));
-        Assert.Single((await directory.ProfileAsync("demo anna/../x")).Value!.Offerings);
+        Assert.Single((await directory.ProfileAsync("demo anna/../x")).Value!.Packages);
         Assert.Equal("/api/v1/practitioners/demo%20anna%2F..%2Fx", backend.Requests.Single().PathAndQuery);
     }
 
@@ -182,7 +182,7 @@ public class ClientAreaClientTests
     [Fact]
     public void The_slow_calls_ask_for_their_budget_on_the_request_and_nothing_else_does()
     {
-        Assert.Equal(TimeSpan.FromSeconds(12), BookingClient.CreateBudget);
+        Assert.Equal(TimeSpan.FromSeconds(12), AccessClient.CreateBudget);
         Assert.Equal(TimeSpan.FromSeconds(35), BriefAssistantClient.Budget);
         Assert.True(BriefAssistantClient.Budget <= ApiResilience.MaxBudget);
     }
@@ -194,10 +194,10 @@ public class ClientAreaClientTests
         var backend = new FakeBackend { Respond = r => { seen.Add((r.RequestUri!.AbsolutePath, r.Options.TryGetValue(RequestContext.Timeout, out var t) ? t : null)); return FakeBackend.Json(new { }, HttpStatusCode.OK); } };
         var http = new HttpClient(backend) { BaseAddress = new Uri("http://b.test") };
         var visitor = new VisitorAddressAccessor(new HttpContextAccessor());
-        var bookings = new BookingClient(http, visitor, new Token("t"));
-        await bookings.CreateAsync(Guid.NewGuid(), new CreateBookingRequestDto(Guid.NewGuid(), new BriefDto("x", null, false)));
-        await bookings.CancelAsync(Id, null);
-        await bookings.GetAsync(Id);
+        var accesses = new AccessClient(http, visitor, new Token("t"));
+        await accesses.CreateAsync(Guid.NewGuid(), new CreateAccessRequestDto(Guid.NewGuid(), new BriefDto("x", null, false)));
+        await accesses.CancelAsync(Id, null);
+        await accesses.GetAsync(Id);
         await new BriefAssistantClient(http, visitor, new Token("t")).SuggestAsync("opis");
         Assert.Equal([("/api/v1/bookings", (TimeSpan?)TimeSpan.FromSeconds(12)), ($"/api/v1/bookings/{Id}/cancel", null), ($"/api/v1/bookings/{Id}", null), ("/api/v1/assistant/brief", TimeSpan.FromSeconds(35))], seen);
     }
@@ -207,23 +207,23 @@ public class ClientAreaClientTests
     {
         await using var web = new WebFactory();
         var slow = TimeSpan.FromSeconds(5.5);
-        web.Booking.Delay = web.Reputation.Delay = slow;
-        web.Booking.Respond = _ => FakeBackend.Json(new CreateBookingResponseDto(Id, "PendingPayment", DateTimeOffset.UtcNow, "/x"), HttpStatusCode.Created);
+        web.Access.Delay = web.Reputation.Delay = slow;
+        web.Access.Respond = _ => FakeBackend.Json(new CreateAccessResponseDto(Id, "PendingPayment", DateTimeOffset.UtcNow, "/x"), HttpStatusCode.Created);
         web.Reputation.Respond = _ => FakeBackend.Json(new CreateReviewResponseDto(Id, "Published"), HttpStatusCode.Created);
         // The clients are built over the handler chains the host really uses (service discovery, the one resilience handler, the fake as the primary handler).
         var handlers = web.Services.GetRequiredService<IHttpMessageHandlerFactory>();
         var visitor = new VisitorAddressAccessor(new HttpContextAccessor());
-        var bookings = new BookingClient(new HttpClient(handlers.CreateHandler(Backend.Booking)) { BaseAddress = new Uri(Backend.BaseAddress(Backend.Booking)) }, visitor, new Token("t"));
+        var accesses = new AccessClient(new HttpClient(handlers.CreateHandler(Backend.Access)) { BaseAddress = new Uri(Backend.BaseAddress(Backend.Access)) }, visitor, new Token("t"));
         var reviews = new ReviewsClient(new HttpClient(handlers.CreateHandler(Backend.Reputation)) { BaseAddress = new Uri(Backend.BaseAddress(Backend.Reputation)) }, visitor, new Token("t"));
 
         // A write with no budget is cut at the 5 s of a read; the one that asked for its budget is not.
-        var withBudget = bookings.CreateAsync(Guid.NewGuid(), new CreateBookingRequestDto(Guid.NewGuid(), new BriefDto("Opis problemu demo, syntetyczny.", null, false)));
+        var withBudget = accesses.CreateAsync(Guid.NewGuid(), new CreateAccessRequestDto(Guid.NewGuid(), new BriefDto("Opis problemu demo, syntetyczny.", null, false)));
         var without = reviews.CreateAsync(Id, 5, "Treść opinii, syntetyczna.");
         var (booked, reviewed) = (await withBudget, await without);
         Assert.True(booked.IsOk, $"the booking write was cut: {booked.Failure}");
         Assert.False(reviewed.IsOk);
         Assert.Equal(0, reviewed.Failure!.Status);
-        Assert.Equal(1, web.Booking.Calls);
+        Assert.Equal(1, web.Access.Calls);
         Assert.Equal(1, web.Reputation.Calls); // and neither was retried
     }
 }

@@ -16,7 +16,7 @@
 - pakiet `Tasks`: zleca zadania w panelu albo przez `POST /v1/tasks`; zadanie wykonuje się w tle, a wynik klient czyta w panelu lub przez `GET /v1/tasks/{id}`;
 - pakiet `Chat`: pula tokenów na API zgodne z OpenAI (`/v1/chat/completions`, np. GitHub Copilot BYOK).
 
-Agentów nie uruchamia ta aplikacja. Woła zewnętrzną platformę agentów przez jeden interfejs (`IAgentUpstream`); w profilu `fake` odpowiada deterministyczny zamiennik. Repozytorium powstało z Gabinety Tech (konsultacje z programistami); przebudowa była rozpisana w [docs/agentic/PLAN.md](docs/agentic/PLAN.md). W kodzie zostały dawne nazwy (`Practitioner` to agent, `Offering` to pakiet, `Booking` to zakupiony pakiet).
+Agentów nie uruchamia ta aplikacja. Woła zewnętrzną platformę agentów przez jeden interfejs (`IAgentUpstream`); w profilu `fake` odpowiada deterministyczny zamiennik. Repozytorium powstało z Gabinety Tech (konsultacje z programistami); przebudowa była rozpisana w [docs/agentic/PLAN.md](docs/agentic/PLAN.md). W kodzie (od etapu E-06) agent to `Agent`, pakiet to `Package`, a zakupiony pakiet to `Access`; na drucie (pola JSON, adresy `/api/v1/...`), w bazie (tabele, kolumny) i w nazwie usługi `Gabinety.Booking` zostają dawne nazwy (`practitionerId`, `bookingId`, `offeringId`). Tabela zmian: [docs/agentic/RENAME-MAP.md](docs/agentic/RENAME-MAP.md).
 
 ## Co działa
 
@@ -40,7 +40,7 @@ Prawdziwy [authservice](https://github.com/konradcinkusz/authservice) jest doł�
 - podłączenie przez GitHub Copilot: kroki po stronie Copilota są niezweryfikowane ([docs/operations/COPILOT-BYOK.md](docs/operations/COPILOT-BYOK.md)),
 - lista decyzji właściciela (adres `/v1` rozstrzygnięty: pod adresem strony): [docs/adr-proposals/0013-agent-marketplace.md](docs/adr-proposals/0013-agent-marketplace.md),
 - weryfikacja prawna regulaminu i polityki prywatności (znacznik `DO WERYFIKACJI PRAWNEJ`), logowanie przez GitHub do końca (potrzebuje prawdziwej aplikacji OAuth), potwierdzanie e-mail, prawdziwy e-mail i model językowy (wymagają kont i sekretów właściciela) oraz zweryfikowane wdrożenie,
-- reszta etapu E planu: E-03, E-05 i E-06 (płatności rzeczywiste, osobna usługa `/v1`, zmiana nazw w kodzie; E-04, wielu agentów jednego dostawcy, jest zrobione) czekają na decyzje właściciela; napisy „gabinet” w tekstach strony i nazwy w kodzie (`Practitioner`, `Booking`) zostają dawne. E-01 (martwy kod terminów) i E-02 (adresy `/agenci`, `/agent/{slug}`, `/dostep/...`, `/moje/dostepy`, `/panel-agenta`; stare adresy odpowiadają 301) są zrobione.
+- reszta etapu E planu: E-03 i E-05 (płatności rzeczywiste, osobna usługa `/v1`) czekają na decyzje właściciela; E-04 (wielu agentów jednego dostawcy) i E-06 (zmiana nazw w kodzie) są zrobione; napisy „gabinet” w tekstach strony zostają dawne. E-01 (martwy kod terminów) i E-02 (adresy `/agenci`, `/agent/{slug}`, `/dostep/...`, `/moje/dostepy`, `/panel-agenta`; stare adresy odpowiadają 301) są zrobione.
 
 ## Szybki start
 

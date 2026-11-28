@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Testcontainers.PostgreSql;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -32,7 +32,7 @@ public class PaymentWebhookIntegrationTests : IAsyncLifetime
 
     public async Task DisposeAsync() { await host.DisposeAsync(); await pg.DisposeAsync(); }
 
-    BookingDbContext Db() => new(new DbContextOptionsBuilder<BookingDbContext>().UseNpgsql(cs).Options);
+    AccessDbContext Db() => new(new DbContextOptionsBuilder<AccessDbContext>().UseNpgsql(cs).Options);
 
     /// <summary>10:00 UTC of the n-th weekday after the clock's Monday (2026-11-16).</summary>
     static string Day(int n)
@@ -54,50 +54,50 @@ public class PaymentWebhookIntegrationTests : IAsyncLifetime
         var c = host.ClientFor(null);
         for (var round = 0; round < 10; round++)
         {
-            var (id, pid) = await Pay.CreateBooking(host, "demo-client-" + round, Day(round));
+            var (id, pid) = await Pay.CreateAccess(host, "demo-client-" + round, Day(round));
             var body = Pay.EventJson($"evt_race_{round}", "PaymentSucceeded", pid);
             var sig = Pay.Sign(body);
             var rs = await Task.WhenAll(Task.Run(() => Pay.Webhook(c, body, sig)), Task.Run(() => Pay.Webhook(c, body, sig)));
             var outcomes = (await Task.WhenAll(rs.Select(Outcome))).Order().ToArray();
             Assert.True(outcomes.SequenceEqual(["Applied", "Duplicate"]), $"round {round}: {string.Join(",", outcomes)}");
             await using var db = Db();
-            Assert.Equal(1, await db.LedgerEntries.CountAsync(l => l.BookingId == id));
+            Assert.Equal(1, await db.LedgerEntries.CountAsync(l => l.AccessId == id));
             Assert.Equal(1, await db.WebhookEvents.CountAsync(x => x.EventId == $"evt_race_{round}"));
-            Assert.Equal(BookingStatus.Confirmed, (await db.Bookings.SingleAsync(b => b.Id == id)).Status);
+            Assert.Equal(AccessStatus.Confirmed, (await db.Accesses.SingleAsync(b => b.Id == id)).Status);
         }
     }
 
     [Fact]
-    public async Task A_success_and_a_failure_for_one_booking_at_once_apply_exactly_one_and_leave_a_consistent_state()
+    public async Task A_success_and_a_failure_for_one_access_at_once_apply_exactly_one_and_leave_a_consistent_state()
     {
         var c = host.ClientFor(null);
         for (var round = 0; round < 10; round++)
         {
-            var (id, pid) = await Pay.CreateBooking(host, "demo-client-x" + round, Day(round + 12));
+            var (id, pid) = await Pay.CreateAccess(host, "demo-client-x" + round, Day(round + 12));
             var ok = Pay.EventJson($"evt_ok_{round}", "PaymentSucceeded", pid);
             var bad = Pay.EventJson($"evt_bad_{round}", "PaymentFailed", pid, null);
             var rs = await Task.WhenAll(Task.Run(() => Pay.Webhook(c, ok, Pay.Sign(ok))), Task.Run(() => Pay.Webhook(c, bad, Pay.Sign(bad))));
             var outcomes = (await Task.WhenAll(rs.Select(Outcome))).Order().ToArray();
             Assert.True(outcomes.SequenceEqual(["Applied", "Ignored"]), $"round {round}: {string.Join(",", outcomes)}");
             await using var db = Db();
-            var booking = await db.Bookings.SingleAsync(b => b.Id == id);
-            var charges = await db.LedgerEntries.CountAsync(l => l.BookingId == id && l.Kind == LedgerKind.ClientCharge);
-            Assert.Equal(booking.Status == BookingStatus.Confirmed ? 1 : 0, charges);
-            Assert.Contains(booking.Status, new[] { BookingStatus.Confirmed, BookingStatus.Expired });
+            var access = await db.Accesses.SingleAsync(b => b.Id == id);
+            var charges = await db.LedgerEntries.CountAsync(l => l.AccessId == id && l.Kind == LedgerKind.ClientCharge);
+            Assert.Equal(access.Status == AccessStatus.Confirmed ? 1 : 0, charges);
+            Assert.Contains(access.Status, new[] { AccessStatus.Confirmed, AccessStatus.Expired });
         }
     }
 
     [Fact]
     public async Task A_late_success_is_refunded_and_recorded_on_PostgreSQL()
     {
-        var (id, pid) = await Pay.CreateBooking(host, "demo-client-late", Day(30));
+        var (id, pid) = await Pay.CreateAccess(host, "demo-client-late", Day(30));
         host.Clock.Advance(TimeSpan.FromMinutes(11));
         var body = Pay.EventJson("evt_late_1", "PaymentSucceeded", pid);
         Assert.Equal("Applied", await Outcome(await Pay.Webhook(host.ClientFor(null), body, Pay.Sign(body))));
         await using var db = Db();
-        Assert.Equal(BookingStatus.Expired, (await db.Bookings.SingleAsync(b => b.Id == id)).Status);
-        Assert.Equal([LedgerKind.ClientCharge, LedgerKind.Refund], (await db.LedgerEntries.Where(l => l.BookingId == id).ToListAsync()).Select(l => l.Kind).Order().ToArray());
-        var payment = await db.Payments.SingleAsync(p => p.BookingId == id);
+        Assert.Equal(AccessStatus.Expired, (await db.Accesses.SingleAsync(b => b.Id == id)).Status);
+        Assert.Equal([LedgerKind.ClientCharge, LedgerKind.Refund], (await db.LedgerEntries.Where(l => l.AccessId == id).ToListAsync()).Select(l => l.Kind).Order().ToArray());
+        var payment = await db.Payments.SingleAsync(p => p.AccessId == id);
         Assert.Equal((PaymentStatus.Refunded, 10000L), (payment.Status, payment.RefundedMinor));
     }
 
@@ -135,6 +135,6 @@ public class PaymentWebhookIntegrationTests : IAsyncLifetime
         Assert.Equal("23505", ((PostgresException)e.InnerException!).SqlState);
     }
 
-    static void LedgerEntryOf(BookingDbContext db, LedgerKind kind, string? pair) =>
-        db.LedgerEntries.Add(new() { Id = Guid.NewGuid(), BookingId = Guid.NewGuid(), Kind = kind, AmountMinor = 1, PairKey = pair, CreatedAt = DateTimeOffset.UnixEpoch });
+    static void LedgerEntryOf(AccessDbContext db, LedgerKind kind, string? pair) =>
+        db.LedgerEntries.Add(new() { Id = Guid.NewGuid(), AccessId = Guid.NewGuid(), Kind = kind, AmountMinor = 1, PairKey = pair, CreatedAt = DateTimeOffset.UnixEpoch });
 }

@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using Gabinety.Contracts.Directory;
 using Gabinety.Directory.Features.Profiles;
 using Gabinety.Directory.Features.Ranking;
-using Gabinety.Directory.Tests.Offerings;
+using Gabinety.Directory.Tests.Packages;
 using Gabinety.Ranking;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,12 +25,12 @@ public class SitemapTests(SearchFactory f)
     {
         await f.Reset();
         var m = await Map();
-        Assert.Empty(m.Practitioners);
+        Assert.Empty(m.Agents);
         Assert.Equal([new SitemapCategory("/agenci", 0, false)], m.Categories);
     }
 
     [Fact]
-    public async Task A_category_is_indexable_from_three_listed_practitioners_not_from_two()
+    public async Task A_category_is_indexable_from_three_listed_agents_not_from_two()
     {
         await f.Reset();
         for (var i = 0; i < 2; i++) await f.Approved(null, new Spec("code-review", ["dotnet"]));
@@ -46,28 +46,28 @@ public class SitemapTests(SearchFactory f)
     }
 
     [Fact]
-    public async Task Only_listed_practitioners_count_each_counts_once_and_empty_pairs_are_omitted()
+    public async Task Only_listed_agents_count_each_counts_once_and_empty_pairs_are_omitted()
     {
         await f.Reset();
         await f.Approved(null, new Spec("code-review", ["dotnet"]), new Spec("code-review", ["dotnet"], 60));   // two offerings, one practitioner
-        await f.Seed(PractitionerStatus.Suspended, null, new Spec("code-review", ["dotnet"]));
-        await f.Seed(PractitionerStatus.Approved, null, new Spec("code-review", ["dotnet"], Active: false));    // approved, not listed
+        await f.Seed(AgentStatus.Suspended, null, new Spec("code-review", ["dotnet"]));
+        await f.Seed(AgentStatus.Approved, null, new Spec("code-review", ["dotnet"], Active: false));    // approved, not listed
         var m = await Map();
-        Assert.Equal(2, m.Practitioners.Count);                                                                   // every Approved one is in the sitemap
+        Assert.Equal(2, m.Agents.Count);                                                                   // every Approved one is in the sitemap
         Assert.Equal(["/agenci", "/agenci/code-review", "/agenci/code-review/dotnet"], m.Categories.Select(c => c.Path));
-        Assert.All(m.Categories, c => Assert.Equal(1, c.PractitionerCount));
+        Assert.All(m.Categories, c => Assert.Equal(1, c.AgentCount));
         Assert.DoesNotContain(m.Categories, c => c.Path.Contains("audyt-kodu"));
     }
 
     [Fact]
-    public async Task Practitioners_are_ordered_by_slug_with_updated_at_and_categories_by_path()
+    public async Task Agents_are_ordered_by_slug_with_updated_at_and_categories_by_path()
     {
         await f.Reset();
         var b = await f.Approved(p => { p.Slug = "demo-bbb"; p.UpdatedAt = SearchFactory.Epoch.AddDays(2); }, new Spec("integracja-ai", ["llm"]));
         var a = await f.Approved(p => { p.Slug = "demo-aaa"; p.UpdatedAt = SearchFactory.Epoch.AddDays(1); }, new Spec("audyt-kodu", ["csharp"]));
-        await f.Seed(PractitionerStatus.Draft, p => p.Slug = "demo-aab");
+        await f.Seed(AgentStatus.Draft, p => p.Slug = "demo-aab");
         var m = await Map();
-        Assert.Equal([new SitemapPractitioner("demo-aaa", a.UpdatedAt), new SitemapPractitioner("demo-bbb", b.UpdatedAt)], m.Practitioners);
+        Assert.Equal([new SitemapAgent("demo-aaa", a.UpdatedAt), new SitemapAgent("demo-bbb", b.UpdatedAt)], m.Agents);
         Assert.Equal(m.Categories.Select(c => c.Path).Order(StringComparer.Ordinal), m.Categories.Select(c => c.Path));
         Assert.Equal("/agenci", m.Categories[0].Path);
     }
@@ -108,12 +108,12 @@ public class RankingRulesTests(SearchFactory f)
 
 public class RankingRecalculatorTests
 {
-    static Practitioner Row(PractitionerStatus status) => new() { Status = status, ProfileCompleteness = 1m, OpenSlots14d = 10, RankingScore = 1m, RankingVersion = "old" };
+    static Agent Row(AgentStatus status) => new() { Status = status, ProfileCompleteness = 1m, OpenSlots14d = 10, RankingScore = 1m, RankingVersion = "old" };
 
     [Fact]
     public void The_contract_vector_scores_82_95_and_stamps_the_version()
     {
-        var p = Row(PractitionerStatus.Approved);      // n=0, r=0, c=0, x=0, s=0, p=1, k=10
+        var p = Row(AgentStatus.Approved);      // n=0, r=0, c=0, x=0, s=0, p=1, k=10
         Assert.True(RankingRecalculator.Recompute(p));
         Assert.Equal(82.95m, p.RankingScore);
         Assert.Equal(RankingRules.Version, p.RankingVersion);
@@ -122,7 +122,7 @@ public class RankingRecalculatorTests
     [Fact]
     public void A_changed_input_changes_the_stored_score()
     {
-        var p = Row(PractitionerStatus.Approved);
+        var p = Row(AgentStatus.Approved);
         RankingRecalculator.Recompute(p);
         var before = p.RankingScore;
         p.ProfileCompleteness = 0.5m; p.RatingCount = 10; p.RatingAvg = 5m;
@@ -132,8 +132,8 @@ public class RankingRecalculatorTests
     }
 
     [Theory]
-    [InlineData(PractitionerStatus.Draft)] [InlineData(PractitionerStatus.Submitted)] [InlineData(PractitionerStatus.Rejected)] [InlineData(PractitionerStatus.Suspended)]
-    public void A_row_that_is_not_Approved_is_not_scored(PractitionerStatus status)
+    [InlineData(AgentStatus.Draft)] [InlineData(AgentStatus.Submitted)] [InlineData(AgentStatus.Rejected)] [InlineData(AgentStatus.Suspended)]
+    public void A_row_that_is_not_Approved_is_not_scored(AgentStatus status)
     {
         var p = Row(status);
         Assert.False(RankingRecalculator.Recompute(p));
@@ -149,7 +149,7 @@ public class RankingRecomputeCallSiteTests(SearchFactory f)
     public async Task Admin_approve_stores_the_contract_score()
     {
         await f.Reset();
-        var p = await f.Seed(PractitionerStatus.Submitted, x => { x.ProfileCompleteness = 1m; x.OpenSlots14d = 10; x.RankingScore = 0; x.RankingVersion = ""; x.ApprovedAt = null; });
+        var p = await f.Seed(AgentStatus.Submitted, x => { x.ProfileCompleteness = 1m; x.OpenSlots14d = 10; x.RankingScore = 0; x.RankingVersion = ""; x.ApprovedAt = null; });
         Assert.Equal(HttpStatusCode.NoContent, (await f.As("demo-admin", "Admin").PostAsync($"/api/v1/admin/practitioners/{p.Id}/approve", null)).StatusCode);
         var row = await f.Load(p.Id);
         Assert.Equal(82.95m, row.RankingScore);
@@ -157,11 +157,11 @@ public class RankingRecomputeCallSiteTests(SearchFactory f)
     }
 
     [Fact]
-    public async Task Creating_an_offering_on_an_Approved_profile_changes_its_completeness_and_so_its_stored_score()
+    public async Task Creating_an_package_on_an_Approved_profile_changes_its_completeness_and_so_its_stored_score()
     {
         await f.Reset();
         var uid = Kit.Id();
-        var p = await f.Seed(PractitionerStatus.Approved, x => { x.UserId = uid; x.ProfileCompleteness = 0m; x.RankingScore = 0m; x.RankingVersion = ""; });
+        var p = await f.Seed(AgentStatus.Approved, x => { x.UserId = uid; x.ProfileCompleteness = 0m; x.RankingScore = 0m; x.RankingVersion = ""; });
         var r = await f.As(uid).PostAsJsonAsync(Kit.Url, Kit.Valid());
         Assert.Equal(HttpStatusCode.Created, r.StatusCode);
         var row = await f.Load(p.Id);
@@ -176,7 +176,7 @@ public class RankingRecomputeCallSiteTests(SearchFactory f)
     {
         await f.Reset();
         var uid = Kit.Id();
-        var p = await f.Seed(PractitionerStatus.Draft, x => { x.UserId = uid; x.RankingScore = 0m; x.RankingVersion = ""; });
+        var p = await f.Seed(AgentStatus.Draft, x => { x.UserId = uid; x.RankingScore = 0m; x.RankingVersion = ""; });
         var r = await f.As(uid).PostAsJsonAsync(Kit.Url, Kit.Valid());
         Assert.Equal(HttpStatusCode.Created, r.StatusCode);
         var row = await f.Load(p.Id);

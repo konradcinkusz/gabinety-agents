@@ -2,7 +2,7 @@ using System.Net;
 using System.Text.Json;
 using Gabinety.Contracts.Common;
 using Gabinety.Contracts.Directory;
-using Gabinety.Directory.Tests.Offerings;
+using Gabinety.Directory.Tests.Packages;
 
 namespace Gabinety.Directory.Tests.Search;
 
@@ -13,14 +13,14 @@ public sealed class SearchCollection : ICollectionFixture<SearchFactory>;
 public class SearchListTests(SearchFactory f)
 {
     [Fact]
-    public async Task Only_Approved_practitioners_with_an_active_offering_are_listed()
+    public async Task Only_Approved_agents_with_an_active_package_are_listed()
     {
         await f.Reset();
         var ok = await f.Approved();
-        foreach (var s in new[] { PractitionerStatus.Draft, PractitionerStatus.Submitted, PractitionerStatus.Rejected, PractitionerStatus.Suspended })
+        foreach (var s in new[] { AgentStatus.Draft, AgentStatus.Submitted, AgentStatus.Rejected, AgentStatus.Suspended })
             await f.Seed(s, null, new Spec());
-        await f.Seed(PractitionerStatus.Approved, null, new Spec(Active: false));   // only an inactive offering
-        await f.Seed(PractitionerStatus.Approved);                                   // no offering at all
+        await f.Seed(AgentStatus.Approved, null, new Spec(Active: false));   // only an inactive offering
+        await f.Seed(AgentStatus.Approved);                                   // no offering at all
         Assert.Equal([ok.Id], await Sk.Ids(f.Anon()));
     }
 
@@ -28,8 +28,8 @@ public class SearchListTests(SearchFactory f)
     public async Task Order_is_ranking_score_then_approved_at_then_id() =>
         await SearchScenarios.Ties_are_ordered_by_score_then_approved_at_then_id(f, SearchScenarios.DotNetOrder);
 
-    [Fact] public Task Each_filter_alone_and_combined_on_the_same_offering() => SearchScenarios.Filters_must_all_hold_on_the_same_offering(f);
-    [Fact] public Task Tech_filter() => SearchScenarios.Tech_filter_returns_exactly_the_rows_whose_offering_has_that_tech(f);
+    [Fact] public Task Each_filter_alone_and_combined_on_the_same_package() => SearchScenarios.Filters_must_all_hold_on_the_same_package(f);
+    [Fact] public Task Tech_filter() => SearchScenarios.Tech_filter_returns_exactly_the_rows_whose_package_has_that_tech(f);
     [Fact] public Task Q_is_case_insensitive_and_wildcard_safe() => SearchScenarios.Q_matches_name_or_headline_case_insensitively_and_treats_wildcards_literally(f);
     [Fact] public Task Paging_30_rows_with_ties() => SearchScenarios.Paging_30_rows_with_ties_visits_every_row_once_in_ranking_order(f, SearchScenarios.DotNetOrder);
 
@@ -116,7 +116,7 @@ public class SearchListTests(SearchFactory f)
     }
 
     [Fact]
-    public async Task FromPrice_is_the_lowest_active_offering_and_respects_the_filters()
+    public async Task FromPrice_is_the_lowest_active_package_and_respects_the_filters()
     {
         await f.Reset();
         var p = await f.Approved(null,

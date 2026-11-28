@@ -91,23 +91,23 @@ sealed class ModerationHost : WebApplicationFactory<Program>
 
     protected override void Dispose(bool disposing) { if (disposing) _rsa.Dispose(); base.Dispose(disposing); }
 
-    public static Review NewReview(Guid practitionerId, ReviewStatus status, int rating = 5, DateTimeOffset? at = null) => new()
+    public static Review NewReview(Guid agentId, ReviewStatus status, int rating = 5, DateTimeOffset? at = null) => new()
     {
-        Id = Guid.CreateVersion7(), BookingId = Guid.NewGuid(), PractitionerId = practitionerId, ClientUserId = "demo-reviewer", Rating = (short)rating,
+        Id = Guid.CreateVersion7(), AccessId = Guid.NewGuid(), AgentId = agentId, ClientUserId = "demo-reviewer", Rating = (short)rating,
         Text = ReviewText, Status = status, HoldReasons = status == ReviewStatus.Held ? ["spam"] : [],
         CreatedAt = at ?? new DateTimeOffset(2026, 11, 1, 10, 0, 0, TimeSpan.Zero),
         PublishedAt = status == ReviewStatus.Published ? at ?? new DateTimeOffset(2026, 11, 1, 10, 0, 0, TimeSpan.Zero) : null,
     };
 
     /// <summary>Seeds reviews and a rating summary that matches the Published ones (what the create path would have written).</summary>
-    public async Task Seed(Guid practitionerId, params Review[] reviews)
+    public async Task Seed(Guid agentId, params Review[] reviews)
     {
         using var scope = Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ReputationDbContext>();
         db.Reviews.AddRange(reviews);
         var pub = reviews.Where(r => r.Status == ReviewStatus.Published).ToList();
         if (pub.Count > 0)
-            db.RatingSummaries.Add(new RatingSummary { PractitionerId = practitionerId, Count = pub.Count, Sum = pub.Sum(r => (int)r.Rating), Version = pub.Count });
+            db.RatingSummaries.Add(new RatingSummary { AgentId = agentId, Count = pub.Count, Sum = pub.Sum(r => (int)r.Rating), Version = pub.Count });
         db.ModerationEvents.AddRange(reviews.Select(r => new ModerationEvent
             { Id = Guid.CreateVersion7(), ReviewId = r.Id, Kind = ModerationEventKind.Created, Actor = "system", At = r.CreatedAt }));
         await db.SaveChangesAsync();
@@ -120,14 +120,14 @@ sealed class ModerationHost : WebApplicationFactory<Program>
     }
 
     public Task<Review> ReviewOf(Guid id) => Query(db => db.Reviews.AsNoTracking().SingleAsync(r => r.Id == id));
-    public Task<RatingSummary?> SummaryOf(Guid p) => Query(db => db.RatingSummaries.AsNoTracking().SingleOrDefaultAsync(s => s.PractitionerId == p));
+    public Task<RatingSummary?> SummaryOf(Guid p) => Query(db => db.RatingSummaries.AsNoTracking().SingleOrDefaultAsync(s => s.AgentId == p));
     public Task<List<ModerationEvent>> EventsOf(Guid reviewId) =>
         Query(db => db.ModerationEvents.AsNoTracking().Where(e => e.ReviewId == reviewId).OrderBy(e => e.At).ThenBy(e => e.Id).ToListAsync());
 
     /// <summary>The summary a recount of the Published rows gives.</summary>
     public async Task<(int Count, int Sum)> Recount(Guid p)
     {
-        var rows = await Query(db => db.Reviews.AsNoTracking().Where(r => r.PractitionerId == p && r.Status == ReviewStatus.Published).ToListAsync());
+        var rows = await Query(db => db.Reviews.AsNoTracking().Where(r => r.AgentId == p && r.Status == ReviewStatus.Published).ToListAsync());
         return (rows.Count, rows.Sum(r => (int)r.Rating));
     }
 
@@ -136,7 +136,7 @@ sealed class ModerationHost : WebApplicationFactory<Program>
         c.PostAsJsonAsync($"/api/v1/admin/reviews/{id}/reject", new { reason });
 
     /// <summary>All admin list items of a status for one practitioner (pages through the shared InMemory database).</summary>
-    public static async Task<List<JsonElement>> ListAll(HttpClient c, Guid practitionerId, string? status = null)
+    public static async Task<List<JsonElement>> ListAll(HttpClient c, Guid agentId, string? status = null)
     {
         var items = new List<JsonElement>(); string? cursor = null;
         do
@@ -145,7 +145,7 @@ sealed class ModerationHost : WebApplicationFactory<Program>
             var r = await c.GetAsync(url);
             r.EnsureSuccessStatusCode();
             var doc = JsonDocument.Parse(await r.Content.ReadAsStringAsync()).RootElement;
-            items.AddRange(doc.GetProperty("items").EnumerateArray().Where(i => i.GetProperty("practitionerId").GetGuid() == practitionerId).Select(i => i.Clone()));
+            items.AddRange(doc.GetProperty("items").EnumerateArray().Where(i => i.GetProperty("practitionerId").GetGuid() == agentId).Select(i => i.Clone()));
             cursor = doc.TryGetProperty("nextCursor", out var n) && n.ValueKind == JsonValueKind.String ? n.GetString() : null;
         } while (cursor is not null);
         return items;

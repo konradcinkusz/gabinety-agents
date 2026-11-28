@@ -11,7 +11,7 @@ public class ScalePlanTests
     public void Factor_1_adds_nothing()
     {
         Assert.Empty(ScalePlan.Extras(1));
-        Assert.Equal(DemoCatalog.Practitioners.Length, ScalePlan.TotalPractitioners(1));
+        Assert.Equal(DemoCatalog.Agents.Length, ScalePlan.TotalAgents(1));
     }
 
     [Theory]
@@ -21,8 +21,8 @@ public class ScalePlanTests
     public void Counts_follow_the_factor_exactly(int factor)
     {
         var extras = ScalePlan.Extras(factor);
-        Assert.Equal(10 * factor, DemoCatalog.Practitioners.Length + extras.Count);
-        var reviews = DemoCatalog.Practitioners.Where(p => p.Stats is not null).Sum(p => p.Stats!.Reviews) + extras.Sum(e => e.Stats.Reviews);
+        Assert.Equal(10 * factor, DemoCatalog.Agents.Length + extras.Count);
+        var reviews = DemoCatalog.Agents.Where(p => p.Stats is not null).Sum(p => p.Stats!.Reviews) + extras.Sum(e => e.Stats.Reviews);
         Assert.Equal(100 * factor, reviews);
     }
 
@@ -33,7 +33,7 @@ public class ScalePlanTests
         Assert.All(extras, e => { Assert.True(DemoNames.IsDemo(e.UserName)); Assert.True(DemoNames.IsDemo(e.Slug)); });
         Assert.Equal(extras.Count, extras.Select(e => e.Slug).Distinct().Count());
         Assert.Equal(extras.Count, extras.Select(e => e.Nip).Distinct().Count());
-        var catalogNips = DemoCatalog.Practitioners.Select(p => p.Nip).ToHashSet();
+        var catalogNips = DemoCatalog.Agents.Select(p => p.Nip).ToHashSet();
         Assert.DoesNotContain(extras, e => catalogNips.Contains(e.Nip));
         Assert.Equal(11, extras[0].Number); // the catalog uses 1 to 10
     }
@@ -80,7 +80,7 @@ public class ScaleSeedStepTests : IAsyncLifetime
     public Task DisposeAsync() { _directory.Dispose(); _identity.Dispose(); return Task.CompletedTask; }
 
     [Fact]
-    public async Task Factor_3_makes_30_practitioners_and_a_second_run_writes_nothing_new()
+    public async Task Factor_3_makes_30_agents_and_a_second_run_writes_nothing_new()
     {
         var options = new SeedOptions("http://localhost", DirectoryHost.Key, DirectoryHost.Authority, SeedOptions.DevIdentityPassword) { Factor = 3 };
         var http = new TestSeedHttp(_identity, _directory);

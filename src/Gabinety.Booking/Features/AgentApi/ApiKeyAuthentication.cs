@@ -63,7 +63,7 @@ public static class ApiKeyAuthentication
             };
         }).Services;
 
-    sealed class ApiKeyHandler(IOptionsMonitor<AuthenticationSchemeOptions> o, ILoggerFactory l, UrlEncoder e, BookingDbContext db, TimeProvider time)
+    sealed class ApiKeyHandler(IOptionsMonitor<AuthenticationSchemeOptions> o, ILoggerFactory l, UrlEncoder e, AccessDbContext db, TimeProvider time)
         : AuthenticationHandler<AuthenticationSchemeOptions>(o, l, e)
     {
         protected override async Task<AuthenticateResult> HandleAuthenticateAsync()

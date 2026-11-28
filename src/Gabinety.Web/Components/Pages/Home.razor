@@ -44,13 +44,13 @@
                     <p class="tile__text">@DescriptionOf(c)</p>
                     @if (count is { } total)
                     {
-                        <p class="tile__count muted">@Practitioners(total)</p>
+                        <p class="tile__count muted">@Agents(total)</p>
                     }
                 </li>
             }
         </ul>
     }
-    <a href="/agenci">@Pl.Home.AllPractitioners</a>
+    <a href="/agenci">@Pl.Home.AllAgents</a>
 </section>
 
 @if (_featured is { Count: > 0 } featured)
@@ -97,9 +97,9 @@
 </section>
 
 <section class="card join" aria-labelledby="home-join">
-    <h2 id="home-join">@PlPages.HomeExtra.ForPractitionersTitle</h2>
-    <p class="prose">@PlPages.HomeExtra.ForPractitionersBody</p>
-    <p><a class="btn btn--secondary" href="/rejestracja">@PlPages.HomeExtra.ForPractitionersLink</a></p>
+    <h2 id="home-join">@PlPages.HomeExtra.ForAgentsTitle</h2>
+    <p class="prose">@PlPages.HomeExtra.ForAgentsBody</p>
+    <p><a class="btn btn--secondary" href="/rejestracja">@PlPages.HomeExtra.ForAgentsLink</a></p>
 </section>
 
 <section class="section" aria-labelledby="home-faq">
@@ -127,7 +127,7 @@
 @code {
     IReadOnlyList<CategoryDto>? _problems;
     IReadOnlyList<SitemapCategoryDto> _sitemap = [];
-    IReadOnlyList<PractitionerCardDto>? _featured;
+    IReadOnlyList<AgentCardDto>? _featured;
     int? _verified;
 
     // Each region is independent (SPEC 6.5): the categories show an error state of their own, the featured row shows nothing, and the H1 is always rendered.
@@ -135,23 +135,23 @@
     {
         var taxonomyTask = Directory.TaxonomyAsync();
         var sitemapTask = Directory.SitemapAsync();
-        var featuredTask = Directory.PractitionersAsync(new PractitionerQuery());
+        var featuredTask = Directory.AgentsAsync(new AgentQuery());
         await Task.WhenAll(taxonomyTask, sitemapTask, featuredTask);
         _problems = taxonomyTask.Result.IsOk ? taxonomyTask.Result.Value!.Problems : null;
         _sitemap = sitemapTask.Result.Value?.Categories ?? [];
         // The trust row counts the approved practitioners (the plain list's count); with no answer the row simply omits the number.
-        _verified = _sitemap.FirstOrDefault(c => c.Path == "/agenci")?.PractitionerCount;
+        _verified = _sitemap.FirstOrDefault(c => c.Path == "/agenci")?.AgentCount;
         // The first page of the list, three of it. A failed read leaves the region out.
         _featured = featuredTask.Result.IsOk ? featuredTask.Result.Value!.Items.Take(3).ToList() : null;
     }
 
     /// <summary>The practitioner count of a category from the sitemap; absent when the sitemap does not answer or does not list it.</summary>
-    int? CountOf(string slug) => _sitemap.FirstOrDefault(c => c.Path == $"/agenci/{slug}")?.PractitionerCount;
+    int? CountOf(string slug) => _sitemap.FirstOrDefault(c => c.Path == $"/agenci/{slug}")?.AgentCount;
 
     static string DescriptionOf(CategoryDto c) =>
         PlPages.HomeExtra.CategoryDescriptions.TryGetValue(c.Slug, out var text) ? text : string.Format(PlPages.HomeExtra.CategoryFallback, c.NamePl);
 
-    static string Practitioners(int n) => Plural(n, PlPages.HomeExtra.PractitionersOne, PlPages.HomeExtra.PractitionersFew, PlPages.HomeExtra.PractitionersMany);
+    static string Agents(int n) => Plural(n, PlPages.HomeExtra.AgentsOne, PlPages.HomeExtra.AgentsFew, PlPages.HomeExtra.AgentsMany);
 
     /// <summary>Polish plural: 1 takes the singular form, 2 to 4 (but not 12 to 14) the few form, everything else the many form.</summary>
     static string Plural(int n, string one, string few, string many)

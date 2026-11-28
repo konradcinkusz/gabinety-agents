@@ -65,29 +65,29 @@ public class CompletenessTests
     [Fact] public void All_false_is_zero() => Assert.Equal(0.00m, ProfileCompleteness.Compute(false, false, false, false, false, false, false));
     [Fact] public void All_true_is_one() => Assert.Equal(1.00m, ProfileCompleteness.Compute(true, true, true, true, true, true, true));
     [Fact] public void Mixed_headline_bio_nip() => Assert.Equal(0.45m, ProfileCompleteness.Compute(true, true, false, false, false, true, false));
-    [Fact] public void Mixed_offering_github_slots() => Assert.Equal(0.45m, ProfileCompleteness.Compute(false, false, true, true, false, false, true));
+    [Fact] public void Mixed_package_github_slots() => Assert.Equal(0.45m, ProfileCompleteness.Compute(false, false, true, true, false, false, true));
 }
 
 public class StateMachineTests
 {
-    static readonly HashSet<(PractitionerStatus, PractitionerTrigger, PractitionerStatus)> Legal =
+    static readonly HashSet<(AgentStatus, AgentTrigger, AgentStatus)> Legal =
     [
-        (PractitionerStatus.Draft, PractitionerTrigger.Submit, PractitionerStatus.Submitted),
-        (PractitionerStatus.Rejected, PractitionerTrigger.Submit, PractitionerStatus.Submitted),
-        (PractitionerStatus.Submitted, PractitionerTrigger.Approve, PractitionerStatus.Approved),
-        (PractitionerStatus.Submitted, PractitionerTrigger.Reject, PractitionerStatus.Rejected),
-        (PractitionerStatus.Approved, PractitionerTrigger.Suspend, PractitionerStatus.Suspended),
-        (PractitionerStatus.Suspended, PractitionerTrigger.Reinstate, PractitionerStatus.Approved),
-        (PractitionerStatus.Approved, PractitionerTrigger.NipChanged, PractitionerStatus.Submitted),
+        (AgentStatus.Draft, AgentTrigger.Submit, AgentStatus.Submitted),
+        (AgentStatus.Rejected, AgentTrigger.Submit, AgentStatus.Submitted),
+        (AgentStatus.Submitted, AgentTrigger.Approve, AgentStatus.Approved),
+        (AgentStatus.Submitted, AgentTrigger.Reject, AgentStatus.Rejected),
+        (AgentStatus.Approved, AgentTrigger.Suspend, AgentStatus.Suspended),
+        (AgentStatus.Suspended, AgentTrigger.Reinstate, AgentStatus.Approved),
+        (AgentStatus.Approved, AgentTrigger.NipChanged, AgentStatus.Submitted),
     ];
 
     [Fact]
     public void Every_status_times_trigger_is_legal_exactly_when_in_the_table()
     {
-        foreach (var s in Enum.GetValues<PractitionerStatus>())
-            foreach (var t in Enum.GetValues<PractitionerTrigger>())
+        foreach (var s in Enum.GetValues<AgentStatus>())
+            foreach (var t in Enum.GetValues<AgentTrigger>())
             {
-                var ok = PractitionerStateMachine.TryTransition(s, t, out var to);
+                var ok = AgentStateMachine.TryTransition(s, t, out var to);
                 var expected = Legal.SingleOrDefault(l => l.Item1 == s && l.Item2 == t);
                 Assert.Equal(expected != default, ok);
                 if (ok) Assert.Equal(expected.Item3, to);
@@ -95,6 +95,6 @@ public class StateMachineTests
     }
 
     [Fact] public void Only_the_seven_pairs_exist() =>
-        Assert.Equal(Legal.Count, Enum.GetValues<PractitionerStatus>().SelectMany(s => Enum.GetValues<PractitionerTrigger>()
-            .Where(t => PractitionerStateMachine.TryTransition(s, t, out _))).Count());
+        Assert.Equal(Legal.Count, Enum.GetValues<AgentStatus>().SelectMany(s => Enum.GetValues<AgentTrigger>()
+            .Where(t => AgentStateMachine.TryTransition(s, t, out _))).Count());
 }

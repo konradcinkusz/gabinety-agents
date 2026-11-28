@@ -13,7 +13,7 @@ public class ReviewsListTests
 
     static Review Row(Guid pract, ReviewStatus status, int minutes, string? reply = null) => new()
     {
-        Id = Guid.NewGuid(), BookingId = Guid.NewGuid(), PractitionerId = pract, ClientUserId = "demo-secret-reviewer-id", Rating = 5,
+        Id = Guid.NewGuid(), AccessId = Guid.NewGuid(), AgentId = pract, ClientUserId = "demo-secret-reviewer-id", Rating = 5,
         Text = $"Synthetyczna opinia numer {minutes} o długości powyżej dwudziestu znaków.", Status = status,
         CreatedAt = T0.AddMinutes(minutes), PublishedAt = status == ReviewStatus.Published ? T0.AddMinutes(minutes) : null,
         ReplyText = reply, RepliedAt = reply is null ? null : T0.AddMinutes(minutes + 1),
@@ -91,7 +91,7 @@ public class ReviewsListTests
     }
 
     [Fact]
-    public async Task A_broken_cursor_is_400_and_an_unknown_practitioner_is_an_empty_page()
+    public async Task A_broken_cursor_is_400_and_an_unknown_agent_is_an_empty_page()
     {
         using var h = new ReviewsHost();
         var c = h.ClientFor(null);
@@ -104,7 +104,7 @@ public class ReviewsListTests
     {
         using var h = new ReviewsHost();
         string user = "demo-" + Guid.NewGuid().ToString("N")[..10]; var pract = Guid.NewGuid();
-        await ReviewsHost.Post(h.ClientFor(user), h.Booking.Add(user, pract), 5);
+        await ReviewsHost.Post(h.ClientFor(user), h.Access.Add(user, pract), 5);
 
         var page = await Get(h.ClientFor(null), $"/api/v1/practitioners/{pract}/reviews");
 

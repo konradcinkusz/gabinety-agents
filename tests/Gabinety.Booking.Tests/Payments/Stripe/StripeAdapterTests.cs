@@ -8,8 +8,8 @@ namespace Gabinety.Booking.Tests.StripePayments;
 /// <summary>What the adapter sends to Stripe (bodies, headers, idempotency keys) and how it reads the answers, against the recorded response shapes.</summary>
 public class StripeAdapterTests
 {
-    static readonly Guid Booking = Guid.Parse("0f8fad5b-d9cb-469f-a165-70867728950e");
-    static readonly Guid Practitioner = Guid.Parse("11111111-2222-3333-4444-555555555555");
+    static readonly Guid Access = Guid.Parse("0f8fad5b-d9cb-469f-a165-70867728950e");
+    static readonly Guid Agent = Guid.Parse("11111111-2222-3333-4444-555555555555");
 
     static Handler Stripe() => new Handler()
         .On(HttpMethod.Post, "/v1/checkout/sessions", Fx.Load("response.checkout.session.create"))
@@ -21,12 +21,12 @@ public class StripeAdapterTests
         .On(HttpMethod.Post, "/v1/account_links", Fx.Load("response.account_link"));
 
     static CheckoutRequest Checkout(long amount = 10000, string currency = "PLN", string title = "demo-offering") =>
-        new(Booking, amount, currency, title, "https://demo.invalid/bookings/" + Booking);
+        new(Access, amount, currency, title, "https://demo.invalid/bookings/" + Access);
 
     // ---- checkout ----
 
     [Fact]
-    public async Task Checkout_posts_a_payment_mode_session_in_zloty_with_the_booking_the_idempotency_key_and_the_documented_headers()
+    public async Task Checkout_posts_a_payment_mode_session_in_zloty_with_the_access_the_idempotency_key_and_the_documented_headers()
     {
         var h = Stripe();
         var r = await Fx.Provider(h).CreateCheckoutAsync(Checkout(), default);
@@ -35,21 +35,21 @@ public class StripeAdapterTests
         Assert.StartsWith("https://checkout.stripe.com/", r.CheckoutUrl);
         var q = Assert.Single(h.Requests);
         Assert.Equal(HttpMethod.Post, q.Method);
-        Assert.Equal($"checkout:{Booking:N}", q.Headers["Idempotency-Key"]); // stable per booking: a retry is the same session
+        Assert.Equal($"checkout:{Access:N}", q.Headers["Idempotency-Key"]); // stable per booking: a retry is the same session
         Assert.Equal($"Bearer {Fx.SecretKey}", q.Headers["Authorization"]);
         Assert.Equal(StripeApi.ApiVersion, q.Headers["Stripe-Version"]);
         Assert.Equal("payment", q.Form["mode"]);
         Assert.Equal("10000", q.Form["line_items[0][price_data][unit_amount]"]);
         Assert.Equal("pln", q.Form["line_items[0][price_data][currency]"]);
         Assert.Equal("1", q.Form["line_items[0][quantity]"]);
-        Assert.Equal(Booking.ToString(), q.Form["client_reference_id"]);
-        Assert.Equal(Booking.ToString(), q.Form["metadata[booking_id]"]);
-        Assert.Equal(Booking.ToString(), q.Form["payment_intent_data[metadata][booking_id]"]);
-        Assert.Equal($"booking_{Booking:N}", q.Form["payment_intent_data[transfer_group]"]);
+        Assert.Equal(Access.ToString(), q.Form["client_reference_id"]);
+        Assert.Equal(Access.ToString(), q.Form["metadata[booking_id]"]);
+        Assert.Equal(Access.ToString(), q.Form["payment_intent_data[metadata][booking_id]"]);
+        Assert.Equal($"booking_{Access:N}", q.Form["payment_intent_data[transfer_group]"]);
         Assert.Equal("card", q.Form["allowed_payment_method_types[0]"]);
         Assert.Equal("blik", q.Form["allowed_payment_method_types[1]"]);
         Assert.Equal((Fx.Now + TimeSpan.FromMinutes(35)).ToUnixTimeSeconds().ToString(), q.Form["expires_at"]); // Stripe's minimum life is 30 minutes
-        Assert.Equal($"https://demo.invalid/bookings/{Booking}", q.Form["success_url"]);
+        Assert.Equal($"https://demo.invalid/bookings/{Access}", q.Form["success_url"]);
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public class StripeAdapterTests
     }
 
     [Fact]
-    public async Task A_long_offering_title_is_cut_to_what_the_product_name_allows_and_form_characters_survive_encoding()
+    public async Task A_long_package_title_is_cut_to_what_the_product_name_allows_and_form_characters_survive_encoding()
     {
         var h = Stripe();
         await Fx.Provider(h).CreateCheckoutAsync(Checkout(title: "A&B=C+ć " + new string('x', 400)), default);
@@ -92,12 +92,12 @@ public class StripeAdapterTests
     public async Task A_refund_finds_the_payment_intent_of_the_session_and_carries_the_callers_key_the_amount_and_the_payment_for_the_webhook()
     {
         var h = Stripe();
-        var r = await Fx.Provider(h).RefundAsync(new RefundRequest(Fx.SessionId, 10000, $"refund:{Booking:N}:ClientCancelledEarly"), default);
+        var r = await Fx.Provider(h).RefundAsync(new RefundRequest(Fx.SessionId, 10000, $"refund:{Access:N}:ClientCancelledEarly"), default);
 
         Assert.Equal("re_3Qx0demo", r.ProviderRefundId);
         Assert.Equal(HttpMethod.Get, h.Requests[0].Method);
         var q = h.Requests[1];
-        Assert.Equal($"refund:{Booking:N}:ClientCancelledEarly", q.Headers["Idempotency-Key"]);
+        Assert.Equal($"refund:{Access:N}:ClientCancelledEarly", q.Headers["Idempotency-Key"]);
         Assert.Equal("pi_3Qx0demo", q.Form["payment_intent"]);
         Assert.Equal("10000", q.Form["amount"]);
         Assert.Equal(Fx.SessionId, q.Form["metadata[provider_payment_id]"]);
@@ -119,18 +119,18 @@ public class StripeAdapterTests
     public async Task A_payout_is_a_transfer_of_price_minus_fee_to_the_connected_account_from_the_charge_with_the_callers_key()
     {
         var h = Stripe().On(HttpMethod.Get, $"/v1/checkout/sessions/{Fx.SessionId}", Fx.Load("response.checkout.session.retrieve.paid.expanded"));
-        var r = await Fx.Provider(h).PayoutAsync(new PayoutRequest(Practitioner, 8500, "PLN", $"payout:{Booking:N}", "acct_1Qx0demo", Fx.SessionId, Booking), default);
+        var r = await Fx.Provider(h).PayoutAsync(new PayoutRequest(Agent, 8500, "PLN", $"payout:{Access:N}", "acct_1Qx0demo", Fx.SessionId, Access), default);
 
         Assert.Equal("tr_1Qx0demo", r.ProviderPayoutId);
         Assert.Contains("expand%5B%5D=payment_intent", h.Requests[0].PathAndQuery);
         var q = h.Requests[1];
         Assert.Equal("/v1/transfers", q.PathAndQuery);
-        Assert.Equal($"payout:{Booking:N}", q.Headers["Idempotency-Key"]);
+        Assert.Equal($"payout:{Access:N}", q.Headers["Idempotency-Key"]);
         Assert.Equal("8500", q.Form["amount"]);
         Assert.Equal("pln", q.Form["currency"]);
         Assert.Equal("acct_1Qx0demo", q.Form["destination"]);
         Assert.Equal("ch_3Qx0demo", q.Form["source_transaction"]); // funds come from this charge, so they need not be available yet
-        Assert.Equal($"booking_{Booking:N}", q.Form["transfer_group"]);
+        Assert.Equal($"booking_{Access:N}", q.Form["transfer_group"]);
     }
 
     [Theory]
@@ -141,26 +141,26 @@ public class StripeAdapterTests
     public async Task A_payout_without_an_account_or_a_payment_is_refused_before_any_call(string? account, string? payment)
     {
         var h = Stripe();
-        await Assert.ThrowsAsync<InvalidOperationException>(() => Fx.Provider(h).PayoutAsync(new PayoutRequest(Practitioner, 100, "PLN", "payout:x", account, payment, Booking), default));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Fx.Provider(h).PayoutAsync(new PayoutRequest(Agent, 100, "PLN", "payout:x", account, payment, Access), default));
         Assert.Empty(h.Requests);
     }
 
     // ---- connected accounts ----
 
     [Fact]
-    public async Task An_express_account_is_created_in_Poland_with_transfers_requested_and_one_key_per_practitioner()
+    public async Task An_express_account_is_created_in_Poland_with_transfers_requested_and_one_key_per_agent()
     {
         var h = Stripe();
-        Assert.Equal("acct_1Qx0demo", await Fx.Provider(h).CreateAccountAsync(Practitioner, default));
+        Assert.Equal("acct_1Qx0demo", await Fx.Provider(h).CreateAccountAsync(Agent, default));
         var q = Assert.Single(h.Requests);
-        Assert.Equal($"account:{Practitioner:N}", q.Headers["Idempotency-Key"]);
+        Assert.Equal($"account:{Agent:N}", q.Headers["Idempotency-Key"]);
         Assert.Equal("express", q.Form["controller[stripe_dashboard][type]"]);
         Assert.Equal("application", q.Form["controller[fees][payer]"]);
         Assert.Equal("application", q.Form["controller[losses][payments]"]);
         Assert.Equal("stripe", q.Form["controller[requirement_collection]"]);
         Assert.Equal("PL", q.Form["country"]);
         Assert.Equal("true", q.Form["capabilities[transfers][requested]"]);
-        Assert.Equal(Practitioner.ToString(), q.Form["metadata[practitioner_id]"]);
+        Assert.Equal(Agent.ToString(), q.Form["metadata[practitioner_id]"]);
     }
 
     [Fact]
@@ -207,8 +207,8 @@ public class StripeAdapterTests
         var p = Fx.Provider(h);
         await p.CreateCheckoutAsync(Checkout(), default);
         await p.RefundAsync(new RefundRequest(Fx.SessionId, 1, "refund:k"), default);
-        await p.PayoutAsync(new PayoutRequest(Practitioner, 1, "PLN", "payout:k", "acct_1Qx0demo", Fx.SessionId, Booking), default);
-        await p.CreateAccountAsync(Practitioner, default);
+        await p.PayoutAsync(new PayoutRequest(Agent, 1, "PLN", "payout:k", "acct_1Qx0demo", Fx.SessionId, Access), default);
+        await p.CreateAccountAsync(Agent, default);
         await p.CreateOnboardingLinkAsync("acct_1Qx0demo", "https://x.invalid/r", "https://x.invalid/f", default);
         var writes = h.Requests.Where(r => r.Method == HttpMethod.Post).ToList();
         Assert.Equal(5, writes.Count);
@@ -255,7 +255,7 @@ public class StripeAdapterTests
     {
         var p = Fx.Provider(new Handler());
         Assert.Equal("Stripe", p.Name);
-        Assert.True(p.RequiresPractitionerAccount);
+        Assert.True(p.RequiresAgentAccount);
         Assert.True(p.WebhookSecretConfigured);
         Assert.IsAssignableFrom<IConnectedAccountProvider>(p);
     }

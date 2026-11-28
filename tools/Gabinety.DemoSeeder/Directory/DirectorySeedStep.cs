@@ -24,8 +24,8 @@ public sealed class DirectorySeedStep : ISeedStep
         context.Log.Info($"directory: {context.Clients.Count} demo clients");
 
         var admin = await context.Identity.SignInAsync("demo-admin", ct);
-        foreach (var demo in DemoCatalog.Practitioners)
-            await SeedPractitionerAsync(context, api, admin, taxonomy, demo, ct);
+        foreach (var demo in DemoCatalog.Agents)
+            await SeedAgentAsync(context, api, admin, taxonomy, demo, ct);
     }
 
     /// <summary>The Directory fills its taxonomy after it starts listening (migrations run post-start), so an empty answer is waited out, up to 30 seconds.</summary>
@@ -40,7 +40,7 @@ public sealed class DirectorySeedStep : ISeedStep
         }
     }
 
-    static async Task SeedPractitionerAsync(SeedContext context, DirectoryApi api, DemoUser admin, TaxonomyView taxonomy, DemoPractitioner demo, CancellationToken ct)
+    static async Task SeedAgentAsync(SeedContext context, DirectoryApi api, DemoUser admin, TaxonomyView taxonomy, DemoAgent demo, CancellationToken ct)
     {
         DemoNames.Require(demo.UserName); DemoNames.Require(demo.Slug);
         var user = await context.Identity.SignInAsync(demo.UserName, ct);
@@ -64,8 +64,8 @@ public sealed class DirectorySeedStep : ISeedStep
 
         if (complete && !mine.GithubLinked) { await api.LinkGithubAsync(user, demo.GithubLogin, ct); changes++; }
 
-        var seeded = new SeededPractitioner(demo.UserName, user.UserId, mine.Id, mine.Slug) { Status = mine.Status };
-        changes += await EnsureOfferingsAsync(api, user, taxonomy, demo, seeded, ct);
+        var seeded = new SeededAgent(demo.UserName, user.UserId, mine.Id, mine.Slug) { Status = mine.Status };
+        changes += await EnsurePackagesAsync(api, user, taxonomy, demo, seeded, ct);
 
         foreach (var trigger in StatusPlan.Triggers(Enum.Parse<DemoStatus>(mine.Status), demo.Target))
         {
@@ -81,25 +81,25 @@ public sealed class DirectorySeedStep : ISeedStep
             await api.PushStatsAsync(mine.Id, s, BaselineVersion, ct);
         }
 
-        context.Practitioners[demo.UserName] = seeded;
-        context.Log.Info($"directory: {demo.UserName} {demo.Slug} {seeded.Status} offerings={seeded.Offerings.Count} {(changes == 0 ? "unchanged" : $"changes={changes}")}");
+        context.Agents[demo.UserName] = seeded;
+        context.Log.Info($"directory: {demo.UserName} {demo.Slug} {seeded.Status} offerings={seeded.Packages.Count} {(changes == 0 ? "unchanged" : $"changes={changes}")}");
     }
 
-    static async Task<int> EnsureOfferingsAsync(DirectoryApi api, DemoUser user, TaxonomyView taxonomy, DemoPractitioner demo, SeededPractitioner seeded, CancellationToken ct)
+    static async Task<int> EnsurePackagesAsync(DirectoryApi api, DemoUser user, TaxonomyView taxonomy, DemoAgent demo, SeededAgent seeded, CancellationToken ct)
     {
-        if (demo.Offerings.Length == 0) return 0;
-        var existing = (await api.OfferingsAsync(user, ct)).ToDictionary(o => o.Title);
+        if (demo.Packages.Length == 0) return 0;
+        var existing = (await api.PackagesAsync(user, ct)).ToDictionary(o => o.Title);
         var changes = 0;
-        foreach (var o in demo.Offerings)
+        foreach (var o in demo.Packages)
         {
             var problem = Pick(taxonomy.Problems, o.ProblemSlot);
             var techs = o.TechSlots.Select(t => Pick(taxonomy.Techs, t)).Distinct().ToArray();
             var body = new { title = o.Title, description = o.Description, durationMinutes = o.Minutes, priceMinor = o.PriceMinor, problemSlug = problem, techSlugs = techs, kind = o.Kind, units = o.Units };
-            if (!existing.TryGetValue(o.Title, out var have)) { seeded.Offerings[o.Title] = await api.CreateOfferingAsync(user, body, ct); changes++; continue; }
-            seeded.Offerings[o.Title] = have.Id;
+            if (!existing.TryGetValue(o.Title, out var have)) { seeded.Packages[o.Title] = await api.CreatePackageAsync(user, body, ct); changes++; continue; }
+            seeded.Packages[o.Title] = have.Id;
             if (have.Description != o.Description || have.DurationMinutes != o.Minutes || have.PriceMinor != o.PriceMinor || have.ProblemSlug != problem || !have.TechSlugs.SequenceEqual(techs) || have.Kind != o.Kind || have.Units != o.Units)
             {
-                await api.UpdateOfferingAsync(user, have.Id, body, ct); changes++;
+                await api.UpdatePackageAsync(user, have.Id, body, ct); changes++;
             }
         }
         return changes;

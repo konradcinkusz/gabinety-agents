@@ -26,17 +26,17 @@ public class ProfileIntegrationTests
         await f.Services.GetRequiredService<Gabinety.Directory.Persistence.MigrationState>().WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
         var j = new JsonSerializerOptions(JsonSerializerDefaults.Web);
-        var ra = await a.PostAsJsonAsync("/api/v1/me/practitioner", new CreatePractitionerRequest("Jan Kowalski"));
-        var rb = await b.PostAsJsonAsync("/api/v1/me/practitioner", new CreatePractitionerRequest("Jan Kowalski"));
+        var ra = await a.PostAsJsonAsync("/api/v1/me/practitioner", new CreateAgentRequest("Jan Kowalski"));
+        var rb = await b.PostAsJsonAsync("/api/v1/me/practitioner", new CreateAgentRequest("Jan Kowalski"));
         Assert.Equal(HttpStatusCode.Created, ra.StatusCode);
         Assert.Equal(HttpStatusCode.Created, rb.StatusCode);
-        var pa = (await ra.Content.ReadFromJsonAsync<PractitionerPrivate>(j))!;
-        var pb = (await rb.Content.ReadFromJsonAsync<PractitionerPrivate>(j))!;
+        var pa = (await ra.Content.ReadFromJsonAsync<AgentPrivate>(j))!;
+        var pb = (await rb.Content.ReadFromJsonAsync<AgentPrivate>(j))!;
         Assert.Equal("jan-kowalski", pa.Slug);
         Assert.Equal("jan-kowalski-2", pb.Slug);
 
-        Assert.Equal(pa.Id, (await a.GetFromJsonAsync<PractitionerPrivate>("/api/v1/me/practitioner", j))!.Id);
-        Assert.Equal(pb.Id, (await b.GetFromJsonAsync<PractitionerPrivate>("/api/v1/me/practitioner", j))!.Id);
+        Assert.Equal(pa.Id, (await a.GetFromJsonAsync<AgentPrivate>("/api/v1/me/practitioner", j))!.Id);
+        Assert.Equal(pb.Id, (await b.GetFromJsonAsync<AgentPrivate>("/api/v1/me/practitioner", j))!.Id);
     }
 
     sealed class ProfilePgFactory(string cs) : ProfileFactory

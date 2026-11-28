@@ -2,34 +2,34 @@ using Gabinety.Booking.Features.Lifecycle.Core;
 using Gabinety.Booking.Notifications;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using BookingStatus = Gabinety.Billing.BookingStatus;
-using BookingTrigger = Gabinety.Billing.BookingTrigger;
+using AccessStatus = Gabinety.Billing.AccessStatus;
+using AccessTrigger = Gabinety.Billing.AccessTrigger;
 
 namespace Gabinety.Booking.Tests;
 
 /// <summary>T-04.09b: the notification rows every transition writes in its own transaction (CONTRACTS 8.1).</summary>
 public class NotificationSchedulingTests
 {
-    const string Client = "demo-client-sched", Practitioner = "demo-practitioner-user"; // the practitioner user id Fee.Seed gives its bookings
+    const string Client = "demo-client-sched", Agent = "demo-practitioner-user"; // the practitioner user id Fee.Seed gives its bookings
 
     static Task<List<Notification>> Rows(CreateHost h, Guid id) =>
-        h.Query(db => db.Notifications.AsNoTracking().Where(n => n.BookingId == id).ToListAsync());
+        h.Query(db => db.Notifications.AsNoTracking().Where(n => n.AccessId == id).ToListAsync());
 
     static async Task<List<NotificationKind>> Kinds(CreateHost h, Guid id) => (await Rows(h, id)).Select(r => r.Kind).ToList();
 
     /// <summary>A booking in <paramref name="status"/> starting in <paramref name="startIn"/> (one hour long) with its succeeded payment.</summary>
-    static Task<Guid> Seed(CreateHost h, TimeSpan startIn, BookingStatus status = BookingStatus.PendingPayment) =>
+    static Task<Guid> Seed(CreateHost h, TimeSpan startIn, AccessStatus status = AccessStatus.PendingPayment) =>
         Fee.Seed(h, status, Client, Guid.NewGuid(), 10000, startIn);
 
     static async Task<Guid> ConfirmedWithRows(CreateHost h, TimeSpan startIn)
     {
         var id = await Seed(h, startIn);
-        Assert.True((await Fee.Apply(h, id, BookingTrigger.PaymentSucceeded)).Applied);
+        Assert.True((await Fee.Apply(h, id, AccessTrigger.PaymentSucceeded)).Applied);
         return id;
     }
 
     static Task MarkSent(CreateHost h, Guid id, NotificationKind kind, string? user = null) =>
-        h.Seed(db => db.Notifications.Single(n => n.BookingId == id && n.Kind == kind && (user == null || n.ToUserId == user)).SentAt = h.Clock.GetUtcNow());
+        h.Seed(db => db.Notifications.Single(n => n.AccessId == id && n.Kind == kind && (user == null || n.ToUserId == user)).SentAt = h.Clock.GetUtcNow());
 
     [Fact]
     public async Task Confirming_schedules_two_confirmations_and_one_review_request_and_no_reminders()
@@ -38,12 +38,12 @@ public class NotificationSchedulingTests
         var id = await Seed(h, TimeSpan.FromDays(3));
         var b = await Life.Row(h, id);
 
-        Assert.True((await Fee.Apply(h, id, BookingTrigger.PaymentSucceeded)).Applied);
+        Assert.True((await Fee.Apply(h, id, AccessTrigger.PaymentSucceeded)).Applied);
 
         var rows = await Rows(h, id);
         Assert.Equal(3, rows.Count); // A-03: no reminders, a package starts at the purchase
         var confirmations = rows.Where(r => r.Kind == NotificationKind.BookingConfirmed).ToList();
-        Assert.Equal(new[] { Client, Practitioner }.Order(), confirmations.Select(r => r.ToUserId).Order());
+        Assert.Equal(new[] { Client, Agent }.Order(), confirmations.Select(r => r.ToUserId).Order());
         Assert.All(confirmations, r => Assert.Equal(h.Clock.GetUtcNow(), r.DueAt));
         Assert.DoesNotContain(rows, r => r.Kind is NotificationKind.Reminder24h or NotificationKind.Reminder1h);
         var review = Assert.Single(rows, r => r.Kind == NotificationKind.ReviewRequest);
@@ -56,7 +56,7 @@ public class NotificationSchedulingTests
     {
         using var h = new CreateHost();
         var id = await Seed(h, TimeSpan.FromDays(3));
-        Assert.True((await Fee.Apply(h, id, BookingTrigger.HoldExpired)).Applied);
+        Assert.True((await Fee.Apply(h, id, AccessTrigger.HoldExpired)).Applied);
         Assert.Empty(await Rows(h, id));
     }
 
@@ -65,8 +65,8 @@ public class NotificationSchedulingTests
     {
         using var h = new CreateHost();
         var id = await ConfirmedWithRows(h, TimeSpan.FromDays(3));
-        await h.Seed(db => db.Bookings.Single(b => b.Id == id).Status = BookingStatus.PendingPayment); // a repair or replay that confirms the booking again
-        Assert.True((await Fee.Apply(h, id, BookingTrigger.PaymentSucceeded)).Applied);
+        await h.Seed(db => db.Accesses.Single(b => b.Id == id).Status = AccessStatus.PendingPayment); // a repair or replay that confirms the booking again
+        Assert.True((await Fee.Apply(h, id, AccessTrigger.PaymentSucceeded)).Applied);
         Assert.Equal(3, (await Rows(h, id)).Count);
     }
 
@@ -78,7 +78,7 @@ public class NotificationSchedulingTests
     {
         using var h = new CreateHost();
         var id = await Seed(h, TimeSpan.FromHours(startInHours));
-        await Fee.Apply(h, id, BookingTrigger.PaymentSucceeded);
+        await Fee.Apply(h, id, AccessTrigger.PaymentSucceeded);
         var kinds = await Kinds(h, id);
         Assert.DoesNotContain(NotificationKind.Reminder24h, kinds);
         Assert.DoesNotContain(NotificationKind.Reminder1h, kinds);
@@ -87,9 +87,9 @@ public class NotificationSchedulingTests
     }
 
     [Theory]
-    [InlineData(BookingTrigger.ClientCancels, 72)]          // CancelledByClient
-    [InlineData(BookingTrigger.ClientCancels, 5)]           // LateCancelledByClient: no review either
-    public async Task A_cancellation_removes_the_unsent_reminders_and_review_request_and_keeps_a_sent_confirmation(BookingTrigger trigger, int startInHours)
+    [InlineData(AccessTrigger.ClientCancels, 72)]          // CancelledByClient
+    [InlineData(AccessTrigger.ClientCancels, 5)]           // LateCancelledByClient: no review either
+    public async Task A_cancellation_removes_the_unsent_reminders_and_review_request_and_keeps_a_sent_confirmation(AccessTrigger trigger, int startInHours)
     {
         using var h = new CreateHost();
         var id = await ConfirmedWithRows(h, TimeSpan.FromHours(startInHours));
@@ -104,13 +104,13 @@ public class NotificationSchedulingTests
     }
 
     [Fact]
-    public async Task A_practitioner_cancel_also_removes_the_unsent_rows_and_tells_the_client_with_Cancelled_due_now()
+    public async Task A_agent_cancel_also_removes_the_unsent_rows_and_tells_the_client_with_Cancelled_due_now()
     {
         using var h = new CreateHost();
         var id = await ConfirmedWithRows(h, TimeSpan.FromHours(72));
         await MarkSent(h, id, NotificationKind.BookingConfirmed, Client);
 
-        Assert.True((await Fee.Apply(h, id, BookingTrigger.PractitionerCancels)).Applied);
+        Assert.True((await Fee.Apply(h, id, AccessTrigger.PractitionerCancels)).Applied);
 
         var rows = await Rows(h, id);
         Assert.Equal([NotificationKind.BookingConfirmed, NotificationKind.BookingConfirmed, NotificationKind.Cancelled], rows.Select(r => r.Kind).Order());
@@ -123,7 +123,7 @@ public class NotificationSchedulingTests
     {
         using var h = new CreateHost();
         var id = await ConfirmedWithRows(h, TimeSpan.FromHours(72));
-        Assert.True((await Fee.Apply(h, id, BookingTrigger.ClientCancels)).Applied);
+        Assert.True((await Fee.Apply(h, id, AccessTrigger.ClientCancels)).Applied);
         Assert.DoesNotContain(NotificationKind.Cancelled, await Kinds(h, id));
     }
 
@@ -133,7 +133,7 @@ public class NotificationSchedulingTests
         using var h = new CreateHost();
         var id = await ConfirmedWithRows(h, TimeSpan.FromDays(3));
         await MarkSent(h, id, NotificationKind.ReviewRequest);
-        await Fee.Apply(h, id, BookingTrigger.PractitionerCancels);
+        await Fee.Apply(h, id, AccessTrigger.PractitionerCancels);
         Assert.Contains(NotificationKind.ReviewRequest, await Kinds(h, id));
     }
 
@@ -142,7 +142,7 @@ public class NotificationSchedulingTests
     {
         using var h = new CreateHost();
         var id = await ConfirmedWithRows(h, TimeSpan.FromDays(3));
-        await Fee.Apply(h, id, BookingTrigger.ClientNoShowReported);
+        await Fee.Apply(h, id, AccessTrigger.ClientNoShowReported);
         Assert.DoesNotContain(NotificationKind.ReviewRequest, await Kinds(h, id));
     }
 
@@ -151,8 +151,8 @@ public class NotificationSchedulingTests
     {
         using var h = new CreateHost();
         var id = await ConfirmedWithRows(h, TimeSpan.FromDays(3));
-        await Fee.Apply(h, id, BookingTrigger.ClientDisputes);
-        await Fee.Apply(h, id, BookingTrigger.AdminResolves, c => c.Booking.DisputeResolution = "release");
+        await Fee.Apply(h, id, AccessTrigger.ClientDisputes);
+        await Fee.Apply(h, id, AccessTrigger.AdminResolves, c => c.Access.DisputeResolution = "release");
         Assert.Equal(3, (await Rows(h, id)).Count);
     }
 
@@ -161,11 +161,11 @@ public class NotificationSchedulingTests
     {
         using var h = new CreateHost();
         var configure = h.Configure;
-        h.Configure = s => { configure?.Invoke(s); s.AddScoped<IBookingTransitionHook, ThrowingHook>(); };
+        h.Configure = s => { configure?.Invoke(s); s.AddScoped<IAccessTransitionHook, ThrowingHook>(); };
         var id = await Seed(h, TimeSpan.FromDays(3));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => Fee.Apply(h, id, BookingTrigger.PaymentSucceeded));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Fee.Apply(h, id, AccessTrigger.PaymentSucceeded));
         Assert.Empty(await Rows(h, id));
-        Assert.Equal(BookingStatus.PendingPayment, (await Life.Row(h, id)).Status);
+        Assert.Equal(AccessStatus.PendingPayment, (await Life.Row(h, id)).Status);
     }
 
     [Fact]
@@ -173,7 +173,7 @@ public class NotificationSchedulingTests
     {
         using var nh = new NotificationHost();
         var id = await Seed(nh.Host, TimeSpan.FromDays(3));
-        await Fee.Apply(nh.Host, id, BookingTrigger.PaymentSucceeded);
+        await Fee.Apply(nh.Host, id, AccessTrigger.PaymentSucceeded);
 
         Assert.Equal(2, await nh.Run()); // the two confirmations are due now, nothing else
         Assert.All(nh.Sender.Sent, m => Assert.Equal(NotificationKind.BookingConfirmed, m.Kind));
@@ -190,16 +190,16 @@ public class NotificationSchedulingTests
     {
         using var h = new CreateHost();
         var id = await Seed(h, TimeSpan.FromDays(3));
-        await Fee.Apply(h, id, BookingTrigger.PaymentSucceeded);
+        await Fee.Apply(h, id, AccessTrigger.PaymentSucceeded);
         var text = string.Join('\n', Adm.LogLines(h));
         Assert.DoesNotContain("demo-brief", text);
         Assert.DoesNotContain(Client, text);
-        Assert.DoesNotContain(Practitioner, text);
+        Assert.DoesNotContain(Agent, text);
     }
 
-    sealed class ThrowingHook : IBookingTransitionHook
+    sealed class ThrowingHook : IAccessTransitionHook
     {
-        public Task OnTransitionAsync(BookingTransitionContext c, CancellationToken ct) =>
-            c.To == BookingStatus.Confirmed ? throw new InvalidOperationException("demo failure") : Task.CompletedTask;
+        public Task OnTransitionAsync(AccessTransitionContext c, CancellationToken ct) =>
+            c.To == AccessStatus.Confirmed ? throw new InvalidOperationException("demo failure") : Task.CompletedTask;
     }
 }

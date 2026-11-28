@@ -23,7 +23,7 @@ public class SkeletonMigrationStateTests
     [Fact]
     public void The_migrations_match_the_model_so_MigrateAsync_will_not_refuse_to_run()
     {
-        using var db = new BookingDbContextFactory().CreateDbContext([]);
+        using var db = new AccessDbContextFactory().CreateDbContext([]);
         Assert.False(db.Database.HasPendingModelChanges());
     }
 }
@@ -34,7 +34,7 @@ public class SkeletonMigrationIntegrationTests
     // The migrations already released, in order. Never edit or reorder these; a new migration is NOT added here: the applied history must equal the assembly's own list
     // (a missing, extra or reordered migration fails) and must start with this pinned prefix (an edited or reordered released one fails).
     static readonly string[] Shipped = ["20261116000000_T-04.03_Baseline", "20261116110000_T-04.03_Availability", "20261116130000_T-04.04_Bookings", "20261116160000_T-04.05_Payments", "20261117090000_T-04.06_Webhook", "20261118090000_T-04.07b_Disputes", "20261118100000_T-04.08c_Payouts", "20261118110000_T-04.09a_Notifications", "20261122090914_T-09.05_StripeConnect", "20261122100000_T-04.09c_ClientEmail"];
-    static readonly string[] Expected = [.. new BookingDbContextFactory().CreateDbContext([]).Database.GetMigrations()];
+    static readonly string[] Expected = [.. new AccessDbContextFactory().CreateDbContext([]).Database.GetMigrations()];
 
     static void AssertHistory(IReadOnlyList<string> applied)
     {
@@ -69,8 +69,8 @@ public class SkeletonMigrationIntegrationTests
         Assert.Equal(MigrationStatus.Done, state.Status);
     }
 
-    static BookingDbContext Db(string cs) =>
-        new(new DbContextOptionsBuilder<BookingDbContext>().UseNpgsql(cs).Options);
+    static AccessDbContext Db(string cs) =>
+        new(new DbContextOptionsBuilder<AccessDbContext>().UseNpgsql(cs).Options);
 
     static async Task<PostgreSqlContainer> Pg()
     {

@@ -1,7 +1,7 @@
 namespace Gabinety.DemoSeeder;
 
 /// <summary>A practitioner the Directory step created or found, by its stable demo key (the user name, e.g. demo-practitioner-3).</summary>
-public sealed class SeededPractitioner(string key, string userId, Guid id, string slug)
+public sealed class SeededAgent(string key, string userId, Guid id, string slug)
 {
     public string Key { get; } = key;
     public string UserId { get; } = userId;
@@ -9,7 +9,7 @@ public sealed class SeededPractitioner(string key, string userId, Guid id, strin
     public string Slug { get; } = slug;
     public string Status { get; set; } = "Draft";
     /// <summary>Offering ids by the offering's stable demo key (its title).</summary>
-    public Dictionary<string, Guid> Offerings { get; } = new();
+    public Dictionary<string, Guid> Packages { get; } = new();
 }
 
 /// <summary>Shared state of one run. Later steps read what earlier ones registered; each key is a demo- name, never a database id of another system.</summary>
@@ -22,7 +22,7 @@ public sealed class SeedContext(SeedOptions options, ISeedHttp http, ISeedLog lo
     public DemoIdentity Identity { get; } = new(http.For(SeedService.Identity), options);
 
     /// <summary>Practitioners by key. Filled by the Directory step.</summary>
-    public Dictionary<string, SeededPractitioner> Practitioners { get; } = new();
+    public Dictionary<string, SeededAgent> Agents { get; } = new();
     /// <summary>Demo client users by key (demo-client, demo-client-2, ...). Filled by the Directory step.</summary>
     public Dictionary<string, DemoUser> Clients { get; } = new();
 }

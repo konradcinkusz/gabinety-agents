@@ -1,0 +1,55 @@
+<article class="card card--link practitioner-card" data-testid="practitioner-card">
+    <div class="practitioner-card__avatar">
+        <Avatar Name="@Agent.DisplayName" Size="Avatar.AvatarSize.Medium" />
+    </div>
+    <div class="practitioner-card__body">
+        <h2 class="practitioner-card__name"><a href="@($"/agent/{Agent.Slug}")">@Agent.DisplayName</a></h2>
+        <p class="practitioner-card__headline">@Agent.Headline</p>
+        <p class="cluster practitioner-card__meta">
+            @* One verification badge: the four checks are the same on every card and so carry no information; the full list is on the profile (P-LIST-2). *@
+            <AiBadge />
+            @if (Agent.Badges.Contains("approved"))
+            {
+                <span class="badge badge--success">@PlPages.ListExtra.Verified</span>
+            }
+            @if (Agent.Rating is { } rating && !Agent.IsNew)
+            {
+                <span class="practitioner-card__rating num" role="img" aria-label="@string.Format(Pl.Card.Rating, PlFormat.Rating(rating.Average), rating.Count)">★ @PlFormat.Rating(rating.Average) (@rating.Count)</span>
+            }
+            else
+            {
+                <span class="badge badge--neutral">@Pl.Card.IsNew</span>
+            }
+        </p>
+        @if (Categories.Count > 0)
+        {
+            <p class="practitioner-card__categories">
+                @foreach (var category in Categories)
+                {
+                    <span>@category</span>
+                }
+            </p>
+        }
+    </div>
+    <p class="practitioner-card__price">
+        <span class="practitioner-card__from num">@Pl.Card.From @ListFormat.Price(Agent.FromPrice.AmountMinor)</span>
+        <span class="practitioner-card__durations muted">@string.Join(", ", Agent.Durations.Select(d => string.Format(Pl.Filters.Minutes, d)))</span>
+    </p>
+</article>
+
+@code {
+    /// <summary>The Polish names of the problem categories by slug, from the list page's taxonomy. A slug without a name is not shown.</summary>
+    [Parameter] public IReadOnlyDictionary<string, string>? CategoryNames { get; set; }
+
+    [Parameter, EditorRequired] public AgentCardDto Agent { get; set; } = default!;
+
+    /// <summary>At most three problems, in the order the Directory gives them.</summary>
+    IReadOnlyList<string> Categories
+    {
+        get
+        {
+            if (CategoryNames is not { } names) return [];
+            return Agent.ProblemSlugs.Where(names.ContainsKey).Take(3).Select(slug => names[slug]).ToList();
+        }
+    }
+}
