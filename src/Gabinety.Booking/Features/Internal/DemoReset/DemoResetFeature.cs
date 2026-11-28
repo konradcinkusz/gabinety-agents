@@ -25,11 +25,11 @@ public sealed class DemoResetFeature : IServiceFeature
         endpoints.MapPost("/internal/v1/demo/reset", ResetAsync).RequireAuthorization("Internal");
     }
 
-    static async Task<IResult> ResetAsync(BookingDbContext db, PractitionerResolver agents, CancellationToken ct)
+    static async Task<IResult> ResetAsync(AccessDbContext db, AgentResolver agents, CancellationToken ct)
     {
         // StartsWith translates to a case-sensitive prefix match on PostgreSQL (LIKE) and on the in-memory provider (ordinal).
-        var bookings = await db.Accesses.Where(b => b.ClientUserId.StartsWith(Ns) || b.AgentUserId.StartsWith(Ns)).ToListAsync(ct);
-        var ids = bookings.Select(b => b.Id).ToList();
+        var accesses = await db.Accesses.Where(b => b.ClientUserId.StartsWith(Ns) || b.AgentUserId.StartsWith(Ns)).ToListAsync(ct);
+        var ids = accesses.Select(b => b.Id).ToList();
         var payments = await db.Payments.Where(p => ids.Contains(p.AccessId)).ToListAsync(ct);
         var ledger = await db.LedgerEntries.Where(l => ids.Contains(l.AccessId)).ToListAsync(ct);
         var idempotency = await db.IdempotencyRecords.Where(r => r.ClientUserId.StartsWith(Ns)).ToListAsync(ct);
@@ -45,13 +45,13 @@ public sealed class DemoResetFeature : IServiceFeature
         db.RemoveRange(apiKeys);
         db.RemoveRange(usage);
         db.RemoveRange(tasks);
-        db.RemoveRange(bookings);
+        db.RemoveRange(accesses);
         await db.SaveChangesAsync(ct); // one unit of work: all or nothing
         agents.Clear(); // the practitioner ids it cached belong to a Directory that is being reset too
 
         return Results.Ok(new
         {
-            bookings = bookings.Count, payments = payments.Count, ledgerEntries = ledger.Count,
+            bookings = accesses.Count, payments = payments.Count, ledgerEntries = ledger.Count,
             idempotencyRecords = idempotency.Count, webhookEvents = events.Count, apiKeys = apiKeys.Count, usageRecords = usage.Count, agentTasks = tasks.Count,
         });
     }

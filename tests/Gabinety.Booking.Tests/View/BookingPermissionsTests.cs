@@ -1,5 +1,5 @@
 using Gabinety.Booking.Features.Bookings.View;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
@@ -13,13 +13,13 @@ public class BookingPermissionsTests
 
     sealed class Clock(DateTimeOffset now) : TimeProvider { public override DateTimeOffset GetUtcNow() => now; }
 
-    static BookingEntity Row(AccessStatus status, TimeSpan? duration = null, string? resolution = null, DateTimeOffset? endedAt = null, long unitsUsed = 0) => new()
+    static AccessEntity Row(AccessStatus status, TimeSpan? duration = null, string? resolution = null, DateTimeOffset? endedAt = null, long unitsUsed = 0) => new()
     {
         Id = Guid.NewGuid(), ClientUserId = Client, AgentUserId = Agent, StartUtc = Start, EndUtc = Start + (duration ?? H),
         Status = status, DisputeResolution = resolution, EndedAt = endedAt, UnitsTotal = 10, UnitsUsed = unitsUsed,
     };
 
-    static BookingFlags Flags(BookingEntity b, string caller, DateTimeOffset now) => BookingPermissions.For(b, caller, new Clock(now));
+    static AccessFlags Flags(AccessEntity b, string caller, DateTimeOffset now) => AccessPermissions.For(b, caller, new Clock(now));
 
     static readonly AccessStatus[] All = Enum.GetValues<AccessStatus>();
 
@@ -157,24 +157,24 @@ public class BookingPermissionsTests
             var b = Row(s);
             b.BriefText = "demo-brief";
             var seen = s is not (AccessStatus.PendingPayment or AccessStatus.Expired);
-            var p = Gabinety.Booking.Features.Payments.BookingViewFeature.ToView(b, null, Agent, admin: false, new Clock(Start), names);
+            var p = Gabinety.Booking.Features.Payments.AccessViewFeature.ToView(b, null, Agent, admin: false, new Clock(Start), names);
             Assert.Equal(seen, p.Brief is not null);
             Assert.Equal(seen, p.Client is not null);
-            var c = Gabinety.Booking.Features.Payments.BookingViewFeature.ToView(b, null, Client, admin: false, new Clock(Start), names);
+            var c = Gabinety.Booking.Features.Payments.AccessViewFeature.ToView(b, null, Client, admin: false, new Clock(Start), names);
             Assert.NotNull(c.Brief);
             Assert.Null(c.Client);
             // the meeting URL rule is unchanged: Confirmed only
             b.MeetingUrlSnapshot = "https://meet.demo.invalid/x";
-            Assert.Equal(s == AccessStatus.Confirmed, Gabinety.Booking.Features.Payments.BookingViewFeature.ToView(b, null, Agent, false, new Clock(Start)).MeetingUrl is not null);
-            Assert.Null(Gabinety.Booking.Features.Payments.BookingViewFeature.ToView(b, null, Stranger, false, new Clock(Start), names).Brief);
+            Assert.Equal(s == AccessStatus.Confirmed, Gabinety.Booking.Features.Payments.AccessViewFeature.ToView(b, null, Agent, false, new Clock(Start)).MeetingUrl is not null);
+            Assert.Null(Gabinety.Booking.Features.Payments.AccessViewFeature.ToView(b, null, Stranger, false, new Clock(Start), names).Brief);
         }
     }
 
     [Fact]
     public void The_resolution_note_of_a_Resolved_booking_is_for_the_admin_only_and_a_cancel_reason_stays_for_the_parties()
     {
-        static Gabinety.Contracts.Booking.AccessView V(BookingEntity b, string who, bool admin) =>
-            Gabinety.Booking.Features.Payments.BookingViewFeature.ToView(b, null, who, admin);
+        static Gabinety.Contracts.Booking.AccessView V(AccessEntity b, string who, bool admin) =>
+            Gabinety.Booking.Features.Payments.AccessViewFeature.ToView(b, null, who, admin);
 
         var resolved = Row(AccessStatus.Resolved);
         resolved.StatusReason = "demo-admin-note: the practitioner was late";

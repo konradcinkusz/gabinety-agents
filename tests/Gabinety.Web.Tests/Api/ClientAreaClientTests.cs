@@ -194,10 +194,10 @@ public class ClientAreaClientTests
         var backend = new FakeBackend { Respond = r => { seen.Add((r.RequestUri!.AbsolutePath, r.Options.TryGetValue(RequestContext.Timeout, out var t) ? t : null)); return FakeBackend.Json(new { }, HttpStatusCode.OK); } };
         var http = new HttpClient(backend) { BaseAddress = new Uri("http://b.test") };
         var visitor = new VisitorAddressAccessor(new HttpContextAccessor());
-        var bookings = new AccessClient(http, visitor, new Token("t"));
-        await bookings.CreateAsync(Guid.NewGuid(), new CreateBookingRequestDto(Guid.NewGuid(), new BriefDto("x", null, false)));
-        await bookings.CancelAsync(Id, null);
-        await bookings.GetAsync(Id);
+        var accesses = new AccessClient(http, visitor, new Token("t"));
+        await accesses.CreateAsync(Guid.NewGuid(), new CreateBookingRequestDto(Guid.NewGuid(), new BriefDto("x", null, false)));
+        await accesses.CancelAsync(Id, null);
+        await accesses.GetAsync(Id);
         await new BriefAssistantClient(http, visitor, new Token("t")).SuggestAsync("opis");
         Assert.Equal([("/api/v1/bookings", (TimeSpan?)TimeSpan.FromSeconds(12)), ($"/api/v1/bookings/{Id}/cancel", null), ($"/api/v1/bookings/{Id}", null), ("/api/v1/assistant/brief", TimeSpan.FromSeconds(35))], seen);
     }
@@ -213,11 +213,11 @@ public class ClientAreaClientTests
         // The clients are built over the handler chains the host really uses (service discovery, the one resilience handler, the fake as the primary handler).
         var handlers = web.Services.GetRequiredService<IHttpMessageHandlerFactory>();
         var visitor = new VisitorAddressAccessor(new HttpContextAccessor());
-        var bookings = new AccessClient(new HttpClient(handlers.CreateHandler(Backend.Access)) { BaseAddress = new Uri(Backend.BaseAddress(Backend.Access)) }, visitor, new Token("t"));
+        var accesses = new AccessClient(new HttpClient(handlers.CreateHandler(Backend.Access)) { BaseAddress = new Uri(Backend.BaseAddress(Backend.Access)) }, visitor, new Token("t"));
         var reviews = new ReviewsClient(new HttpClient(handlers.CreateHandler(Backend.Reputation)) { BaseAddress = new Uri(Backend.BaseAddress(Backend.Reputation)) }, visitor, new Token("t"));
 
         // A write with no budget is cut at the 5 s of a read; the one that asked for its budget is not.
-        var withBudget = bookings.CreateAsync(Guid.NewGuid(), new CreateBookingRequestDto(Guid.NewGuid(), new BriefDto("Opis problemu demo, syntetyczny.", null, false)));
+        var withBudget = accesses.CreateAsync(Guid.NewGuid(), new CreateBookingRequestDto(Guid.NewGuid(), new BriefDto("Opis problemu demo, syntetyczny.", null, false)));
         var without = reviews.CreateAsync(Id, 5, "Treść opinii, syntetyczna.");
         var (booked, reviewed) = (await withBudget, await without);
         Assert.True(booked.IsOk, $"the booking write was cut: {booked.Failure}");

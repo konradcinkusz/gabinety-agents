@@ -25,8 +25,8 @@ public sealed class AdminApi(DirectoryClient directory, AccessClient access, Rep
     public Task<ApiResult<PageDto<AdminDisputeDto>>> Disputes(string status, string? cursor, int limit, CancellationToken ct = default) =>
         With(t => access.AdminDisputesAsync(t, status, cursor, limit, ct), ct);
     public Task<ApiResult<AdminBookingDto>> Access(Guid id, CancellationToken ct = default) => With(t => access.AdminBookingAsync(t, id, ct), ct);
-    public Task<ApiResult<Unit>> Resolve(Guid bookingId, string resolution, long? refundMinor, string note, CancellationToken ct = default) =>
-        With(t => access.AdminResolveAsync(t, bookingId, resolution, refundMinor, note, ct), ct);
+    public Task<ApiResult<Unit>> Resolve(Guid accessId, string resolution, long? refundMinor, string note, CancellationToken ct = default) =>
+        With(t => access.AdminResolveAsync(t, accessId, resolution, refundMinor, note, ct), ct);
     public Task<ApiResult<LedgerPreviewDto>> LedgerPreview(string from, string to, int max, CancellationToken ct = default) =>
         With(t => access.AdminLedgerPreviewAsync(t, from, to, max, ct), ct);
 

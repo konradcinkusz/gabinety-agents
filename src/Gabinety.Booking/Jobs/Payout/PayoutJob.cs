@@ -8,7 +8,7 @@ using Gabinety.Booking.Persistence;
 using Gabinety.Contracts.Booking;
 using Gabinety.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Jobs.Payout;
@@ -46,12 +46,12 @@ public class PayoutJob(IServiceScopeFactory scopes, IPaymentProvider provider, T
     static readonly SemaphoreSlim InMemoryGate = new(1, 1);
 
     /// <summary>The status rule of "money-complete" for the query. <see cref="IsMoneyComplete"/> is the same rule for a loaded row.</summary>
-    static readonly Expression<Func<BookingEntity, bool>> MoneyCompleteExpr = b =>
+    static readonly Expression<Func<AccessEntity, bool>> MoneyCompleteExpr = b =>
         b.Status == AccessStatus.Completed || b.Status == AccessStatus.ClientNoShow || b.Status == AccessStatus.LateCancelledByClient
         || (b.Status == AccessStatus.Resolved && (b.DisputeResolution == "release" || b.DisputeResolution == "refund_partial"));
-    static readonly Func<BookingEntity, bool> IsMoneyComplete = MoneyCompleteExpr.Compile();
+    static readonly Func<AccessEntity, bool> IsMoneyComplete = MoneyCompleteExpr.Compile();
 
-    static DateTimeOffset? DueAt(BookingEntity b) => b.PayoutDueAt ?? (b.Status == AccessStatus.Resolved ? b.ResolvedAt : null);
+    static DateTimeOffset? DueAt(AccessEntity b) => b.PayoutDueAt ?? (b.Status == AccessStatus.Resolved ? b.ResolvedAt : null);
 
     sealed record Prepared(Guid PayoutId, Guid AccessId, Guid AgentId, long AmountMinor, int Attempt, string? DestinationAccountId, string? ProviderPaymentId);
     enum Outcome { Paid, Skipped, Failed }
@@ -93,14 +93,14 @@ public class PayoutJob(IServiceScopeFactory scopes, IPaymentProvider provider, T
     }
 
     /// <summary>Narrows what the job looks at. The default is everything; a test sharing a database with other tests restricts it to its own rows.</summary>
-    protected virtual IQueryable<BookingEntity> Scope(IQueryable<BookingEntity> bookings) => bookings;
+    protected virtual IQueryable<AccessEntity> Scope(IQueryable<AccessEntity> accesses) => accesses;
 
     async Task<List<Guid>> SelectDueAsync(DateTimeOffset now, List<Guid> seen, int take, CancellationToken ct)
     {
         // what is backing off, leased to a run or out of attempts must not take a place in the batch (it would starve the others every run)
         var maxAttempts = MaxAttempts;
         using var scope = scopes.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<AccessDbContext>();
         var due = from b in Scope(db.Accesses.AsNoTracking()).Where(MoneyCompleteExpr)
                   where b.PayoutMinor > 0 && !seen.Contains(b.Id) && (b.PayoutDueAt ?? (b.Status == AccessStatus.Resolved ? b.ResolvedAt : null)) <= now
                   join p in db.Payouts.AsNoTracking() on b.Id equals p.AccessId into rows
@@ -212,7 +212,7 @@ public class PayoutJob(IServiceScopeFactory scopes, IPaymentProvider provider, T
             return true;
         }, ct);
 
-    async Task MarkFailedAsync(Guid bookingId, Prepared prepared, DateTimeOffset now, CancellationToken ct)
+    async Task MarkFailedAsync(Guid accessId, Prepared prepared, DateTimeOffset now, CancellationToken ct)
     {
         var maxAttempts = MaxAttempts;
         var backoff = TimeSpan.FromSeconds(ReadPositiveInt(Configuration, "Jobs:Payout:RetryBackoffSeconds", DefaultBackoffSeconds) * Math.Pow(2, Math.Min(prepared.Attempt - 1, 10)));
@@ -225,30 +225,30 @@ public class PayoutJob(IServiceScopeFactory scopes, IPaymentProvider provider, T
             await db.SaveChangesAsync(ct);
             return true;
         }, ct);
-        if (prepared.Attempt == maxAttempts) log.LogError("Payout for booking {BookingId} failed {Attempts} times and is not retried until an operator resets its attempt count", bookingId, prepared.Attempt);
+        if (prepared.Attempt == maxAttempts) log.LogError("Payout for booking {BookingId} failed {Attempts} times and is not retried until an operator resets its attempt count", accessId, prepared.Attempt);
     }
 
-    async Task<bool> RowExistsAsync(Guid bookingId, CancellationToken ct)
+    async Task<bool> RowExistsAsync(Guid accessId, CancellationToken ct)
     {
         using var scope = scopes.CreateScope();
-        return await scope.ServiceProvider.GetRequiredService<BookingDbContext>().Payouts.AsNoTracking().AnyAsync(p => p.AccessId == bookingId, ct);
+        return await scope.ServiceProvider.GetRequiredService<AccessDbContext>().Payouts.AsNoTracking().AnyAsync(p => p.AccessId == accessId, ct);
     }
 
-    static async Task<BookingEntity?> LoadForUpdateAsync(BookingDbContext db, Guid id, CancellationToken ct) =>
+    static async Task<AccessEntity?> LoadForUpdateAsync(AccessDbContext db, Guid id, CancellationToken ct) =>
         db.Database.IsNpgsql()
             ? await db.Accesses.FromSql($"SELECT * FROM bookings WHERE id = {id} FOR UPDATE SKIP LOCKED").SingleOrDefaultAsync(ct)
             : await db.Accesses.SingleOrDefaultAsync(b => b.Id == id, ct);
 
-    static async Task<Features.Payouts.Payout?> LoadPayoutForUpdateAsync(BookingDbContext db, Guid id, CancellationToken ct) =>
+    static async Task<Features.Payouts.Payout?> LoadPayoutForUpdateAsync(AccessDbContext db, Guid id, CancellationToken ct) =>
         db.Database.IsNpgsql()
             ? await db.Payouts.FromSql($"SELECT * FROM payouts WHERE id = {id} FOR UPDATE").SingleOrDefaultAsync(ct)
             : await db.Payouts.SingleOrDefaultAsync(p => p.Id == id, ct);
 
     /// <summary>One short transaction in its own scope and context; the scope is gone when this returns, so nothing of it is open during the provider call.</summary>
-    async Task<T> InTransactionAsync<T>(Func<BookingDbContext, Task<T>> body, CancellationToken ct)
+    async Task<T> InTransactionAsync<T>(Func<AccessDbContext, Task<T>> body, CancellationToken ct)
     {
         using var scope = scopes.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<AccessDbContext>();
         async Task<T> Run() { db.ChangeTracker.Clear(); return await body(db); } // a retry starts from the database
         if (!db.Database.IsRelational())
         {

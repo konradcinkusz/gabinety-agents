@@ -155,6 +155,6 @@ sealed class ReviewsHost : WebApplicationFactory<Program>
     public Task<List<Review>> ReviewsOf(Guid agentId) => Query(db => db.Reviews.AsNoTracking().Where(r => r.AgentId == agentId).ToListAsync());
     public Task<RatingSummary?> SummaryOf(Guid agentId) => Query(db => db.RatingSummaries.AsNoTracking().SingleOrDefaultAsync(s => s.AgentId == agentId));
 
-    public static Task<HttpResponseMessage> Post(HttpClient c, Guid bookingId, int rating = 5, string? text = null) =>
-        c.PostAsJsonAsync("/api/v1/reviews", new { bookingId, rating, text = text ?? GoodText });
+    public static Task<HttpResponseMessage> Post(HttpClient c, Guid accessId, int rating = 5, string? text = null) =>
+        c.PostAsJsonAsync("/api/v1/reviews", new { bookingId = accessId, rating, text = text ?? GoodText });
 }

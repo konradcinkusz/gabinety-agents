@@ -34,11 +34,11 @@ public class RefundPolicyTests
     [InlineData(MoneyEvent.ClientNoShow, 0, 21250, 3750)]
     [InlineData(MoneyEvent.DisputeRelease, 0, 21250, 3750)]
     [InlineData(MoneyEvent.DisputeRefundFull, 25000, 0, 0)]
-    public void Table_9_2_rows(MoneyEvent e, long refund, long practitioner, long fee)
+    public void Table_9_2_rows(MoneyEvent e, long refund, long agent, long fee)
     {
         var s = RefundPolicy.Settle(e, Price, 1500, false);
         Assert.Equal(refund, s.Refund.Minor);
-        Assert.Equal(practitioner, s.AgentShare.Minor);
+        Assert.Equal(agent, s.AgentShare.Minor);
         Assert.Equal(fee, s.Fee.Minor);
     }
 

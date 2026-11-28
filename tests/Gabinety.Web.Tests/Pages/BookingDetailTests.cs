@@ -56,7 +56,7 @@ public class BookingDetailTests
     [Fact]
     public async Task A_missing_name_leaves_the_row_out_F03_instead_of_printing_a_placeholder()
     {
-        await using var f = await Open(Detail(practitioner: "  "));
+        await using var f = await Open(Detail(agent: "  "));
         var page = await f.Browser.GetAsync(Client);
         Assert.DoesNotContain("Agent", page.All(".dl dt").Select(d => d.TextContent));
         await using var g = await Open(Detail(client: ""));

@@ -8,15 +8,15 @@ public class PractitionerResolverTests
     sealed class Counting(Func<string, DirectoryAgent[]> answer) : IDirectoryClient
     {
         public int Calls;
-        public Task<IReadOnlyList<DirectoryAgent>> GetPractitionerAgentsAsync(string userId, CancellationToken ct)
+        public Task<IReadOnlyList<DirectoryAgent>> GetAgentAgentsAsync(string userId, CancellationToken ct)
         {
             Calls++;
             return Task.FromResult<IReadOnlyList<DirectoryAgent>>(answer(userId));
         }
-        public Task<DirectoryPractitioner?> GetPractitionerByUserAsync(string userId, CancellationToken ct) => throw new NotSupportedException();
-        public Task<DirectoryOffering?> GetOfferingAsync(Guid offeringId, CancellationToken ct) => throw new NotSupportedException();
-        public Task<DirectoryPractitionerName?> GetPractitionerNameAsync(Guid agentId, CancellationToken ct) => throw new NotSupportedException();
-        public Task<DirectoryContact?> GetPractitionerContactAsync(string userId, CancellationToken ct) => throw new NotSupportedException();
+        public Task<DirectoryAgentState?> GetAgentByUserAsync(string userId, CancellationToken ct) => throw new NotSupportedException();
+        public Task<DirectoryPackage?> GetPackageAsync(Guid packageId, CancellationToken ct) => throw new NotSupportedException();
+        public Task<DirectoryAgentName?> GetAgentNameAsync(Guid agentId, CancellationToken ct) => throw new NotSupportedException();
+        public Task<DirectoryContact?> GetAgentContactAsync(string userId, CancellationToken ct) => throw new NotSupportedException();
         public Task<bool> IsAliveAsync(CancellationToken ct) => throw new NotSupportedException();
     }
 
@@ -28,7 +28,7 @@ public class PractitionerResolverTests
         var clock = new ManualClock();
         var id = Guid.NewGuid();
         var dir = new Counting(_ => [Agent(id)]);
-        var resolver = new PractitionerResolver(dir, clock);
+        var resolver = new AgentResolver(dir, clock);
 
         Assert.Equal(id, (await resolver.ResolveAsync("demo-user-1", null, default)).AgentId);
         clock.Advance(TimeSpan.FromSeconds(59));
@@ -48,7 +48,7 @@ public class PractitionerResolverTests
         var second = Guid.NewGuid();
         var current = first;
         var dir = new Counting(_ => [Agent(current)]);
-        var resolver = new PractitionerResolver(dir, new ManualClock());
+        var resolver = new AgentResolver(dir, new ManualClock());
         Assert.Equal(first, (await resolver.ResolveAsync("demo-user-1", null, default)).AgentId);
 
         current = second; // the Directory was reset and reseeded: the same user has a new practitioner id
@@ -61,7 +61,7 @@ public class PractitionerResolverTests
     public async Task A_non_practitioner_resolves_to_nothing_and_is_not_cached()
     {
         var dir = new Counting(_ => []);
-        var resolver = new PractitionerResolver(dir, new ManualClock());
+        var resolver = new AgentResolver(dir, new ManualClock());
         Assert.Equal(new AgentResolution(null, false), await resolver.ResolveAsync("demo-user-1", null, default));
         Assert.Equal(new AgentResolution(null, false), await resolver.ResolveAsync("demo-user-1", "demo-agent", default));
         Assert.Equal(2, dir.Calls);
@@ -71,7 +71,7 @@ public class PractitionerResolverTests
     public async Task With_two_agents_a_slug_picks_one_and_no_slug_is_ambiguous()
     {
         var a = Guid.NewGuid(); var b = Guid.NewGuid();
-        var resolver = new PractitionerResolver(new Counting(_ => [Agent(a, "demo-a"), Agent(b, "demo-b")]), new ManualClock());
+        var resolver = new AgentResolver(new Counting(_ => [Agent(a, "demo-a"), Agent(b, "demo-b")]), new ManualClock());
 
         Assert.Equal(new AgentResolution(null, true), await resolver.ResolveAsync("demo-user-1", null, default));
         Assert.Equal(new AgentResolution(null, true), await resolver.ResolveAsync("demo-user-1", "  ", default));
@@ -82,7 +82,7 @@ public class PractitionerResolverTests
     [Fact]
     public async Task A_slug_that_is_not_the_users_resolves_to_nothing_even_with_one_agent()
     {
-        var resolver = new PractitionerResolver(new Counting(_ => [Agent(Guid.NewGuid(), "demo-mine")]), new ManualClock());
+        var resolver = new AgentResolver(new Counting(_ => [Agent(Guid.NewGuid(), "demo-mine")]), new ManualClock());
         Assert.Equal(new AgentResolution(null, false), await resolver.ResolveAsync("demo-user-1", "demo-someone-elses", default));
     }
 
@@ -92,7 +92,7 @@ public class PractitionerResolverTests
         var a = Guid.NewGuid(); var b = Guid.NewGuid();
         var known = new List<DirectoryAgent> { Agent(a, "demo-a") };
         var dir = new Counting(_ => [.. known]);
-        var resolver = new PractitionerResolver(dir, new ManualClock());
+        var resolver = new AgentResolver(dir, new ManualClock());
         Assert.Equal(a, (await resolver.ResolveAsync("demo-user-1", "demo-a", default)).AgentId);
 
         known.Add(Agent(b, "demo-b")); // created after the list was cached

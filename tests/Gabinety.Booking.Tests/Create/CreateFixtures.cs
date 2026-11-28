@@ -153,18 +153,18 @@ sealed class CreateHost : WebApplicationFactory<Program>
 
     protected override void Dispose(bool disposing) { if (disposing) _rsa.Dispose(); base.Dispose(disposing); }
 
-    public async Task Seed(Action<BookingDbContext> act)
+    public async Task Seed(Action<AccessDbContext> act)
     {
         using var scope = Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<AccessDbContext>();
         act(db);
         await db.SaveChangesAsync();
     }
 
-    public async Task<T> Query<T>(Func<BookingDbContext, Task<T>> q)
+    public async Task<T> Query<T>(Func<AccessDbContext, Task<T>> q)
     {
         using var scope = Services.CreateScope();
-        return await q(scope.ServiceProvider.GetRequiredService<BookingDbContext>());
+        return await q(scope.ServiceProvider.GetRequiredService<AccessDbContext>());
     }
 
     public Task<List<Access>> Accesses() => Query(db => db.Accesses.AsNoTracking().Where(b => b.AgentId == Agent).ToListAsync());

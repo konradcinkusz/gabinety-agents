@@ -10,7 +10,7 @@ namespace Gabinety.Booking.Jobs.StatsPush;
 /// </summary>
 public sealed class StatsPushJob(IServiceScopeFactory scopes, IDirectoryStatsClient client, TimeProvider time, ILogger<StatsPushJob> log)
 {
-    readonly ConcurrentDictionary<Guid, BookingStats> _lastPushed = new();
+    readonly ConcurrentDictionary<Guid, AccessStats> _lastPushed = new();
     readonly SemaphoreSlim _gate = new(1, 1);
     long _lastVersion;
 
@@ -21,7 +21,7 @@ public sealed class StatsPushJob(IServiceScopeFactory scopes, IDirectoryStatsCli
         await _gate.WaitAsync(ct);
         try
         {
-            Dictionary<Guid, BookingStats> all;
+            Dictionary<Guid, AccessStats> all;
             try
             {
                 using var scope = scopes.CreateScope();

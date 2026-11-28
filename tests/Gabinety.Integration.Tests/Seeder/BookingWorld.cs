@@ -18,7 +18,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using BookingEntity = BookingApp::Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = BookingApp::Gabinety.Booking.Features.Bookings.Entities.Access;
 using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Integration.Tests.Seeder;
@@ -40,10 +40,10 @@ public sealed class BookingHost : WebApplicationFactory<BookingApp::Program>
         var dbName = "seeder-booking-" + Guid.NewGuid().ToString("N");
         builder.ConfigureTestServices(s =>
         {
-            s.RemoveAll<DbContextOptions<BookingDbContext>>();
-            s.RemoveAll(typeof(IDbContextOptionsConfiguration<BookingDbContext>));
-            s.RemoveAll<BookingDbContext>();
-            s.AddDbContext<BookingDbContext>(o => o.UseInMemoryDatabase(dbName));
+            s.RemoveAll<DbContextOptions<AccessDbContext>>();
+            s.RemoveAll(typeof(IDbContextOptionsConfiguration<AccessDbContext>));
+            s.RemoveAll<AccessDbContext>();
+            s.AddDbContext<AccessDbContext>(o => o.UseInMemoryDatabase(dbName));
             s.RemoveAll<IDirectoryClient>();
             s.AddSingleton<IDirectoryClient>(new DirectoryClient(_directory.CreateDefaultClient(), DirectoryHost.Key, retryDelay: TimeSpan.Zero));
             s.PostConfigure<RateLimiterOptions>(o => o.GlobalLimiter = null);
@@ -55,13 +55,13 @@ public sealed class BookingHost : WebApplicationFactory<BookingApp::Program>
     public void SetClockOffset(long minutes) => Services.GetRequiredService<TestClockOffset>().Minutes = minutes;
     public DateTimeOffset Now => Services.GetRequiredService<TimeProvider>().GetUtcNow();
 
-    public async Task<T> Db<T>(Func<BookingDbContext, Task<T>> work)
+    public async Task<T> Db<T>(Func<AccessDbContext, Task<T>> work)
     {
         using var scope = Services.CreateScope();
-        return await work(scope.ServiceProvider.GetRequiredService<BookingDbContext>());
+        return await work(scope.ServiceProvider.GetRequiredService<AccessDbContext>());
     }
 
-    public Task<List<BookingEntity>> Accesses() => Db(db => db.Accesses.AsNoTracking().OrderBy(b => b.CreatedAt).ThenBy(b => b.Id).ToListAsync());
+    public Task<List<AccessEntity>> Accesses() => Db(db => db.Accesses.AsNoTracking().OrderBy(b => b.CreatedAt).ThenBy(b => b.Id).ToListAsync());
 }
 
 /// <summary>
@@ -191,8 +191,8 @@ public sealed class BookingWorld : IAsyncDisposable
         return (await res.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("accessToken").GetString()!;
     }
 
-    public static Dictionary<string, int> StatusCounts(IEnumerable<JsonElement> bookings) =>
-        bookings.GroupBy(b => b.GetProperty("status").GetString()!).ToDictionary(g => g.Key, g => g.Count());
+    public static Dictionary<string, int> StatusCounts(IEnumerable<JsonElement> accesses) =>
+        accesses.GroupBy(b => b.GetProperty("status").GetString()!).ToDictionary(g => g.Key, g => g.Count());
 
     public async ValueTask DisposeAsync() { Access.Dispose(); Directory.Dispose(); Identity.Dispose(); await Task.CompletedTask; }
 }

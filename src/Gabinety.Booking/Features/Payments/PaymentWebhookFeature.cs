@@ -60,7 +60,7 @@ public sealed class PaymentWebhookFeature : IServiceFeature
         return await RunAsync(handler, payments.Name, verified, http, ct);
     }
 
-    static async Task<IResult> SimulateAsync(SimulatePaymentRequest? req, IPaymentProvider payments, BookingDbContext db, PaymentEventHandler handler,
+    static async Task<IResult> SimulateAsync(SimulatePaymentRequest? req, IPaymentProvider payments, AccessDbContext db, PaymentEventHandler handler,
         ClaimsPrincipal user, HttpContext http, CancellationToken ct)
     {
         if (!IsMock(payments)) return Problem(ErrorCodes.Forbidden, "Forbidden", 403, "Payments are not simulated outside Mock mode.");

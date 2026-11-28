@@ -16,12 +16,12 @@ namespace Gabinety.Booking.Features.Bookings.View;
 /// <summary>
 /// GET /api/v1/me/bookings?role=client|practitioner&amp;status=&amp;limit=&amp;cursor= (CONTRACTS 4.2, 0). The caller's own rows for one role, newest
 /// <c>start_utc</c> first, ties by id descending, so the order is total. Each item is the single view of that booking for the caller
-/// (<see cref="BookingViewFeature.ToView"/>): the same visibility of brief, meeting URL and fee. Two queries per page whatever its size (rows, then their payments).
+/// (<see cref="AccessViewFeature.ToView"/>): the same visibility of brief, meeting URL and fee. Two queries per page whatever its size (rows, then their payments).
 /// <para>The cursor is opaque: the position of the last row plus the role and status it was made for, and a short checksum. It is not a secret and not
 /// a signature: a forged one can only move the position within the caller's own rows; the checksum and the role/status binding catch a cursor that was
 /// edited by accident or reused for another listing.</para>
 /// </summary>
-public sealed class MyBookingsFeature : IServiceFeature
+public sealed class MyAccessesFeature : IServiceFeature
 {
     public const int DefaultLimit = 12, MaxLimit = 24;
 
@@ -30,10 +30,10 @@ public sealed class MyBookingsFeature : IServiceFeature
     public void Map(IEndpointRouteBuilder endpoints) =>
         endpoints.MapGet("/api/v1/me/bookings", ListAsync).RequireAuthorization("Authenticated");
 
-    static async Task<IResult> ListAsync(string? role, string? status, string? cursor, string? limit, ClaimsPrincipal user, BookingDbContext db,
+    static async Task<IResult> ListAsync(string? role, string? status, string? cursor, string? limit, ClaimsPrincipal user, AccessDbContext db,
         PartyNamesLookup names, TimeProvider time, CancellationToken ct)
     {
-        var sub = BookingViewFeature.CallerId(user);
+        var sub = AccessViewFeature.CallerId(user);
         if (sub is null) return Results.Unauthorized();
 
         var errors = new Dictionary<string, string[]>();
@@ -66,13 +66,13 @@ public sealed class MyBookingsFeature : IServiceFeature
 
         var ids = rows.Select(b => b.Id).ToList();
         var payments = (await db.Payments.AsNoTracking().Where(pm => ids.Contains(pm.AccessId)).ToListAsync(ct)).ToDictionary(pm => pm.AccessId);
-        var admin = BookingViewFeature.IsAdmin(user);
+        var admin = AccessViewFeature.IsAdmin(user);
         var nameOf = await names.ForAsync(rows, ct);
-        var items = rows.Select(b => BookingViewFeature.ToView(b, payments.GetValueOrDefault(b.Id), sub, admin, time, nameOf[b.Id])).ToList();
+        var items = rows.Select(b => AccessViewFeature.ToView(b, payments.GetValueOrDefault(b.Id), sub, admin, time, nameOf[b.Id])).ToList();
 
         return Results.Ok(more && rows.Count > 0
-            ? new MyBookingsPage(items, Encode(new Position(rows[^1].StartUtc, rows[^1].Id), role!, statusFilter))
-            : new MyBookingsPage(items, null));
+            ? new MyAccessesPage(items, Encode(new Position(rows[^1].StartUtc, rows[^1].Id), role!, statusFilter))
+            : new MyAccessesPage(items, null));
     }
 
     readonly record struct Position(DateTimeOffset Start, Guid Id);
@@ -110,5 +110,5 @@ public sealed class MyBookingsFeature : IServiceFeature
 }
 
 /// <summary><c>nextCursor</c> is omitted from the JSON on the last page (CONTRACTS 0).</summary>
-public sealed record MyBookingsPage(IReadOnlyList<AccessView> Items,
+public sealed record MyAccessesPage(IReadOnlyList<AccessView> Items,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] string? NextCursor);

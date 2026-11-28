@@ -24,7 +24,7 @@ public interface IPaymentProvider
 {
     string Name { get; }
     /// <summary>True when a practitioner must own a ready connected account before a booking is taken and a payout made (every real vendor; not the Mock).</summary>
-    bool RequiresPractitionerAccount => false;
+    bool RequiresAgentAccount => false;
     /// <summary>The request header that carries the webhook signature.</summary>
     string SignatureHeader => "X-Payment-Signature";
     /// <summary>True when the adapter itself holds the webhook secret (it refuses to start without one), so the host need not look for <c>Payments:WebhookSecret</c>.</summary>

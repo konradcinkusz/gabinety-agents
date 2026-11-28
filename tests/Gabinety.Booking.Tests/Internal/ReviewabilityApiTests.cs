@@ -1,6 +1,6 @@
 using System.Net;
 using System.Text.Json;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
@@ -28,7 +28,7 @@ public class ReviewabilityApiTests
     {
         var id = Guid.NewGuid();
         var end = endUtc ?? h.Clock.GetUtcNow().AddDays(-1);
-        await h.Seed(db => db.Accesses.Add(new BookingEntity
+        await h.Seed(db => db.Accesses.Add(new AccessEntity
         {
             Id = id, ClientUserId = "demo-client-rev", AgentId = h.Agent, AgentUserId = "demo-practitioner-user",
             PackageId = h.Package, PackageTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 12345,

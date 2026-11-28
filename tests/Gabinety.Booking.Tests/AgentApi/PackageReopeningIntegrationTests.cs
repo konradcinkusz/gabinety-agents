@@ -36,7 +36,7 @@ public class PackageReopeningIntegrationTests : IAsyncLifetime
 
     public async Task DisposeAsync() { await host.DisposeAsync(); await pg.DisposeAsync(); }
 
-    BookingDbContext NewDb() => new(new DbContextOptionsBuilder<BookingDbContext>().UseNpgsql(pg.GetConnectionString()).Options);
+    AccessDbContext NewDb() => new(new DbContextOptionsBuilder<AccessDbContext>().UseNpgsql(pg.GetConnectionString()).Options);
 
     [Fact]
     public async Task The_whole_path_reopens_the_package_removes_the_unpaid_fee_row_and_frees_the_pair()

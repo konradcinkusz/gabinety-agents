@@ -55,8 +55,8 @@ public sealed class AdminHost : IAsyncDisposable
     public static string Fact(IElement root, string label) =>
         Page.Squash(root.QuerySelectorAll("dt").FirstOrDefault(d => d.TextContent.Trim() == label)?.NextElementSibling?.TextContent ?? throw new InvalidOperationException($"no fact '{label}'")).Replace('\u00A0', ' ');
 
-    public static AdminDisputeDto Dispute(Guid? id = null, string kind = "not_as_described", string text = "Konsultacja różniła się od opisu, dane syntetyczne testu.", string client = "demo-client-2", string practitioner = "demo-practitioner-4") =>
-        new(id ?? Guid.NewGuid(), client, practitioner, kind, text, new DateTimeOffset(2026, 11, 24, 12, 0, 9, TimeSpan.Zero), null, null, null);
+    public static AdminDisputeDto Dispute(Guid? id = null, string kind = "not_as_described", string text = "Konsultacja różniła się od opisu, dane syntetyczne testu.", string client = "demo-client-2", string agent = "demo-practitioner-4") =>
+        new(id ?? Guid.NewGuid(), client, agent, kind, text, new DateTimeOffset(2026, 11, 24, 12, 0, 9, TimeSpan.Zero), null, null, null);
 
     public static AdminBookingDto BookingOf(Guid id, long price = 18000, string title = "Audyt kodu .NET", string practitionerName = "", Guid? agentId = null, string payment = "Succeeded", long refunded = 0) =>
         new(id, "Disputed", new DateTimeOffset(2026, 11, 23, 10, 0, 0, TimeSpan.Zero), title, new MoneyDto(price, "PLN"), new PractitionerRefDto(agentId ?? Guid.NewGuid(), practitionerName, "demo-anna"), null,

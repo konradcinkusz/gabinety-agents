@@ -44,10 +44,10 @@ public sealed class ClientAreaFixture : IAsyncDisposable
         new(Guid.NewGuid(), "demo-anna-demowska", name, "Audyty kodu .NET", null, ["email"], null, true, new MoneyDto(price, "PLN"), "Bio demo", null,
             [new OfferingDto(PackageId, "Audyt kodu demo", "Opis oferty demo", 60, new MoneyDto(price, "PLN"), "audyt-kodu", ["dotnet"], "Tasks", 10)], 0, new DateTimeOffset(2026, 11, 3, 9, 0, 0, TimeSpan.Zero));
 
-    public static BookingDetailDto Detail(string status = "Confirmed", string practitioner = "Anna Demowska", string client = "demo-client", string payment = "Succeeded", long refunded = 0,
+    public static BookingDetailDto Detail(string status = "Confirmed", string agent = "Anna Demowska", string client = "demo-client", string payment = "Succeeded", long refunded = 0,
         bool cancel = false, bool dispute = false, bool noShow = false, bool review = false, string? meeting = null, DateTimeOffset? hold = null, string? brief = "Opis problemu demo, syntetyczny.", CancelOutcomeDto? outcome = null,
         MoneyDto? fee = null, MoneyDto? payout = null, string kind = "Tasks", long unitsTotal = 10, long unitsUsed = 0, DateTimeOffset? end = null) =>
-        new(AccessId, status, null, Start, end ?? Start.AddHours(1), 60, "Audyt kodu demo", new MoneyDto(25000, "PLN"), new PractitionerRefDto(Guid.NewGuid(), practitioner, "demo-anna-demowska"),
+        new(AccessId, status, null, Start, end ?? Start.AddHours(1), 60, "Audyt kodu demo", new MoneyDto(25000, "PLN"), new PractitionerRefDto(Guid.NewGuid(), agent, "demo-anna-demowska"),
             client.Length == 0 ? null : new ClientRefDto(client), brief is null ? null : new BriefDto(brief, null, false), meeting, hold, new PaymentViewDto(payment, new MoneyDto(refunded, "PLN")), fee, payout,
             cancel, dispute, noShow, review, outcome, kind, unitsTotal, unitsUsed);
 

@@ -60,20 +60,20 @@ public static class SiteNavigation
     public static readonly NavItem Terms = new("/regulamin", Pl.Site.Terms), Privacy = new("/polityka-prywatnosci", Pl.Site.Privacy);
 
     /// <param name="back">The page the visitor is on, already filtered by <see cref="ReturnTarget.Safe"/>: the sign-in and registration links bring them back to it.</param>
-    /// <param name="practitioner">The signed-in account has a practitioner profile (it decides between the practitioner panel and the way to become one).</param>
-    public static HeaderModel For(ClaimsPrincipal? user, string currentPath, string back = "/", bool practitioner = false)
+    /// <param name="agent">The signed-in account has a practitioner profile (it decides between the practitioner panel and the way to become one).</param>
+    public static HeaderModel For(ClaimsPrincipal? user, string currentPath, string back = "/", bool agent = false)
     {
         if (user?.Identity?.IsAuthenticated != true) return new HeaderModel(Primary, SignIn with { Href = ReturnTarget.LoginUrl(back) }, Register with { Href = ReturnTarget.RegisterUrl(back) }, [], null, currentPath);
-        List<NavItem> menu = [MyBookings, ApiKeys, Account, practitioner ? PractitionerArea : BecomePractitioner];
+        List<NavItem> menu = [MyBookings, ApiKeys, Account, agent ? PractitionerArea : BecomePractitioner];
         if (ClaimMapping.IsAdmin(user)) menu.Add(Admin);
         menu.Add(SignOut);
         return new HeaderModel(Primary, null, null, menu, ClaimMapping.Email(user.Claims), currentPath);
     }
 
     /// <summary>The footer of the same visitor: a visitor is sent to registration, a client to the way to become a programmer, a practitioner to the panel (D-2).</summary>
-    public static FooterModel Footer(ClaimsPrincipal? user, bool practitioner)
+    public static FooterModel Footer(ClaimsPrincipal? user, bool agent)
     {
-        var practitionerLink = user?.Identity?.IsAuthenticated != true ? VisitorBecomePractitioner : practitioner ? PractitionerArea : BecomePractitioner;
+        var practitionerLink = user?.Identity?.IsAuthenticated != true ? VisitorBecomePractitioner : agent ? PractitionerArea : BecomePractitioner;
         return new FooterModel(Product, practitionerLink, [Terms, Privacy]);
     }
 }

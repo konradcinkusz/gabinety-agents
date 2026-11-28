@@ -10,7 +10,7 @@ public interface IEmailSender
 }
 
 /// <summary>Who a notification is for, as far as an address lookup needs: the user, the side of the booking, and the client's e-mail snapshot from the booking row.</summary>
-public sealed record ContactLookup(string UserId, bool IsPractitioner, string? ClientEmailSnapshot);
+public sealed record ContactLookup(string UserId, bool IsAgent, string? ClientEmailSnapshot);
 
 /// <summary>The address of a notification's recipient. Null when there is none (counts as a failed attempt, so the dispatcher retries). Must not throw for an outage.</summary>
 public interface IContactResolver

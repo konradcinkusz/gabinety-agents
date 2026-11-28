@@ -4,16 +4,16 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
 /// <summary>The job restricted to one practitioner: the test InMemory database is shared by every host in the process.</summary>
-sealed class ScopedAutoCompleteJob(IServiceScopeFactory scopes, TimeProvider time, IConfiguration config, JobMetrics metrics, ILogger<AutoCompleteJob> log, Guid practitioner)
+sealed class ScopedAutoCompleteJob(IServiceScopeFactory scopes, TimeProvider time, IConfiguration config, JobMetrics metrics, ILogger<AutoCompleteJob> log, Guid agent)
     : AutoCompleteJob(scopes, time, config, metrics, log)
 {
-    protected override IQueryable<BookingEntity> Scope(IQueryable<BookingEntity> q) => q.Where(b => b.AgentId == practitioner);
+    protected override IQueryable<AccessEntity> Scope(IQueryable<AccessEntity> q) => q.Where(b => b.AgentId == agent);
 }
 
 static class Auto

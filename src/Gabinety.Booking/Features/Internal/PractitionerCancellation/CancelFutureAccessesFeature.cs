@@ -12,28 +12,28 @@ namespace Gabinety.Booking.Features.Internal.PractitionerCancellation;
 /// <param name="Cancelled">Confirmed future bookings moved to <c>CancelledByPractitioner</c> by this call.</param>
 /// <param name="HoldsExpired">Unpaid holds moved to <c>Expired</c> by this call.</param>
 /// <param name="Failed">Bookings that could not be settled this time (provider down, payment unusable); the next call retries them.</param>
-public sealed record CancelFutureBookingsResult(int Cancelled, int HoldsExpired, int Failed);
+public sealed record CancelFutureAccessesResult(int Cancelled, int HoldsExpired, int Failed);
 
 /// <summary>
 /// What happens to a practitioner's bookings when Directory suspends or erases them (ADR-0012, RUNBOOK 9). It goes through the one transition machinery
-/// (<see cref="BookingTransitions"/>), so the rules are those of a practitioner cancel (CONTRACTS 8.1, 9.2): a <c>Confirmed</c> booking that has not started becomes
+/// (<see cref="AccessTransitions"/>), so the rules are those of a practitioner cancel (CONTRACTS 8.1, 9.2): a <c>Confirmed</c> booking that has not started becomes
 /// <c>CancelledByPractitioner</c> with a full refund at any distance from the start, no fee, no payout, and the client is told with the <c>Cancelled</c> notification.
 /// A hold (<c>PendingPayment</c>) is expired at once, so a payment that arrives later meets the existing "paid after expiry" refund rule. A booking that has started
 /// (or is over) is left to run its course and to the completion job. One transaction per booking; the provider is asked before it (no lock across a network call), with
 /// the same idempotency key as any practitioner cancel, so a repeated or resumed call is one refund.
 /// </summary>
-public sealed class FutureBookingCanceller(IServiceScopeFactory scopes, TimeProvider time, ILogger<FutureBookingCanceller> log)
+public sealed class FutureAccessCanceller(IServiceScopeFactory scopes, TimeProvider time, ILogger<FutureAccessCanceller> log)
 {
     /// <summary>The <c>status_reason</c> of a booking cancelled by suspension or erasure. A code, never user text.</summary>
     public const string Reason = "practitioner_suspended";
 
-    public async Task<CancelFutureBookingsResult> CancelAsync(Guid agentId, CancellationToken ct)
+    public async Task<CancelFutureAccessesResult> CancelAsync(Guid agentId, CancellationToken ct)
     {
         var now = time.GetUtcNow();
         List<(Guid Id, AccessStatus Status)> open;
         using (var scope = scopes.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AccessDbContext>();
             open = (await db.Accesses.AsNoTracking()
                     .Where(b => b.AgentId == agentId && ((b.Status == AccessStatus.Confirmed && b.StartUtc > now) || b.Status == AccessStatus.PendingPayment))
                     .OrderBy(b => b.StartUtc).ThenBy(b => b.Id).Select(b => new { b.Id, b.Status }).ToListAsync(ct))
@@ -58,22 +58,22 @@ public sealed class FutureBookingCanceller(IServiceScopeFactory scopes, TimeProv
         }
         if (cancelled + expired + failed > 0)
             log.LogInformation("Suspension of practitioner {PractitionerId}: cancelled {Cancelled}, expired {Expired} hold(s), failed {Failed}", agentId, cancelled, expired, failed);
-        return new CancelFutureBookingsResult(cancelled, expired, failed);
+        return new CancelFutureAccessesResult(cancelled, expired, failed);
     }
 
     enum Outcome { Applied, Skipped, Failed }
 
     static async Task<Outcome> ExpireAsync(IServiceScope scope, Guid id, DateTimeOffset now, CancellationToken ct)
     {
-        var transitions = scope.ServiceProvider.GetRequiredService<BookingTransitions>();
+        var transitions = scope.ServiceProvider.GetRequiredService<AccessTransitions>();
         var result = await transitions.ApplyAsync(new TransitionRequest(id, AccessTrigger.HoldExpired, now), ct);
         return result.Applied ? Outcome.Applied : Outcome.Skipped; // moved meanwhile: nothing left to do
     }
 
     static async Task<Outcome> CancelOneAsync(IServiceScope scope, Guid id, DateTimeOffset now, CancellationToken ct)
     {
-        var db = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
-        var transitions = scope.ServiceProvider.GetRequiredService<BookingTransitions>();
+        var db = scope.ServiceProvider.GetRequiredService<AccessDbContext>();
+        var transitions = scope.ServiceProvider.GetRequiredService<AccessTransitions>();
         var refunds = scope.ServiceProvider.GetRequiredService<RefundCoordinator>();
 
         var access = await db.Accesses.AsNoTracking().SingleOrDefaultAsync(b => b.Id == id, ct);
@@ -105,14 +105,14 @@ public sealed class FutureBookingCanceller(IServiceScopeFactory scopes, TimeProv
 /// dependency_unavailable</c> when some booking could not be settled (the others were), so the caller reports it and may repeat the call. Idempotent; an unknown
 /// practitioner is <c>200</c> with zeros.
 /// </summary>
-public sealed class CancelFutureBookingsFeature : IServiceFeature
+public sealed class CancelFutureAccessesFeature : IServiceFeature
 {
-    public void Add(IHostApplicationBuilder builder) => builder.Services.AddScoped<FutureBookingCanceller>();
+    public void Add(IHostApplicationBuilder builder) => builder.Services.AddScoped<FutureAccessCanceller>();
 
     public void Map(IEndpointRouteBuilder endpoints) =>
         endpoints.MapPost("/internal/v1/practitioners/{id:guid}/cancel-future-bookings", CancelAsync).RequireAuthorization("Internal");
 
-    static async Task<IResult> CancelAsync(Guid id, FutureBookingCanceller canceller, CancellationToken ct)
+    static async Task<IResult> CancelAsync(Guid id, FutureAccessCanceller canceller, CancellationToken ct)
     {
         var result = await canceller.CancelAsync(id, ct);
         return result.Failed == 0

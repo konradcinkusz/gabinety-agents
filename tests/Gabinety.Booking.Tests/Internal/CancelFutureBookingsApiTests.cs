@@ -39,9 +39,9 @@ public class CancelFutureBookingsApiTests
         return h;
     }
 
-    static Task<HttpResponseMessage> Call(CreateHost h, Guid practitioner, string? key = Key)
+    static Task<HttpResponseMessage> Call(CreateHost h, Guid agent, string? key = Key)
     {
-        var req = new HttpRequestMessage(HttpMethod.Post, $"/internal/v1/practitioners/{practitioner}/cancel-future-bookings");
+        var req = new HttpRequestMessage(HttpMethod.Post, $"/internal/v1/practitioners/{agent}/cancel-future-bookings");
         if (key is not null) req.Headers.Add("X-Internal-Key", key);
         return h.CreateClient().SendAsync(req);
     }

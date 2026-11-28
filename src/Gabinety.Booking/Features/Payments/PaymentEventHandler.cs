@@ -7,7 +7,7 @@ using Gabinety.Booking.Persistence;
 using Gabinety.Contracts.Booking;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 using AccessStatus = Gabinety.Billing.AccessStatus;
 using ProviderEvent = Gabinety.Booking.Payments.Abstractions.WebhookEvent;
 
@@ -23,8 +23,8 @@ public readonly record struct PaymentEventResult(WebhookOutcome? Outcome)
 /// The single handler behind POST /webhooks/payments/{provider} and POST /api/v1/payments/simulate (CONTRACTS 4.3, 8.1).
 /// Provider calls (the meeting URL lookup, the refund of a late payment) happen BEFORE the transaction, so no database lock is held across a network call.
 /// </summary>
-public sealed class PaymentEventHandler(BookingDbContext db, IDirectoryClient directory, IPaymentProvider provider, TimeProvider time,
-    IEnumerable<IBookingTransitionHook> hooks, ILogger<PaymentEventHandler> log)
+public sealed class PaymentEventHandler(AccessDbContext db, IDirectoryClient directory, IPaymentProvider provider, TimeProvider time,
+    IEnumerable<IAccessTransitionHook> hooks, ILogger<PaymentEventHandler> log)
 {
     const string UniqueViolation = "23505";
     public const string Currency = "PLN";
@@ -68,7 +68,7 @@ public sealed class PaymentEventHandler(BookingDbContext db, IDirectoryClient di
         var late = e.Kind == WebhookEventKind.PaymentSucceeded && IsLate(access, now);
         string? meetingUrl = null;
         if (e.Kind == WebhookEventKind.PaymentSucceeded && !late && access.Status == AccessStatus.PendingPayment)
-            meetingUrl = (await directory.GetOfferingAsync(access.PackageId, ct))?.MeetingUrl; // DirectoryUnavailableException: the caller answers 503 and the provider retries
+            meetingUrl = (await directory.GetPackageAsync(access.PackageId, ct))?.MeetingUrl; // DirectoryUnavailableException: the caller answers 503 and the provider retries
         if (late && payment.Status == PaymentStatus.Created)
             await provider.RefundAsync(new RefundRequest(e.ProviderPaymentId!, payment.AmountMinor, $"late:{payment.Id:N}"), ct);
 
@@ -83,17 +83,17 @@ public sealed class PaymentEventHandler(BookingDbContext db, IDirectoryClient di
         }
     }
 
-    static bool IsLate(BookingEntity b, DateTimeOffset now) =>
+    static bool IsLate(AccessEntity b, DateTimeOffset now) =>
         b.Status == AccessStatus.Expired || (b.Status == AccessStatus.PendingPayment && b.HoldExpiresAt <= now);
 
-    async Task<WebhookOutcome> ApplyAsync(string providerName, ProviderEvent e, Guid bookingId, bool lateAtRead, string? meetingUrl, CancellationToken ct)
+    async Task<WebhookOutcome> ApplyAsync(string providerName, ProviderEvent e, Guid accessId, bool lateAtRead, string? meetingUrl, CancellationToken ct)
     {
         async Task<WebhookOutcome> Body()
         {
             db.ChangeTracker.Clear(); // a retry starts from the database
             var now = time.GetUtcNow();
-            var access = await LoadForUpdateAsync(bookingId, ct);
-            var payment = await db.Payments.SingleAsync(p => p.AccessId == bookingId, ct);
+            var access = await LoadForUpdateAsync(accessId, ct);
+            var payment = await db.Payments.SingleAsync(p => p.AccessId == accessId, ct);
             var outcome = WebhookOutcome.Ignored;
 
             switch (e.Kind)
@@ -104,7 +104,7 @@ public sealed class PaymentEventHandler(BookingDbContext db, IDirectoryClient di
                     // Without this no confirmation e-mail was ever scheduled for a paid booking.
                     if (outcome == WebhookOutcome.Applied && access.Status == AccessStatus.Confirmed)
                     {
-                        var context = new BookingTransitionContext(db, access, payment, AccessStatus.PendingPayment, AccessStatus.Confirmed, AccessTrigger.PaymentSucceeded, now);
+                        var context = new AccessTransitionContext(db, access, payment, AccessStatus.PendingPayment, AccessStatus.Confirmed, AccessTrigger.PaymentSucceeded, now);
                         foreach (var hook in hooks) await hook.OnTransitionAsync(context, ct);
                     }
                     break;
@@ -137,7 +137,7 @@ public sealed class PaymentEventHandler(BookingDbContext db, IDirectoryClient di
         });
     }
 
-    WebhookOutcome ApplySucceeded(BookingEntity access, Payment payment, ProviderEvent e, bool lateNow, bool lateAtRead, string? meetingUrl, DateTimeOffset now)
+    WebhookOutcome ApplySucceeded(AccessEntity access, Payment payment, ProviderEvent e, bool lateNow, bool lateAtRead, string? meetingUrl, DateTimeOffset now)
     {
         if (payment.Status != PaymentStatus.Created) return WebhookOutcome.Ignored; // a second success for the same payment
         if (lateNow && !lateAtRead) throw new StaleReadException(); // the hold ran out after the first read: it needs the refund call
@@ -168,17 +168,17 @@ public sealed class PaymentEventHandler(BookingDbContext db, IDirectoryClient di
     }
 
     /// <summary>The provider confirms a refund it was asked for (CONTRACTS 9.2: the ledger row is written then). Already recorded in full is a no-op.</summary>
-    WebhookOutcome ApplyRefundSucceeded(BookingEntity access, Payment payment, ProviderEvent e, DateTimeOffset now) =>
+    WebhookOutcome ApplyRefundSucceeded(AccessEntity access, Payment payment, ProviderEvent e, DateTimeOffset now) =>
         RefundLedger.Record(db, access.Id, payment, e.AmountMinor, now); // shared with the cancel flow (T-04.07a)
 
-    void AddLedger(Guid bookingId, LedgerKind kind, long amount, DateTimeOffset now) =>
-        db.LedgerEntries.Add(new LedgerEntry { Id = Guid.CreateVersion7(), AccessId = bookingId, Kind = kind, AmountMinor = amount, CreatedAt = now });
+    void AddLedger(Guid accessId, LedgerKind kind, long amount, DateTimeOffset now) =>
+        db.LedgerEntries.Add(new LedgerEntry { Id = Guid.CreateVersion7(), AccessId = accessId, Kind = kind, AmountMinor = amount, CreatedAt = now });
 
     /// <summary>The booking row, locked on PostgreSQL so two events for one booking apply one after the other.</summary>
-    async Task<BookingEntity> LoadForUpdateAsync(Guid bookingId, CancellationToken ct) =>
+    async Task<AccessEntity> LoadForUpdateAsync(Guid accessId, CancellationToken ct) =>
         db.Database.IsNpgsql()
-            ? await db.Accesses.FromSql($"SELECT * FROM bookings WHERE id = {bookingId} FOR UPDATE").SingleAsync(ct)
-            : await db.Accesses.SingleAsync(b => b.Id == bookingId, ct);
+            ? await db.Accesses.FromSql($"SELECT * FROM bookings WHERE id = {accessId} FOR UPDATE").SingleAsync(ct)
+            : await db.Accesses.SingleAsync(b => b.Id == accessId, ct);
 
     async Task<WebhookOutcome> RecordOnlyAsync(string providerName, string eventId, WebhookOutcome outcome, CancellationToken ct)
     {

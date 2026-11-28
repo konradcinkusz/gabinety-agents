@@ -230,7 +230,7 @@ public class MyBookingsTests : BunitContext
     [Fact]
     public void A_row_names_the_agent_with_the_badge_for_a_client_and_the_client_for_a_provider_F03()
     {
-        _booking.Respond = _ => FakeBackend.Json(new PageDto<BookingViewDto>([Sample.Access("Z imieniem"), Sample.Access("Bez imienia", practitioner: "")], null));
+        _booking.Respond = _ => FakeBackend.Json(new PageDto<BookingViewDto>([Sample.Access("Z imieniem"), Sample.Access("Bez imienia", agent: "")], null));
         var cut = Open();
         var lines = cut.FindAll("[data-testid=booking-party]").Select(p => Page.Squash(p.TextContent)).ToList();
         Assert.Equal("Anna DemowskaAgent AI", lines[0]);

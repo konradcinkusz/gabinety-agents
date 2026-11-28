@@ -3,7 +3,7 @@ using System.Text.Json;
 using Gabinety.Booking.Features.Bookings.Create;
 using Gabinety.Booking.Features.Payouts;
 using Gabinety.Contracts.Booking;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
@@ -30,7 +30,7 @@ public class PairCountsApiTests
     static async Task<JsonElement> Json(HttpResponseMessage r) => JsonDocument.Parse(await r.Content.ReadAsStringAsync()).RootElement.Clone();
 
     /// <summary>Seeds <paramref name="count"/> bookings of a pair, each with a payment in <paramref name="payment"/> (none when null).</summary>
-    static Task Seed(CreateHost h, string client, Guid practitioner, int count, AccessStatus status = AccessStatus.Completed, PaymentStatus? payment = PaymentStatus.Succeeded) =>
+    static Task Seed(CreateHost h, string client, Guid agent, int count, AccessStatus status = AccessStatus.Completed, PaymentStatus? payment = PaymentStatus.Succeeded) =>
         h.Seed(db =>
         {
             for (var i = 0; i < count; i++)
@@ -44,9 +44,9 @@ public class PairCountsApiTests
                         RefundedMinor = ps == PaymentStatus.Refunded ? 12345 : ps == PaymentStatus.PartiallyRefunded ? 100 : 0,
                         CreatedAt = start, UpdatedAt = start,
                     });
-                db.Accesses.Add(new BookingEntity
+                db.Accesses.Add(new AccessEntity
                 {
-                    Id = id, ClientUserId = client, AgentId = practitioner, AgentUserId = "demo-practitioner-user",
+                    Id = id, ClientUserId = client, AgentId = agent, AgentUserId = "demo-practitioner-user",
                     PackageId = h.Package, PackageTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 12345,
                     StartUtc = start, EndUtc = start.AddHours(1), Status = status, BriefText = "demo-brief-SECRET-TEXT",
                     IdempotencyKey = Guid.NewGuid(), CreatedAt = start.AddDays(-2),

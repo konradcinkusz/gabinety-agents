@@ -6,7 +6,7 @@ using Gabinety.Booking.Persistence;
 using Gabinety.Contracts.Booking;
 using Gabinety.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Features.Payouts;
@@ -15,7 +15,7 @@ namespace Gabinety.Booking.Features.Payouts;
 /// When a transition leaves a booking money-complete (CONTRACTS 8.1, 9.2) sets <c>fee_minor</c> and <c>payout_minor</c> (CONTRACTS 9.1) and writes the
 /// <c>PlatformFee</c> ledger row. Runs inside the transition's transaction. It creates no payout row: the payout job does (T-04.08d).
 /// </summary>
-public sealed class FeeHook(IConfiguration config, PlatformFeeClaims claims) : IBookingTransitionHook
+public sealed class FeeHook(IConfiguration config, PlatformFeeClaims claims) : IAccessTransitionHook
 {
     public const string RateKey = "Billing:FirstConsultationFeeBps";
     public const int DefaultRateBps = 1500;
@@ -29,7 +29,7 @@ public sealed class FeeHook(IConfiguration config, PlatformFeeClaims claims) : I
         _ => null,
     };
 
-    public async Task OnTransitionAsync(BookingTransitionContext context, CancellationToken ct)
+    public async Task OnTransitionAsync(AccessTransitionContext context, CancellationToken ct)
     {
         var b = context.Access;
         if (context.From == AccessStatus.Completed && context.To == AccessStatus.Disputed)
@@ -62,7 +62,7 @@ public sealed class FeeHook(IConfiguration config, PlatformFeeClaims claims) : I
     }
 
     /// <summary>Writes the PlatformFee row for the pair; false when the pair already has one. The unique partial index decides a race.</summary>
-    async Task<bool> ClaimPairAsync(BookingTransitionContext context, BookingEntity b, long feeMinor, CancellationToken ct)
+    async Task<bool> ClaimPairAsync(AccessTransitionContext context, AccessEntity b, long feeMinor, CancellationToken ct)
     {
         var pairKey = PairKey.For(b.ClientUserId, b.AgentId); // spec format when it fits varchar(80), hashed otherwise
         var id = Guid.CreateVersion7();
@@ -95,7 +95,7 @@ public sealed class FeeHook(IConfiguration config, PlatformFeeClaims claims) : I
 /// </summary>
 public static class MoneyReopening
 {
-    public static void Reopen(BookingTransitionContext c)
+    public static void Reopen(AccessTransitionContext c)
     {
         c.Access.FeeMinor = null;
         c.Access.PayoutMinor = null;
@@ -112,7 +112,7 @@ public sealed class PlatformFeeClaims
 
     public void Release(string pairKey) { lock (gate) claimed.Remove(pairKey); }
 
-    public async Task<bool> TryClaimAsync(BookingDbContext db, string pairKey, CancellationToken ct)
+    public async Task<bool> TryClaimAsync(AccessDbContext db, string pairKey, CancellationToken ct)
     {
         var saved = await db.LedgerEntries.AsNoTracking().AnyAsync(l => l.Kind == LedgerKind.PlatformFee && l.PairKey == pairKey, ct);
         lock (gate) return !saved && claimed.Add(pairKey);
@@ -124,7 +124,7 @@ public sealed class PayoutsFeature : IServiceFeature
     public void Add(IHostApplicationBuilder builder)
     {
         builder.Services.AddSingleton<PlatformFeeClaims>();
-        builder.Services.AddScoped<IBookingTransitionHook, FeeHook>();
+        builder.Services.AddScoped<IAccessTransitionHook, FeeHook>();
     }
 
     public void Map(IEndpointRouteBuilder endpoints) { }

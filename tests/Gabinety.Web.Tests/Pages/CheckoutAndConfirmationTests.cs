@@ -240,7 +240,7 @@ public class CheckoutAndConfirmationTests
     [Fact]
     public async Task Without_a_name_in_the_booking_the_summary_leaves_the_row_out_instead_of_printing_a_placeholder_F03()
     {
-        await using var f = await Open(Detail("Confirmed", practitioner: ""));
+        await using var f = await Open(Detail("Confirmed", agent: ""));
         var page = await f.Browser.GetAsync(Confirmation);
         Assert.Equal(["Pakiet", "Zawartość", "Ważność", "Do zapłaty"], page.All(".booking-summary dt").Select(d => d.TextContent));
     }

@@ -33,7 +33,7 @@ public class CancelIntegrationTests : IAsyncLifetime
 
     public async Task DisposeAsync() { await host.DisposeAsync(); await pg.DisposeAsync(); }
 
-    BookingDbContext Db() => new(new DbContextOptionsBuilder<BookingDbContext>().UseNpgsql(cs).Options);
+    AccessDbContext Db() => new(new DbContextOptionsBuilder<AccessDbContext>().UseNpgsql(cs).Options);
 
     [Fact]
     public async Task Two_concurrent_cancels_of_one_booking_give_one_200_one_409_and_one_refund_row()

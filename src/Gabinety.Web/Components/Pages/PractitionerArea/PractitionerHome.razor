@@ -273,14 +273,14 @@ else if (Profile is not null) @* Blazor renders once before an async OnInitializ
     async Task LoadOverviewAsync()
     {
         var agents = Agent.AgentsAsync();
-        var bookings = Accesses.MyBookingsAsync(AccessClient.PractitionerRole, null, null);
-        await Task.WhenAll(agents, bookings);
+        var accesses = Accesses.MyBookingsAsync(AccessClient.PractitionerRole, null, null);
+        await Task.WhenAll(agents, accesses);
         _agentsFailed = !agents.Result.IsOk;
         _agents = agents.Result.IsOk ? agents.Result.Value! : [];
-        _recentFailed = !bookings.Result.IsOk;
-        if (bookings.Result.IsOk)
+        _recentFailed = !accesses.Result.IsOk;
+        if (accesses.Result.IsOk)
         {
-            var items = bookings.Result.Value!.Items;
+            var items = accesses.Result.Value!.Items;
             _activePackages = MyBookingsSchedule.Split(items, Clock.GetUtcNow()).Upcoming.Count;
             _recent = [.. items.OrderByDescending(b => b.StartUtc).Take(5)];
         }
@@ -291,14 +291,14 @@ else if (Profile is not null) @* Blazor renders once before an async OnInitializ
     {
         var offers = Agent.OfferingsAsync();
         var account = Scheduling.PaymentAccountAsync();
-        Task<ApiResult<PageDto<BookingViewDto>>>? bookings = Profile!.Status == "Approved" ? Accesses.MyBookingsAsync(AccessClient.PractitionerRole, null, null) : null;
-        await Task.WhenAll(offers, account, (Task?)bookings ?? Task.CompletedTask);
-        if (bookings is not null) // the region fails soft: the rest of the dashboard is already known
+        Task<ApiResult<PageDto<BookingViewDto>>>? accesses = Profile!.Status == "Approved" ? Accesses.MyBookingsAsync(AccessClient.PractitionerRole, null, null) : null;
+        await Task.WhenAll(offers, account, (Task?)accesses ?? Task.CompletedTask);
+        if (accesses is not null) // the region fails soft: the rest of the dashboard is already known
         {
-            _recentFailed = !bookings.Result.IsOk;
-            if (bookings.Result.IsOk)
+            _recentFailed = !accesses.Result.IsOk;
+            if (accesses.Result.IsOk)
             {
-                IReadOnlyList<BookingViewDto> items = AgentSlug is null ? bookings.Result.Value!.Items : [.. bookings.Result.Value!.Items.Where(b => b.Agent.Slug == Profile!.Slug)]; // E-04: a chosen agent sees only its own purchases
+                IReadOnlyList<BookingViewDto> items = AgentSlug is null ? accesses.Result.Value!.Items : [.. accesses.Result.Value!.Items.Where(b => b.Agent.Slug == Profile!.Slug)]; // E-04: a chosen agent sees only its own purchases
                 _activePackages = MyBookingsSchedule.Split(items, Clock.GetUtcNow()).Upcoming.Count; // the first page of the list: the newest purchases
                 _recent = [.. items.OrderByDescending(b => b.StartUtc).Take(5)]; // a package starts when it is bought
             }

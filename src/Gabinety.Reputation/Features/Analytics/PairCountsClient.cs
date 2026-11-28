@@ -10,8 +10,8 @@ public sealed class BookingUnavailableForAnalyticsException(Exception? inner = n
 
 public interface IPairCountsClient
 {
-    /// <summary>GET /internal/v1/analytics/pair-counts: one page of pairs with at least <paramref name="minBookings"/> paid bookings.</summary>
-    Task<Page<PairCountDto>> GetAsync(int minBookings, string? cursor, int limit, CancellationToken ct);
+    /// <summary>GET /internal/v1/analytics/pair-counts: one page of pairs with at least <paramref name="minAccesses"/> paid bookings.</summary>
+    Task<Page<PairCountDto>> GetAsync(int minAccesses, string? cursor, int limit, CancellationToken ct);
 }
 
 /// <summary>Typed client for Booking's pair counts (ADR-0007): internal key, 3 s, no retry (an administrator reloads). Failure is one exception type.</summary>
@@ -19,9 +19,9 @@ public sealed class PairCountsClient(HttpClient http, string? internalKey, TimeS
 {
     public static readonly TimeSpan CallTimeout = TimeSpan.FromSeconds(3);
 
-    public async Task<Page<PairCountDto>> GetAsync(int minBookings, string? cursor, int limit, CancellationToken ct)
+    public async Task<Page<PairCountDto>> GetAsync(int minAccesses, string? cursor, int limit, CancellationToken ct)
     {
-        var query = $"minBookings={minBookings}&limit={limit}" + (cursor is null ? "" : $"&cursor={Uri.EscapeDataString(cursor)}");
+        var query = $"minBookings={minAccesses}&limit={limit}" + (cursor is null ? "" : $"&cursor={Uri.EscapeDataString(cursor)}");
         using var request = new HttpRequestMessage(HttpMethod.Get, $"internal/v1/analytics/pair-counts?{query}");
         if (!string.IsNullOrEmpty(internalKey)) request.Headers.Add("X-Internal-Key", internalKey);
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);

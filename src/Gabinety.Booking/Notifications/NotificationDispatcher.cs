@@ -28,7 +28,7 @@ public sealed class NotificationDispatcher(IServiceScopeFactory scopes, TimeProv
         List<Guid> ids;
         using (var scope = scopes.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AccessDbContext>();
             var now = time.GetUtcNow();
             ids = await db.Notifications.AsNoTracking()
                 .Where(n => n.SentAt == null && n.Attempts < MaxAttempts && n.DueAt <= now)
@@ -54,7 +54,7 @@ public sealed class NotificationDispatcher(IServiceScopeFactory scopes, TimeProv
     {
         using var scope = scopes.CreateScope();
         var sp = scope.ServiceProvider;
-        var db = sp.GetRequiredService<BookingDbContext>();
+        var db = sp.GetRequiredService<AccessDbContext>();
         var now = time.GetUtcNow();
 
         var n = await db.Notifications.SingleOrDefaultAsync(x => x.Id == id, ct);
@@ -78,13 +78,13 @@ public sealed class NotificationDispatcher(IServiceScopeFactory scopes, TimeProv
 
         if (access is null) return Failed(n, "the booking does not exist");
 
-        var forPractitioner = n.ToUserId == access.AgentUserId;
+        var forAgent = n.ToUserId == access.AgentUserId;
         string? address;
-        try { address = await sp.GetRequiredService<IContactResolver>().ResolveAddressAsync(new ContactLookup(n.ToUserId, forPractitioner, access.ClientEmail), ct); }
+        try { address = await sp.GetRequiredService<IContactResolver>().ResolveAddressAsync(new ContactLookup(n.ToUserId, forAgent, access.ClientEmail), ct); }
         catch (Exception ex) when (ex is not OperationCanceledException) { return Failed(n, "the address lookup failed: " + ex.GetType().Name); }
         if (string.IsNullOrWhiteSpace(address)) return Failed(n, "the user has no address");
 
-        var mail = NotificationTemplates.Render(n.Kind, SiteUrl.From(sp.GetRequiredService<IConfiguration>()), n.AccessId, access.StartUtc, forPractitioner);
+        var mail = NotificationTemplates.Render(n.Kind, SiteUrl.From(sp.GetRequiredService<IConfiguration>()), n.AccessId, access.StartUtc, forAgent);
         try { await sp.GetRequiredService<IEmailSender>().SendAsync(new EmailMessage(address, n.ToUserId, n.Kind, mail.Subject, mail.Text, mail.Html), ct); }
         catch (Exception ex) when (ex is not OperationCanceledException) { return Failed(n, "the sender failed: " + ex.GetType().Name); }
 

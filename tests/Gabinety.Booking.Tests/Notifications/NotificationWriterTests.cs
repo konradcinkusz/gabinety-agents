@@ -2,7 +2,7 @@ using Gabinety.Booking.Notifications;
 using Gabinety.Booking.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 
 namespace Gabinety.Booking.Tests;
 
@@ -14,13 +14,13 @@ public class NotificationWriterTests
     public async Task Scheduling_the_same_booking_kind_and_user_twice_adds_one_row()
     {
         using var t = new NotificationHost();
-        var access = new BookingEntity { Id = Guid.NewGuid() };
+        var access = new AccessEntity { Id = Guid.NewGuid() };
         using (var scope = t.Host.Services.CreateScope())
         {
             var writer = scope.ServiceProvider.GetRequiredService<INotificationWriter>();
             Assert.True(writer.Schedule(access, NotificationKind.Reminder24h, "demo-client", Due));
             Assert.False(writer.Schedule(access, NotificationKind.Reminder24h, "demo-client", Due.AddHours(1)));
-            await scope.ServiceProvider.GetRequiredService<BookingDbContext>().SaveChangesAsync();
+            await scope.ServiceProvider.GetRequiredService<AccessDbContext>().SaveChangesAsync();
         }
         var rows = await t.Host.Query(db => db.Notifications.AsNoTracking().Where(n => n.AccessId == access.Id).ToListAsync());
         var row = Assert.Single(rows);
@@ -31,14 +31,14 @@ public class NotificationWriterTests
     public async Task A_different_user_or_kind_is_a_different_row_and_Schedule_does_not_save()
     {
         using var t = new NotificationHost();
-        var access = new BookingEntity { Id = Guid.NewGuid() };
+        var access = new AccessEntity { Id = Guid.NewGuid() };
         using var scope = t.Host.Services.CreateScope();
         var writer = scope.ServiceProvider.GetRequiredService<INotificationWriter>();
         Assert.True(writer.Schedule(access, NotificationKind.BookingConfirmed, "demo-client", Due));
         Assert.True(writer.Schedule(access, NotificationKind.BookingConfirmed, "demo-practitioner", Due));
         Assert.True(writer.Schedule(access, NotificationKind.Reminder1h, "demo-client", Due));
         Assert.Empty(await t.Host.Query(db => db.Notifications.Where(n => n.AccessId == access.Id).ToListAsync())); // nothing saved yet
-        await scope.ServiceProvider.GetRequiredService<BookingDbContext>().SaveChangesAsync();
+        await scope.ServiceProvider.GetRequiredService<AccessDbContext>().SaveChangesAsync();
         Assert.Equal(3, (await t.Host.Query(db => db.Notifications.Where(n => n.AccessId == access.Id).ToListAsync())).Count);
     }
 
@@ -46,13 +46,13 @@ public class NotificationWriterTests
     public async Task ScheduleAsync_adds_nothing_when_the_row_was_saved_by_an_earlier_transaction()
     {
         using var t = new NotificationHost();
-        var access = new BookingEntity { Id = Guid.NewGuid() };
+        var access = new AccessEntity { Id = Guid.NewGuid() };
         t.Add(access.Id, NotificationKind.Cancelled, "demo-client");
         using var scope = t.Host.Services.CreateScope();
         var writer = scope.ServiceProvider.GetRequiredService<INotificationWriter>();
         Assert.False(await writer.ScheduleAsync(access, NotificationKind.Cancelled, "demo-client", Due, default));
         Assert.True(await writer.ScheduleAsync(access, NotificationKind.Cancelled, "demo-practitioner", Due, default));
-        await scope.ServiceProvider.GetRequiredService<BookingDbContext>().SaveChangesAsync();
+        await scope.ServiceProvider.GetRequiredService<AccessDbContext>().SaveChangesAsync();
         Assert.Equal(2, (await t.Host.Query(db => db.Notifications.Where(n => n.AccessId == access.Id).ToListAsync())).Count);
     }
 
@@ -72,7 +72,7 @@ public class NotificationWriterTests
         {
             var writer = scope.ServiceProvider.GetRequiredService<INotificationWriter>();
             Assert.Equal(2, await writer.CancelUnsentAsync(access, [NotificationKind.Reminder24h, NotificationKind.Reminder1h], default));
-            await scope.ServiceProvider.GetRequiredService<BookingDbContext>().SaveChangesAsync();
+            await scope.ServiceProvider.GetRequiredService<AccessDbContext>().SaveChangesAsync();
         }
         var left = (await t.Host.Query(db => db.Notifications.AsNoTracking().Where(n => n.AccessId == access || n.AccessId == other).Select(n => n.Id).ToListAsync())).ToHashSet();
         Assert.Equal(new HashSet<Guid> { r1Sent.Id, review.Id, otherBooking.Id }, left);
@@ -84,19 +84,19 @@ public class NotificationWriterTests
     public async Task CancelUnsent_also_removes_a_row_scheduled_in_the_same_unsaved_context()
     {
         using var t = new NotificationHost();
-        var access = new BookingEntity { Id = Guid.NewGuid() };
+        var access = new AccessEntity { Id = Guid.NewGuid() };
         using var scope = t.Host.Services.CreateScope();
         var writer = scope.ServiceProvider.GetRequiredService<INotificationWriter>();
         writer.Schedule(access, NotificationKind.Reminder24h, "demo-client", Due);
         Assert.Equal(1, await writer.CancelUnsentAsync(access.Id, [NotificationKind.Reminder24h], default));
-        await scope.ServiceProvider.GetRequiredService<BookingDbContext>().SaveChangesAsync();
+        await scope.ServiceProvider.GetRequiredService<AccessDbContext>().SaveChangesAsync();
         Assert.Empty(await t.Host.Query(db => db.Notifications.Where(n => n.AccessId == access.Id).ToListAsync()));
     }
 
     [Fact]
     public void The_model_maps_the_table_the_unique_key_and_the_kind_as_a_string()
     {
-        using var db = new BookingDbContextFactory().CreateDbContext([]);
+        using var db = new AccessDbContextFactory().CreateDbContext([]);
         var e = db.Model.FindEntityType(typeof(Notification))!;
         Assert.Equal("notifications", e.GetTableName());
         Assert.Contains(e.GetIndexes(), i => i.IsUnique && i.Properties.Select(p => p.Name).SequenceEqual(["AccessId", "Kind", "ToUserId"]));

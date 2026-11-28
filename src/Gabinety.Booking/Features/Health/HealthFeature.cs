@@ -32,7 +32,7 @@ public sealed class HealthFeature : IServiceFeature
 }
 
 /// <summary>Healthy on InMemory, or when migrations are Done and the connection works; Degraded otherwise.</summary>
-public sealed class DatabaseHealthCheck(BookingDbContext db, MigrationState migrations) : IHealthCheck
+public sealed class DatabaseHealthCheck(AccessDbContext db, MigrationState migrations) : IHealthCheck
 {
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken ct = default)
     {

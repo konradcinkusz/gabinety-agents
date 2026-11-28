@@ -37,7 +37,7 @@ public class RecipientAddressTests
             Host.Emails[Client] = ClientAddress;
             // Its OWN in-memory database: on the shared one another test's dispatcher would claim these rows (and this one theirs).
             var db = "recipients-" + Guid.NewGuid().ToString("N");
-            Host.Configure = s => s.AddDbContext<BookingDbContext>(o => o.UseInMemoryDatabase(db));
+            Host.Configure = s => s.AddDbContext<AccessDbContext>(o => o.UseInMemoryDatabase(db));
             if (smtp)
             {
                 Host.Settings["Notifications:Provider"] = "Smtp";

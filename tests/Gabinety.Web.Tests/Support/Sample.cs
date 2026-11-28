@@ -15,9 +15,9 @@ public static class Sample
 
     public static SitemapDto Sitemap(int count = 6, bool indexable = true, string path = "/agenci") => new([new SitemapCategoryDto(path, count, indexable)]);
 
-    public static BookingViewDto Access(string title = "Konsultacja demo", string status = "Confirmed", string practitioner = "Anna Demowska", long price = 25000) =>
+    public static BookingViewDto Access(string title = "Konsultacja demo", string status = "Confirmed", string agent = "Anna Demowska", long price = 25000) =>
         new(Guid.NewGuid(), status, new DateTimeOffset(2026, 12, 1, 12, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 12, 1, 13, 0, 0, TimeSpan.Zero), 60, title,
-            new MoneyDto(price, "PLN"), new PractitionerRefDto(Guid.NewGuid(), practitioner, "demo-anna-demowska"), new ClientRefDto("demo-client"));
+            new MoneyDto(price, "PLN"), new PractitionerRefDto(Guid.NewGuid(), agent, "demo-anna-demowska"), new ClientRefDto("demo-client"));
 
     public static PageDto<PractitionerCardDto> Cards(int n = 2, string? next = null) =>
         new([.. Enumerable.Range(1, n).Select(i => Card($"demo-person-{i}", $"Osoba Demo {i}"))], next);

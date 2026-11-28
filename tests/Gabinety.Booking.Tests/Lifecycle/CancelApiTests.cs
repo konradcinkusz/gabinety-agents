@@ -268,7 +268,7 @@ public class CancelApiTests
     {
         var hook = new CapturingHook();
         var p = new RecordingProvider();
-        await using var h = Life.Host(p, x => x.Configure += s => s.AddSingleton<IBookingTransitionHook>(hook));
+        await using var h = Life.Host(p, x => x.Configure += s => s.AddSingleton<IAccessTransitionHook>(hook));
         var id = await Life.Seed(h, AccessStatus.Confirmed, H24);
         Assert.Equal(HttpStatusCode.OK, (await Life.Cancel(h, id, Life.Client)).StatusCode);
         var seen = Assert.Single(hook.Seen);
@@ -280,11 +280,11 @@ public class CancelApiTests
         Assert.Equal(AccessStatus.Confirmed, (await Life.Row(h, id2)).Status);
     }
 
-    sealed class CapturingHook : IBookingTransitionHook
+    sealed class CapturingHook : IAccessTransitionHook
     {
         public List<(Guid, AccessStatus, AccessStatus, AccessTrigger)> Seen { get; } = [];
         public bool Fail { get; set; }
-        public Task OnTransitionAsync(BookingTransitionContext c, CancellationToken ct)
+        public Task OnTransitionAsync(AccessTransitionContext c, CancellationToken ct)
         {
             if (Fail) throw new InvalidOperationException("demo hook failure");
             Seen.Add((c.Access.Id, c.From, c.To, c.Trigger));

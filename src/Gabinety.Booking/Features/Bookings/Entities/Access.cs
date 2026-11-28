@@ -57,7 +57,7 @@ public sealed class Access
     public DateTimeOffset? ResolvedAt { get; set; }
 }
 
-sealed class BookingConfiguration : IEntityTypeConfiguration<Access>
+sealed class AccessConfiguration : IEntityTypeConfiguration<Access>
 {
     public void Configure(EntityTypeBuilder<Access> b)
     {

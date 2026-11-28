@@ -5,7 +5,7 @@ using System.Text.Json;
 using Gabinety.Contracts.Booking;
 using Gabinety.Booking.Features.Bookings.Create;
 using Gabinety.Booking.Features.Payments;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
@@ -27,7 +27,7 @@ public class MyBookingsApiTests
         var start = h.Clock.GetUtcNow() + startIn;
         await h.Seed(db =>
         {
-            db.Accesses.Add(new BookingEntity
+            db.Accesses.Add(new AccessEntity
             {
                 Id = id.Value, ClientUserId = clientOverride ?? w.Client, AgentId = h.Agent, AgentUserId = practitionerOverride ?? w.Agent,
                 PackageId = h.Package, PackageTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 10000, StartUtc = start, EndUtc = start + H,

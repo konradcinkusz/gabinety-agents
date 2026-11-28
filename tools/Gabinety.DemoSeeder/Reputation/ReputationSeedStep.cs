@@ -24,7 +24,7 @@ public sealed class ReputationSeedStep : ISeedStep
         if (context.Options.ReputationUrl.Length == 0) { context.Log.Info("reputation: skipped (Backend:Reputation is not configured)"); return; }
         if (context.Options.ReputationKey.Length == 0) throw new SeedException("reputation: Internal:Keys:Reputation is not configured");
         if (context.Options.BookingUrl.Length == 0) throw new SeedException("reputation: Backend:Booking is not configured (reviews need the bookings)");
-        var bookings = new BookingApi(context.Http.For(SeedService.Access), context.Options, context.Time);
+        var accesses = new BookingApi(context.Http.For(SeedService.Access), context.Options, context.Time);
         var reputation = new ReputationApi(context.Http.For(SeedService.Reputation), context.Time);
         var clients = context.Clients.OrderBy(c => c.Key, StringComparer.Ordinal).Select(c => c.Value).ToList();
         if (clients.Count == 0) throw new SeedException("reputation: no demo clients (run the directory step first)");
@@ -32,7 +32,7 @@ public sealed class ReputationSeedStep : ISeedStep
         // the used demo packages (a review needs UnitsUsed above 0, and a package that is Confirmed, Completed or Resolved), each with the client who made it
         var completed = new Dictionary<string, (DemoUser Client, Guid Id)>();
         foreach (var client in clients)
-            foreach (var b in await bookings.MyBookingsAsync(client, ct))
+            foreach (var b in await accesses.MyBookingsAsync(client, ct))
                 if (b.Status is "Confirmed" or "Completed" or "Resolved" && b.UnitsUsed > 0 && BookingSeedStep.KeyOf(b) is { } key) completed[key] = (client, b.Id);
         if (completed.Count == 0)
         {

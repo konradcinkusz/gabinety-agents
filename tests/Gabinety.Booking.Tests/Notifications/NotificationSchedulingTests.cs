@@ -161,7 +161,7 @@ public class NotificationSchedulingTests
     {
         using var h = new CreateHost();
         var configure = h.Configure;
-        h.Configure = s => { configure?.Invoke(s); s.AddScoped<IBookingTransitionHook, ThrowingHook>(); };
+        h.Configure = s => { configure?.Invoke(s); s.AddScoped<IAccessTransitionHook, ThrowingHook>(); };
         var id = await Seed(h, TimeSpan.FromDays(3));
         await Assert.ThrowsAsync<InvalidOperationException>(() => Fee.Apply(h, id, AccessTrigger.PaymentSucceeded));
         Assert.Empty(await Rows(h, id));
@@ -197,9 +197,9 @@ public class NotificationSchedulingTests
         Assert.DoesNotContain(Agent, text);
     }
 
-    sealed class ThrowingHook : IBookingTransitionHook
+    sealed class ThrowingHook : IAccessTransitionHook
     {
-        public Task OnTransitionAsync(BookingTransitionContext c, CancellationToken ct) =>
+        public Task OnTransitionAsync(AccessTransitionContext c, CancellationToken ct) =>
             c.To == AccessStatus.Confirmed ? throw new InvalidOperationException("demo failure") : Task.CompletedTask;
     }
 }

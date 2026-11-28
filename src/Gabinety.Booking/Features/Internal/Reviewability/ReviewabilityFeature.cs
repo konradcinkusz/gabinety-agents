@@ -31,7 +31,7 @@ public sealed class ReviewabilityFeature : IServiceFeature
     public void Map(IEndpointRouteBuilder endpoints) =>
         endpoints.MapGet("/internal/v1/bookings/{id:guid}/reviewability", GetAsync).RequireAuthorization("Internal");
 
-    static async Task<IResult> GetAsync(Guid id, BookingDbContext db, TimeProvider clock, CancellationToken ct)
+    static async Task<IResult> GetAsync(Guid id, AccessDbContext db, TimeProvider clock, CancellationToken ct)
     {
         var b = await db.Accesses.AsNoTracking().Where(x => x.Id == id)
             .Select(x => new { x.Status, x.DisputeResolution, x.UnitsUsed, x.EndedAt, x.EndUtc, x.ClientUserId, x.AgentId })

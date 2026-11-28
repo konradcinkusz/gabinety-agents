@@ -53,7 +53,7 @@ public sealed class ReplyReviewFeature : IServiceFeature
         Guid agentId;
         try
         {
-            if (await directory.GetPractitionerByUserAsync(sub, ct) is not { } found) return Problem(ErrorCodes.NotFound, "Not found", 404);
+            if (await directory.GetAgentByUserAsync(sub, ct) is not { } found) return Problem(ErrorCodes.NotFound, "Not found", 404);
             agentId = found.AgentId;
         }
         catch (DirectoryUnavailableException)

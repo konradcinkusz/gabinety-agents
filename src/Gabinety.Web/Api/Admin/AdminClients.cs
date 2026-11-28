@@ -35,8 +35,8 @@ public sealed partial class AccessClient
         GetAsync<AdminBookingDto>($"/api/v1/bookings/{id}", token, ct);
 
     /// <summary><c>resolution</c> is <c>release | refund_full | refund_partial</c>; <c>refundMinor</c> only for a partial refund (grosz, strictly between 0 and the price).</summary>
-    public Task<ApiResult<Unit>> AdminResolveAsync(string? token, Guid bookingId, string resolution, long? refundMinor, string note, CancellationToken ct = default) =>
-        PostAsync<Unit>($"/api/v1/admin/bookings/{bookingId}/resolve", new { resolution, refundMinor, note = note.Trim() }, token, ct);
+    public Task<ApiResult<Unit>> AdminResolveAsync(string? token, Guid accessId, string resolution, long? refundMinor, string note, CancellationToken ct = default) =>
+        PostAsync<Unit>($"/api/v1/admin/bookings/{accessId}/resolve", new { resolution, refundMinor, note = note.Trim() }, token, ct);
 
     /// <summary>The ledger export as a stream (<c>GET /api/v1/admin/ledger.csv</c>): days are UTC days, both ends inclusive, at most 366 days. The caller disposes the stream.</summary>
     public Task<(ApiStream? Stream, ApiFailure? Failure)> AdminLedgerCsvAsync(string? token, string from, string to, CancellationToken ct = default) =>

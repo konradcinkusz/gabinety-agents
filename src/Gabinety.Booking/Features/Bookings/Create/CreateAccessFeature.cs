@@ -15,7 +15,7 @@ using Gabinety.Contracts.Directory;
 using Gabinety.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 using ContractsStatus = Gabinety.Contracts.Booking.AccessStatus;
 
 namespace Gabinety.Booking.Features.Bookings.Create;
@@ -25,7 +25,7 @@ namespace Gabinety.Booking.Features.Bookings.Create;
 /// never reaches a log, an exception message, a metric, the idempotency record or any response.
 /// Not part of this task: the per-user rate limit of CONTRACTS 10.2 (429 rate_limited).
 /// </summary>
-public sealed class CreateBookingFeature : IServiceFeature
+public sealed class CreateAccessFeature : IServiceFeature
 {
     public const string IdempotencyHeader = "Idempotency-Key";
     public static readonly TimeSpan IdempotencyWindow = TimeSpan.FromHours(24);
@@ -37,8 +37,8 @@ public sealed class CreateBookingFeature : IServiceFeature
     public void Map(IEndpointRouteBuilder endpoints) =>
         endpoints.MapPost("/api/v1/bookings", HandleAsync).RequireAuthorization("Authenticated");
 
-    static async Task<IResult> HandleAsync(HttpContext http, ClaimsPrincipal user, BookingDbContext db, IDirectoryClient directory,
-        IPaymentProvider payments, TimeProvider time, IConfiguration config, ILogger<CreateBookingFeature> log, CancellationToken ct)
+    static async Task<IResult> HandleAsync(HttpContext http, ClaimsPrincipal user, AccessDbContext db, IDirectoryClient directory,
+        IPaymentProvider payments, TimeProvider time, IConfiguration config, ILogger<CreateAccessFeature> log, CancellationToken ct)
     {
         var sub = user.FindFirst("sub")?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (sub is null) return Results.Unauthorized();
@@ -59,8 +59,8 @@ public sealed class CreateBookingFeature : IServiceFeature
             return Replay(seen, hash, now);
 
         // 3. the offering
-        DirectoryOffering? package;
-        try { package = await directory.GetOfferingAsync(req.PackageId, ct); }
+        DirectoryPackage? package;
+        try { package = await directory.GetPackageAsync(req.PackageId, ct); }
         catch (DirectoryUnavailableException)
         {
             return Problem(ErrorCodes.DependencyUnavailable, "Dependency unavailable", 503, null, "A required service is temporarily unavailable.");
@@ -70,16 +70,16 @@ public sealed class CreateBookingFeature : IServiceFeature
         if (package.AgentStatus != AgentStatus.Approved) return Problem(ErrorCodes.AgentNotBookable, "Practitioner not bookable", 422);
         if (!package.IsActive) return Problem(ErrorCodes.PackageInactive, "Offering inactive", 422);
         // A real provider pays the practitioner into a connected account: without a ready one the booking would be charged and could never be paid out (T-09.05). Mock needs none.
-        if (payments.RequiresPractitionerAccount
+        if (payments.RequiresAgentAccount
             && !await db.PaymentAccounts.AsNoTracking().AnyAsync(a => a.AgentId == package.AgentId && a.Provider == payments.Name && a.Ready, ct))
             return Problem(ErrorCodes.AgentPaymentsNotReady, "Practitioner payments not ready", 422);
 
         // The provider call (a network call with a real vendor, SPEC 5.1: 10 s) happens BEFORE the transaction, with a
         // pre-allocated booking id, so no database lock is held across it. A request that then fails (a replay won the race) leaves an unused
         // checkout at the provider: a real adapter must make checkouts expire by themselves (the hold is 10 minutes).
-        var bookingId = Guid.CreateVersion7();
-        var checkout = await payments.CreateCheckoutAsync(new CheckoutRequest(bookingId, package.Price.AmountMinor, package.Price.Currency,
-            package.Title, $"{SiteUrl.From(config)}/bookings/{bookingId}"), ct);
+        var accessId = Guid.CreateVersion7();
+        var checkout = await payments.CreateCheckoutAsync(new CheckoutRequest(accessId, package.Price.AmountMinor, package.Price.Currency,
+            package.Title, $"{SiteUrl.From(config)}/bookings/{accessId}"), ct);
 
         var holdUntil = now.AddMinutes(config.GetValue("Booking:HoldMinutes", 10));
         // A package is valid from the purchase for Access:ValidityDays (CONTRACTS section 9 constant, the owner's). Chat counts tokens: the offering holds thousands.
@@ -94,11 +94,11 @@ public sealed class CreateBookingFeature : IServiceFeature
                 if (await db.IdempotencyRecords.AsNoTracking().SingleOrDefaultAsync(x => x.ClientUserId == sub && x.IdempotencyKey == key, ct) is { } won)
                     return Replay(won, hash, now);
 
-                var response = new CreateAccessResponse(bookingId, Enum.Parse<ContractsStatus>(AccessStateMachine.Create().ToString()), holdUntil, checkout.CheckoutUrl);
+                var response = new CreateAccessResponse(accessId, Enum.Parse<ContractsStatus>(AccessStateMachine.Create().ToString()), holdUntil, checkout.CheckoutUrl);
                 var body = JsonSerializer.Serialize(response, Json);
-                db.Accesses.Add(new BookingEntity
+                db.Accesses.Add(new AccessEntity
                 {
-                    Id = bookingId, ClientUserId = sub, ClientEmail = UserEmail.From(user), ClientDisplayName = clientName,
+                    Id = accessId, ClientUserId = sub, ClientEmail = UserEmail.From(user), ClientDisplayName = clientName,
                     AgentId = package.AgentId, AgentUserId = package.AgentUserId,
                     PackageId = package.PackageId, PackageTitle = package.Title, DurationMinutes = (short)package.DurationMinutes,
                     PriceMinor = package.Price.AmountMinor, StartUtc = now, EndUtc = validUntil, Kind = package.Kind, UnitsTotal = unitsTotal, UnitsUsed = 0,
@@ -108,15 +108,15 @@ public sealed class CreateBookingFeature : IServiceFeature
                 });
                 db.Payments.Add(new Payment
                 {
-                    Id = Guid.CreateVersion7(), AccessId = bookingId, Provider = payments.Name, ProviderPaymentId = checkout.ProviderPaymentId,
+                    Id = Guid.CreateVersion7(), AccessId = accessId, Provider = payments.Name, ProviderPaymentId = checkout.ProviderPaymentId,
                     AmountMinor = package.Price.AmountMinor, Status = PaymentStatus.Created, RefundedMinor = 0, CreatedAt = now, UpdatedAt = now,
                 });
                 db.IdempotencyRecords.Add(new IdempotencyRecord
                     { ClientUserId = sub, IdempotencyKey = key, RequestHash = hash, ResponseStatus = 201, ResponseBody = body, CreatedAt = now });
                 await db.SaveChangesAsync(ct);
 
-                log.LogInformation("Booking {BookingId} created for practitioner {PractitionerId}", bookingId, package.AgentId);
-                http.Response.Headers.Location = $"/api/v1/bookings/{bookingId}";
+                log.LogInformation("Booking {BookingId} created for practitioner {PractitionerId}", accessId, package.AgentId);
+                http.Response.Headers.Location = $"/api/v1/bookings/{accessId}";
                 return Results.Text(body, "application/json", Encoding.UTF8, 201);
             }, ct);
         }
@@ -130,7 +130,7 @@ public sealed class CreateBookingFeature : IServiceFeature
     }
 
     /// <summary>One transaction inside the retrying execution strategy. InMemory has no transactions or unique indexes, so a process lock per idempotency key gives the same one-after-the-other effect there; PostgreSQL relies on the unique key.</summary>
-    static async Task<IResult> InTransaction(BookingDbContext db, Guid idempotencyKey, Func<Task<IResult>> body, CancellationToken ct)
+    static async Task<IResult> InTransaction(AccessDbContext db, Guid idempotencyKey, Func<Task<IResult>> body, CancellationToken ct)
     {
         if (!db.Database.IsRelational())
         {

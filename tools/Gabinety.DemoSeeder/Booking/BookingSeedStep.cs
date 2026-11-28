@@ -90,7 +90,7 @@ public sealed class BookingSeedStep : ISeedStep
         var seeded = approved[plan.Agent % approved.Count];
         var client = clients[plan.Client % clients.Count];
         var package = Pick(seeded, plan.Package);
-        var offeringId = seeded.Packages.TryGetValue(package.Title, out var id) ? id : throw new SeedException($"booking: {seeded.Key} has no offering '{plan.Package}' in the Directory");
+        var packageId = seeded.Packages.TryGetValue(package.Title, out var id) ? id : throw new SeedException($"booking: {seeded.Key} has no offering '{plan.Package}' in the Directory");
 
         if (known.TryGetValue(plan.Key, out var existing))
         {
@@ -98,7 +98,7 @@ public sealed class BookingSeedStep : ISeedStep
             return (new Work(plan, client, seeded, existing), false);
         }
 
-        var outcome = await api.CreateAsync(client, plan.IdempotencyKey, offeringId, plan.BriefText, ct);
+        var outcome = await api.CreateAsync(client, plan.IdempotencyKey, packageId, plan.BriefText, ct);
         var created = await api.GetAsync(client, outcome.Id, ct);
         context.Log.Info($"booking: {plan.Key} created {seeded.Key}");
         return (new Work(plan, client, seeded, created), true);

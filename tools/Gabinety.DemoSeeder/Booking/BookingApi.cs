@@ -93,9 +93,9 @@ public sealed class BookingApi(HttpClient http, SeedOptions options, TimeProvide
     // ---- bookings
 
     /// <summary>Buys a package: no date (a package is valid for 30 days from the purchase, PLAN A-02). The booking is PendingPayment until the simulated payment.</summary>
-    public async Task<BookingInfo> CreateAsync(DemoUser client, Guid idempotencyKey, Guid offeringId, string briefText, CancellationToken ct)
+    public async Task<BookingInfo> CreateAsync(DemoUser client, Guid idempotencyKey, Guid packageId, string briefText, CancellationToken ct)
     {
-        var body = new { offeringId, brief = new { text = briefText, problemSlug = (string?)null, aiAssisted = false } };
+        var body = new { offeringId = packageId, brief = new { text = briefText, problemSlug = (string?)null, aiAssisted = false } };
         var r = await SendAsync(HttpMethod.Post, "/api/v1/bookings", client.AccessToken, false, body, ct, idempotencyKey);
         if (r.Status == HttpStatusCode.Created && r.Json is { } j) return new BookingInfo(j.GetProperty("bookingId").GetGuid(), j.GetProperty("status").GetString()!, default, default, briefText);
         throw Fail("create booking", r);
@@ -134,12 +134,12 @@ public sealed class BookingApi(HttpClient http, SeedOptions options, TimeProvide
     // ---- tasks (PLAN B-05) and API keys (PLAN B-01)
 
     /// <summary>Orders one task of a <c>Tasks</c> package as the signed-in client (the browser route). It takes a unit at once; the agent answers later. Never logs the text.</summary>
-    public async Task<Guid> CreateTaskAsync(DemoUser client, Guid bookingId, string input, CancellationToken ct) =>
-        Need(await SendAsync(HttpMethod.Post, $"/api/v1/bookings/{bookingId}/tasks", client.AccessToken, false, new { input }, ct), "create task", HttpStatusCode.Accepted).GetProperty("id").GetGuid();
+    public async Task<Guid> CreateTaskAsync(DemoUser client, Guid accessId, string input, CancellationToken ct) =>
+        Need(await SendAsync(HttpMethod.Post, $"/api/v1/bookings/{accessId}/tasks", client.AccessToken, false, new { input }, ct), "create task", HttpStatusCode.Accepted).GetProperty("id").GetGuid();
 
-    public async Task<List<TaskInfo>> TasksAsync(DemoUser client, Guid bookingId, CancellationToken ct)
+    public async Task<List<TaskInfo>> TasksAsync(DemoUser client, Guid accessId, CancellationToken ct)
     {
-        var j = Need(await SendAsync(HttpMethod.Get, $"/api/v1/me/bookings/{bookingId}/tasks", client.AccessToken, false, null, ct), "list tasks", HttpStatusCode.OK);
+        var j = Need(await SendAsync(HttpMethod.Get, $"/api/v1/me/bookings/{accessId}/tasks", client.AccessToken, false, null, ct), "list tasks", HttpStatusCode.OK);
         return j.EnumerateArray().Select(t => new TaskInfo(t.GetProperty("id").GetGuid(), t.GetProperty("status").GetString()!)).ToList();
     }
 

@@ -26,8 +26,8 @@ public sealed partial class AccessClient
         await PostAsync<BookingDetailDto>($"/api/v1/bookings/{Id(id)}/dispute", new { kind, text = text.Trim() }, await tokens.AccessTokenAsync(ct), ct);
 
     /// <summary>The mock checkout's button (fake profile only: the route does not exist elsewhere, a 403 or 404 says so). <paramref name="outcome"/> is <c>succeeded</c> or <c>failed</c>.</summary>
-    public async Task<ApiResult<Unit>> SimulatePaymentAsync(Guid bookingId, string outcome, CancellationToken ct = default) =>
-        await PostAsync<Unit>("/api/v1/payments/simulate", new { bookingId, outcome }, await tokens.AccessTokenAsync(ct), ct);
+    public async Task<ApiResult<Unit>> SimulatePaymentAsync(Guid accessId, string outcome, CancellationToken ct = default) =>
+        await PostAsync<Unit>("/api/v1/payments/simulate", new { bookingId = accessId, outcome }, await tokens.AccessTokenAsync(ct), ct);
 }
 
 
@@ -46,9 +46,9 @@ public sealed partial class AccessClient
         await WriteAsync<Unit>(HttpMethod.Delete, $"/api/v1/me/api-keys/{Id(id)}", await tokens.AccessTokenAsync(ct), null, ct);
 
     /// <summary>The tasks of one package, newest first as the service sends them. The service answers a plain array; an object with <c>items</c> is read too (the contract is B-05 of the other session).</summary>
-    public async Task<ApiResult<IReadOnlyList<AgentTaskDto>>> TasksAsync(Guid bookingId, CancellationToken ct = default)
+    public async Task<ApiResult<IReadOnlyList<AgentTaskDto>>> TasksAsync(Guid accessId, CancellationToken ct = default)
     {
-        var result = await GetAsync<System.Text.Json.JsonElement>($"/api/v1/me/bookings/{Id(bookingId)}/tasks", await tokens.AccessTokenAsync(ct), ct);
+        var result = await GetAsync<System.Text.Json.JsonElement>($"/api/v1/me/bookings/{Id(accessId)}/tasks", await tokens.AccessTokenAsync(ct), ct);
         if (!result.IsOk) return ApiResult<IReadOnlyList<AgentTaskDto>>.Fail(result.Failure!);
         try
         {
@@ -63,8 +63,8 @@ public sealed partial class AccessClient
     public async Task<ApiResult<AgentTaskDto>> TaskAsync(Guid id, CancellationToken ct = default) =>
         await GetAsync<AgentTaskDto>($"/api/v1/me/tasks/{Id(id)}", await tokens.AccessTokenAsync(ct), ct);
 
-    public async Task<ApiResult<TaskCreatedDto>> CreateTaskAsync(Guid bookingId, string input, CancellationToken ct = default) =>
-        await PostAsync<TaskCreatedDto>($"/api/v1/bookings/{Id(bookingId)}/tasks", new { input = input.Trim() }, await tokens.AccessTokenAsync(ct), ct);
+    public async Task<ApiResult<TaskCreatedDto>> CreateTaskAsync(Guid accessId, string input, CancellationToken ct = default) =>
+        await PostAsync<TaskCreatedDto>($"/api/v1/bookings/{Id(accessId)}/tasks", new { input = input.Trim() }, await tokens.AccessTokenAsync(ct), ct);
 }
 
 /// <summary>The optional help with the brief (CONTRACTS 6). 35 s (SPEC 5.1): a language model answers; it is signed in and rate limited per user.</summary>
@@ -79,8 +79,8 @@ public sealed class BriefAssistantClient(HttpClient http, VisitorAddressAccessor
 /// <summary>Reviews of a signed-in user (CONTRACTS 5.1, 5.2) and the identity facts the practitioner's list needs (<c>GET /api/v1/me</c> of the Directory is on <see cref="MeClient"/>).</summary>
 public sealed class ReviewsClient(HttpClient http, VisitorAddressAccessor visitor, IAccessTokenSource tokens) : ApiClient(http, visitor)
 {
-    public async Task<ApiResult<CreateReviewResponseDto>> CreateAsync(Guid bookingId, int rating, string text, CancellationToken ct = default) =>
-        await PostAsync<CreateReviewResponseDto>("/api/v1/reviews", new { bookingId, rating, text = text.Trim() }, await tokens.AccessTokenAsync(ct), ct);
+    public async Task<ApiResult<CreateReviewResponseDto>> CreateAsync(Guid accessId, int rating, string text, CancellationToken ct = default) =>
+        await PostAsync<CreateReviewResponseDto>("/api/v1/reviews", new { bookingId = accessId, rating, text = text.Trim() }, await tokens.AccessTokenAsync(ct), ct);
 
     public async Task<ApiResult<Unit>> ReplyAsync(Guid reviewId, string text, CancellationToken ct = default) =>
         await PostAsync<Unit>($"/api/v1/reviews/{reviewId:D}/reply", new { text = text.Trim() }, await tokens.AccessTokenAsync(ct), ct);

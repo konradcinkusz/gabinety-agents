@@ -15,12 +15,12 @@ namespace Gabinety.Booking.Notifications.Scheduling;
 /// </list>
 /// Rows go through <see cref="INotificationWriter.ScheduleAsync"/>, which checks saved rows too, so a replay never duplicates (unique per booking, kind, user).
 /// </summary>
-public sealed class NotificationSchedulingHook(INotificationWriter writer) : IBookingTransitionHook
+public sealed class NotificationSchedulingHook(INotificationWriter writer) : IAccessTransitionHook
 {
     public static readonly TimeSpan ReviewDelay = TimeSpan.FromHours(2);
     static readonly NotificationKind[] RemovedWhenNotHeld = [NotificationKind.Reminder24h, NotificationKind.Reminder1h, NotificationKind.ReviewRequest];
 
-    public async Task OnTransitionAsync(BookingTransitionContext context, CancellationToken ct)
+    public async Task OnTransitionAsync(AccessTransitionContext context, CancellationToken ct)
     {
         switch (context.To)
         {
@@ -36,7 +36,7 @@ public sealed class NotificationSchedulingHook(INotificationWriter writer) : IBo
         }
     }
 
-    async Task ScheduleConfirmedAsync(BookingTransitionContext c, CancellationToken ct)
+    async Task ScheduleConfirmedAsync(AccessTransitionContext c, CancellationToken ct)
     {
         var b = c.Access;
         await writer.ScheduleAsync(b, NotificationKind.BookingConfirmed, b.ClientUserId, c.Now, ct);
@@ -48,10 +48,10 @@ public sealed class NotificationSchedulingHook(INotificationWriter writer) : IBo
     }
 }
 
-/// <summary>Registers the scheduling hook; <see cref="BookingTransitions"/> runs it inside every transition.</summary>
+/// <summary>Registers the scheduling hook; <see cref="AccessTransitions"/> runs it inside every transition.</summary>
 public sealed class NotificationSchedulingFeature : IServiceFeature
 {
-    public void Add(IHostApplicationBuilder builder) => builder.Services.AddScoped<IBookingTransitionHook, NotificationSchedulingHook>();
+    public void Add(IHostApplicationBuilder builder) => builder.Services.AddScoped<IAccessTransitionHook, NotificationSchedulingHook>();
 
     public void Map(IEndpointRouteBuilder endpoints) { }
 }

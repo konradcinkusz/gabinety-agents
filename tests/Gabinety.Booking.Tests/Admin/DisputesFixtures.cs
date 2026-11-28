@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using Gabinety.Booking.Features.Lifecycle.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
@@ -11,10 +11,10 @@ namespace Gabinety.Booking.Tests;
 /// <summary>What a registered hook saw: the status, the trigger and <c>payment.RefundedMinor</c> at the moment it ran (T-04.08c reads it to price the fee).</summary>
 sealed record SeenByHook([property: JsonPropertyName("bookingId")] Guid AccessId, string Trigger, long RefundedMinor);
 
-sealed class RecordingHook : IBookingTransitionHook
+sealed class RecordingHook : IAccessTransitionHook
 {
     public List<SeenByHook> Seen { get; } = [];
-    public Task OnTransitionAsync(BookingTransitionContext c, CancellationToken ct)
+    public Task OnTransitionAsync(AccessTransitionContext c, CancellationToken ct)
     {
         lock (Seen) Seen.Add(new(c.Access.Id, c.Trigger.ToString(), c.Payment?.RefundedMinor ?? -1));
         return Task.CompletedTask;
@@ -36,7 +36,7 @@ static class Adm
             h.Configure = s =>
             {
                 configure?.Invoke(s);
-                if (hook is not null) s.AddSingleton<IBookingTransitionHook>(hook);
+                if (hook is not null) s.AddSingleton<IAccessTransitionHook>(hook);
             };
         });
 

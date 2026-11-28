@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 
 namespace Gabinety.Booking.Tests;
 
@@ -26,22 +26,22 @@ public class DemoResetApiTests
             h.Configure = s =>
             {
                 inner?.Invoke(s);
-                s.RemoveAll<DbContextOptions<BookingDbContext>>();
-                s.RemoveAll(typeof(IDbContextOptionsConfiguration<BookingDbContext>));
-                s.RemoveAll<BookingDbContext>();
-                s.AddDbContext<BookingDbContext>(o => o.UseInMemoryDatabase(dbName));
+                s.RemoveAll<DbContextOptions<AccessDbContext>>();
+                s.RemoveAll(typeof(IDbContextOptionsConfiguration<AccessDbContext>));
+                s.RemoveAll<AccessDbContext>();
+                s.AddDbContext<AccessDbContext>(o => o.UseInMemoryDatabase(dbName));
             };
         });
     }
 
     sealed record Rows([property: JsonPropertyName("booking")] Guid Access, Guid Payment, Guid Ledger);
 
-    static Rows SeedChain(BookingDbContext db, CreateHost h, string clientUser, string practitionerUser, string provider, string? eventId)
+    static Rows SeedChain(AccessDbContext db, CreateHost h, string clientUser, string practitionerUser, string provider, string? eventId)
     {
         var now = h.Clock.GetUtcNow();
         var key = Guid.NewGuid();
         var id = Guid.NewGuid();
-        db.Accesses.Add(new BookingEntity
+        db.Accesses.Add(new AccessEntity
         {
             Id = id, ClientUserId = clientUser, AgentId = h.Agent, AgentUserId = practitionerUser,
             PackageId = h.Package, PackageTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 10000,
@@ -59,7 +59,7 @@ public class DemoResetApiTests
 
     static Task<HttpResponseMessage> Reset(CreateHost h, string? key = ClockApiTests.InternalKey) => ClockApiTests.PostRaw(h, "/internal/v1/demo/reset", "{}", key);
 
-    static async Task<(int bookings, int payments, int ledger, int idem, int events)> Counts(CreateHost h) =>
+    static async Task<(int accesses, int payments, int ledger, int idem, int events)> Counts(CreateHost h) =>
         await h.Query(async db => (await db.Accesses.CountAsync(), await db.Payments.CountAsync(), await db.LedgerEntries.CountAsync(),
             await db.IdempotencyRecords.CountAsync(), await db.WebhookEvents.CountAsync()));
 
@@ -112,7 +112,7 @@ public class DemoResetApiTests
             SeedChain(db, h, "Demo-c", "real-p", "Mock", null); // case matters: the namespace is lower case
         });
         Assert.Equal(0, (await (await Reset(h)).Body()).GetProperty("bookings").GetInt32());
-        Assert.Equal(2, (await Counts(h)).bookings);
+        Assert.Equal(2, (await Counts(h)).accesses);
     }
 
     [Fact]
@@ -134,6 +134,6 @@ public class DemoResetApiTests
         await using var h = Host();
         await h.Seed(db => SeedChain(db, h, "demo-c1", "real-p1", "Mock", null));
         Assert.Equal(HttpStatusCode.Unauthorized, (await Reset(h, null)).StatusCode);
-        Assert.Equal(1, (await Counts(h)).bookings);
+        Assert.Equal(1, (await Counts(h)).accesses);
     }
 }

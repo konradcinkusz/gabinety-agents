@@ -42,7 +42,7 @@
     protected override async Task OnParametersSetAsync()
     {
         var user = AuthState is null ? null : (await AuthState).User;
-        var practitioner = await PractitionerProfileCheck.HasProfileAsync(user, Me, Time);
-        Model = SiteNavigation.Footer(user, practitioner);
+        var agent = await PractitionerProfileCheck.HasProfileAsync(user, Me, Time);
+        Model = SiteNavigation.Footer(user, agent);
     }
 }

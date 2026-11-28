@@ -8,19 +8,19 @@ using Gabinety.ServiceDefaults;
 namespace Gabinety.Booking.Clients;
 
 /// <summary>GET /internal/v1/practitioners/by-user/{userId} (CONTRACTS 3.6).</summary>
-public sealed record DirectoryPractitioner([property: JsonPropertyName("practitionerId")] Guid AgentId, AgentStatus Status);
+public sealed record DirectoryAgentState([property: JsonPropertyName("practitionerId")] Guid AgentId, AgentStatus Status);
 
 /// <summary>One row of GET /internal/v1/practitioners/by-user/{userId}/agents (E-04): an agent of a provider account.</summary>
 public sealed record DirectoryAgent([property: JsonPropertyName("practitionerId")] Guid AgentId, AgentStatus Status, string Slug);
 sealed record DirectoryAgents(IReadOnlyList<DirectoryAgent> Items);
 
 /// <summary>GET /internal/v1/offerings/{id} (CONTRACTS 3.6).</summary>
-public sealed record DirectoryOffering([property: JsonPropertyName("offeringId")] Guid PackageId, [property: JsonPropertyName("practitionerId")] Guid AgentId, [property: JsonPropertyName("practitionerUserId")] string AgentUserId, [property: JsonPropertyName("practitionerStatus")] AgentStatus AgentStatus,
+public sealed record DirectoryPackage([property: JsonPropertyName("offeringId")] Guid PackageId, [property: JsonPropertyName("practitionerId")] Guid AgentId, [property: JsonPropertyName("practitionerUserId")] string AgentUserId, [property: JsonPropertyName("practitionerStatus")] AgentStatus AgentStatus,
     string Title, int DurationMinutes, MoneyDto Price, string? MeetingUrl, bool IsActive,
     PackageKind Kind = PackageKind.Tasks, int Units = 1, [property: JsonPropertyName("practitionerSlug")] string AgentSlug = "");
 
 /// <summary>GET /internal/v1/practitioners/{id}: display name and slug for the booking views (ADR-0012 section 6).</summary>
-public sealed record DirectoryPractitionerName([property: JsonPropertyName("practitionerId")] Guid AgentId, string DisplayName, string Slug);
+public sealed record DirectoryAgentName([property: JsonPropertyName("practitionerId")] Guid AgentId, string DisplayName, string Slug);
 /// <summary>GET /internal/v1/practitioners/{userId}/contact: the practitioner's e-mail, a snapshot of the token they last used on their profile. Personal data: never logged.</summary>
 public sealed record DirectoryContact(string? Email);
 
@@ -30,19 +30,19 @@ public sealed class DirectoryUnavailableException(Exception? inner = null) : Exc
 public interface IDirectoryClient
 {
     /// <summary>Null when Directory answers 404.</summary>
-    Task<DirectoryOffering?> GetOfferingAsync(Guid offeringId, CancellationToken ct);
+    Task<DirectoryPackage?> GetPackageAsync(Guid packageId, CancellationToken ct);
     /// <summary>The account's first (oldest) agent. Null when the user is not a practitioner (404).</summary>
-    Task<DirectoryPractitioner?> GetPractitionerByUserAsync(string userId, CancellationToken ct);
+    Task<DirectoryAgentState?> GetAgentByUserAsync(string userId, CancellationToken ct);
     /// <summary>
     /// Every agent of the provider account, oldest first (E-04); empty when the user is not a practitioner. The default answer is the one agent of
-    /// <see cref="GetPractitionerByUserAsync"/> (with no slug), for a double that knows only the older route.
+    /// <see cref="GetAgentByUserAsync"/> (with no slug), for a double that knows only the older route.
     /// </summary>
-    async Task<IReadOnlyList<DirectoryAgent>> GetPractitionerAgentsAsync(string userId, CancellationToken ct) =>
-        await GetPractitionerByUserAsync(userId, ct) is { } one ? [new DirectoryAgent(one.AgentId, one.Status, "")] : [];
+    async Task<IReadOnlyList<DirectoryAgent>> GetAgentAgentsAsync(string userId, CancellationToken ct) =>
+        await GetAgentByUserAsync(userId, ct) is { } one ? [new DirectoryAgent(one.AgentId, one.Status, "")] : [];
     /// <summary>Null when the practitioner is unknown (404).</summary>
-    Task<DirectoryPractitionerName?> GetPractitionerNameAsync(Guid agentId, CancellationToken ct);
+    Task<DirectoryAgentName?> GetAgentNameAsync(Guid agentId, CancellationToken ct);
     /// <summary>The e-mail snapshot of a practitioner's user. Null when Directory answers 404 (unknown user, or no address held yet).</summary>
-    Task<DirectoryContact?> GetPractitionerContactAsync(string userId, CancellationToken ct);
+    Task<DirectoryContact?> GetAgentContactAsync(string userId, CancellationToken ct);
     /// <summary>One probe of /alive, no retry; false on any failure or non-200.</summary>
     Task<bool> IsAliveAsync(CancellationToken ct);
 }
@@ -56,18 +56,18 @@ public sealed class DirectoryClient(HttpClient http, string? internalKey, TimeSp
     public static readonly TimeSpan CallTimeout = TimeSpan.FromSeconds(3);
     readonly TimeSpan _timeout = timeout ?? CallTimeout, _retryDelay = retryDelay ?? TimeSpan.FromMilliseconds(150);
 
-    public Task<DirectoryOffering?> GetOfferingAsync(Guid offeringId, CancellationToken ct) =>
-        GetAsync<DirectoryOffering>($"internal/v1/offerings/{offeringId}", ct);
+    public Task<DirectoryPackage?> GetPackageAsync(Guid packageId, CancellationToken ct) =>
+        GetAsync<DirectoryPackage>($"internal/v1/offerings/{packageId}", ct);
 
-    public Task<DirectoryPractitioner?> GetPractitionerByUserAsync(string userId, CancellationToken ct) =>
-        GetAsync<DirectoryPractitioner>($"internal/v1/practitioners/by-user/{Uri.EscapeDataString(userId)}", ct);
+    public Task<DirectoryAgentState?> GetAgentByUserAsync(string userId, CancellationToken ct) =>
+        GetAsync<DirectoryAgentState>($"internal/v1/practitioners/by-user/{Uri.EscapeDataString(userId)}", ct);
 
-    public async Task<IReadOnlyList<DirectoryAgent>> GetPractitionerAgentsAsync(string userId, CancellationToken ct) =>
+    public async Task<IReadOnlyList<DirectoryAgent>> GetAgentAgentsAsync(string userId, CancellationToken ct) =>
         (await GetAsync<DirectoryAgents>($"internal/v1/practitioners/by-user/{Uri.EscapeDataString(userId)}/agents", ct))?.Items ?? [];
 
-    public Task<DirectoryPractitionerName?> GetPractitionerNameAsync(Guid agentId, CancellationToken ct) =>
-        GetAsync<DirectoryPractitionerName>($"internal/v1/practitioners/{agentId}", ct);
-    public Task<DirectoryContact?> GetPractitionerContactAsync(string userId, CancellationToken ct) =>
+    public Task<DirectoryAgentName?> GetAgentNameAsync(Guid agentId, CancellationToken ct) =>
+        GetAsync<DirectoryAgentName>($"internal/v1/practitioners/{agentId}", ct);
+    public Task<DirectoryContact?> GetAgentContactAsync(string userId, CancellationToken ct) =>
         GetAsync<DirectoryContact>($"internal/v1/practitioners/{Uri.EscapeDataString(userId)}/contact", ct);
 
     public async Task<bool> IsAliveAsync(CancellationToken ct)

@@ -11,7 +11,7 @@ public sealed class PersistenceFeature : IServiceFeature
     public void Add(IHostApplicationBuilder builder)
     {
         // Configuration is read when the context is first built, so a host that overrides it late still wins.
-        builder.Services.AddDbContext<BookingDbContext>((sp, o) =>
+        builder.Services.AddDbContext<AccessDbContext>((sp, o) =>
         {
             var config = sp.GetRequiredService<IConfiguration>();
             var cs = config.GetConnectionString("bookingdb");
@@ -19,7 +19,7 @@ public sealed class PersistenceFeature : IServiceFeature
             if (string.IsNullOrWhiteSpace(cs) || string.Equals(provider, "InMemory", StringComparison.OrdinalIgnoreCase))
                 o.UseInMemoryDatabase(InMemoryName);
             else
-                o.UseNpgsql(cs, n => n.EnableRetryOnFailure().MigrationsAssembly(typeof(BookingDbContext).Assembly.GetName().Name));
+                o.UseNpgsql(cs, n => n.EnableRetryOnFailure().MigrationsAssembly(typeof(AccessDbContext).Assembly.GetName().Name));
         });
         builder.Services.AddSingleton<MigrationState>();
         builder.Services.AddHostedService<MigrationHostedService>();

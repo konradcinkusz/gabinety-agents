@@ -4,7 +4,7 @@ using Gabinety.Contracts.Directory;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 
 namespace Gabinety.Booking.Tests;
 
@@ -21,7 +21,7 @@ static class AgentApiFx
     {
         var id = Guid.NewGuid();
         var now = h.Clock.GetUtcNow();
-        await h.Seed(db => db.Accesses.Add(new BookingEntity
+        await h.Seed(db => db.Accesses.Add(new AccessEntity
         {
             Id = id, ClientUserId = client, AgentId = h.Agent, AgentUserId = h.OwnerUserId, PackageId = package ?? h.Package,
             PackageTitle = "demo-package", DurationMinutes = 30, PriceMinor = 9900, StartUtc = now, EndUtc = now + (validFor ?? TimeSpan.FromDays(30)),

@@ -22,7 +22,7 @@ internal sealed class StripePaymentProvider(StripeApi api, string webhookSecret,
     const int MaxProductNameLength = 200;
 
     public string Name => ProviderName;
-    public bool RequiresPractitionerAccount => true;
+    public bool RequiresAgentAccount => true;
     public string SignatureHeader => "Stripe-Signature";
     public bool WebhookSecretConfigured => !string.IsNullOrEmpty(webhookSecret);
 
@@ -132,7 +132,7 @@ internal sealed class StripePaymentProvider(StripeApi api, string webhookSecret,
 
     // --- helpers ---
 
-    static string TransferGroup(Guid bookingId) => $"booking_{bookingId:N}";
+    static string TransferGroup(Guid accessId) => $"booking_{accessId:N}";
 
     /// <summary>The PaymentIntent of a paid session: null while the session has none. The session id is what Booking stores.</summary>
     async Task<string?> PaymentIntentOfAsync(string sessionId, CancellationToken ct)

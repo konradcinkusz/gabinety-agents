@@ -20,20 +20,20 @@ public sealed record RefundTicket(long AmountMinor, string IdempotencyKey, bool 
 /// </summary>
 public sealed class RefundCoordinator(IPaymentProvider provider)
 {
-    public static string IdempotencyKey(Guid bookingId, RefundReason reason) => $"refund:{bookingId:N}:{reason}";
+    public static string IdempotencyKey(Guid accessId, RefundReason reason) => $"refund:{accessId:N}:{reason}";
 
     /// <summary>Asks the provider for <paramref name="amountMinor"/>. A repeated call with the same booking and reason is the same refund to the provider.</summary>
-    public async Task<RefundTicket> RequestAsync(Guid bookingId, Payment payment, long amountMinor, RefundReason reason, CancellationToken ct)
+    public async Task<RefundTicket> RequestAsync(Guid accessId, Payment payment, long amountMinor, RefundReason reason, CancellationToken ct)
     {
         if (payment.ProviderPaymentId is null || amountMinor <= 0 || amountMinor > payment.AmountMinor - payment.RefundedMinor)
-            throw new InvalidOperationException($"Payment of booking {bookingId} cannot be refunded by {amountMinor}.");
-        var key = IdempotencyKey(bookingId, reason);
+            throw new InvalidOperationException($"Payment of booking {accessId} cannot be refunded by {amountMinor}.");
+        var key = IdempotencyKey(accessId, reason);
         await provider.RefundAsync(new RefundRequest(payment.ProviderPaymentId, amountMinor, key), ct);
         return new RefundTicket(amountMinor, key, string.Equals(provider.Name, "Mock", StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>Inside the transaction: records the refund now when the provider already confirmed it, otherwise waits for the webhook.</summary>
-    public static void Record(BookingTransitionContext context, RefundTicket ticket)
+    public static void Record(AccessTransitionContext context, RefundTicket ticket)
     {
         if (ticket.ConfirmedNow && context.Payment is { } payment)
             RefundLedger.Record(context.Db, context.Access.Id, payment, ticket.AmountMinor, context.Now);
@@ -44,11 +44,11 @@ public sealed class RefundCoordinator(IPaymentProvider provider)
 public static class RefundLedger
 {
     /// <summary>Already refunded in full is a no-op (Ignored); more than the payment holds is Rejected; otherwise Applied.</summary>
-    public static WebhookOutcome Record(BookingDbContext db, Guid bookingId, Payment payment, long? amountMinor, DateTimeOffset now)
+    public static WebhookOutcome Record(AccessDbContext db, Guid accessId, Payment payment, long? amountMinor, DateTimeOffset now)
     {
         if (amountMinor is not > 0 || payment.RefundedMinor >= payment.AmountMinor) return WebhookOutcome.Ignored;
         if (payment.RefundedMinor + amountMinor > payment.AmountMinor) return WebhookOutcome.Rejected;
-        db.LedgerEntries.Add(new LedgerEntry { Id = Guid.CreateVersion7(), AccessId = bookingId, Kind = LedgerKind.Refund, AmountMinor = amountMinor.Value, CreatedAt = now });
+        db.LedgerEntries.Add(new LedgerEntry { Id = Guid.CreateVersion7(), AccessId = accessId, Kind = LedgerKind.Refund, AmountMinor = amountMinor.Value, CreatedAt = now });
         payment.RefundedMinor += amountMinor.Value;
         payment.Status = payment.RefundedMinor == payment.AmountMinor ? PaymentStatus.Refunded : PaymentStatus.PartiallyRefunded;
         payment.UpdatedAt = now;

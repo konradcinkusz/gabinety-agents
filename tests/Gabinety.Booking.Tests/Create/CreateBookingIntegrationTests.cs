@@ -29,7 +29,7 @@ public class CreateBookingIntegrationTests : IAsyncLifetime
 
     public async Task DisposeAsync() { await host.DisposeAsync(); await pg.DisposeAsync(); }
 
-    BookingDbContext Db() => new(new DbContextOptionsBuilder<BookingDbContext>().UseNpgsql(cs).Options);
+    AccessDbContext Db() => new(new DbContextOptionsBuilder<AccessDbContext>().UseNpgsql(cs).Options);
 
     /// <summary>Start of the n-th weekday after the clock's Monday 2026-11-16: 10:00 UTC (11:00 Warsaw).</summary>
     static string Day(int round)

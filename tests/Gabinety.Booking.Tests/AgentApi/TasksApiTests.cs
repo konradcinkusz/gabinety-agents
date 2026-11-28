@@ -263,10 +263,10 @@ public class TasksApiTests
             x.Configure = s =>
             {
                 inner?.Invoke(s);
-                s.RemoveAll<DbContextOptions<BookingDbContext>>();
-                s.RemoveAll(typeof(IDbContextOptionsConfiguration<BookingDbContext>));
-                s.RemoveAll<BookingDbContext>();
-                s.AddDbContext<BookingDbContext>(o => o.UseInMemoryDatabase(dbName));
+                s.RemoveAll<DbContextOptions<AccessDbContext>>();
+                s.RemoveAll(typeof(IDbContextOptionsConfiguration<AccessDbContext>));
+                s.RemoveAll<AccessDbContext>();
+                s.AddDbContext<AccessDbContext>(o => o.UseInMemoryDatabase(dbName));
             };
         });
         var package = await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, 5, package: Offer);

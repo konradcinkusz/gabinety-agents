@@ -5,7 +5,7 @@ using Gabinety.Booking.Features.Payouts;
 using Gabinety.Booking.Persistence;
 using Gabinety.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 
 namespace Gabinety.Booking.Features.Internal.Erasure;
 
@@ -33,13 +33,13 @@ public sealed class ErasureFeature : IServiceFeature
     /// <summary><c>"erased-"</c> + the first 40 lowercase hex characters of SHA-256 of the UTF-8 user id (47 characters, fits varchar(64)). It cannot be reversed.</summary>
     public static string Token(string userId) => TokenPrefix + Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(userId)))[..40];
 
-    static async Task<IResult> EraseAsync(string userId, BookingDbContext db, ILogger<ErasureFeature> log, CancellationToken ct)
+    static async Task<IResult> EraseAsync(string userId, AccessDbContext db, ILogger<ErasureFeature> log, CancellationToken ct)
     {
         // A token is the output of an erasure, never an input: erasing it again would rewrite the rows to a second token.
         if (userId.StartsWith(TokenPrefix, StringComparison.Ordinal)) return Results.NoContent();
         var token = Token(userId);
 
-        var (bookings, records) = db.Database.IsRelational()
+        var (accesses, records) = db.Database.IsRelational()
             ? await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
             {
                 await using var tx = await db.Database.BeginTransactionAsync(ct);
@@ -49,15 +49,15 @@ public sealed class ErasureFeature : IServiceFeature
             })
             : await EraseAllAsync(db, userId, token, ct);
 
-        if (bookings + records > 0)
-            log.LogInformation("Erased {Bookings} bookings and {Records} idempotency records of subject {SubjectHash}", bookings, records, token.Substring(TokenPrefix.Length, 8));
+        if (accesses + records > 0)
+            log.LogInformation("Erased {Bookings} bookings and {Records} idempotency records of subject {SubjectHash}", accesses, records, token.Substring(TokenPrefix.Length, 8));
         return Results.NoContent();
     }
 
-    static async Task<(int Accesses, int Records)> EraseAllAsync(BookingDbContext db, string userId, string token, CancellationToken ct)
+    static async Task<(int Accesses, int Records)> EraseAllAsync(AccessDbContext db, string userId, string token, CancellationToken ct)
     {
         db.ChangeTracker.Clear(); // a retried execution strategy starts from the database, not from a half-applied tracker
-        int bookings = 0, records = 0;
+        int accesses = 0, records = 0;
 
         // Rows leave the filter as they are updated, so each pass takes the next batch and the loop ends when none is left.
         while (true)
@@ -72,7 +72,7 @@ public sealed class ErasureFeature : IServiceFeature
             foreach (var b in batch) Anonymise(b, userId, token);
             await db.SaveChangesAsync(ct);
             db.ChangeTracker.Clear();
-            bookings += batch.Count;
+            accesses += batch.Count;
         }
 
         // The key of an idempotency record is (client_user_id, idempotency_key): a key cannot be updated in place, so each record is replaced by a copy.
@@ -108,10 +108,10 @@ public sealed class ErasureFeature : IServiceFeature
         db.ApiKeys.RemoveRange(await db.ApiKeys.Where(k => k.ClientUserId == userId).ToListAsync(ct));
         await db.SaveChangesAsync(ct);
         db.ChangeTracker.Clear();
-        return (bookings, records);
+        return (accesses, records);
     }
 
-    static void Anonymise(BookingEntity b, string userId, string token)
+    static void Anonymise(AccessEntity b, string userId, string token)
     {
         b.BriefText = ErasedBrief;
         b.DisputeText = null;

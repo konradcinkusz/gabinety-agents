@@ -6,22 +6,22 @@ using Gabinety.Booking.Persistence;
 using Gabinety.Contracts.Common;
 using Gabinety.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Features.Lifecycle.Core;
 
 /// <summary>What a hook or an effect sees while the transition's transaction is open. <see cref="Db"/> is the transaction's own context: add rows to it, never save.</summary>
-public sealed record BookingTransitionContext(BookingDbContext Db, BookingEntity Access, Payment? Payment, AccessStatus From, AccessStatus To,
+public sealed record AccessTransitionContext(AccessDbContext Db, AccessEntity Access, Payment? Payment, AccessStatus From, AccessStatus To,
     AccessTrigger Trigger, DateTimeOffset Now);
 
 /// <summary>
 /// Extension point: called inside the transition's transaction, after the status changed and before it is saved, for EVERY transition.
 /// Nothing is registered today; T-04.09b registers the notification scheduler here. A hook that throws rolls the whole transition back.
 /// </summary>
-public interface IBookingTransitionHook
+public interface IAccessTransitionHook
 {
-    Task OnTransitionAsync(BookingTransitionContext context, CancellationToken ct);
+    Task OnTransitionAsync(AccessTransitionContext context, CancellationToken ct);
 }
 
 /// <summary>
@@ -32,16 +32,16 @@ public interface IBookingTransitionHook
 /// </summary>
 public sealed record TransitionRequest(Guid AccessId, AccessTrigger Trigger, DateTimeOffset Now)
 {
-    public Func<BookingEntity, bool>? Precondition { get; init; }
+    public Func<AccessEntity, bool>? Precondition { get; init; }
     /// <summary>A rule that needs the database (a row of another table), checked inside the transaction under the booking's row lock, after <see cref="Precondition"/>: false means 409. Read only.</summary>
-    public Func<BookingDbContext, BookingEntity, CancellationToken, Task<bool>>? DbPrecondition { get; init; }
-    public Action<BookingTransitionContext>? Effects { get; init; }
+    public Func<AccessDbContext, AccessEntity, CancellationToken, Task<bool>>? DbPrecondition { get; init; }
+    public Action<AccessTransitionContext>? Effects { get; init; }
 }
 
 public enum TransitionKind { Applied, NotFound, Invalid }
 
 /// <summary>Applied carries the committed booking and its payment; From is the status before (the one that refused, for Invalid).</summary>
-public sealed record BookingTransitionResult(TransitionKind Kind, BookingEntity? Access = null, Payment? Payment = null, AccessStatus? From = null)
+public sealed record AccessTransitionResult(TransitionKind Kind, AccessEntity? Access = null, Payment? Payment = null, AccessStatus? From = null)
 {
     public bool Applied => Kind == TransitionKind.Applied;
 
@@ -61,11 +61,11 @@ public sealed record BookingTransitionResult(TransitionKind Kind, BookingEntity?
 /// A new trigger needs no change here: add it to the state table and pass its own precondition and effects.
 /// Provider calls must happen BEFORE <see cref="ApplyAsync"/>: no lock is held across a network call.
 /// </summary>
-public sealed class BookingTransitions(BookingDbContext db, IEnumerable<IBookingTransitionHook> hooks, ILogger<BookingTransitions> log)
+public sealed class AccessTransitions(AccessDbContext db, IEnumerable<IAccessTransitionHook> hooks, ILogger<AccessTransitions> log)
 {
-    public async Task<BookingTransitionResult> ApplyAsync(TransitionRequest request, CancellationToken ct)
+    public async Task<AccessTransitionResult> ApplyAsync(TransitionRequest request, CancellationToken ct)
     {
-        async Task<BookingTransitionResult> Body()
+        async Task<AccessTransitionResult> Body()
         {
             db.ChangeTracker.Clear(); // a retry starts from the database
             var access = db.Database.IsNpgsql()
@@ -82,14 +82,14 @@ public sealed class BookingTransitions(BookingDbContext db, IEnumerable<IBooking
             access.Status = to;
             StampCancellation(access, to, request.Now);
             var payment = await db.Payments.SingleOrDefaultAsync(p => p.AccessId == access.Id, ct);
-            var context = new BookingTransitionContext(db, access, payment, from, to, request.Trigger, request.Now);
+            var context = new AccessTransitionContext(db, access, payment, from, to, request.Trigger, request.Now);
             request.Effects?.Invoke(context);
             foreach (var hook in hooks) await hook.OnTransitionAsync(context, ct);
             await db.SaveChangesAsync(ct);
             return new(TransitionKind.Applied, access, payment, from);
         }
 
-        BookingTransitionResult result;
+        AccessTransitionResult result;
         if (!db.Database.IsRelational())
         {
             // InMemory has no row lock: one gate for the read, the checks and the save, shared with EntitlementStore's InMemory path, so that a completion and a refund of a unit (ADR-0013) are never interleaved
@@ -112,7 +112,7 @@ public sealed class BookingTransitions(BookingDbContext db, IEnumerable<IBooking
     }
 
     /// <summary>What the three cancellations share (CONTRACTS 8.1): the time, and for a late client cancel the payout date. Other triggers set theirs in their effects.</summary>
-    static void StampCancellation(BookingEntity b, AccessStatus to, DateTimeOffset now)
+    static void StampCancellation(AccessEntity b, AccessStatus to, DateTimeOffset now)
     {
         if (to is not (AccessStatus.CancelledByClient or AccessStatus.LateCancelledByClient or AccessStatus.CancelledByPractitioner)) return;
         b.CancelledAt = now;
@@ -125,7 +125,7 @@ public sealed class LifecycleCoreFeature : IServiceFeature
 {
     public void Add(IHostApplicationBuilder builder)
     {
-        builder.Services.AddScoped<BookingTransitions>();
+        builder.Services.AddScoped<AccessTransitions>();
         builder.Services.AddScoped<RefundCoordinator>();
     }
 

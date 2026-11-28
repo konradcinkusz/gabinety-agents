@@ -9,16 +9,16 @@ namespace Gabinety.Reputation.Tests;
 /// </summary>
 public class SummaryPushPromptnessTests
 {
-    static async Task<List<ReputationPush>> WaitForPushes(ReviewsHost h, Guid practitioner, int count)
+    static async Task<List<ReputationPush>> WaitForPushes(ReviewsHost h, Guid agent, int count)
     {
         var deadline = DateTime.UtcNow.AddSeconds(20);
         while (DateTime.UtcNow < deadline)
         {
-            var pushes = h.Directory.For(practitioner);
+            var pushes = h.Directory.For(agent);
             if (pushes.Count >= count) return pushes;
             await Task.Delay(25);
         }
-        return h.Directory.For(practitioner);
+        return h.Directory.For(agent);
     }
 
     [Fact]

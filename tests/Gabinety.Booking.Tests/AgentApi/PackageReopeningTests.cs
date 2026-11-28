@@ -10,7 +10,7 @@ using Gabinety.Contracts.Directory;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
@@ -57,10 +57,10 @@ public class PackageReopeningTests
 
     // ---- the rule on the row (pure)
 
-    static BookingEntity Row(Action<BookingEntity>? tweak = null)
+    static AccessEntity Row(Action<AccessEntity>? tweak = null)
     {
         var now = new DateTimeOffset(2026, 12, 1, 9, 0, 0, TimeSpan.Zero);
-        var b = new BookingEntity { Status = AccessStatus.Completed, Kind = PackageKind.Tasks, UnitsTotal = 3, UnitsUsed = 2, StartUtc = now.AddDays(-1), EndUtc = now.AddDays(29) };
+        var b = new AccessEntity { Status = AccessStatus.Completed, Kind = PackageKind.Tasks, UnitsTotal = 3, UnitsUsed = 2, StartUtc = now.AddDays(-1), EndUtc = now.AddDays(29) };
         tweak?.Invoke(b);
         return b;
     }

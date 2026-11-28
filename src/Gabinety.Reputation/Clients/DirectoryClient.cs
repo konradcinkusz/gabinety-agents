@@ -7,7 +7,7 @@ using Gabinety.ServiceDefaults;
 namespace Gabinety.Reputation.Clients;
 
 /// <summary>GET /internal/v1/practitioners/by-user/{userId} (CONTRACTS 3.6).</summary>
-public sealed record DirectoryPractitioner([property: JsonPropertyName("practitionerId")] Guid AgentId, AgentStatus Status);
+public sealed record DirectoryAgentState([property: JsonPropertyName("practitionerId")] Guid AgentId, AgentStatus Status);
 
 /// <summary>Directory did not answer in budget (connection failure, timeout or 5xx after the retry). The message never carries the URL or the key.</summary>
 public sealed class DirectoryUnavailableException(Exception? inner = null) : Exception("Directory is unavailable.", inner);
@@ -15,7 +15,7 @@ public sealed class DirectoryUnavailableException(Exception? inner = null) : Exc
 public interface IDirectoryClient
 {
     /// <summary>Null when the user is not a practitioner (Directory answers 404). Throws <see cref="DirectoryUnavailableException"/> when Directory cannot answer.</summary>
-    Task<DirectoryPractitioner?> GetPractitionerByUserAsync(string userId, CancellationToken ct);
+    Task<DirectoryAgentState?> GetAgentByUserAsync(string userId, CancellationToken ct);
 }
 
 /// <summary>
@@ -27,7 +27,7 @@ public sealed class DirectoryClient(HttpClient http, string? internalKey, TimeSp
     public static readonly TimeSpan CallTimeout = TimeSpan.FromSeconds(3);
     readonly TimeSpan _timeout = timeout ?? CallTimeout, _retryDelay = retryDelay ?? TimeSpan.FromMilliseconds(150);
 
-    public async Task<DirectoryPractitioner?> GetPractitionerByUserAsync(string userId, CancellationToken ct)
+    public async Task<DirectoryAgentState?> GetAgentByUserAsync(string userId, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
         var path = $"internal/v1/practitioners/by-user/{Uri.EscapeDataString(userId)}";
@@ -40,7 +40,7 @@ public sealed class DirectoryClient(HttpClient http, string? internalKey, TimeSp
                 if (response.StatusCode == HttpStatusCode.NotFound) return null;
                 if ((int)response.StatusCode >= 500) { if (attempt == 1) { await Pause(ct); continue; } throw new DirectoryUnavailableException(); }
                 if (!response.IsSuccessStatusCode) throw new DirectoryUnavailableException(); // 401 and the like: a configuration fault, retrying will not help
-                return await response.Content.ReadFromJsonAsync<DirectoryPractitioner>(ct) ?? throw new DirectoryUnavailableException();
+                return await response.Content.ReadFromJsonAsync<DirectoryAgentState>(ct) ?? throw new DirectoryUnavailableException();
             }
             catch (Exception ex) when ((ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or InvalidOperationException) && !ct.IsCancellationRequested)
             {

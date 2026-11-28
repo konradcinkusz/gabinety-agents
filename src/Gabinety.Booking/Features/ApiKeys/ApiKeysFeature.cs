@@ -29,7 +29,7 @@ public sealed class ApiKeysFeature : IServiceFeature
 
     static string? Sub(ClaimsPrincipal user) => user.FindFirst("sub")?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-    static async Task<IResult> CreateAsync(CreateApiKeyRequest? body, ClaimsPrincipal user, BookingDbContext db, TimeProvider time, CancellationToken ct)
+    static async Task<IResult> CreateAsync(CreateApiKeyRequest? body, ClaimsPrincipal user, AccessDbContext db, TimeProvider time, CancellationToken ct)
     {
         var sub = Sub(user);
         if (sub is null) return Results.Unauthorized();
@@ -54,7 +54,7 @@ public sealed class ApiKeysFeature : IServiceFeature
         return Results.Json(new ApiKeyCreatedDto(row.Id, row.Name, row.Prefix, key, row.CreatedAt), statusCode: 201);
     }
 
-    static async Task<IResult> ListAsync(ClaimsPrincipal user, BookingDbContext db, CancellationToken ct)
+    static async Task<IResult> ListAsync(ClaimsPrincipal user, AccessDbContext db, CancellationToken ct)
     {
         var sub = Sub(user);
         if (sub is null) return Results.Unauthorized();
@@ -62,7 +62,7 @@ public sealed class ApiKeysFeature : IServiceFeature
         return Results.Ok(rows.Select(k => new ApiKeyDto(k.Id, k.Name, k.Prefix, k.CreatedAt, k.LastUsedAt)).ToList());
     }
 
-    static async Task<IResult> RevokeAsync(Guid id, ClaimsPrincipal user, BookingDbContext db, TimeProvider time, CancellationToken ct)
+    static async Task<IResult> RevokeAsync(Guid id, ClaimsPrincipal user, AccessDbContext db, TimeProvider time, CancellationToken ct)
     {
         var sub = Sub(user);
         if (sub is null) return Results.Unauthorized();

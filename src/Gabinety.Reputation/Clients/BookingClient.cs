@@ -11,7 +11,7 @@ public sealed class AccessUnavailableException(Exception? inner = null) : Except
 public interface IAccessClient
 {
     /// <summary>GET /internal/v1/bookings/{id}/reviewability (CONTRACTS 4.3). Null when Booking answers 404.</summary>
-    Task<ReviewabilityDto?> GetReviewabilityAsync(Guid bookingId, CancellationToken ct);
+    Task<ReviewabilityDto?> GetReviewabilityAsync(Guid accessId, CancellationToken ct);
 }
 
 /// <summary>
@@ -23,10 +23,10 @@ public sealed class AccessClient(HttpClient http, string? internalKey, TimeSpan?
     public static readonly TimeSpan CallTimeout = TimeSpan.FromSeconds(3);
     readonly TimeSpan _timeout = timeout ?? CallTimeout, _retryDelay = retryDelay ?? TimeSpan.FromMilliseconds(150);
 
-    public async Task<ReviewabilityDto?> GetReviewabilityAsync(Guid bookingId, CancellationToken ct)
+    public async Task<ReviewabilityDto?> GetReviewabilityAsync(Guid accessId, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        var path = $"internal/v1/bookings/{bookingId}/reviewability";
+        var path = $"internal/v1/bookings/{accessId}/reviewability";
         Exception? last = null;
         for (var attempt = 1; attempt <= 2; attempt++)
         {

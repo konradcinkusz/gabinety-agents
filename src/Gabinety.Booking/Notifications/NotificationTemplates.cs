@@ -15,9 +15,9 @@ public static class NotificationTemplates
 
     sealed record Template(string Subject, string Lead, string LinkLabel, string Path);
 
-    static Template For(NotificationKind kind, bool forPractitioner) => kind switch
+    static Template For(NotificationKind kind, bool forAgent) => kind switch
     {
-        NotificationKind.BookingConfirmed when forPractitioner => new("Masz nową rezerwację", "Masz nową rezerwację.", "Szczegóły rezerwacji", Access),
+        NotificationKind.BookingConfirmed when forAgent => new("Masz nową rezerwację", "Masz nową rezerwację.", "Szczegóły rezerwacji", Access),
         NotificationKind.BookingConfirmed => new("Rezerwacja potwierdzona", "Twoja rezerwacja została potwierdzona.", "Szczegóły rezerwacji", Access),
         NotificationKind.Reminder24h => new("Przypomnienie: konsultacja już jutro", "Przypominamy, że Twoja konsultacja odbędzie się za 24 godziny.", "Szczegóły rezerwacji", Access),
         NotificationKind.Reminder1h => new("Przypomnienie: konsultacja za godzinę", "Przypominamy, że Twoja konsultacja zaczyna się za godzinę.", "Szczegóły rezerwacji", Access),
@@ -32,10 +32,10 @@ public static class NotificationTemplates
     const string Access = "/moje/dostepy/{0}";
 
     /// <param name="siteBaseUrl"><c>Site:BaseUrl</c>; a trailing slash is trimmed here too.</param>
-    public static RenderedEmail Render(NotificationKind kind, string siteBaseUrl, Guid bookingId, DateTimeOffset startUtc, bool forPractitioner = false)
+    public static RenderedEmail Render(NotificationKind kind, string siteBaseUrl, Guid accessId, DateTimeOffset startUtc, bool forAgent = false)
     {
-        var t = For(kind, forPractitioner);
-        var link = siteBaseUrl.TrimEnd('/') + string.Format(CultureInfo.InvariantCulture, t.Path, bookingId);
+        var t = For(kind, forAgent);
+        var link = siteBaseUrl.TrimEnd('/') + string.Format(CultureInfo.InvariantCulture, t.Path, accessId);
         var when = TimeZoneInfo.ConvertTime(startUtc, Warsaw).ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture);
         var text = $"{t.Lead}\nTermin: {when} (czas polski)\n\n{t.LinkLabel}: {link}\n\nGabinety Tech\n";
         var html = $"<!doctype html>\n<html lang=\"pl\"><head><meta charset=\"utf-8\"><title>{t.Subject}</title></head>\n"

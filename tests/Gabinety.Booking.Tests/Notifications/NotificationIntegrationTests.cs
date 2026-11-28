@@ -12,7 +12,7 @@ namespace Gabinety.Booking.Tests;
 [Trait("tier", "integration")]
 public class NotificationIntegrationTests
 {
-    static BookingDbContext Db(string cs) => new(new DbContextOptionsBuilder<BookingDbContext>().UseNpgsql(cs).Options);
+    static AccessDbContext Db(string cs) => new(new DbContextOptionsBuilder<AccessDbContext>().UseNpgsql(cs).Options);
 
     static async Task<PostgreSqlContainer> Pg()
     {

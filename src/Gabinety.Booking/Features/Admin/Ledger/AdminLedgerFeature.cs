@@ -30,7 +30,7 @@ public sealed class AdminLedgerFeature : IServiceFeature
     public void Map(IEndpointRouteBuilder endpoints) =>
         endpoints.MapGet("/api/v1/admin/ledger.csv", Export).RequireAuthorization("Admin");
 
-    static IResult Export(string? from, string? to, HttpContext http, BookingDbContext db)
+    static IResult Export(string? from, string? to, HttpContext http, AccessDbContext db)
     {
         var errors = new Dictionary<string, string[]>();
         var f = ParseDay(from, "from", errors);
@@ -48,7 +48,7 @@ public sealed class AdminLedgerFeature : IServiceFeature
         return Results.Stream(s => WriteAsync(s, db, start, end, http.RequestAborted), "text/csv; charset=utf-8");
     }
 
-    static async Task WriteAsync(Stream body, BookingDbContext db, DateTimeOffset start, DateTimeOffset end, CancellationToken ct)
+    static async Task WriteAsync(Stream body, AccessDbContext db, DateTimeOffset start, DateTimeOffset end, CancellationToken ct)
     {
         await using var text = new StreamWriter(body, new UTF8Encoding(false), 16 * 1024, leaveOpen: true);
         var csv = new CsvWriter(text);

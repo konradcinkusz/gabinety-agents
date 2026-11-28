@@ -52,7 +52,7 @@ public class StatsPushCalculationTests : IDisposable
     {
         // ADR-0012: an administrator's action must not lower the reliability of a practitioner who is later reinstated (a deviation from the CONTRACTS 8.1 text)
         var cascade = await StatsFx.Seed(h, AccessStatus.CancelledByPractitioner);
-        await h.Seed(db => db.Accesses.Single(b => b.Id == cascade).StatusReason = Gabinety.Booking.Features.Internal.PractitionerCancellation.FutureBookingCanceller.Reason);
+        await h.Seed(db => db.Accesses.Single(b => b.Id == cascade).StatusReason = Gabinety.Booking.Features.Internal.PractitionerCancellation.FutureAccessCanceller.Reason);
         Assert.Equal(0, (await StatsFx.StatsOf(h)).AgentCancelCount);
 
         var voluntary = await StatsFx.Seed(h, AccessStatus.CancelledByPractitioner);

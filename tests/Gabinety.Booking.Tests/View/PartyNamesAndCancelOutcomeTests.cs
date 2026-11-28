@@ -7,7 +7,7 @@ using Gabinety.Booking.Features.Internal.Erasure;
 using Gabinety.Booking.Features.Lifecycle.Cancel;
 using Gabinety.Booking.Features.Payments;
 using Gabinety.Contracts.Booking;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
@@ -47,15 +47,15 @@ public class PartyNamesTests
         var id = await Life.Seed(h, AccessStatus.Confirmed, H24 * 3);
         // unique parties: the in-memory database is shared by the hosts of one test process and the list shows 12 rows a page
         var client = "demo-client-" + Guid.NewGuid().ToString("n");
-        var practitioner = "demo-practitioner-" + Guid.NewGuid().ToString("n");
-        await h.Seed(db => { var b = db.Accesses.Single(x => x.Id == id); b.ClientDisplayName = "Klient D."; b.ClientUserId = client; b.AgentUserId = practitioner; });
+        var agent = "demo-practitioner-" + Guid.NewGuid().ToString("n");
+        await h.Seed(db => { var b = db.Accesses.Single(x => x.Id == id); b.ClientDisplayName = "Klient D."; b.ClientUserId = client; b.AgentUserId = agent; });
 
         var asClient = await Get(h.ClientFor(client), $"/api/v1/bookings/{id}");
         Assert.Equal("Demo Practitioner", asClient.GetProperty("practitioner").GetProperty("displayName").GetString());
         Assert.Equal("demo-practitioner", asClient.GetProperty("practitioner").GetProperty("slug").GetString());
         Assert.Equal(JsonValueKind.Null, asClient.GetProperty("client").ValueKind); // a client is not shown to themself
 
-        var asPractitioner = await Get(h.ClientFor(practitioner), $"/api/v1/bookings/{id}");
+        var asPractitioner = await Get(h.ClientFor(agent), $"/api/v1/bookings/{id}");
         Assert.Equal("Klient D.", asPractitioner.GetProperty("client").GetProperty("displayName").GetString());
         Assert.DoesNotContain("example.test", asPractitioner.GetRawText());
 
@@ -63,7 +63,7 @@ public class PartyNamesTests
         // the in-memory database is shared by the hosts of one test process: find the row by id
         JsonElement Mine(JsonElement page) => page.GetProperty("items").EnumerateArray().Single(i => i.GetProperty("id").GetGuid() == id);
         Assert.Equal("Demo Practitioner", Mine(list).GetProperty("practitioner").GetProperty("displayName").GetString());
-        var plist = await Get(h.ClientFor(practitioner), "/api/v1/me/bookings?role=practitioner");
+        var plist = await Get(h.ClientFor(agent), "/api/v1/me/bookings?role=practitioner");
         Assert.Equal("Klient D.", Mine(plist).GetProperty("client").GetProperty("displayName").GetString());
     }
 
@@ -105,7 +105,7 @@ public class PartyNamesTests
     [Fact]
     public void Erasing_the_client_clears_the_snapshot()
     {
-        var b = new BookingEntity { ClientUserId = "demo-u", ClientDisplayName = "Klient D.", AgentUserId = "demo-p" };
+        var b = new AccessEntity { ClientUserId = "demo-u", ClientDisplayName = "Klient D.", AgentUserId = "demo-p" };
         var method = typeof(ErasureFeature).GetMethod("Anonymise", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
         method.Invoke(null, [b, "demo-u", ErasureFeature.Token("demo-u")]);
         Assert.Null(b.ClientDisplayName);
@@ -168,7 +168,7 @@ public class CancelOutcomeTests
     public void The_planner_is_the_single_source_at_the_boundary_and_names_partial_only_for_a_part_refund()
     {
         var start = new DateTimeOffset(2026, 12, 1, 10, 0, 0, TimeSpan.Zero);
-        var b = new BookingEntity { Status = AccessStatus.Confirmed, StartUtc = start, EndUtc = start.AddHours(1), PriceMinor = 18000 };
+        var b = new AccessEntity { Status = AccessStatus.Confirmed, StartUtc = start, EndUtc = start.AddHours(1), PriceMinor = 18000 };
         Assert.Equal((CancelOutcomeKind.FullRefund, 18000L), Tuple(CancelPlanner.Plan(b, byClient: true, start - H24)));
         Assert.Equal((CancelOutcomeKind.FullRefund, 18000L), Tuple(CancelPlanner.Plan(b, byClient: true, start - H24 + S)));
         Assert.Equal((CancelOutcomeKind.FullRefund, 18000L), Tuple(CancelPlanner.Plan(b, byClient: true, start + 10 * H24)));
@@ -202,9 +202,9 @@ public class DisputeWindowTests
     [InlineData(73 * 3600 + 1, false)]
     public void canDispute_is_true_for_a_Completed_booking_until_end_plus_72h(int offsetSeconds, bool expected)
     {
-        var b = new BookingEntity { ClientUserId = "demo-client", AgentUserId = "demo-practitioner", Status = AccessStatus.Completed, StartUtc = Start, EndUtc = Start + H, EndedAt = Start + H };
+        var b = new AccessEntity { ClientUserId = "demo-client", AgentUserId = "demo-practitioner", Status = AccessStatus.Completed, StartUtc = Start, EndUtc = Start + H, EndedAt = Start + H };
         var now = Start + TimeSpan.FromSeconds(offsetSeconds);
-        Assert.Equal(expected, BookingPermissions.For(b, "demo-client", new Clock(now)).CanDispute);
-        Assert.False(BookingPermissions.For(b, "demo-practitioner", new Clock(now)).CanDispute);
+        Assert.Equal(expected, AccessPermissions.For(b, "demo-client", new Clock(now)).CanDispute);
+        Assert.False(AccessPermissions.For(b, "demo-practitioner", new Clock(now)).CanDispute);
     }
 }

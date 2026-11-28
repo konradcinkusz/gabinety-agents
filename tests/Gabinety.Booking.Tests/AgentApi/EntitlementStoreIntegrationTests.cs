@@ -35,7 +35,7 @@ public class EntitlementStoreIntegrationTests : IAsyncLifetime
             using var scope = host.Services.CreateScope();
             await scope.ServiceProvider.GetRequiredService<EntitlementStore>().ConsumeAsync(id, 2, default);
         })));
-        await using var db = new BookingDbContext(new DbContextOptionsBuilder<BookingDbContext>().UseNpgsql(pg.GetConnectionString()).Options);
+        await using var db = new AccessDbContext(new DbContextOptionsBuilder<AccessDbContext>().UseNpgsql(pg.GetConnectionString()).Options);
         Assert.Equal(100, (await db.Accesses.AsNoTracking().SingleAsync(b => b.Id == id)).UnitsUsed);
 
         using var scope = host.Services.CreateScope();
@@ -46,7 +46,7 @@ public class EntitlementStoreIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task Usage_records_round_trip_with_the_kind_stored_as_text()
     {
-        await using var db = new BookingDbContext(new DbContextOptionsBuilder<BookingDbContext>().UseNpgsql(pg.GetConnectionString()).Options);
+        await using var db = new AccessDbContext(new DbContextOptionsBuilder<AccessDbContext>().UseNpgsql(pg.GetConnectionString()).Options);
         var row = new UsageRecord { Id = Guid.NewGuid(), AccessId = Guid.NewGuid(), ApiKeyId = null, Kind = Gabinety.Contracts.Directory.PackageKind.Chat, Units = 42, CreatedAt = DateTimeOffset.UtcNow };
         db.UsageRecords.Add(row);
         await db.SaveChangesAsync();
@@ -63,7 +63,7 @@ public class EntitlementStoreIntegrationTests : IAsyncLifetime
             return await scope.ServiceProvider.GetRequiredService<EntitlementStore>().TryConsumeAsync(id, 1, default);
         })));
         Assert.Equal(5, taken.Count(t => t));
-        await using var db = new BookingDbContext(new DbContextOptionsBuilder<BookingDbContext>().UseNpgsql(pg.GetConnectionString()).Options);
+        await using var db = new AccessDbContext(new DbContextOptionsBuilder<AccessDbContext>().UseNpgsql(pg.GetConnectionString()).Options);
         Assert.Equal(5, (await db.Accesses.AsNoTracking().SingleAsync(b => b.Id == id)).UnitsUsed);
     }
 
@@ -79,7 +79,7 @@ public class EntitlementStoreIntegrationTests : IAsyncLifetime
 
         await Task.WhenAll(Task.Run(() => TaskFx.Job(host, client).RunOnceAsync(host.Clock.GetUtcNow(), default)), Task.Run(() => TaskFx.Job(host, client).RunOnceAsync(host.Clock.GetUtcNow(), default)));
 
-        await using var db = new BookingDbContext(new DbContextOptionsBuilder<BookingDbContext>().UseNpgsql(pg.GetConnectionString()).Options);
+        await using var db = new AccessDbContext(new DbContextOptionsBuilder<AccessDbContext>().UseNpgsql(pg.GetConnectionString()).Options);
         var rows = await db.AgentTasks.AsNoTracking().Where(t => t.AccessId == package).OrderBy(t => t.CreatedAt).ToListAsync();
         Assert.Equal(4, rows.Count);
         Assert.All(rows, t => { Assert.Equal(AgentTaskStatus.Succeeded, t.Status); Assert.Equal(1, t.Attempts); Assert.False(string.IsNullOrWhiteSpace(t.OutputText)); });

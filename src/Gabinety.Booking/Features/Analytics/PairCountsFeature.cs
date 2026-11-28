@@ -20,7 +20,7 @@ namespace Gabinety.Booking.Features.Analytics;
 /// </summary>
 public sealed class PairCountsFeature : IServiceFeature
 {
-    public const int DefaultMinBookings = 3, MinMinBookings = 2, MaxMinBookings = 1000, DefaultLimit = 20, MaxLimit = 50;
+    public const int DefaultMinAccesses = 3, MinMinAccesses = 2, MaxMinAccesses = 1000, DefaultLimit = 20, MaxLimit = 50;
 
     static readonly PaymentStatus[] Kept = [PaymentStatus.Succeeded, PaymentStatus.PartiallyRefunded];
 
@@ -29,17 +29,17 @@ public sealed class PairCountsFeature : IServiceFeature
     public void Map(IEndpointRouteBuilder endpoints) =>
         endpoints.MapGet("/internal/v1/analytics/pair-counts", ListAsync).RequireAuthorization("Internal");
 
-    static async Task<IResult> ListAsync(string? minBookings, string? cursor, int? limit, BookingDbContext db, CancellationToken ct)
+    static async Task<IResult> ListAsync([Microsoft.AspNetCore.Mvc.FromQuery(Name = "minBookings")] string? minAccesses, string? cursor, int? limit, AccessDbContext db, CancellationToken ct)
     {
         var errors = new Dictionary<string, string[]>();
-        var min = DefaultMinBookings;
-        if (minBookings is not null && !(int.TryParse(minBookings, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out min) && min is >= MinMinBookings and <= MaxMinBookings))
-            errors["minBookings"] = [$"minBookings is {MinMinBookings} to {MaxMinBookings}."];
+        var min = DefaultMinAccesses;
+        if (minAccesses is not null && !(int.TryParse(minAccesses, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out min) && min is >= MinMinAccesses and <= MaxMinAccesses))
+            errors["minBookings"] = [$"minBookings is {MinMinAccesses} to {MaxMinAccesses}."];
         if (limit is < 1) errors["limit"] = ["The limit is at least 1."];
-        string afterClient = ""; Guid afterPractitioner = default; var hasCursor = false;
+        string afterClient = ""; Guid afterAgent = default; var hasCursor = false;
         if (cursor is not null)
         {
-            if (!TryDecode(cursor, out afterClient, out afterPractitioner)) errors["cursor"] = ["The cursor is not valid."];
+            if (!TryDecode(cursor, out afterClient, out afterAgent)) errors["cursor"] = ["The cursor is not valid."];
             else hasCursor = true;
         }
         if (errors.Count > 0) return PaymentWebhookFeature.Problem(ErrorCodes.ValidationFailed, "Validation failed", 400, null, errors);
@@ -48,7 +48,7 @@ public sealed class PairCountsFeature : IServiceFeature
         var q = db.Accesses.AsNoTracking()
             .Where(b => db.Payments.Any(p => p.AccessId == b.Id && Kept.Contains(p.Status)));
         if (hasCursor)
-            q = q.Where(b => string.Compare(b.ClientUserId, afterClient) > 0 || (b.ClientUserId == afterClient && b.AgentId.CompareTo(afterPractitioner) > 0));
+            q = q.Where(b => string.Compare(b.ClientUserId, afterClient) > 0 || (b.ClientUserId == afterClient && b.AgentId.CompareTo(afterAgent) > 0));
         var rows = await q.GroupBy(b => new { b.ClientUserId, b.AgentId })
             .Select(g => new { g.Key.ClientUserId, g.Key.AgentId, Count = g.Count() })
             .Where(g => g.Count >= min)
@@ -61,13 +61,13 @@ public sealed class PairCountsFeature : IServiceFeature
     }
 
     // base64url(client) . practitioner(N): the client id is arbitrary text, base64url has no '.', so the split is unambiguous.
-    static string Encode(string client, Guid practitioner) => Base64Url.EncodeToString(Encoding.UTF8.GetBytes(client)) + "." + practitioner.ToString("N");
+    static string Encode(string client, Guid agent) => Base64Url.EncodeToString(Encoding.UTF8.GetBytes(client)) + "." + agent.ToString("N");
 
-    static bool TryDecode(string cursor, out string client, out Guid practitioner)
+    static bool TryDecode(string cursor, out string client, out Guid agent)
     {
-        client = ""; practitioner = default;
+        client = ""; agent = default;
         var parts = cursor.Split('.');
-        if (parts.Length != 2 || parts[0].Length == 0 || !Guid.TryParseExact(parts[1], "N", out practitioner)) return false;
+        if (parts.Length != 2 || parts[0].Length == 0 || !Guid.TryParseExact(parts[1], "N", out agent)) return false;
         try { client = new UTF8Encoding(false, true).GetString(Base64Url.DecodeFromChars(parts[0])); return client.Length > 0; }
         catch (Exception e) when (e is FormatException or ArgumentException) { return false; }
     }

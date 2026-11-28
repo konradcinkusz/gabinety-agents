@@ -56,7 +56,7 @@ static class StatsFx
     public static StatsPushJob Job(CreateHost h, IDirectoryStatsClient client, ILogger<StatsPushJob>? log = null) =>
         new(h.Services.GetRequiredService<IServiceScopeFactory>(), client, h.Clock, log ?? NullLogger<StatsPushJob>.Instance);
 
-    public static async Task<BookingStats> StatsOf(CreateHost h)
+    public static async Task<AccessStats> StatsOf(CreateHost h)
     {
         using var scope = h.Services.CreateScope();
         var calc = scope.ServiceProvider.GetRequiredService<StatsCalculator>();

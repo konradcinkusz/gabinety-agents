@@ -5,7 +5,7 @@ using System.Text.Json.Nodes;
 using Gabinety.Booking.Agents.Abstractions;
 using Gabinety.Contracts.Directory;
 using Gabinety.ServiceDefaults;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 
 namespace Gabinety.Booking.Features.AgentApi;
 
@@ -46,7 +46,7 @@ public sealed class ChatCompletionsFeature : IServiceFeature
             : await NonStreamAsync(package, apiKeyId, body, entitlements, upstream, log, clock, ct);
     }
 
-    static async Task<IResult> NonStreamAsync(BookingEntity package, Guid? apiKeyId, JsonObject body, EntitlementStore entitlements, IAgentUpstream upstream,
+    static async Task<IResult> NonStreamAsync(AccessEntity package, Guid? apiKeyId, JsonObject body, EntitlementStore entitlements, IAgentUpstream upstream,
         ILogger log, Stopwatch clock, CancellationToken ct)
     {
         UpstreamResult result;
@@ -69,7 +69,7 @@ public sealed class ChatCompletionsFeature : IServiceFeature
         return Results.Content(result.Json, "application/json", System.Text.Encoding.UTF8, result.StatusCode);
     }
 
-    static async Task<IResult> StreamAsync(HttpContext http, BookingEntity package, Guid? apiKeyId, JsonObject body, EntitlementStore entitlements,
+    static async Task<IResult> StreamAsync(HttpContext http, AccessEntity package, Guid? apiKeyId, JsonObject body, EntitlementStore entitlements,
         IAgentUpstream upstream, ILogger log, Stopwatch clock, CancellationToken ct)
     {
         var response = http.Response;
@@ -119,7 +119,7 @@ public sealed class ChatCompletionsFeature : IServiceFeature
         return (null, OpenAiError.BadRequest("The request body must be a JSON object."));
     }
 
-    static void LogOutcome(ILogger log, BookingEntity package, long tokens, int status, Stopwatch clock, string? failure) =>
+    static void LogOutcome(ILogger log, AccessEntity package, long tokens, int status, Stopwatch clock, string? failure) =>
         log.LogInformation("Chat completion for package {BookingId} agent {AgentSlug}: {Tokens} tokens, status {Status}, {ElapsedMs} ms, failure {Failure}",
             package.Id, package.AgentSlug, tokens, status, clock.ElapsedMilliseconds, failure ?? "none");
 }

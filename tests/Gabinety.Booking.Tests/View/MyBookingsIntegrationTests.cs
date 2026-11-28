@@ -3,7 +3,7 @@ using System.Text.Json;
 using Gabinety.Booking.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
@@ -40,7 +40,7 @@ public class MyBookingsIntegrationTests : IAsyncLifetime
         await host.Seed(db =>
         {
             foreach (var id in ids)
-                db.Accesses.Add(new BookingEntity
+                db.Accesses.Add(new AccessEntity
                 {
                     Id = id, ClientUserId = client, AgentId = Guid.NewGuid(), AgentUserId = "demo-p", PackageId = host.Package, PackageTitle = "demo-offering",
                     DurationMinutes = 60, PriceMinor = 10000, StartUtc = start, EndUtc = start.AddHours(1), Status = AccessStatus.Expired, BriefText = "demo-brief",

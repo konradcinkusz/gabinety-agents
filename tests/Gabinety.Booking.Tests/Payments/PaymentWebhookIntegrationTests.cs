@@ -32,7 +32,7 @@ public class PaymentWebhookIntegrationTests : IAsyncLifetime
 
     public async Task DisposeAsync() { await host.DisposeAsync(); await pg.DisposeAsync(); }
 
-    BookingDbContext Db() => new(new DbContextOptionsBuilder<BookingDbContext>().UseNpgsql(cs).Options);
+    AccessDbContext Db() => new(new DbContextOptionsBuilder<AccessDbContext>().UseNpgsql(cs).Options);
 
     /// <summary>10:00 UTC of the n-th weekday after the clock's Monday (2026-11-16).</summary>
     static string Day(int n)
@@ -135,6 +135,6 @@ public class PaymentWebhookIntegrationTests : IAsyncLifetime
         Assert.Equal("23505", ((PostgresException)e.InnerException!).SqlState);
     }
 
-    static void LedgerEntryOf(BookingDbContext db, LedgerKind kind, string? pair) =>
+    static void LedgerEntryOf(AccessDbContext db, LedgerKind kind, string? pair) =>
         db.LedgerEntries.Add(new() { Id = Guid.NewGuid(), AccessId = Guid.NewGuid(), Kind = kind, AmountMinor = 1, PairKey = pair, CreatedAt = DateTimeOffset.UnixEpoch });
 }

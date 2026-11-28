@@ -9,22 +9,22 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
 /// <summary>The job restricted to one practitioner: the test InMemory database is shared by every host in the process, and an unscoped job would expire other tests' holds.</summary>
-sealed class ScopedHoldExpiryJob(IServiceScopeFactory scopes, TimeProvider time, IConfiguration config, JobMetrics metrics, ILogger<HoldExpiryJob> log, Guid practitioner)
+sealed class ScopedHoldExpiryJob(IServiceScopeFactory scopes, TimeProvider time, IConfiguration config, JobMetrics metrics, ILogger<HoldExpiryJob> log, Guid agent)
     : HoldExpiryJob(scopes, time, config, metrics, log)
 {
-    protected override IQueryable<BookingEntity> Scope(IQueryable<BookingEntity> q) => q.Where(b => b.AgentId == practitioner);
+    protected override IQueryable<AccessEntity> Scope(IQueryable<AccessEntity> q) => q.Where(b => b.AgentId == agent);
 }
 
 /// <summary>Throws from inside the transition's transaction for the listed bookings, with a message that carries the brief.</summary>
-sealed class FailingHook(HashSet<Guid> bad) : IBookingTransitionHook
+sealed class FailingHook(HashSet<Guid> bad) : IAccessTransitionHook
 {
-    public Task OnTransitionAsync(BookingTransitionContext context, CancellationToken ct) =>
+    public Task OnTransitionAsync(AccessTransitionContext context, CancellationToken ct) =>
         bad.Contains(context.Access.Id) ? throw new InvalidOperationException("boom " + context.Access.BriefText) : Task.CompletedTask;
 }
 
@@ -39,7 +39,7 @@ static class Hold
         if (failing != null)
         {
             var provider = h.Configure;
-            h.Configure = s => { provider?.Invoke(s); s.AddScoped<IBookingTransitionHook>(_ => new FailingHook(failing)); };
+            h.Configure = s => { provider?.Invoke(s); s.AddScoped<IAccessTransitionHook>(_ => new FailingHook(failing)); };
         }
         return h;
     }
@@ -52,7 +52,7 @@ static class Hold
         var start = now.AddDays(2).AddHours(3 * slot);
         await h.Seed(db =>
         {
-            db.Accesses.Add(new BookingEntity
+            db.Accesses.Add(new AccessEntity
             {
                 Id = id, ClientUserId = Life.Client, AgentId = h.Agent, AgentUserId = h.OwnerUserId, PackageId = h.Package,
                 PackageTitle = h.Title, DurationMinutes = 60, PriceMinor = h.PriceMinor, StartUtc = start, EndUtc = start.AddHours(1), Status = status,
@@ -77,10 +77,10 @@ static class Hold
     /// <summary>Every row the job could touch, as text, so "changes nothing" is an equality.</summary>
     public static Task<string> Snapshot(CreateHost h) => h.Query(async db =>
     {
-        var bookings = await db.Accesses.AsNoTracking().Where(b => b.AgentId == h.Agent).OrderBy(b => b.Id).ToListAsync();
-        var ids = bookings.Select(b => b.Id).ToList();
+        var accesses = await db.Accesses.AsNoTracking().Where(b => b.AgentId == h.Agent).OrderBy(b => b.Id).ToListAsync();
+        var ids = accesses.Select(b => b.Id).ToList();
         var payments = await db.Payments.AsNoTracking().Where(p => ids.Contains(p.AccessId)).OrderBy(p => p.Id).ToListAsync();
         var ledger = await db.LedgerEntries.AsNoTracking().Where(l => ids.Contains(l.AccessId)).OrderBy(l => l.Id).ToListAsync();
-        return JsonSerializer.Serialize(new { bookings, payments, ledger });
+        return JsonSerializer.Serialize(new { bookings = accesses, payments, ledger });
     });
 }

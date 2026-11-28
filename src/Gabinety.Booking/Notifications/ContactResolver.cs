@@ -19,14 +19,14 @@ public sealed class ContactResolver(IDirectoryClient directory, TimeProvider tim
 
     public async Task<string?> ResolveAddressAsync(ContactLookup recipient, CancellationToken ct)
     {
-        if (!recipient.IsPractitioner) return UserEmail.Normalize(recipient.ClientEmailSnapshot);
+        if (!recipient.IsAgent) return UserEmail.Normalize(recipient.ClientEmailSnapshot);
 
         var now = time.GetUtcNow();
         if (_cache.TryGetValue(recipient.UserId, out var hit) && hit.Until > now) return hit.Address;
 
         try
         {
-            var contact = await directory.GetPractitionerContactAsync(recipient.UserId, ct);
+            var contact = await directory.GetAgentContactAsync(recipient.UserId, ct);
             var address = UserEmail.Normalize(contact?.Email);
             if (address is null) { _cache.TryRemove(recipient.UserId, out _); return null; }
             if (_cache.Count >= MaxCached) _cache.Clear(); // a few thousand practitioners at most: a reset is cheaper than an eviction policy

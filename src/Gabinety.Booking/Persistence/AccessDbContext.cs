@@ -5,14 +5,14 @@ using Gabinety.Booking.Features.Payments;
 using Gabinety.Booking.Features.Payouts;
 using Gabinety.Booking.Notifications;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 
 namespace Gabinety.Booking.Persistence;
 
 /// <summary>Owns bookingdb (P3). The other Booking tables arrive with later tasks.</summary>
-public sealed class BookingDbContext(DbContextOptions<BookingDbContext> options) : DbContext(options)
+public sealed class AccessDbContext(DbContextOptions<AccessDbContext> options) : DbContext(options)
 {
-    public DbSet<BookingEntity> Accesses => Set<BookingEntity>();
+    public DbSet<AccessEntity> Accesses => Set<AccessEntity>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
     public DbSet<WebhookEvent> WebhookEvents => Set<WebhookEvent>();
@@ -25,12 +25,12 @@ public sealed class BookingDbContext(DbContextOptions<BookingDbContext> options)
     public DbSet<AgentTask> AgentTasks => Set<AgentTask>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(BookingDbContext).Assembly);
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(AccessDbContext).Assembly);
 }
 
 /// <summary>Only for `dotnet ef`; never used at runtime and never opens a connection.</summary>
-public sealed class BookingDbContextFactory : Microsoft.EntityFrameworkCore.Design.IDesignTimeDbContextFactory<BookingDbContext>
+public sealed class AccessDbContextFactory : Microsoft.EntityFrameworkCore.Design.IDesignTimeDbContextFactory<AccessDbContext>
 {
-    public BookingDbContext CreateDbContext(string[] args) => new(new DbContextOptionsBuilder<BookingDbContext>()
-        .UseNpgsql("Host=localhost;Database=design-time", o => o.MigrationsAssembly(typeof(BookingDbContext).Assembly.GetName().Name)).Options);
+    public AccessDbContext CreateDbContext(string[] args) => new(new DbContextOptionsBuilder<AccessDbContext>()
+        .UseNpgsql("Host=localhost;Database=design-time", o => o.MigrationsAssembly(typeof(AccessDbContext).Assembly.GetName().Name)).Options);
 }

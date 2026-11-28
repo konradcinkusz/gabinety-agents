@@ -2,14 +2,14 @@ using Gabinety.Billing;
 using Gabinety.Booking.Features.Internal.Reviewability;
 using Gabinety.Booking.Features.Lifecycle.Cancel;
 using Gabinety.Booking.Features.Lifecycle.Dispute;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 
 namespace Gabinety.Booking.Features.Bookings.View;
 
 /// <summary>What the caller may do with a booking right now (CONTRACTS 4.4: the four booleans of <c>BookingView</c>).</summary>
-public readonly record struct BookingFlags(bool CanCancel, bool CanDispute, bool CanReportNoShow, bool CanReview)
+public readonly record struct AccessFlags(bool CanCancel, bool CanDispute, bool CanReportNoShow, bool CanReview)
 {
-    public static readonly BookingFlags None = default;
+    public static readonly AccessFlags None = default;
 }
 
 /// <summary>
@@ -19,18 +19,18 @@ public readonly record struct BookingFlags(bool CanCancel, bool CanDispute, bool
 /// <para><c>CanReview</c> is an upper bound: Reputation owns "already reviewed", which Booking cannot see.</para>
 /// An admin who is not a party gets no flag; a stranger neither.
 /// </summary>
-public static class BookingPermissions
+public static class AccessPermissions
 {
-    public static BookingFlags For(BookingEntity b, string callerId, TimeProvider time)
+    public static AccessFlags For(AccessEntity b, string callerId, TimeProvider time)
     {
         var isClient = b.ClientUserId == callerId;
-        var isPractitioner = b.AgentUserId == callerId;
-        if (!isClient && !isPractitioner) return BookingFlags.None;
+        var isAgent = b.AgentUserId == callerId;
+        if (!isClient && !isAgent) return AccessFlags.None;
         var now = time.GetUtcNow();
         var s = b.Status;
 
         var canCancel = isClient && Allowed(s, AccessTrigger.ClientCancels, b, now) && CancelPlanner.TimeRuleAllows(b, byClient: true, now)
-            || isPractitioner && Allowed(s, AccessTrigger.PractitionerCancels, b, now) && CancelPlanner.TimeRuleAllows(b, byClient: false, now);
+            || isAgent && Allowed(s, AccessTrigger.PractitionerCancels, b, now) && CancelPlanner.TimeRuleAllows(b, byClient: false, now);
         // "Can open a dispute of some kind": the practitioner_no_show kind has the widest window, the other kinds' window lies inside it or ends with it.
         var canDispute = isClient && Allowed(s, AccessTrigger.ClientDisputes, b, now) && DisputeFeature.InWindow(b, "practitioner_no_show", now);
         const bool canReportNoShow = false; // an agent has no appointment to miss (A-03); the flag stays in the wire shape, always false
@@ -38,9 +38,9 @@ public static class BookingPermissions
         return new(canCancel, canDispute, canReportNoShow, canReview);
     }
 
-    static bool Allowed(AccessStatus from, AccessTrigger trigger, BookingEntity b, DateTimeOffset now) =>
+    static bool Allowed(AccessStatus from, AccessTrigger trigger, AccessEntity b, DateTimeOffset now) =>
         AccessStateMachine.Next(from, trigger, b.StartUtc, now).Allowed;
 
     /// <summary>The same test as the reviewability endpoint (<see cref="ReviewabilityFeature.IsReviewable"/>).</summary>
-    static bool CanReview(BookingEntity b, DateTimeOffset now) => ReviewabilityFeature.IsReviewable(b.Status, b.DisputeResolution, b.UnitsUsed, b.EndUtc, now);
+    static bool CanReview(AccessEntity b, DateTimeOffset now) => ReviewabilityFeature.IsReviewable(b.Status, b.DisputeResolution, b.UnitsUsed, b.EndUtc, now);
 }

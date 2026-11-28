@@ -10,16 +10,16 @@ using Gabinety.Contracts.Booking;
 using Gabinety.Contracts.Common;
 using Gabinety.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 using ContractsStatus = Gabinety.Contracts.Booking.AccessStatus;
 
 namespace Gabinety.Booking.Features.Payments;
 
 /// <summary>
-/// GET /api/v1/bookings/{id} (CONTRACTS 4.2, 4.4). The list is <see cref="MyBookingsFeature"/>; both build their items with <see cref="ToView"/>.
+/// GET /api/v1/bookings/{id} (CONTRACTS 4.2, 4.4). The list is <see cref="MyAccessesFeature"/>; both build their items with <see cref="ToView"/>.
 /// The party names come from <see cref="PartyNamesLookup"/> (ADR-0012 section 6): the practitioner's from Directory, the client's from the snapshot taken when the booking was made.
 /// </summary>
-public sealed class BookingViewFeature : IServiceFeature
+public sealed class AccessViewFeature : IServiceFeature
 {
     public void Add(IHostApplicationBuilder builder) => builder.Services.AddScoped<PartyNamesLookup>();
 
@@ -29,7 +29,7 @@ public sealed class BookingViewFeature : IServiceFeature
     public static string? CallerId(ClaimsPrincipal user) => user.FindFirst("sub")?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
     public static bool IsAdmin(ClaimsPrincipal user) => user.IsInRole("Admin") || user.IsInRole("SuperAdmin");
 
-    static async Task<IResult> GetAsync(Guid id, ClaimsPrincipal user, BookingDbContext db, PartyNamesLookup names, TimeProvider time, CancellationToken ct)
+    static async Task<IResult> GetAsync(Guid id, ClaimsPrincipal user, AccessDbContext db, PartyNamesLookup names, TimeProvider time, CancellationToken ct)
     {
         var sub = CallerId(user);
         if (sub is null) return Results.Unauthorized();
@@ -42,32 +42,32 @@ public sealed class BookingViewFeature : IServiceFeature
     }
 
     /// <summary>The admin's resolution note is stored in <c>status_reason</c> of a Resolved booking and is for the admin only (CONTRACTS 4.3); a cancel reason is for both parties.</summary>
-    static string? StatusReasonFor(BookingEntity b, bool admin) => b.Status == Gabinety.Billing.AccessStatus.Resolved && !admin ? null : b.StatusReason;
+    static string? StatusReasonFor(AccessEntity b, bool admin) => b.Status == Gabinety.Billing.AccessStatus.Resolved && !admin ? null : b.StatusReason;
 
     /// <summary>
     /// The meeting URL is for a party of a Confirmed booking only; the brief for the client always and for the practitioner from Confirmed onward (any status but PendingPayment and Expired); fee and payout for
     /// the practitioner and admin. The flags are the caller's at <paramref name="time"/> (<see cref="TimeProvider.System"/> when omitted: the callers that
     /// pass nothing build the view of a booking that has just left Confirmed, where every flag is false whatever the clock says).
     /// </summary>
-    public static AccessView ToView(BookingEntity b, Payment? payment, string callerId, bool admin, TimeProvider? time = null, PartyNames? names = null)
+    public static AccessView ToView(AccessEntity b, Payment? payment, string callerId, bool admin, TimeProvider? time = null, PartyNames? names = null)
     {
         var isClient = b.ClientUserId == callerId;
-        var isPractitioner = b.AgentUserId == callerId;
+        var isAgent = b.AgentUserId == callerId;
         var confirmed = b.Status == Gabinety.Billing.AccessStatus.Confirmed;
         // CONTRACTS 4.4 "after Confirmed": the practitioner sees the brief and the client name once the booking was confirmed at some point, i.e. from any
         // status but PendingPayment and Expired. Decided by status, not by confirmed_at (not every row sets it).
         var wasConfirmed = b.Status is not (Gabinety.Billing.AccessStatus.PendingPayment or Gabinety.Billing.AccessStatus.Expired);
         var money = (long? m) => m is { } v ? new MoneyDto(v) : null;
-        var flags = BookingPermissions.For(b, callerId, time ?? TimeProvider.System);
+        var flags = AccessPermissions.For(b, callerId, time ?? TimeProvider.System);
         return new AccessView(
             b.Id, Enum.Parse<ContractsStatus>(b.Status.ToString()), StatusReasonFor(b, admin), b.StartUtc, b.EndUtc, b.DurationMinutes, b.PackageTitle,
-            new MoneyDto(b.PriceMinor), new AgentRef(b.AgentId, names?.PractitionerDisplayName ?? PartyNamesLookup.PractitionerFallback, names?.AgentSlug ?? ""),
-            isPractitioner && wasConfirmed && names?.ClientDisplayName is { } clientName ? new ClientRef(clientName) : null,
-            isClient || (isPractitioner && wasConfirmed) ? new BriefDto(b.BriefText, b.BriefProblemSlug, b.BriefAiAssisted) : null,
-            confirmed && (isClient || isPractitioner) ? b.MeetingUrlSnapshot : null,
+            new MoneyDto(b.PriceMinor), new AgentRef(b.AgentId, names?.AgentDisplayName ?? PartyNamesLookup.AgentFallback, names?.AgentSlug ?? ""),
+            isAgent && wasConfirmed && names?.ClientDisplayName is { } clientName ? new ClientRef(clientName) : null,
+            isClient || (isAgent && wasConfirmed) ? new BriefDto(b.BriefText, b.BriefProblemSlug, b.BriefAiAssisted) : null,
+            confirmed && (isClient || isAgent) ? b.MeetingUrlSnapshot : null,
             b.Status == Gabinety.Billing.AccessStatus.PendingPayment ? b.HoldExpiresAt : null,
             new PaymentView(payment?.Status ?? PaymentStatus.Created, new MoneyDto(payment?.RefundedMinor ?? 0)),
-            isPractitioner || admin ? money(b.FeeMinor) : null, isPractitioner || admin ? money(b.PayoutMinor) : null,
+            isAgent || admin ? money(b.FeeMinor) : null, isAgent || admin ? money(b.PayoutMinor) : null,
             flags.CanCancel, flags.CanDispute, flags.CanReportNoShow, flags.CanReview,
             // The same planner the cancel endpoint runs, so what the dialog says is what the money does.
             flags.CanCancel && CancelPlanner.Plan(b, byClient: isClient, time?.GetUtcNow() ?? TimeProvider.System.GetUtcNow()) is { } plan ? plan.ToDto() : null,
@@ -76,24 +76,24 @@ public sealed class BookingViewFeature : IServiceFeature
 }
 
 /// <summary>Display names for one booking; every member is optional and absent means "not known" (the view then shows its fallback).</summary>
-public sealed record PartyNames(string? PractitionerDisplayName = null, string? AgentSlug = null, string? ClientDisplayName = null);
+public sealed record PartyNames(string? AgentDisplayName = null, string? AgentSlug = null, string? ClientDisplayName = null);
 
 /// <summary>
 /// The counter-party names of bookings (ADR-0012 section 6, F-03). The practitioner's name and slug come from Directory (one call per distinct practitioner,
-/// the 3 s budget of <see cref="DirectoryClient"/>); when Directory cannot answer the view still renders, with <see cref="PractitionerFallback"/>. The client's name is the
+/// the 3 s budget of <see cref="DirectoryClient"/>); when Directory cannot answer the view still renders, with <see cref="AgentFallback"/>. The client's name is the
 /// snapshot on the booking: "Klient" and an initial, never an e-mail or a surname; <see cref="ErasedName"/> once either side was erased.
 /// </summary>
 public sealed class PartyNamesLookup(IDirectoryClient directory)
 {
-    public const string ErasedName = "Usunięty użytkownik", ClientFallback = "Klient", PractitionerFallback = "Programista";
+    public const string ErasedName = "Usunięty użytkownik", ClientFallback = "Klient", AgentFallback = "Programista";
 
-    public async Task<Dictionary<Guid, PartyNames>> ForAsync(IReadOnlyCollection<BookingEntity> rows, CancellationToken ct)
+    public async Task<Dictionary<Guid, PartyNames>> ForAsync(IReadOnlyCollection<AccessEntity> rows, CancellationToken ct)
     {
         var live = rows.Where(b => !IsErased(b.AgentUserId)).Select(b => b.AgentId).Distinct().ToList();
-        var found = new Dictionary<Guid, DirectoryPractitionerName>();
+        var found = new Dictionary<Guid, DirectoryAgentName>();
         var lookups = await Task.WhenAll(live.Select(async id =>
         {
-            try { return await directory.GetPractitionerNameAsync(id, ct); }
+            try { return await directory.GetAgentNameAsync(id, ct); }
             catch (DirectoryUnavailableException) { return null; }
         }));
         foreach (var n in lookups) if (n is not null) found[n.AgentId] = n;

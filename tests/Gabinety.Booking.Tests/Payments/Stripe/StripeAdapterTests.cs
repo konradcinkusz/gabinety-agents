@@ -255,7 +255,7 @@ public class StripeAdapterTests
     {
         var p = Fx.Provider(new Handler());
         Assert.Equal("Stripe", p.Name);
-        Assert.True(p.RequiresPractitionerAccount);
+        Assert.True(p.RequiresAgentAccount);
         Assert.True(p.WebhookSecretConfigured);
         Assert.IsAssignableFrom<IConnectedAccountProvider>(p);
     }

@@ -4,7 +4,7 @@ using Gabinety.Booking.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
@@ -55,7 +55,7 @@ sealed class NotificationHost : IDisposable
         setup?.Invoke(Host);
         Host.Configure = s =>
         {
-            s.AddDbContext<BookingDbContext>(o => o.UseInMemoryDatabase(name)); // applied after the feature's own configuration, so it wins
+            s.AddDbContext<AccessDbContext>(o => o.UseInMemoryDatabase(name)); // applied after the feature's own configuration, so it wins
             if (!keepSender) { s.RemoveAll<IEmailSender>(); s.AddSingleton<IEmailSender>(Sender); } // keepSender: the one the feature registered
             s.RemoveAll<IContactResolver>();
             s.AddSingleton<IContactResolver>(Contacts);
@@ -65,16 +65,16 @@ sealed class NotificationHost : IDisposable
 
     public Task<int> Run() => Dispatcher.RunOnceAsync(CancellationToken.None);
 
-    public Notification Add(Guid bookingId, NotificationKind kind, string userId, DateTimeOffset? due = null, int attempts = 0, DateTimeOffset? sentAt = null)
+    public Notification Add(Guid accessId, NotificationKind kind, string userId, DateTimeOffset? due = null, int attempts = 0, DateTimeOffset? sentAt = null)
     {
-        var n = new Notification { Id = Guid.NewGuid(), AccessId = bookingId, Kind = kind, ToUserId = userId, DueAt = due ?? Now, Attempts = attempts, SentAt = sentAt };
+        var n = new Notification { Id = Guid.NewGuid(), AccessId = accessId, Kind = kind, ToUserId = userId, DueAt = due ?? Now, Attempts = attempts, SentAt = sentAt };
         Host.Seed(db => db.Notifications.Add(n)).GetAwaiter().GetResult();
         return n;
     }
 
-    public Task<BookingEntity> AddBooking(Guid? id = null, Action<BookingEntity>? edit = null)
+    public Task<AccessEntity> AddBooking(Guid? id = null, Action<AccessEntity>? edit = null)
     {
-        var b = new BookingEntity
+        var b = new AccessEntity
         {
             Id = id ?? Guid.NewGuid(), ClientUserId = "demo-client", AgentUserId = "demo-practitioner", AgentId = Guid.NewGuid(), PackageId = Guid.NewGuid(),
             PackageTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 10000, StartUtc = Now.AddDays(2), EndUtc = Now.AddDays(2).AddHours(1),

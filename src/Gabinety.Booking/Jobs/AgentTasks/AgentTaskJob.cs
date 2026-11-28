@@ -47,7 +47,7 @@ public class AgentTaskJob(IServiceScopeFactory scopes, TimeProvider time, IConfi
     {
         var limit = now - TimeSpan.FromMinutes(ReadPositiveInt(Configuration, "Agents:TaskTimeoutMinutes", DefaultTimeoutMinutes));
         using var scope = scopes.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<AccessDbContext>();
         var stuck = await Scope(db.AgentTasks).Where(t => t.Status == AgentTaskStatus.Running && t.StartedAt <= limit).Select(t => t.Id).ToListAsync(ct);
         foreach (var id in stuck) await FailAsync(id, now, ct);
         if (stuck.Count > 0) log.LogWarning("AgentTasks gave up on {Count} task(s) that ran past the timeout", stuck.Count);
@@ -57,7 +57,7 @@ public class AgentTaskJob(IServiceScopeFactory scopes, TimeProvider time, IConfi
     async Task<List<Guid>> ClaimAsync(DateTimeOffset now, CancellationToken ct)
     {
         using var scope = scopes.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<AccessDbContext>();
         var ids = await Scope(db.AgentTasks.AsNoTracking()).Where(t => t.Status == AgentTaskStatus.Queued).OrderBy(t => t.CreatedAt).ThenBy(t => t.Id).Select(t => t.Id).Take(BatchSize).ToListAsync(ct);
         var claimed = new List<Guid>();
         // The platform is resolved only when there is work, and before anything is claimed: a deployed host without Agents:Provider still starts (AgentsFeature) and its job stays quiet until a task exists.
@@ -91,7 +91,7 @@ public class AgentTaskJob(IServiceScopeFactory scopes, TimeProvider time, IConfi
         try
         {
             using var scope = scopes.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<AccessDbContext>();
             var task = await db.AgentTasks.AsNoTracking().SingleAsync(t => t.Id == id, ct);
             var body = new JsonObject
             {
@@ -110,7 +110,7 @@ public class AgentTaskJob(IServiceScopeFactory scopes, TimeProvider time, IConfi
         using var finish = scopes.CreateScope();
         var now = started; // one reading of the clock per cycle, like the other jobs
         if (output is null) { await FailAsync(id, now, ct, finish); return false; }
-        var fdb = finish.ServiceProvider.GetRequiredService<BookingDbContext>();
+        var fdb = finish.ServiceProvider.GetRequiredService<AccessDbContext>();
         var t = await fdb.AgentTasks.SingleAsync(x => x.Id == id, ct);
         if (t.Status != AgentTaskStatus.Running) return true; // another instance gave up on it meanwhile
         t.Status = AgentTaskStatus.Succeeded;
@@ -125,7 +125,7 @@ public class AgentTaskJob(IServiceScopeFactory scopes, TimeProvider time, IConfi
     {
         using var own = use is null ? scopes.CreateScope() : null;
         var sp = (use ?? own!).ServiceProvider;
-        var db = sp.GetRequiredService<BookingDbContext>();
+        var db = sp.GetRequiredService<AccessDbContext>();
         var t = await db.AgentTasks.SingleOrDefaultAsync(x => x.Id == id, ct);
         if (t is null || t.Status != AgentTaskStatus.Running) return;
         if (t.Attempts < MaxAttempts)
@@ -141,7 +141,7 @@ public class AgentTaskJob(IServiceScopeFactory scopes, TimeProvider time, IConfi
         await db.SaveChangesAsync(ct);
         await sp.GetRequiredService<EntitlementStore>().RefundUnitsAsync(t.AccessId, 1, ct);
         // The refunded unit may belong to a package AutoCompleteJob completed because its units ran out: bring it back so the client can use the unit (ADR-0013). A no-op in every other case.
-        if (await PackageReopening.TryAsync(sp.GetRequiredService<BookingTransitions>(), t.AccessId, now, ct))
+        if (await PackageReopening.TryAsync(sp.GetRequiredService<AccessTransitions>(), t.AccessId, now, ct))
             log.LogInformation("AgentTasks: package {BookingId} is open again after the refund of a failed task", t.AccessId);
         log.LogWarning("AgentTasks: task {TaskId} failed after {Attempts} attempts, its unit went back to package {BookingId}", t.Id, t.Attempts, t.AccessId);
     }

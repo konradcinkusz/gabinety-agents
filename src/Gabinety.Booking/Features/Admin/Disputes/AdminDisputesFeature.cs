@@ -10,7 +10,7 @@ using Gabinety.Booking.Persistence;
 using Gabinety.Contracts.Common;
 using Gabinety.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Features.Admin.Disputes;
@@ -32,7 +32,7 @@ public sealed record AdminDisputeItem(
 /// with an opaque cursor like the other lists.</item>
 /// <item><c>POST /api/v1/admin/bookings/{id}/resolve</c>: <c>AdminResolves</c>, from <c>Disputed</c> only. The refund is requested at the provider BEFORE the
 /// transaction (no lock across a network call) and recorded inside it by <see cref="RefundCoordinator.Record"/>, which runs in the effects, i.e. before
-/// every <see cref="IBookingTransitionHook"/>: a hook (the fee on the kept amount, T-04.08c) sees <c>payment.RefundedMinor</c> already set.</item>
+/// every <see cref="IAccessTransitionHook"/>: a hook (the fee on the kept amount, T-04.08c) sees <c>payment.RefundedMinor</c> already set.</item>
 /// </list>
 /// The dispute text and the note are never logged. The resolve response is the BookingView without the note (<c>statusReason</c> is cleared).
 /// </summary>
@@ -55,7 +55,7 @@ public sealed class AdminDisputesFeature : IServiceFeature
 
     // ---- list ----
 
-    static async Task<IResult> ListAsync(string? status, string? cursor, int? limit, BookingDbContext db, CancellationToken ct)
+    static async Task<IResult> ListAsync(string? status, string? cursor, int? limit, AccessDbContext db, CancellationToken ct)
     {
         var errors = new Dictionary<string, string[]>();
         var resolved = false;
@@ -101,7 +101,7 @@ public sealed class AdminDisputesFeature : IServiceFeature
 
     // ---- resolve ----
 
-    static async Task<IResult> ResolveAsync(Guid id, ResolveRequest? body, ClaimsPrincipal user, BookingDbContext db, BookingTransitions transitions,
+    static async Task<IResult> ResolveAsync(Guid id, ResolveRequest? body, ClaimsPrincipal user, AccessDbContext db, AccessTransitions transitions,
         RefundCoordinator refunds, PartyNamesLookup names, TimeProvider time, CancellationToken ct)
     {
         var sub = user.FindFirst("sub")?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -149,7 +149,7 @@ public sealed class AdminDisputesFeature : IServiceFeature
             },
         }, ct);
         if (result.ToErrorResult() is { } error) return error;
-        return Results.Ok(BookingViewFeature.ToView(result.Access!, result.Payment, sub, admin: true, names: (await names.ForAsync([result.Access!], ct))[result.Access!.Id]) with { StatusReason = null }); // the note is for the admin list only
+        return Results.Ok(AccessViewFeature.ToView(result.Access!, result.Payment, sub, admin: true, names: (await names.ForAsync([result.Access!], ct))[result.Access!.Id]) with { StatusReason = null }); // the note is for the admin list only
     }
 
     static Dictionary<string, string[]> Validate(ResolveRequest? body, long price)

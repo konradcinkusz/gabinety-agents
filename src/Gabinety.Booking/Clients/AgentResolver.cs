@@ -4,7 +4,7 @@ using System.Collections.Concurrent;
 namespace Gabinety.Booking.Clients;
 
 /// <summary>
-/// The answer of <see cref="PractitionerResolver.ResolveAsync"/>. <see cref="AgentId"/> is the agent the call is about; null with <see cref="Ambiguous"/> false means the user
+/// The answer of <see cref="AgentResolver.ResolveAsync"/>. <see cref="AgentId"/> is the agent the call is about; null with <see cref="Ambiguous"/> false means the user
 /// owns no such agent (not a practitioner, or the named slug is not theirs); <see cref="Ambiguous"/> means they own several and named none.
 /// </summary>
 public readonly record struct AgentResolution([property: JsonPropertyName("practitionerId")] Guid? AgentId, bool Ambiguous);
@@ -14,7 +14,7 @@ public readonly record struct AgentResolution([property: JsonPropertyName("pract
 /// own exactly one; with a slug it must be one of theirs. The account's agent list is cached per user for 60 s; a non-practitioner is not cached, and a slug missing from a cached
 /// list is asked about again at once, because the agent may have been created within the minute.
 /// </summary>
-public sealed class PractitionerResolver(IDirectoryClient directory, TimeProvider time)
+public sealed class AgentResolver(IDirectoryClient directory, TimeProvider time)
 {
     public static readonly TimeSpan Ttl = TimeSpan.FromSeconds(60);
     readonly ConcurrentDictionary<string, (IReadOnlyList<DirectoryAgent> Agents, DateTimeOffset At)> _cache = new();
@@ -37,7 +37,7 @@ public sealed class PractitionerResolver(IDirectoryClient directory, TimeProvide
 
     async Task<IReadOnlyList<DirectoryAgent>> Load(string userId, DateTimeOffset now, CancellationToken ct)
     {
-        var found = await directory.GetPractitionerAgentsAsync(userId, ct);
+        var found = await directory.GetAgentAgentsAsync(userId, ct);
         if (found.Count == 0) _cache.TryRemove(userId, out _); else _cache[userId] = (found, now);
         return found;
     }

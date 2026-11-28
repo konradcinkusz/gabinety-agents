@@ -25,9 +25,9 @@ sealed class FakePairCounts : IPairCountsClient
     public List<(int Min, string? Cursor, int Limit)> Calls { get; } = [];
     public bool Unavailable { get; set; }
 
-    public Task<Page<PairCountDto>> GetAsync(int minBookings, string? cursor, int limit, CancellationToken ct)
+    public Task<Page<PairCountDto>> GetAsync(int minAccesses, string? cursor, int limit, CancellationToken ct)
     {
-        Calls.Add((minBookings, cursor, limit));
+        Calls.Add((minAccesses, cursor, limit));
         if (Unavailable) throw new BookingUnavailableForAnalyticsException();
         var index = cursor is null ? 0 : int.Parse(cursor[1..]);
         return Task.FromResult(Pages[index]);
@@ -102,11 +102,11 @@ sealed class AnalyticsHost : WebApplicationFactory<Program>
 
     protected override void Dispose(bool disposing) { if (disposing) _rsa.Dispose(); base.Dispose(disposing); }
 
-    public static PairCountDto Pair(string client, Guid practitioner, int bookings) => new($"{client}:{practitioner}", client, practitioner, bookings);
+    public static PairCountDto Pair(string client, Guid agent, int accesses) => new($"{client}:{agent}", client, agent, accesses);
 
-    public static Review NewReview(string client, Guid practitioner, int rating, ReviewStatus status = ReviewStatus.Published) => new()
+    public static Review NewReview(string client, Guid agent, int rating, ReviewStatus status = ReviewStatus.Published) => new()
     {
-        Id = Guid.CreateVersion7(), AccessId = Guid.NewGuid(), AgentId = practitioner, ClientUserId = client, Rating = (short)rating,
+        Id = Guid.CreateVersion7(), AccessId = Guid.NewGuid(), AgentId = agent, ClientUserId = client, Rating = (short)rating,
         Text = ReviewText, Status = status, HoldReasons = [], CreatedAt = new DateTimeOffset(2026, 11, 1, 10, 0, 0, TimeSpan.Zero),
         PublishedAt = status == ReviewStatus.Published ? new DateTimeOffset(2026, 11, 1, 10, 0, 0, TimeSpan.Zero) : null,
     };

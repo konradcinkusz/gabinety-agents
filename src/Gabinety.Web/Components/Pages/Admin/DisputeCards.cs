@@ -23,13 +23,13 @@ public static class DisputeRules
     public static async Task<IReadOnlyList<DisputeCard>> LoadAsync(AdminApi api, IReadOnlyList<AdminDisputeDto> disputes, CancellationToken ct = default)
     {
         using var gate = new SemaphoreSlim(ReadParallelism);
-        var bookings = await Task.WhenAll(disputes.Select(async d =>
+        var accesses = await Task.WhenAll(disputes.Select(async d =>
         {
             await gate.WaitAsync(ct);
             try { return await api.Access(d.AccessId, ct); }
             finally { gate.Release(); }
         }));
-        var views = bookings.Select(b => b.IsOk ? b.Value : null).ToList();
+        var views = accesses.Select(b => b.IsOk ? b.Value : null).ToList();
         var missingNames = views.Where(b => b is not null && string.IsNullOrWhiteSpace(b.Agent.DisplayName)).Select(b => b!.Agent.Id);
         var names = await api.PractitionerNames(missingNames, ct: ct);
         return [.. disputes.Select((d, i) => new DisputeCard(d, views[i], views[i] is { } b ? (!string.IsNullOrWhiteSpace(b.Agent.DisplayName) ? b.Agent.DisplayName : names.GetValueOrDefault(b.Agent.Id)) : null))];

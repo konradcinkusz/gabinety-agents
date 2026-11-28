@@ -25,7 +25,7 @@ public class PayoutIntegrationTests : IAsyncLifetime
 
     public async Task DisposeAsync() { await host.DisposeAsync(); await pg.DisposeAsync(); }
 
-    BookingDbContext NewDb() => new(new DbContextOptionsBuilder<BookingDbContext>().UseNpgsql(pg.GetConnectionString()).Options);
+    AccessDbContext NewDb() => new(new DbContextOptionsBuilder<AccessDbContext>().UseNpgsql(pg.GetConnectionString()).Options);
 
     [Fact]
     public async Task Two_payout_jobs_at_once_pay_each_booking_exactly_once_for_every_interleaving()

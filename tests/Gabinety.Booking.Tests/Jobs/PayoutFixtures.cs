@@ -13,7 +13,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
@@ -66,10 +66,10 @@ sealed class PayoutProvider : IPaymentProvider
     }
 }
 
-sealed class ScopedPayoutJob(IServiceScopeFactory scopes, IPaymentProvider provider, TimeProvider time, IConfiguration config, JobMetrics metrics, ILogger<PayoutJob> log, Guid practitioner)
+sealed class ScopedPayoutJob(IServiceScopeFactory scopes, IPaymentProvider provider, TimeProvider time, IConfiguration config, JobMetrics metrics, ILogger<PayoutJob> log, Guid agent)
     : PayoutJob(scopes, provider, time, config, metrics, log)
 {
-    protected override IQueryable<BookingEntity> Scope(IQueryable<BookingEntity> q) => q.Where(b => b.AgentId == practitioner);
+    protected override IQueryable<AccessEntity> Scope(IQueryable<AccessEntity> q) => q.Where(b => b.AgentId == agent);
 }
 
 static class PayJob
@@ -117,9 +117,9 @@ static class PayJob
     public static Task<string> Snapshot(CreateHost h) => h.Query(async db =>
     {
         var ids = await db.Accesses.AsNoTracking().Where(b => b.AgentId == h.Agent).Select(b => b.Id).ToListAsync();
-        var bookings = await db.Accesses.AsNoTracking().Where(b => ids.Contains(b.Id)).OrderBy(b => b.Id).ToListAsync();
+        var accesses = await db.Accesses.AsNoTracking().Where(b => ids.Contains(b.Id)).OrderBy(b => b.Id).ToListAsync();
         var payouts = await db.Payouts.AsNoTracking().Where(p => ids.Contains(p.AccessId)).OrderBy(p => p.Id).ToListAsync();
         var ledger = await db.LedgerEntries.AsNoTracking().Where(l => ids.Contains(l.AccessId)).OrderBy(l => l.Id).ToListAsync();
-        return JsonSerializer.Serialize(new { bookings, payouts, ledger });
+        return JsonSerializer.Serialize(new { bookings = accesses, payouts, ledger });
     });
 }

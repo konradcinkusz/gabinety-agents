@@ -1,7 +1,7 @@
 using System.Net;
 using Gabinety.Booking.Features.Internal.Erasure;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 
 namespace Gabinety.Booking.Tests;
 
@@ -83,11 +83,11 @@ public class ClientEmailSnapshotTests
     public async Task Erasing_the_client_nulls_the_snapshot_and_erasing_the_practitioner_leaves_the_clients()
     {
         using var h = ErasureApiTests.NewHost();
-        var client = ErasureApiTests.NewUser("c"); var practitioner = ErasureApiTests.NewUser("p");
-        var id = await ErasureApiTests.SeedBooking(h, client, practitioner);
+        var client = ErasureApiTests.NewUser("c"); var agent = ErasureApiTests.NewUser("p");
+        var id = await ErasureApiTests.SeedBooking(h, client, agent);
         await h.Seed(db => db.Accesses.Single(b => b.Id == id).ClientEmail = Address);
 
-        Assert.Equal(HttpStatusCode.NoContent, (await ErasureApiTests.Erase(h, practitioner)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await ErasureApiTests.Erase(h, agent)).StatusCode);
         Assert.Equal(Address, (await Row(h, id)).ClientEmail); // the client's own data: a practitioner's erasure does not touch it
 
         Assert.Equal(HttpStatusCode.NoContent, (await ErasureApiTests.Erase(h, client)).StatusCode);
@@ -96,15 +96,15 @@ public class ClientEmailSnapshotTests
         Assert.Equal(ErasureApiTests.Token(client), after.ClientUserId);
     }
 
-    static Task<BookingEntity> Row(CreateHost h, Guid id) => h.Query(db => db.Accesses.AsNoTracking().SingleAsync(b => b.Id == id));
+    static Task<AccessEntity> Row(CreateHost h, Guid id) => h.Query(db => db.Accesses.AsNoTracking().SingleAsync(b => b.Id == id));
 
     [Fact]
     public void The_column_is_a_nullable_254_character_string_named_client_email()
     {
         using var h = new CreateHost();
         using var scope = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.CreateScope(h.Services);
-        var db = (Gabinety.Booking.Persistence.BookingDbContext)scope.ServiceProvider.GetService(typeof(Gabinety.Booking.Persistence.BookingDbContext))!;
-        var p = db.Model.FindEntityType(typeof(BookingEntity))!.FindProperty(nameof(BookingEntity.ClientEmail))!;
+        var db = (Gabinety.Booking.Persistence.AccessDbContext)scope.ServiceProvider.GetService(typeof(Gabinety.Booking.Persistence.AccessDbContext))!;
+        var p = db.Model.FindEntityType(typeof(AccessEntity))!.FindProperty(nameof(AccessEntity.ClientEmail))!;
         Assert.Equal(("client_email", 254, true), (p.GetColumnName(), p.GetMaxLength(), p.IsNullable));
     }
 }
