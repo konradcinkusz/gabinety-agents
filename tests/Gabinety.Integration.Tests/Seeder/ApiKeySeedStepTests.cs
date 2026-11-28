@@ -15,7 +15,7 @@ public class ApiKeySeedStepTests
 
         await step.RunAsync(w.Context, CancellationToken.None);
 
-        var keys = await w.Booking.Db(db => db.ApiKeys.AsNoTracking().ToListAsync());
+        var keys = await w.Access.Db(db => db.ApiKeys.AsNoTracking().ToListAsync());
         var key = Assert.Single(keys);
         Assert.Equal("demo-seed-key", key.Name);
         Assert.Equal(8, key.Prefix.Length);
@@ -29,7 +29,7 @@ public class ApiKeySeedStepTests
         w.Calls.Requests.Clear();
         await step.RunAsync(again, CancellationToken.None);
 
-        Assert.Single(await w.Booking.Db(db => db.ApiKeys.AsNoTracking().ToListAsync()));
+        Assert.Single(await w.Access.Db(db => db.ApiKeys.AsNoTracking().ToListAsync()));
         Assert.DoesNotContain(w.Calls.Requests, r => r.Method == HttpMethod.Post);
         Assert.Contains($"found, prefix {key.Prefix}", w.Log.Text);
     }

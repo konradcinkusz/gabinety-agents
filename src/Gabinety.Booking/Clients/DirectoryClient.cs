@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using System.Net;
 using System.Net.Http.Json;
 using Gabinety.Contracts.Common;
@@ -7,19 +8,19 @@ using Gabinety.ServiceDefaults;
 namespace Gabinety.Booking.Clients;
 
 /// <summary>GET /internal/v1/practitioners/by-user/{userId} (CONTRACTS 3.6).</summary>
-public sealed record DirectoryPractitioner(Guid PractitionerId, PractitionerStatus Status);
+public sealed record DirectoryPractitioner([property: JsonPropertyName("practitionerId")] Guid AgentId, AgentStatus Status);
 
 /// <summary>One row of GET /internal/v1/practitioners/by-user/{userId}/agents (E-04): an agent of a provider account.</summary>
-public sealed record DirectoryAgent(Guid PractitionerId, PractitionerStatus Status, string Slug);
+public sealed record DirectoryAgent([property: JsonPropertyName("practitionerId")] Guid AgentId, AgentStatus Status, string Slug);
 sealed record DirectoryAgents(IReadOnlyList<DirectoryAgent> Items);
 
 /// <summary>GET /internal/v1/offerings/{id} (CONTRACTS 3.6).</summary>
-public sealed record DirectoryOffering(Guid OfferingId, Guid PractitionerId, string PractitionerUserId, PractitionerStatus PractitionerStatus,
+public sealed record DirectoryOffering([property: JsonPropertyName("offeringId")] Guid PackageId, [property: JsonPropertyName("practitionerId")] Guid AgentId, string PractitionerUserId, [property: JsonPropertyName("practitionerStatus")] AgentStatus AgentStatus,
     string Title, int DurationMinutes, MoneyDto Price, string? MeetingUrl, bool IsActive,
-    OfferingKind Kind = OfferingKind.Tasks, int Units = 1, string PractitionerSlug = "");
+    PackageKind Kind = PackageKind.Tasks, int Units = 1, string PractitionerSlug = "");
 
 /// <summary>GET /internal/v1/practitioners/{id}: display name and slug for the booking views (ADR-0012 section 6).</summary>
-public sealed record DirectoryPractitionerName(Guid PractitionerId, string DisplayName, string Slug);
+public sealed record DirectoryPractitionerName([property: JsonPropertyName("practitionerId")] Guid AgentId, string DisplayName, string Slug);
 /// <summary>GET /internal/v1/practitioners/{userId}/contact: the practitioner's e-mail, a snapshot of the token they last used on their profile. Personal data: never logged.</summary>
 public sealed record DirectoryContact(string? Email);
 
@@ -37,7 +38,7 @@ public interface IDirectoryClient
     /// <see cref="GetPractitionerByUserAsync"/> (with no slug), for a double that knows only the older route.
     /// </summary>
     async Task<IReadOnlyList<DirectoryAgent>> GetPractitionerAgentsAsync(string userId, CancellationToken ct) =>
-        await GetPractitionerByUserAsync(userId, ct) is { } one ? [new DirectoryAgent(one.PractitionerId, one.Status, "")] : [];
+        await GetPractitionerByUserAsync(userId, ct) is { } one ? [new DirectoryAgent(one.AgentId, one.Status, "")] : [];
     /// <summary>Null when the practitioner is unknown (404).</summary>
     Task<DirectoryPractitionerName?> GetPractitionerNameAsync(Guid practitionerId, CancellationToken ct);
     /// <summary>The e-mail snapshot of a practitioner's user. Null when Directory answers 404 (unknown user, or no address held yet).</summary>

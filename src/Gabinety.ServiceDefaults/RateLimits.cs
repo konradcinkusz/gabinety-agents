@@ -27,7 +27,7 @@ public readonly record struct RateLimitRule(TimeSpan Window, int Permits);
 /// </summary>
 public static class RateLimitTable
 {
-    public const string Reads = "reads", Bookings = "bookings", Reviews = "reviews", Webhooks = "webhooks", Other = "other";
+    public const string Reads = "reads", Accesses = "bookings", Reviews = "reviews", Webhooks = "webhooks", Other = "other";
     static readonly string[] PublicReadRoots = ["/api/v1/practitioners", "/api/v1/taxonomy", "/api/v1/sitemap", "/api/v1/ranking-rules"];
 
     /// <summary>The group of a request, or <see cref="Webhooks"/> for the unlimited one.</summary>
@@ -38,7 +38,7 @@ public static class RateLimitTable
         if (HttpMethods.IsPost(method))
         {
             var exact = p.TrimEnd('/');
-            if (exact.Equals("/api/v1/bookings", StringComparison.OrdinalIgnoreCase)) return Bookings;
+            if (exact.Equals("/api/v1/bookings", StringComparison.OrdinalIgnoreCase)) return Accesses;
             if (exact.Equals("/api/v1/reviews", StringComparison.OrdinalIgnoreCase)) return Reviews;
         }
         else if (HttpMethods.IsGet(method) && PublicReadRoots.Any(root => IsUnder(p, root))) return Reads;
@@ -55,7 +55,7 @@ public static class RateLimitTable
         return group switch
         {
             Reads => [new(TimeSpan.FromMinutes(1), Scaled(120))],
-            Bookings => [new(TimeSpan.FromMinutes(1), Scaled(10)), new(TimeSpan.FromDays(1), Scaled(30))],
+            Accesses => [new(TimeSpan.FromMinutes(1), Scaled(10)), new(TimeSpan.FromDays(1), Scaled(30))],
             Reviews => [new(TimeSpan.FromHours(1), Scaled(5))],
             _ => [new(TimeSpan.FromMinutes(1), perMinute)],
         };

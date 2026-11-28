@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using System.Net;
 using Gabinety.Contracts.Reputation;
 using Gabinety.Reputation.Features.Internal.Erasure;
@@ -11,7 +12,7 @@ public class ErasureApiTests
     const string User = "demo-erase-user-7";
     static Task<HttpResponseMessage> Erase(InternalHost h, string user = User, string? key = InternalHost.Key) => h.Send(HttpMethod.Delete, $"/internal/v1/subjects/{user}", key);
 
-    sealed record Seeded(Review Mine, Review Held, Review Other, Guid Practitioner);
+    sealed record Seeded(Review Mine, Review Held, Review Other, [property: JsonPropertyName("practitioner")] Guid Agent);
 
     static async Task<Seeded> SeedAll(InternalHost h)
     {
@@ -20,7 +21,7 @@ public class ErasureApiTests
         await h.Seed(db =>
         {
             db.Reviews.AddRange(mine, held, other);
-            db.RatingSummaries.Add(new RatingSummary { PractitionerId = p, Count = 2, Sum = 9, Version = 5, PushedVersion = 5 });
+            db.RatingSummaries.Add(new RatingSummary { AgentId = p, Count = 2, Sum = 9, Version = 5, PushedVersion = 5 });
             db.ModerationEvents.AddRange(
                 InternalHost.NewEvent(mine.Id, ModerationEventKind.Created), InternalHost.NewEvent(mine.Id, ModerationEventKind.Rejected, InternalHost.Note, "demo-admin"),
                 InternalHost.NewEvent(held.Id, ModerationEventKind.Held, "spam"), InternalHost.NewEvent(other.Id, ModerationEventKind.Rejected, InternalHost.Note, "demo-admin"));
@@ -57,7 +58,7 @@ public class ErasureApiTests
         Assert.All(await h.EventsOf(s.Mine.Id), e => Assert.DoesNotContain("NOTATKA", e.Note ?? ""));
         Assert.Equal("spam", (await h.EventsOf(s.Held.Id)).Single().Note); // a reason code is not the user's text
 
-        var sum = (await h.SummaryOf(s.Practitioner))!;
+        var sum = (await h.SummaryOf(s.Agent))!;
         Assert.Equal((2, 9, 5L, 5L), (sum.Count, sum.Sum, sum.Version, sum.PushedVersion)); // the rating still counts; nothing to push
     }
 
@@ -78,12 +79,12 @@ public class ErasureApiTests
         await using var h = InternalHost.Fake();
         var s = await SeedAll(h);
         await Erase(h);
-        var before = await h.Query(db => db.Reviews.AsNoTracking().Where(r => r.PractitionerId == s.Practitioner).OrderBy(r => r.Id).ToListAsync());
+        var before = await h.Query(db => db.Reviews.AsNoTracking().Where(r => r.AgentId == s.Agent).OrderBy(r => r.Id).ToListAsync());
 
         Assert.Equal(HttpStatusCode.NoContent, (await Erase(h)).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await Erase(h, "demo-never-existed")).StatusCode);
 
-        var after = await h.Query(db => db.Reviews.AsNoTracking().Where(r => r.PractitionerId == s.Practitioner).OrderBy(r => r.Id).ToListAsync());
+        var after = await h.Query(db => db.Reviews.AsNoTracking().Where(r => r.AgentId == s.Agent).OrderBy(r => r.Id).ToListAsync());
         Assert.Equal(before.Select(r => (r.Id, r.ClientUserId, r.Text, r.ReplyText, r.ModerationNote, r.Rating)), after.Select(r => (r.Id, r.ClientUserId, r.Text, r.ReplyText, r.ModerationNote, r.Rating)));
     }
 
@@ -93,7 +94,7 @@ public class ErasureApiTests
         await using var h = InternalHost.Fake();
         var s = await SeedAll(h);
         await Erase(h);
-        var body = await (await h.CreateClient().GetAsync($"/api/v1/practitioners/{s.Practitioner}/reviews")).Body();
+        var body = await (await h.CreateClient().GetAsync($"/api/v1/practitioners/{s.Agent}/reviews")).Body();
         var item = body.GetProperty("items").EnumerateArray().Single(i => i.GetProperty("id").GetGuid() == s.Mine.Id);
         Assert.Equal(ErasureFeature.ErasedText, item.GetProperty("text").GetString());
         Assert.Equal(4, item.GetProperty("rating").GetInt32());

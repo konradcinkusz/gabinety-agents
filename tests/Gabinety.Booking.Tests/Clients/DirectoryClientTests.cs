@@ -27,9 +27,9 @@ public class DirectoryClientTests
         };
         var o = await Make(h).GetOfferingAsync(offering, default);
         Assert.NotNull(o);
-        Assert.Equal(practitioner, o.PractitionerId);
+        Assert.Equal(practitioner, o.AgentId);
         Assert.Equal("demo-user-7", o.PractitionerUserId);
-        Assert.Equal(PractitionerStatus.Approved, o.PractitionerStatus);
+        Assert.Equal(AgentStatus.Approved, o.AgentStatus);
         Assert.Equal(60, o.DurationMinutes);
         Assert.Equal(15000, o.Price.AmountMinor);
         Assert.True(o.IsActive);
@@ -56,7 +56,7 @@ public class DirectoryClientTests
                 : new HttpResponseMessage(HttpStatusCode.NotFound),
         };
         var agents = await Make(h).GetPractitionerAgentsAsync("demo-user-7", default);
-        Assert.Equal([(one, "demo-a", PractitionerStatus.Approved), (two, "demo-b", PractitionerStatus.Draft)], agents.Select(a => (a.PractitionerId, a.Slug, a.Status)));
+        Assert.Equal([(one, "demo-a", AgentStatus.Approved), (two, "demo-b", AgentStatus.Draft)], agents.Select(a => (a.AgentId, a.Slug, a.Status)));
         Assert.Empty(await Make(h).GetPractitionerAgentsAsync("demo-nobody", default));
         Assert.Equal(FakeDirectory.Key, h.LastKeyHeader);
     }

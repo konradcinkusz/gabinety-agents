@@ -3,8 +3,8 @@ using System.Text.Json;
 using Gabinety.Booking.Features.Bookings.Create;
 using Gabinety.Booking.Features.Payouts;
 using Gabinety.Contracts.Booking;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -30,7 +30,7 @@ public class PairCountsApiTests
     static async Task<JsonElement> Json(HttpResponseMessage r) => JsonDocument.Parse(await r.Content.ReadAsStringAsync()).RootElement.Clone();
 
     /// <summary>Seeds <paramref name="count"/> bookings of a pair, each with a payment in <paramref name="payment"/> (none when null).</summary>
-    static Task Seed(CreateHost h, string client, Guid practitioner, int count, BookingStatus status = BookingStatus.Completed, PaymentStatus? payment = PaymentStatus.Succeeded) =>
+    static Task Seed(CreateHost h, string client, Guid practitioner, int count, AccessStatus status = AccessStatus.Completed, PaymentStatus? payment = PaymentStatus.Succeeded) =>
         h.Seed(db =>
         {
             for (var i = 0; i < count; i++)
@@ -40,14 +40,14 @@ public class PairCountsApiTests
                 if (payment is { } ps)
                     db.Payments.Add(new Payment
                     {
-                        Id = Guid.NewGuid(), BookingId = id, Provider = "mock", AmountMinor = 12345, Status = ps,
+                        Id = Guid.NewGuid(), AccessId = id, Provider = "mock", AmountMinor = 12345, Status = ps,
                         RefundedMinor = ps == PaymentStatus.Refunded ? 12345 : ps == PaymentStatus.PartiallyRefunded ? 100 : 0,
                         CreatedAt = start, UpdatedAt = start,
                     });
-                db.Bookings.Add(new BookingEntity
+                db.Accesses.Add(new BookingEntity
                 {
-                    Id = id, ClientUserId = client, PractitionerId = practitioner, PractitionerUserId = "demo-practitioner-user",
-                    OfferingId = h.Offering, OfferingTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 12345,
+                    Id = id, ClientUserId = client, AgentId = practitioner, PractitionerUserId = "demo-practitioner-user",
+                    PackageId = h.Package, PackageTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 12345,
                     StartUtc = start, EndUtc = start.AddHours(1), Status = status, BriefText = "demo-brief-SECRET-TEXT",
                     IdempotencyKey = Guid.NewGuid(), CreatedAt = start.AddDays(-2),
                 });
@@ -94,17 +94,17 @@ public class PairCountsApiTests
         var p = Guid.NewGuid();
         var client = $"demo-pc-unpaid-{payment?.ToString() ?? "none"}";
         await Seed(h, client, p, 2);
-        await Seed(h, client, p, 5, BookingStatus.Completed, payment);
+        await Seed(h, client, p, 5, AccessStatus.Completed, payment);
         Assert.Empty(Items(await Json(await Get(h, "?limit=50")), client));
     }
 
     [Theory]
-    [InlineData(PaymentStatus.Succeeded, BookingStatus.Completed)]
-    [InlineData(PaymentStatus.Succeeded, BookingStatus.Confirmed)]
-    [InlineData(PaymentStatus.Succeeded, BookingStatus.LateCancelledByClient)]
-    [InlineData(PaymentStatus.PartiallyRefunded, BookingStatus.Resolved)]
-    [InlineData(PaymentStatus.PartiallyRefunded, BookingStatus.Completed)]
-    public async Task A_booking_with_a_succeeded_or_partially_refunded_payment_counts_whatever_its_status(PaymentStatus payment, BookingStatus status)
+    [InlineData(PaymentStatus.Succeeded, AccessStatus.Completed)]
+    [InlineData(PaymentStatus.Succeeded, AccessStatus.Confirmed)]
+    [InlineData(PaymentStatus.Succeeded, AccessStatus.LateCancelledByClient)]
+    [InlineData(PaymentStatus.PartiallyRefunded, AccessStatus.Resolved)]
+    [InlineData(PaymentStatus.PartiallyRefunded, AccessStatus.Completed)]
+    public async Task A_booking_with_a_succeeded_or_partially_refunded_payment_counts_whatever_its_status(PaymentStatus payment, AccessStatus status)
     {
         using var h = NewHost();
         var p = Guid.NewGuid();
@@ -119,7 +119,7 @@ public class PairCountsApiTests
         using var h = NewHost();
         var p = Guid.NewGuid();
         await Seed(h, "demo-pc-mixedpay", p, 2);
-        await Seed(h, "demo-pc-mixedpay", p, 4, BookingStatus.CancelledByClient, PaymentStatus.Refunded);
+        await Seed(h, "demo-pc-mixedpay", p, 4, AccessStatus.CancelledByClient, PaymentStatus.Refunded);
         Assert.Empty(Items(await Json(await Get(h, "?limit=50")), "demo-pc-mixedpay")); // 2 kept + 4 refunded: two bookings, not six
         await Seed(h, "demo-pc-mixedpay", p, 1);
         Assert.Equal(3, Assert.Single(Items(await Json(await Get(h, "?limit=50")), "demo-pc-mixedpay")).GetProperty("bookings").GetInt32());

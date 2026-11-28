@@ -7,7 +7,7 @@ using Gabinety.Booking.Persistence;
 using Gabinety.Contracts.Common;
 using Gabinety.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
+using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 
 namespace Gabinety.Booking.Features.Lifecycle.Dispute;
 
@@ -36,7 +36,7 @@ public sealed class DisputeFeature : IServiceFeature
     /// so the callers and the kinds of the contract stay as they are. The state table decides which statuses may dispute at all.
     /// </summary>
     public static bool InWindow(BookingEntity b, string kind, DateTimeOffset now) =>
-        b.Status is Gabinety.Billing.BookingStatus.Confirmed or Gabinety.Billing.BookingStatus.Completed && now < b.EndUtc + WindowAfterEnd;
+        b.Status is Gabinety.Billing.AccessStatus.Confirmed or Gabinety.Billing.AccessStatus.Completed && now < b.EndUtc + WindowAfterEnd;
 
     /// <summary>
     /// A disputed booking was money-complete: completion had set <c>fee_minor</c>, <c>payout_minor</c>, <c>payout_due_at</c> and claimed the pair's <c>PlatformFee</c> row. Nothing was paid out
@@ -51,7 +51,7 @@ public sealed class DisputeFeature : IServiceFeature
         var sub = user.FindFirst("sub")?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (sub is null) return Results.Unauthorized();
 
-        var ownerId = await db.Bookings.AsNoTracking().Where(b => b.Id == id).Select(b => b.ClientUserId).SingleOrDefaultAsync(ct);
+        var ownerId = await db.Accesses.AsNoTracking().Where(b => b.Id == id).Select(b => b.ClientUserId).SingleOrDefaultAsync(ct);
         if (ownerId != sub) return PaymentWebhookFeature.Problem(ErrorCodes.NotFound, "Not found", 404); // unknown, or not the client: the same answer
 
         var errors = new Dictionary<string, string[]>();
@@ -62,17 +62,17 @@ public sealed class DisputeFeature : IServiceFeature
         if (errors.Count > 0) return PaymentWebhookFeature.Problem(ErrorCodes.ValidationFailed, "Validation failed", 422, null, errors);
 
         var now = time.GetUtcNow();
-        var result = await transitions.ApplyAsync(new TransitionRequest(id, BookingTrigger.ClientDisputes, now)
+        var result = await transitions.ApplyAsync(new TransitionRequest(id, AccessTrigger.ClientDisputes, now)
         {
             Precondition = b => InWindow(b, kind!, now),
             Effects = c =>
             {
-                c.Booking.DisputeOpenedAt = now;
-                c.Booking.DisputeKind = kind;
-                c.Booking.DisputeText = text;
-                if (c.From == Gabinety.Billing.BookingStatus.Completed) ReopenMoney(c);
+                c.Access.DisputeOpenedAt = now;
+                c.Access.DisputeKind = kind;
+                c.Access.DisputeText = text;
+                if (c.From == Gabinety.Billing.AccessStatus.Completed) ReopenMoney(c);
             },
         }, ct);
-        return result.ToErrorResult() ?? Results.Ok(BookingViewFeature.ToView(result.Booking!, result.Payment, sub, admin: false, names: (await names.ForAsync([result.Booking!], ct))[result.Booking!.Id]));
+        return result.ToErrorResult() ?? Results.Ok(BookingViewFeature.ToView(result.Access!, result.Payment, sub, admin: false, names: (await names.ForAsync([result.Access!], ct))[result.Access!.Id]));
     }
 }

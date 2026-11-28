@@ -9,7 +9,7 @@ namespace Gabinety.Directory.Features.Search;
 /// <summary>One active offering must satisfy every given filter at once (CONTRACTS 3.2).</summary>
 public sealed record OfferingFilter(string? Problem, string? Tech, int? Duration, long? MaxPriceMinor)
 {
-    public IQueryable<Offering> Apply(IQueryable<Offering> offerings)
+    public IQueryable<Package> Apply(IQueryable<Package> offerings)
     {
         var q = offerings.Where(o => o.IsActive);
         if (Problem is { } p) q = q.Where(o => o.ProblemSlug == p);
@@ -20,7 +20,7 @@ public sealed record OfferingFilter(string? Problem, string? Tech, int? Duration
     }
 
     /// <summary>The same rule in memory, for the page's already loaded offerings (fromPrice).</summary>
-    public bool Matches(Offering o) => o.IsActive && (Problem is null || o.ProblemSlug == Problem) && (Tech is null || o.TechSlugs.Contains(Tech))
+    public bool Matches(Package o) => o.IsActive && (Problem is null || o.ProblemSlug == Problem) && (Tech is null || o.TechSlugs.Contains(Tech))
         && (Duration is null || o.DurationMinutes == Duration) && (MaxPriceMinor is null || o.PriceMinor <= MaxPriceMinor);
 }
 

@@ -30,13 +30,13 @@ sealed class FakeDirectory : HttpMessageHandler
     public const string Key = "k-test-DO-NOT-LEAK-1234";
     public const string BaseUrl = "http://directory.demo.invalid";
 
-    public readonly Dictionary<string, Guid> Practitioners = new();
+    public readonly Dictionary<string, Guid> Agents = new();
     public Func<HttpRequestMessage, int, HttpResponseMessage>? Override; // (request, call number from 1)
     public bool Down;
     public int Calls, ByUserCalls;
     public string? LastKeyHeader;
 
-    public Guid Add(string userId) => Practitioners[userId] = Guid.NewGuid();
+    public Guid Add(string userId) => Agents[userId] = Guid.NewGuid();
 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage r, CancellationToken ct)
     {
@@ -52,9 +52,9 @@ sealed class FakeDirectory : HttpMessageHandler
             Interlocked.Increment(ref ByUserCalls);
             var rest = path[byUser.Length..];
             if (rest.EndsWith("/agents")) // E-04: every agent of the account; this double knows one per user
-                return Task.FromResult(Json(new { items = Practitioners.TryGetValue(Uri.UnescapeDataString(rest[..^"/agents".Length]), out var one)
+                return Task.FromResult(Json(new { items = Agents.TryGetValue(Uri.UnescapeDataString(rest[..^"/agents".Length]), out var one)
                     ? new[] { new { practitionerId = one, status = "Draft", slug = "demo-" + one.ToString("n")[..8] } } : [] }));
-            return Task.FromResult(Practitioners.TryGetValue(Uri.UnescapeDataString(rest), out var id)
+            return Task.FromResult(Agents.TryGetValue(Uri.UnescapeDataString(rest), out var id)
                 ? Json(new { practitionerId = id, status = "Draft" })
                 : new HttpResponseMessage(HttpStatusCode.NotFound));
         }

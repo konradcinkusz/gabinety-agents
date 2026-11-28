@@ -62,7 +62,7 @@ public class OfferingIntegrationTests
     {
         var (pg, f) = await Start();
         await using var _ = pg; using var __ = f;
-        var c = await Practitioner(f);
+        var c = await Agent(f);
         await Created(c, Valid(title: "Dotnet review", problem: "code-review", techs: ["dotnet", "csharp"]));
         await Created(c, Valid(title: "Python review", problem: "code-review", techs: ["python"]));
         await Created(c, Valid(title: "Dotnet audyt", problem: "audyt-kodu", techs: ["dotnet"]));
@@ -82,7 +82,7 @@ public class OfferingIntegrationTests
         var (pg, f) = await Start();
         await using var _ = pg; using var __ = f;
         var sub = Id();
-        var owner = await Practitioner(f, sub);
+        var owner = await Agent(f, sub);
         var clients = Enumerable.Range(0, 6).Select(_ => f.ClientFor(sub)).ToList();
 
         using var gate = new ManualResetEventSlim(false);

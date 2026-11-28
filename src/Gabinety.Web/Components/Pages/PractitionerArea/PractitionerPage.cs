@@ -13,7 +13,7 @@ namespace Gabinety.Web.Components.Pages.PractitionerArea;
 /// </summary>
 public abstract class PractitionerPage : ComponentBase
 {
-    [Inject] protected PractitionerClient Practitioner { get; set; } = default!;
+    [Inject] protected PractitionerClient Agent { get; set; } = default!;
     [Inject] protected NavigationManager Navigation { get; set; } = default!;
     [CascadingParameter] protected HttpContext HttpContext { get; set; } = default!;
 
@@ -27,7 +27,7 @@ public abstract class PractitionerPage : ComponentBase
     public string? AgentSlug
     {
         get => _agent;
-        set { _agent = string.IsNullOrWhiteSpace(value) ? null : value.Trim(); Practitioner.Agent = _agent; }
+        set { _agent = string.IsNullOrWhiteSpace(value) ? null : value.Trim(); Agent.Agent = _agent; }
     }
 
     /// <summary>True when the account has several agents and this page was opened without saying which (set by <see cref="LoadProfileAsync"/>).</summary>
@@ -63,7 +63,7 @@ public abstract class PractitionerPage : ComponentBase
     /// </summary>
     protected async Task<bool> LoadProfileAsync(bool missingIsState = false)
     {
-        var r = await Practitioner.ProfileAsync();
+        var r = await Agent.ProfileAsync();
         if (r.IsOk) { Profile = r.Value; NoProfile = false; return true; }
         switch (r.Failure!)
         {

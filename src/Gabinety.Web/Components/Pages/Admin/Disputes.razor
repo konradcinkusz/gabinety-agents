@@ -27,7 +27,7 @@
             @foreach (var card in _cards)
             {
                 var d = card.Dispute;
-                var b = card.Booking;
+                var b = card.Access;
                 <li class="card" data-testid="dispute">
                     <div class="admin-row__head">
                         <h2 class="admin-row__title">@AdminFormat.DisputeKind(d.Kind)</h2>
@@ -35,10 +35,10 @@
                         else {<AdminBadge Kind="BadgeKind.Neutral">@PlAdmin.Disputes.Resolved</AdminBadge>}
                     </div>
                     <dl class="admin-facts">
-                        <dt>@PlAdmin.Disputes.Offer</dt><dd>@(b?.OfferingTitle ?? PlAdmin.Disputes.BookingUnreadable)</dd>
+                        <dt>@PlAdmin.Disputes.Offer</dt><dd>@(b?.PackageTitle ?? PlAdmin.Disputes.BookingUnreadable)</dd>
                         <dt>@PlAdmin.Disputes.Client</dt><dd><span title="@d.ClientUserId">@string.Format(PlAdmin.Common.ClientRef, AdminFormat.ShortRef(d.ClientUserId))</span></dd>
-                        <dt>@PlAdmin.Disputes.Practitioner</dt>
-                        <dd><span title="@d.PractitionerUserId">@(card.PractitionerName ?? string.Format(PlAdmin.Common.PractitionerRef, AdminFormat.ShortRef(d.PractitionerUserId)))</span></dd>
+                        <dt>@PlAdmin.Disputes.Agent</dt>
+                        <dd><span title="@d.PractitionerUserId">@(card.PractitionerName ?? string.Format(PlAdmin.Common.AgentRef, AdminFormat.ShortRef(d.PractitionerUserId)))</span></dd>
                         @if (b is not null)
                         {
                             <dt>@PlAdmin.Disputes.Price</dt><dd class="num">@AdminFormat.Pln(b.Price.AmountMinor)</dd>
@@ -53,7 +53,7 @@
                                 @if (b.Payment.Refunded.AmountMinor > 0) {<span class="num"> @string.Format(PlAdmin.Disputes.Refunded, AdminFormat.Pln(b.Payment.Refunded.AmountMinor))</span>}
                             </dd>
                         }
-                        <dt>@PlAdmin.Disputes.Booking</dt><dd><span class="admin-ref">@d.BookingId</span></dd>
+                        <dt>@PlAdmin.Disputes.Access</dt><dd><span class="admin-ref">@d.AccessId</span></dd>
                         @if (d.OpenedAt is { } opened) {<dt>@PlAdmin.Disputes.Opened</dt><dd><time datetime="@opened.ToString("O")">@AdminFormat.When(opened)</time></dd>}
                         @if (_status == DisputeRules.Resolved && d.ResolvedAt is { } resolvedAt) {<dt>@PlAdmin.Disputes.ResolvedAt</dt><dd><time datetime="@resolvedAt.ToString("O")">@AdminFormat.When(resolvedAt)</time></dd>}
                         @if (_status == DisputeRules.Resolved && !string.IsNullOrEmpty(d.Resolution)) {<dt>@PlAdmin.Disputes.Outcome</dt><dd>@AdminFormat.Resolution(d.Resolution)</dd>}

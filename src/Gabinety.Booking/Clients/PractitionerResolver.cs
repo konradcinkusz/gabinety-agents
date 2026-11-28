@@ -1,12 +1,13 @@
+using System.Text.Json.Serialization;
 using System.Collections.Concurrent;
 
 namespace Gabinety.Booking.Clients;
 
 /// <summary>
-/// The answer of <see cref="PractitionerResolver.ResolveAsync"/>. <see cref="PractitionerId"/> is the agent the call is about; null with <see cref="Ambiguous"/> false means the user
+/// The answer of <see cref="PractitionerResolver.ResolveAsync"/>. <see cref="AgentId"/> is the agent the call is about; null with <see cref="Ambiguous"/> false means the user
 /// owns no such agent (not a practitioner, or the named slug is not theirs); <see cref="Ambiguous"/> means they own several and named none.
 /// </summary>
-public readonly record struct AgentResolution(Guid? PractitionerId, bool Ambiguous);
+public readonly record struct AgentResolution([property: JsonPropertyName("practitionerId")] Guid? AgentId, bool Ambiguous);
 
 /// <summary>
 /// Maps the token's user id (and optionally an agent slug) to the practitioner id through Directory. One provider account may own several agents (E-04): without a slug the user must
@@ -29,7 +30,7 @@ public sealed class PractitionerResolver(IDirectoryClient directory, TimeProvide
         var cached = _cache.TryGetValue(userId, out var hit) && now - hit.At < Ttl;
         var agents = cached ? hit.Agents : await Load(userId, now, ct);
         var result = Pick(agents, slug);
-        if (result.PractitionerId is null && !result.Ambiguous && cached && slug is not null)
+        if (result.AgentId is null && !result.Ambiguous && cached && slug is not null)
             result = Pick(await Load(userId, now, ct), slug); // a new agent of this account is not in the cached list yet
         return result;
     }
@@ -43,7 +44,7 @@ public sealed class PractitionerResolver(IDirectoryClient directory, TimeProvide
 
     static AgentResolution Pick(IReadOnlyList<DirectoryAgent> agents, string? slug)
     {
-        if (slug is not null) return new(agents.FirstOrDefault(a => a.Slug == slug)?.PractitionerId, false);
-        return agents.Count switch { 0 => new(null, false), 1 => new(agents[0].PractitionerId, false), _ => new(null, true) };
+        if (slug is not null) return new(agents.FirstOrDefault(a => a.Slug == slug)?.AgentId, false);
+        return agents.Count switch { 0 => new(null, false), 1 => new(agents[0].AgentId, false), _ => new(null, true) };
     }
 }

@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Testcontainers.PostgreSql;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -61,9 +61,9 @@ public class PaymentWebhookIntegrationTests : IAsyncLifetime
             var outcomes = (await Task.WhenAll(rs.Select(Outcome))).Order().ToArray();
             Assert.True(outcomes.SequenceEqual(["Applied", "Duplicate"]), $"round {round}: {string.Join(",", outcomes)}");
             await using var db = Db();
-            Assert.Equal(1, await db.LedgerEntries.CountAsync(l => l.BookingId == id));
+            Assert.Equal(1, await db.LedgerEntries.CountAsync(l => l.AccessId == id));
             Assert.Equal(1, await db.WebhookEvents.CountAsync(x => x.EventId == $"evt_race_{round}"));
-            Assert.Equal(BookingStatus.Confirmed, (await db.Bookings.SingleAsync(b => b.Id == id)).Status);
+            Assert.Equal(AccessStatus.Confirmed, (await db.Accesses.SingleAsync(b => b.Id == id)).Status);
         }
     }
 
@@ -80,10 +80,10 @@ public class PaymentWebhookIntegrationTests : IAsyncLifetime
             var outcomes = (await Task.WhenAll(rs.Select(Outcome))).Order().ToArray();
             Assert.True(outcomes.SequenceEqual(["Applied", "Ignored"]), $"round {round}: {string.Join(",", outcomes)}");
             await using var db = Db();
-            var booking = await db.Bookings.SingleAsync(b => b.Id == id);
-            var charges = await db.LedgerEntries.CountAsync(l => l.BookingId == id && l.Kind == LedgerKind.ClientCharge);
-            Assert.Equal(booking.Status == BookingStatus.Confirmed ? 1 : 0, charges);
-            Assert.Contains(booking.Status, new[] { BookingStatus.Confirmed, BookingStatus.Expired });
+            var booking = await db.Accesses.SingleAsync(b => b.Id == id);
+            var charges = await db.LedgerEntries.CountAsync(l => l.AccessId == id && l.Kind == LedgerKind.ClientCharge);
+            Assert.Equal(booking.Status == AccessStatus.Confirmed ? 1 : 0, charges);
+            Assert.Contains(booking.Status, new[] { AccessStatus.Confirmed, AccessStatus.Expired });
         }
     }
 
@@ -95,9 +95,9 @@ public class PaymentWebhookIntegrationTests : IAsyncLifetime
         var body = Pay.EventJson("evt_late_1", "PaymentSucceeded", pid);
         Assert.Equal("Applied", await Outcome(await Pay.Webhook(host.ClientFor(null), body, Pay.Sign(body))));
         await using var db = Db();
-        Assert.Equal(BookingStatus.Expired, (await db.Bookings.SingleAsync(b => b.Id == id)).Status);
-        Assert.Equal([LedgerKind.ClientCharge, LedgerKind.Refund], (await db.LedgerEntries.Where(l => l.BookingId == id).ToListAsync()).Select(l => l.Kind).Order().ToArray());
-        var payment = await db.Payments.SingleAsync(p => p.BookingId == id);
+        Assert.Equal(AccessStatus.Expired, (await db.Accesses.SingleAsync(b => b.Id == id)).Status);
+        Assert.Equal([LedgerKind.ClientCharge, LedgerKind.Refund], (await db.LedgerEntries.Where(l => l.AccessId == id).ToListAsync()).Select(l => l.Kind).Order().ToArray());
+        var payment = await db.Payments.SingleAsync(p => p.AccessId == id);
         Assert.Equal((PaymentStatus.Refunded, 10000L), (payment.Status, payment.RefundedMinor));
     }
 
@@ -136,5 +136,5 @@ public class PaymentWebhookIntegrationTests : IAsyncLifetime
     }
 
     static void LedgerEntryOf(BookingDbContext db, LedgerKind kind, string? pair) =>
-        db.LedgerEntries.Add(new() { Id = Guid.NewGuid(), BookingId = Guid.NewGuid(), Kind = kind, AmountMinor = 1, PairKey = pair, CreatedAt = DateTimeOffset.UnixEpoch });
+        db.LedgerEntries.Add(new() { Id = Guid.NewGuid(), AccessId = Guid.NewGuid(), Kind = kind, AmountMinor = 1, PairKey = pair, CreatedAt = DateTimeOffset.UnixEpoch });
 }

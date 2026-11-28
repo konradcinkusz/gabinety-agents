@@ -13,7 +13,7 @@ public static class BookFlowText
 
     public static class Summary
     {
-        public const string Title = "Podsumowanie", Offering = "Pakiet", Practitioner = "Agent", Units = "Zawartość", Validity = "Ważność", Price = "Do zapłaty";
+        public const string Title = "Podsumowanie", Package = "Pakiet", Agent = "Agent", Units = "Zawartość", Validity = "Ważność", Price = "Do zapłaty";
         public const string ValidFor = "{0} dni od zakupu", ValidUntil = "do {0}";
         public const string Hold = "Zakup jest wstrzymany na 10 minut od kliknięcia „Zapłać”.";
         /// <summary>The refund rule in one line, before the money is spent: it is the lifecycle rule of docs/agentic/PLAN.md 2.5, applied by the Booking service.</summary>

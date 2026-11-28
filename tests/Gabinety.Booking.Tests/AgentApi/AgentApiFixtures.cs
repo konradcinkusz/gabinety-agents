@@ -4,7 +4,7 @@ using Gabinety.Contracts.Directory;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
+using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 
 namespace Gabinety.Booking.Tests;
 
@@ -16,15 +16,15 @@ static class AgentApiFx
     public static string NewUser() => "demo-api-" + Guid.NewGuid().ToString("N");
 
     /// <summary>The in-memory database is shared by every host of a run: each test uses its own user, and a fresh slug when it counts rows per agent.</summary>
-    public static async Task<Guid> Package(CreateHost h, string client, string slug = Slug, OfferingKind kind = OfferingKind.Chat, long total = 100_000, long used = 0,
-        BookingStatus status = BookingStatus.Confirmed, TimeSpan? validFor = null, TimeSpan? created = null, Guid? offering = null)
+    public static async Task<Guid> Package(CreateHost h, string client, string slug = Slug, PackageKind kind = PackageKind.Chat, long total = 100_000, long used = 0,
+        AccessStatus status = AccessStatus.Confirmed, TimeSpan? validFor = null, TimeSpan? created = null, Guid? offering = null)
     {
         var id = Guid.NewGuid();
         var now = h.Clock.GetUtcNow();
-        await h.Seed(db => db.Bookings.Add(new BookingEntity
+        await h.Seed(db => db.Accesses.Add(new BookingEntity
         {
-            Id = id, ClientUserId = client, PractitionerId = h.Practitioner, PractitionerUserId = h.OwnerUserId, OfferingId = offering ?? h.Offering,
-            OfferingTitle = "demo-package", DurationMinutes = 30, PriceMinor = 9900, StartUtc = now, EndUtc = now + (validFor ?? TimeSpan.FromDays(30)),
+            Id = id, ClientUserId = client, AgentId = h.Agent, PractitionerUserId = h.OwnerUserId, PackageId = offering ?? h.Package,
+            PackageTitle = "demo-package", DurationMinutes = 30, PriceMinor = 9900, StartUtc = now, EndUtc = now + (validFor ?? TimeSpan.FromDays(30)),
             Kind = kind, UnitsTotal = total, UnitsUsed = used, PractitionerSlug = slug, Status = status, BriefText = "demo-brief: a first review of my plan",
             IdempotencyKey = Guid.NewGuid(), CreatedAt = now + (created ?? TimeSpan.Zero), ConfirmedAt = now,
         }));

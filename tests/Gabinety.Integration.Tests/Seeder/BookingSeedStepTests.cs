@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.Json;
 using Gabinety.DemoSeeder;
 using Microsoft.EntityFrameworkCore;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Integration.Tests.Seeder;
 
@@ -22,7 +22,7 @@ public sealed class BookingSeedFixture : IAsyncLifetime
     public async Task InitializeAsync()
     {
         await World.SeedDirectoryAsync();
-        _job = new BookingJobDriver(World.Booking);
+        _job = new BookingJobDriver(World.Access);
         await BookingWorld.Step().RunAsync(World.Context, CancellationToken.None);
     }
 
@@ -67,7 +67,7 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
     public void The_step_asks_for_no_availability_no_slot_and_no_clock_move()
     {
         Assert.DoesNotContain(_w.Calls.Requests, r => r.Path.Contains("/availability") || r.Path.Contains("/slots") || r.Path == "/internal/v1/test/clock");
-        Assert.Equal(0, _w.Booking.ClockOffsetMinutes);
+        Assert.Equal(0, _w.Access.ClockOffsetMinutes);
     }
 
     [Fact]
@@ -86,16 +86,16 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
     [Fact]
     public async Task Used_task_packages_have_exactly_that_many_tasks_the_fake_platform_answered_and_a_usage_record_each()
     {
-        var rows = await _w.Booking.Bookings();
-        await _w.Booking.Db(async db =>
+        var rows = await _w.Access.Accesses();
+        await _w.Access.Db(async db =>
         {
             var tasks = await db.AgentTasks.AsNoTracking().ToListAsync();
             var usage = await db.UsageRecords.AsNoTracking().ToListAsync();
             foreach (var b in rows.Where(b => b.UnitsUsed > 0))
             {
-                Assert.Equal(b.UnitsUsed, tasks.Count(t => t.BookingId == b.Id));
-                Assert.All(tasks.Where(t => t.BookingId == b.Id), t => { Assert.Equal("Succeeded", t.Status.ToString()); Assert.False(string.IsNullOrEmpty(t.OutputText)); });
-                Assert.Equal(b.UnitsUsed, usage.Count(u => u.BookingId == b.Id));
+                Assert.Equal(b.UnitsUsed, tasks.Count(t => t.AccessId == b.Id));
+                Assert.All(tasks.Where(t => t.AccessId == b.Id), t => { Assert.Equal("Succeeded", t.Status.ToString()); Assert.False(string.IsNullOrEmpty(t.OutputText)); });
+                Assert.Equal(b.UnitsUsed, usage.Count(u => u.AccessId == b.Id));
             }
             Assert.Equal(rows.Sum(b => b.UnitsUsed), tasks.Count);
             return 0;
@@ -116,7 +116,7 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
     [Fact]
     public async Task Every_booking_carries_a_demo_key_and_an_idempotency_key_derived_from_it()
     {
-        var rows = await _w.Booking.Bookings();
+        var rows = await _w.Access.Accesses();
         Assert.Equal(ExpectedPerStatus.Values.Sum(), rows.Count);
         foreach (var b in rows)
         {
@@ -134,10 +134,10 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
     [Fact]
     public async Task Completed_bookings_are_reviewable_by_Bookings_internal_endpoint_and_the_others_in_the_review_path_are_not()
     {
-        using var http = _w.Booking.CreateClient();
+        using var http = _w.Access.CreateClient();
         http.DefaultRequestHeaders.Add("X-Internal-Key", BookingHost.Key);
-        var rows = await _w.Booking.Bookings();
-        var completed = rows.Where(b => b.Status == BookingStatus.Completed).ToList();
+        var rows = await _w.Access.Accesses();
+        var completed = rows.Where(b => b.Status == AccessStatus.Completed).ToList();
         Assert.Equal(3, completed.Count); // the last unit of a single-task package was used, and the real auto-complete job completed it
         foreach (var b in completed)
         {
@@ -145,8 +145,8 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
             Assert.True(r.GetProperty("reviewable").GetBoolean(), $"{Regex(b.BriefText)} is not reviewable");
         }
         // three different practitioners, so Reputation can seed reviews for more than one of them
-        Assert.True(completed.Select(b => b.PractitionerId).Distinct().Count() >= 3);
-        var notDone = rows.First(b => b.Status == BookingStatus.PendingPayment);
+        Assert.True(completed.Select(b => b.AgentId).Distinct().Count() >= 3);
+        var notDone = rows.First(b => b.Status == AccessStatus.PendingPayment);
         Assert.False((await http.GetFromJsonAsync<JsonElement>($"/internal/v1/bookings/{notDone.Id}/reviewability")).GetProperty("reviewable").GetBoolean());
     }
 
@@ -157,7 +157,7 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
         var disputable = mine.Where(b => b.GetProperty("status").GetString() == "Completed" && b.GetProperty("canDispute").GetBoolean()).ToList();
         Assert.NotEmpty(disputable);
         foreach (var b in disputable) // "inside the window" is measured against the service clock, not this machine's
-            Assert.True(_w.Booking.Now < b.GetProperty("endUtc").GetDateTimeOffset() + TimeSpan.FromHours(72)); // A-03: a claim is open until the end of the package + 72 h
+            Assert.True(_w.Access.Now < b.GetProperty("endUtc").GetDateTimeOffset() + TimeSpan.FromHours(72)); // A-03: a claim is open until the end of the package + 72 h
     }
 
     [Fact]
@@ -165,15 +165,15 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
     {
         var all = await _w.AllClientBookings();
         var pending = all.Single(b => b.GetProperty("status").GetString() == "PendingPayment");
-        Assert.True(pending.GetProperty("holdExpiresAt").GetDateTimeOffset() > _w.Booking.Now);
+        Assert.True(pending.GetProperty("holdExpiresAt").GetDateTimeOffset() > _w.Access.Now);
     }
 
     [Fact]
     public async Task Dispute_and_resolution_leave_a_Disputed_and_a_Resolved_booking_with_a_release_decision()
     {
-        var rows = await _w.Booking.Bookings();
-        Assert.Equal("release", rows.Single(b => b.Status == BookingStatus.Resolved).DisputeResolution);
-        Assert.NotNull(rows.Single(b => b.Status == BookingStatus.Disputed).DisputeOpenedAt);
+        var rows = await _w.Access.Accesses();
+        Assert.Equal("release", rows.Single(b => b.Status == AccessStatus.Resolved).DisputeResolution);
+        Assert.NotNull(rows.Single(b => b.Status == AccessStatus.Disputed).DisputeOpenedAt);
     }
 
     [Fact]
@@ -202,9 +202,9 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
         Assert.True(writes.Count == 0, "a second run wrote: " + string.Join(", ", writes.Select(w => $"{w.Method} {w.Path}")));
     }
 
-    async Task<string> Snapshot() => await _w.Booking.Db(async db => JsonSerializer.Serialize(new
+    async Task<string> Snapshot() => await _w.Access.Db(async db => JsonSerializer.Serialize(new
     {
-        B = await db.Bookings.AsNoTracking().OrderBy(b => b.Id).ToListAsync(),
+        B = await db.Accesses.AsNoTracking().OrderBy(b => b.Id).ToListAsync(),
         P = await db.Payments.AsNoTracking().OrderBy(p => p.Id).ToListAsync(),
         L = await db.LedgerEntries.AsNoTracking().OrderBy(l => l.Id).ToListAsync(),
         T = await db.AgentTasks.AsNoTracking().OrderBy(t => t.Id).ToListAsync(),
@@ -229,7 +229,7 @@ public class BookingSeedStepFailureTests
     {
         await using var w = new BookingWorld();
         await w.SeedDirectoryAsync();
-        await using var job = new BookingJobDriver(w.Booking);
+        await using var job = new BookingJobDriver(w.Access);
         w.Calls.FailWhen = r => r.RequestUri!.AbsolutePath.EndsWith("/dispute");
 
         await Assert.ThrowsAnyAsync<Exception>(() => BookingWorld.Step().RunAsync(w.Context, CancellationToken.None));
@@ -242,7 +242,7 @@ public class BookingSeedStepFailureTests
         Assert.Equal(11, counts.Values.Sum());
         Assert.Equal(1, counts["Disputed"]);
         Assert.Equal(1, counts["Resolved"]);
-        Assert.Equal(6, await w.Booking.Db(db => db.AgentTasks.CountAsync())); // one task per used package (confirmed-2, three completed, disputed, resolved), none ordered twice
+        Assert.Equal(6, await w.Access.Db(db => db.AgentTasks.CountAsync())); // one task per used package (confirmed-2, three completed, disputed, resolved), none ordered twice
     }
 
     [Fact]
@@ -267,19 +267,19 @@ public class BookingSeedStepFailureTests
     {
         await using var w = new BookingWorld();
         await w.SeedDirectoryAsync();
-        await w.Booking.Db(async db =>
+        await w.Access.Db(async db =>
         {
-            db.Bookings.Add(new()
+            db.Accesses.Add(new()
             {
-                Id = Guid.NewGuid(), ClientUserId = "demo-reset-client", PractitionerId = Guid.NewGuid(), PractitionerUserId = "someone-else", OfferingId = Guid.NewGuid(),
-                OfferingTitle = "demo", DurationMinutes = 60, PriceMinor = 10000, StartUtc = DateTimeOffset.UtcNow.AddDays(3), EndUtc = DateTimeOffset.UtcNow.AddDays(3).AddHours(1),
-                Status = BookingStatus.Confirmed, BriefText = "demo", IdempotencyKey = Guid.NewGuid(), CreatedAt = DateTimeOffset.UtcNow,
+                Id = Guid.NewGuid(), ClientUserId = "demo-reset-client", AgentId = Guid.NewGuid(), PractitionerUserId = "someone-else", PackageId = Guid.NewGuid(),
+                PackageTitle = "demo", DurationMinutes = 60, PriceMinor = 10000, StartUtc = DateTimeOffset.UtcNow.AddDays(3), EndUtc = DateTimeOffset.UtcNow.AddDays(3).AddHours(1),
+                Status = AccessStatus.Confirmed, BriefText = "demo", IdempotencyKey = Guid.NewGuid(), CreatedAt = DateTimeOffset.UtcNow,
             });
-            db.Bookings.Add(new()
+            db.Accesses.Add(new()
             {
-                Id = Guid.NewGuid(), ClientUserId = "real-client", PractitionerId = Guid.NewGuid(), PractitionerUserId = "real-practitioner", OfferingId = Guid.NewGuid(),
-                OfferingTitle = "real", DurationMinutes = 60, PriceMinor = 10000, StartUtc = DateTimeOffset.UtcNow.AddDays(4), EndUtc = DateTimeOffset.UtcNow.AddDays(4).AddHours(1),
-                Status = BookingStatus.Confirmed, BriefText = "real", IdempotencyKey = Guid.NewGuid(), CreatedAt = DateTimeOffset.UtcNow,
+                Id = Guid.NewGuid(), ClientUserId = "real-client", AgentId = Guid.NewGuid(), PractitionerUserId = "real-practitioner", PackageId = Guid.NewGuid(),
+                PackageTitle = "real", DurationMinutes = 60, PriceMinor = 10000, StartUtc = DateTimeOffset.UtcNow.AddDays(4), EndUtc = DateTimeOffset.UtcNow.AddDays(4).AddHours(1),
+                Status = AccessStatus.Confirmed, BriefText = "real", IdempotencyKey = Guid.NewGuid(), CreatedAt = DateTimeOffset.UtcNow,
             });
             await db.SaveChangesAsync();
             return 0;
@@ -288,7 +288,7 @@ public class BookingSeedStepFailureTests
         var removed = await new BookingSeedStep().ResetAsync(w.Context, CancellationToken.None);
 
         Assert.Equal(1, removed);
-        Assert.Equal(["real-client"], (await w.Booking.Bookings()).Select(b => b.ClientUserId));
+        Assert.Equal(["real-client"], (await w.Access.Accesses()).Select(b => b.ClientUserId));
     }
 
     [Fact]

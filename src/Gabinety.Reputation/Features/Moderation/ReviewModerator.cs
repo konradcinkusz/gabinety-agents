@@ -22,7 +22,7 @@ public static class ReviewModerator
     public static bool Allowed(ReviewStatus from, ModerationAction action) =>
         action == ModerationAction.Publish ? from == ReviewStatus.Held : from is ReviewStatus.Held or ReviewStatus.Published;
 
-    public static async Task<(ModerationOutcome Outcome, Guid PractitionerId, ReviewStatus Status)> ApplyAsync(ReputationDbContext db, Guid reviewId,
+    public static async Task<(ModerationOutcome Outcome, Guid AgentId, ReviewStatus Status)> ApplyAsync(ReputationDbContext db, Guid reviewId,
         ModerationAction action, string actor, string? note, DateTimeOffset now, CancellationToken ct)
     {
         var target = action == ModerationAction.Publish ? ReviewStatus.Published : ReviewStatus.Rejected;
@@ -34,27 +34,27 @@ public static class ReviewModerator
             {
                 var review = await db.Reviews.SingleOrDefaultAsync(x => x.Id == reviewId, ct);
                 if (review is null) return (ModerationOutcome.NotFound, default, default);
-                if (!Allowed(review.Status, action)) return (ModerationOutcome.InvalidTransition, review.PractitionerId, review.Status);
+                if (!Allowed(review.Status, action)) return (ModerationOutcome.InvalidTransition, review.AgentId, review.Status);
                 var from = review.Status;
                 review.Status = target; review.ModeratedBy = actor; review.ModerationNote = note;
                 if (action == ModerationAction.Publish) review.PublishedAt = now;
                 db.ModerationEvents.Add(Event(reviewId, action, actor, note, now));
                 await db.SaveChangesAsync(ct);
-                await ApplySummaryAsync(db, review.PractitionerId, review.Rating, from, target, ct);
-                return (ModerationOutcome.Done, review.PractitionerId, target);
+                await ApplySummaryAsync(db, review.AgentId, review.Rating, from, target, ct);
+                return (ModerationOutcome.Done, review.AgentId, target);
             }
             finally { RatingSummaryStore.InMemoryGate.Release(); }
         }
 
-        var result = (Outcome: ModerationOutcome.NotFound, PractitionerId: Guid.Empty, Status: default(ReviewStatus));
+        var result = (Outcome: ModerationOutcome.NotFound, AgentId: Guid.Empty, Status: default(ReviewStatus));
         await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
             db.ChangeTracker.Clear(); // a retry starts from the database
             await using var tx = await db.Database.BeginTransactionAsync(ct);
             var row = await db.Reviews.AsNoTracking().Where(x => x.Id == reviewId)
-                .Select(x => new { x.PractitionerId, x.Rating, x.Status }).SingleOrDefaultAsync(ct);
+                .Select(x => new { x.AgentId, x.Rating, x.Status }).SingleOrDefaultAsync(ct);
             if (row is null) { result = (ModerationOutcome.NotFound, default, default); return; }
-            if (!Allowed(row.Status, action)) { result = (ModerationOutcome.InvalidTransition, row.PractitionerId, row.Status); return; }
+            if (!Allowed(row.Status, action)) { result = (ModerationOutcome.InvalidTransition, row.AgentId, row.Status); return; }
 
             // One conditional UPDATE decides a race: the loser waits for the winner's commit, then matches no row.
             var from = row.Status;
@@ -63,13 +63,13 @@ public static class ReviewModerator
                     .SetProperty(x => x.Status, target).SetProperty(x => x.ModeratedBy, actor).SetProperty(x => x.ModerationNote, note).SetProperty(x => x.PublishedAt, (DateTimeOffset?)now), ct)
                 : await db.Reviews.Where(x => x.Id == reviewId && x.Status == from).ExecuteUpdateAsync(s => s
                     .SetProperty(x => x.Status, target).SetProperty(x => x.ModeratedBy, actor).SetProperty(x => x.ModerationNote, note), ct);
-            if (changed == 0) { result = (ModerationOutcome.InvalidTransition, row.PractitionerId, row.Status); return; }
+            if (changed == 0) { result = (ModerationOutcome.InvalidTransition, row.AgentId, row.Status); return; }
 
             db.ModerationEvents.Add(Event(reviewId, action, actor, note, now));
             await db.SaveChangesAsync(ct);
-            await ApplySummaryAsync(db, row.PractitionerId, row.Rating, from, target, ct);
+            await ApplySummaryAsync(db, row.AgentId, row.Rating, from, target, ct);
             await tx.CommitAsync(ct);
-            result = (ModerationOutcome.Done, row.PractitionerId, target);
+            result = (ModerationOutcome.Done, row.AgentId, target);
         });
         return result;
     }

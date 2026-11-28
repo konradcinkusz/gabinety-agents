@@ -1,15 +1,15 @@
 @page "/moje/dostepy"
 @attribute [Authorize]
-@inject BookingClient Bookings
+@inject BookingClient Accesses
 @inject MeClient Me
 @inject TimeProvider Clock
 @inject NavigationManager Navigation
 @* Static server rendering: the role is a tab (a link), the status is a row of chips (links) and "more" is a link with the cursor, so the list is complete HTML and a URL reopens the same view (DESIGN-CONTRACT 5.9, G-2).
    The list is two sections (Aktywne, Zakończone) by the end of validity. Each row is a card with the agent, the package, a "used X of Y" bar and "ważny do"; its "Szczegóły" link is the whole card's target (DESIGN-CONTRACT 4.2). *@
 
-<PageTitle>@Pl.Bookings.MetaTitle</PageTitle>
+<PageTitle>@Pl.Accesses.MetaTitle</PageTitle>
 <HeadContent><meta name="robots" content="noindex,follow" /></HeadContent>
-<h1>@Pl.Bookings.Title</h1>
+<h1>@Pl.Accesses.Title</h1>
 
 @if (_showRoleTabs)
 {
@@ -17,14 +17,14 @@
         <ul>
             @foreach (var r in new[] { BookingClient.ClientRole, BookingClient.PractitionerRole })
             {
-                <li><a class="tabs__link" href="@Href(r, _status, null)" aria-current="@(r == _role ? "page" : null)">@(r == BookingClient.ClientRole ? Pl.Bookings.Client : Pl.Bookings.Practitioner)</a></li>
+                <li><a class="tabs__link" href="@Href(r, _status, null)" aria-current="@(r == _role ? "page" : null)">@(r == BookingClient.ClientRole ? Pl.Accesses.Client : Pl.Accesses.Agent)</a></li>
             }
         </ul>
     </nav>
 }
 
-<nav class="status-chips" aria-label="@Pl.Bookings.StatusFilterLabel" data-testid="status-filter">
-    <a class="chip" href="@Href(_role, "", null)" aria-current="@(_status.Length == 0 ? "true" : null)">@Pl.Bookings.AllStatuses</a>
+<nav class="status-chips" aria-label="@Pl.Accesses.StatusFilterLabel" data-testid="status-filter">
+    <a class="chip" href="@Href(_role, "", null)" aria-current="@(_status.Length == 0 ? "true" : null)">@Pl.Accesses.AllStatuses</a>
     @foreach (var s in _filterStatuses)
     {
         <a class="chip" href="@Href(_role, s, null)" aria-current="@(s == _status ? "true" : null)">@BookingFormat.StatusLabel(s)</a>
@@ -35,7 +35,7 @@
 {
     @* The session ended while the cookie was still sent (a revoked refresh token): said here, with the way back; the host deletes the dead cookie with this response. *@
     <div class="callout callout--danger" role="alert" data-testid="bookings-signed-out">
-        <p>@Pl.Bookings.SignedOut <a href="@ReturnTarget.LoginUrl(ReturnTarget.Safe(Href(_role, _status, _cursor)))">@Pl.Bookings.SignInAgain</a></p>
+        <p>@Pl.Accesses.SignedOut <a href="@ReturnTarget.LoginUrl(ReturnTarget.Safe(Href(_role, _status, _cursor)))">@Pl.Accesses.SignInAgain</a></p>
     </div>
 }
 else if (_failure is { } failure)
@@ -65,15 +65,15 @@ else if (_page is not null)
                 {
                     <li class="card card--link booking-row" data-testid="booking-row">
                         <div class="cluster cluster--between">
-                            <p class="booking-row__title" id="@($"booking-{b.Id:N}-title")">@b.OfferingTitle</p>
+                            <p class="booking-row__title" id="@($"booking-{b.Id:N}-title")">@b.PackageTitle</p>
                             <span class="num booking-row__price">@Money.Pln(b.Price.AmountMinor)</span>
                         </div>
                         <p class="muted" data-testid="booking-party">
-                            @BookingFormat.Name(_role == BookingClient.ClientRole ? b.Practitioner.DisplayName : b.Client?.DisplayName)
+                            @BookingFormat.Name(_role == BookingClient.ClientRole ? b.Agent.DisplayName : b.Client?.DisplayName)
                             @if (_role == BookingClient.ClientRole) {<AiBadge />}
                         </p>
                         <UsageBar Kind="@b.Kind" Used="b.UnitsUsed" Total="b.UnitsTotal" />
-                        <p class="muted" data-testid="booking-valid-until">@string.Format(Pl.Bookings.ValidUntil, BookingFormat.ValidUntil(b.EndUtc))</p>
+                        <p class="muted" data-testid="booking-valid-until">@string.Format(Pl.Accesses.ValidUntil, BookingFormat.ValidUntil(b.EndUtc))</p>
                         <div class="cluster cluster--between">
                             <BookingBadge Badge="Badge.ForBooking(b.Status)" />
                             <a class="booking-row__link" href="@($"/moje/dostepy/{b.Id}?role={_role}")" aria-describedby="@($"booking-{b.Id:N}-title")">@BookingsText.Details</a>
@@ -111,12 +111,12 @@ else if (_page is not null)
         if (!_profileAsked)
         {
             var me = await Me.GetAsync();
-            _showRoleTabs = !me.IsOk || me.Value!.PractitionerId is not null;
+            _showRoleTabs = !me.IsOk || me.Value!.AgentId is not null;
             _profileAsked = true;
         }
 
         _now = Clock.GetUtcNow();
-        var result = await Bookings.MyBookingsAsync(_role, _status, _cursor);
+        var result = await Accesses.MyBookingsAsync(_role, _status, _cursor);
         if (result.IsOk) _page = result.Value;
         else _failure = result.Failure;
 
@@ -124,8 +124,8 @@ else if (_page is not null)
         var (upcoming, past) = MyBookingsSchedule.Split(items, _now);
         _sections = new[]
         {
-            new Section("bookings-upcoming", Pl.Bookings.Upcoming, [.. upcoming.Select(b => (b, false))]),
-            new Section("bookings-past", Pl.Bookings.Past, [.. past.Select(b => (b, false))]),
+            new Section("bookings-upcoming", Pl.Accesses.Upcoming, [.. upcoming.Select(b => (b, false))]),
+            new Section("bookings-past", Pl.Accesses.Past, [.. past.Select(b => (b, false))]),
         }.Where(s => s.Rows.Count > 0).ToList();
 
         // The chips list the statuses the loaded role has, plus the active one, so a filter that matched nothing can still be left.

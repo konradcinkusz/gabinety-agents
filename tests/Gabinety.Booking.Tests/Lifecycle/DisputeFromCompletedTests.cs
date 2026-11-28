@@ -2,7 +2,7 @@ using System.Net;
 using Gabinety.Booking.Jobs.Payout;
 using Gabinety.Contracts.Booking;
 using Microsoft.EntityFrameworkCore;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -22,7 +22,7 @@ public class DisputeFromCompletedTests : IDisposable
         var id = await Auto.Seed(h, TimeSpan.FromHours(48));
         Assert.Equal(1, await Auto.Job(h).CompleteDueAsync(h.Clock.GetUtcNow(), default));
         var b = await Life.Row(h, id);
-        Assert.Equal((BookingStatus.Completed, 1500L, 8500L), (b.Status, b.FeeMinor, b.PayoutMinor));
+        Assert.Equal((AccessStatus.Completed, 1500L, 8500L), (b.Status, b.FeeMinor, b.PayoutMinor));
         Assert.Equal(b.EndUtc + TimeSpan.FromHours(72), b.PayoutDueAt); // the dispute window of a package closes at end + 72 h, and so does the payout date
         Assert.Single(await Life.Ledger(h, id), l => l.Kind == LedgerKind.PlatformFee);
         return id;
@@ -37,7 +37,7 @@ public class DisputeFromCompletedTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
 
         var b = await Life.Row(h, id);
-        Assert.Equal(BookingStatus.Disputed, b.Status);
+        Assert.Equal(AccessStatus.Disputed, b.Status);
         Assert.Equal((null, null, null), (b.FeeMinor, b.PayoutMinor, b.PayoutDueAt));
         Assert.DoesNotContain(await Life.Ledger(h, id), l => l.Kind == LedgerKind.PlatformFee); // the pair is free for the booking that really earns the fee
     }
@@ -52,7 +52,7 @@ public class DisputeFromCompletedTests : IDisposable
         h.Clock.Advance(TimeSpan.FromHours(hours - 49) + TimeSpan.FromMinutes(minutes));
         var r = await DisputeApiTests.Dispute(h, id, Life.Client, Body);
         Assert.Equal(ok ? HttpStatusCode.OK : HttpStatusCode.Conflict, r.StatusCode);
-        Assert.Equal(ok ? BookingStatus.Disputed : BookingStatus.Completed, (await Life.Row(h, id)).Status);
+        Assert.Equal(ok ? AccessStatus.Disputed : AccessStatus.Completed, (await Life.Row(h, id)).Status);
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public class DisputeFromCompletedTests : IDisposable
         var resolve = await Adm.Resolve(h, id, Adm.Body("release"));
         Assert.Equal(HttpStatusCode.OK, resolve.StatusCode);
         var b = await Life.Row(h, id);
-        Assert.Equal((BookingStatus.Resolved, 1500L, 8500L), (b.Status, b.FeeMinor, b.PayoutMinor));
+        Assert.Equal((AccessStatus.Resolved, 1500L, 8500L), (b.Status, b.FeeMinor, b.PayoutMinor));
         Assert.Single(await Life.Ledger(h, id), l => l.Kind == LedgerKind.PlatformFee);
         Assert.Equal(1, await PayJob.Job(h, provider).PayDueAsync(h.Clock.GetUtcNow(), default));
         Assert.Single(provider.Payouts);
@@ -82,7 +82,7 @@ public class DisputeFromCompletedTests : IDisposable
         await DisputeApiTests.Dispute(h, id, Life.Client, Body);
         Assert.Equal(HttpStatusCode.OK, (await Adm.Resolve(h, id, Adm.Body("refund_full"))).StatusCode);
         var b = await Life.Row(h, id);
-        Assert.Equal((BookingStatus.Resolved, 0L), (b.Status, b.FeeMinor ?? 0));
+        Assert.Equal((AccessStatus.Resolved, 0L), (b.Status, b.FeeMinor ?? 0));
         Assert.DoesNotContain(await Life.Ledger(h, id), l => l.Kind == LedgerKind.PlatformFee);
     }
 
@@ -91,6 +91,6 @@ public class DisputeFromCompletedTests : IDisposable
     {
         var id = await Completed();
         Assert.Equal(HttpStatusCode.NotFound, (await DisputeApiTests.Dispute(h, id, "demo-stranger", Body)).StatusCode);
-        Assert.Equal(BookingStatus.Completed, (await Life.Row(h, id)).Status);
+        Assert.Equal(AccessStatus.Completed, (await Life.Row(h, id)).Status);
     }
 }

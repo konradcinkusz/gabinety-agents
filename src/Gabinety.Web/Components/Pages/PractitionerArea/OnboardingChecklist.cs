@@ -9,7 +9,7 @@ public sealed record ChecklistItem(ChecklistKey Key, bool Done)
 {
     public string Title => Key switch
     {
-        ChecklistKey.Headline => PlPractitioner.Checklist.Headline, ChecklistKey.Bio => PlPractitioner.Checklist.Bio, ChecklistKey.Offering => PlPractitioner.Checklist.Offering,
+        ChecklistKey.Headline => PlPractitioner.Checklist.Headline, ChecklistKey.Bio => PlPractitioner.Checklist.Bio, ChecklistKey.Offering => PlPractitioner.Checklist.Package,
         ChecklistKey.Github => PlPractitioner.Checklist.Github, ChecklistKey.Nip => PlPractitioner.Checklist.Nip, ChecklistKey.Portfolio => PlPractitioner.Checklist.Portfolio,
         _ => PlPractitioner.Checklist.Email,
     };

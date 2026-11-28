@@ -17,7 +17,7 @@ public sealed class ApiKeySeedStep : ISeedStep
     public async Task RunAsync(SeedContext context, CancellationToken ct)
     {
         if (context.Options.BookingUrl.Length == 0) { context.Log.Info("apikey: skipped (Backend:Booking is not configured)"); return; }
-        var api = new BookingApi(context.Http.For(SeedService.Booking), context.Options, context.Time);
+        var api = new BookingApi(context.Http.For(SeedService.Access), context.Options, context.Time);
         var client = context.Clients.TryGetValue(ClientName, out var c) ? c : throw new SeedException($"apikey: {ClientName} is unknown (run the directory step first)");
         DemoNames.Require(KeyName);
 

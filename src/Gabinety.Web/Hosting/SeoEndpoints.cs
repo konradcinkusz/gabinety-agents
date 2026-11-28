@@ -18,7 +18,7 @@ public static class SeoContent
         var xml = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
         foreach (var c in dto.Categories.Where(c => c.Indexable))
             xml.Append("<url><loc>").Append(SecurityElement.Escape(baseUrl + c.Path)).Append("</loc></url>\n");
-        foreach (var p in dto.Practitioners ?? [])
+        foreach (var p in dto.Agents ?? [])
             xml.Append("<url><loc>").Append(SecurityElement.Escape($"{baseUrl}/agent/{Uri.EscapeDataString(p.Slug)}")).Append("</loc><lastmod>")
                .Append(p.LastModified.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture)).Append("</lastmod></url>\n");
         return xml.Append("</urlset>\n").ToString();

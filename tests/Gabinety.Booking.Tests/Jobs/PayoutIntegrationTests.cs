@@ -45,8 +45,8 @@ public class PayoutIntegrationTests : IAsyncLifetime
             await using var db = NewDb();
             foreach (var id in ids)
             {
-                Assert.Equal(PayoutStatus.Sent, (await db.Payouts.AsNoTracking().SingleAsync(p => p.BookingId == id)).Status); // one row: the unique index on booking_id
-                var ledger = await db.LedgerEntries.AsNoTracking().Where(l => l.BookingId == id && l.Kind == Gabinety.Contracts.Booking.LedgerKind.PractitionerPayout).ToListAsync();
+                Assert.Equal(PayoutStatus.Sent, (await db.Payouts.AsNoTracking().SingleAsync(p => p.AccessId == id)).Status); // one row: the unique index on booking_id
+                var ledger = await db.LedgerEntries.AsNoTracking().Where(l => l.AccessId == id && l.Kind == Gabinety.Contracts.Booking.LedgerKind.PractitionerPayout).ToListAsync();
                 Assert.Equal(8500, Assert.Single(ledger).AmountMinor);
             }
             var calls = provider.Payouts.Skip(sentBefore).Where(r => ids.Select(PayJob.Key).Contains(r.IdempotencyKey)).ToList();

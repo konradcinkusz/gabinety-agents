@@ -15,7 +15,7 @@ public enum PackagePick { SingleTask, TaskPack, Chat }
 /// <see cref="Tasks"/> is how many tasks are ordered through the client API (<c>POST /api/v1/bookings/{id}/tasks</c>), so the package really has <c>UnitsUsed = Tasks</c>; ordering the last unit of a
 /// single-task package also makes the service's auto-complete job complete it (<see cref="BookingTarget.Completed"/>). There is no date: a package is valid for 30 days from the purchase.
 /// </summary>
-public sealed record DemoBooking(string Key, BookingTarget Target, int Practitioner, int Client, PackagePick Package = PackagePick.SingleTask, int Tasks = 0)
+public sealed record DemoBooking(string Key, BookingTarget Target, int Agent, int Client, PackagePick Package = PackagePick.SingleTask, int Tasks = 0)
 {
     // the text is picked by a stable sum (string.GetHashCode is randomised per process)
     static readonly string[] BriefTexts =

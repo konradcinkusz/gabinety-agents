@@ -17,10 +17,10 @@ public class SearchListTests(SearchFactory f)
     {
         await f.Reset();
         var ok = await f.Approved();
-        foreach (var s in new[] { PractitionerStatus.Draft, PractitionerStatus.Submitted, PractitionerStatus.Rejected, PractitionerStatus.Suspended })
+        foreach (var s in new[] { AgentStatus.Draft, AgentStatus.Submitted, AgentStatus.Rejected, AgentStatus.Suspended })
             await f.Seed(s, null, new Spec());
-        await f.Seed(PractitionerStatus.Approved, null, new Spec(Active: false));   // only an inactive offering
-        await f.Seed(PractitionerStatus.Approved);                                   // no offering at all
+        await f.Seed(AgentStatus.Approved, null, new Spec(Active: false));   // only an inactive offering
+        await f.Seed(AgentStatus.Approved);                                   // no offering at all
         Assert.Equal([ok.Id], await Sk.Ids(f.Anon()));
     }
 

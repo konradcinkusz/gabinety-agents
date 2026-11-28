@@ -1,5 +1,5 @@
 using System.Net;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 using Gabinety.Contracts.Booking;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,8 +20,8 @@ public class PaymentWebhookTests
     }
 
     static async Task<string> Outcome(HttpResponseMessage r) => (await r.Body()).GetProperty("outcome").GetString()!;
-    static Task<Gabinety.Booking.Features.Bookings.Entities.Booking> Booking(CreateHost h, Guid id) => h.Query(db => db.Bookings.AsNoTracking().SingleAsync(b => b.Id == id));
-    static Task<List<Gabinety.Booking.Features.Payments.LedgerEntry>> Ledger(CreateHost h, Guid id) => h.Query(db => db.LedgerEntries.AsNoTracking().Where(l => l.BookingId == id).ToListAsync());
+    static Task<Gabinety.Booking.Features.Bookings.Entities.Access> Access(CreateHost h, Guid id) => h.Query(db => db.Accesses.AsNoTracking().SingleAsync(b => b.Id == id));
+    static Task<List<Gabinety.Booking.Features.Payments.LedgerEntry>> Ledger(CreateHost h, Guid id) => h.Query(db => db.LedgerEntries.AsNoTracking().Where(l => l.AccessId == id).ToListAsync());
 
     [Fact]
     public async Task A_valid_signature_confirms_the_booking_snapshots_the_meeting_url_and_writes_the_ClientCharge()
@@ -33,11 +33,11 @@ public class PaymentWebhookTests
 
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
         Assert.Equal("Applied", await Outcome(r));
-        var b = await Booking(h, id);
-        Assert.Equal(BookingStatus.Confirmed, b.Status);
+        var b = await Access(h, id);
+        Assert.Equal(AccessStatus.Confirmed, b.Status);
         Assert.Equal("https://meet.demo.invalid/room-1", b.MeetingUrlSnapshot);
         Assert.Equal(h.Clock.GetUtcNow(), b.ConfirmedAt);
-        Assert.Equal(PaymentStatus.Succeeded, (await h.Query(db => db.Payments.SingleAsync(p => p.BookingId == id))).Status);
+        Assert.Equal(PaymentStatus.Succeeded, (await h.Query(db => db.Payments.SingleAsync(p => p.AccessId == id))).Status);
         var ledger = Assert.Single(await Ledger(h, id));
         Assert.Equal((LedgerKind.ClientCharge, 10000L), (ledger.Kind, ledger.AmountMinor));
         Assert.Equal(Features.Payments.WebhookOutcome.Applied, WebhookOutcomeOf(h, "evt_demo_1"));
@@ -56,7 +56,7 @@ public class PaymentWebhookTests
         var c = h.ClientFor(null);
         foreach (var r in new[] { await Pay.Webhook(c, altered, Pay.Sign(body)), await Pay.Webhook(c, body, Pay.Sign(body, "another-secret")), await Pay.Webhook(c, body, null), await Pay.Webhook(c, body, "not-hex") })
             Assert.Equal(HttpStatusCode.Unauthorized, r.StatusCode);
-        Assert.Equal(BookingStatus.PendingPayment, (await Booking(h, id)).Status);
+        Assert.Equal(AccessStatus.PendingPayment, (await Access(h, id)).Status);
         Assert.Empty(await Ledger(h, id));
         Assert.Empty(await h.Query(db => db.WebhookEvents.Where(x => x.EventId == "evt_demo_2").ToListAsync()));
     }
@@ -161,7 +161,7 @@ public class PaymentWebhookTests
             Assert.Equal("Rejected", await Outcome(await Pay.Webhook(c, body, Pay.Sign(body))));
             Assert.Equal(Features.Payments.WebhookOutcome.Rejected, WebhookOutcomeOf(h, evt));
         }
-        Assert.Equal(BookingStatus.PendingPayment, (await Booking(h, id)).Status);
+        Assert.Equal(AccessStatus.PendingPayment, (await Access(h, id)).Status);
         Assert.Empty(await Ledger(h, id));
         Assert.Contains(h.Logs.Lines, l => l.Contains("ALERT") && l.Contains(id.ToString()));
     }
@@ -178,7 +178,7 @@ public class PaymentWebhookTests
         var (id, pid2) = await Pay.CreateBooking(other);
         var body2 = Pay.EventJson("evt_demo_5b", "PaymentSucceeded", pid2);
         Assert.Equal(HttpStatusCode.Unauthorized, (await Pay.Webhook(other.ClientFor(null), body2, null, "acme")).StatusCode);
-        Assert.Equal(BookingStatus.PendingPayment, (await Booking(other, id)).Status);
+        Assert.Equal(AccessStatus.PendingPayment, (await Access(other, id)).Status);
     }
 
     [Fact]
@@ -189,7 +189,7 @@ public class PaymentWebhookTests
         var c = h.ClientFor(Client);
         var r = await Pay.Simulate(c, id, "succeeded");
         Assert.Equal("Applied", await Outcome(r));
-        Assert.Equal(BookingStatus.Confirmed, (await Booking(h, id)).Status);
+        Assert.Equal(AccessStatus.Confirmed, (await Access(h, id)).Status);
         Assert.Equal("Duplicate", await Outcome(await Pay.Simulate(c, id, "succeeded")));
         Assert.Equal((HttpStatusCode)422, (await Pay.Simulate(c, id, "maybe")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await Pay.Simulate(c, Guid.NewGuid(), "succeeded")).StatusCode);
@@ -197,12 +197,12 @@ public class PaymentWebhookTests
 
         var (id2, _) = await Pay.CreateBooking(h, "demo-client-2", "2026-11-17T13:00:00Z");
         Assert.Equal("Applied", await Outcome(await Pay.Simulate(h.ClientFor("demo-client-2"), id2, "failed")));
-        Assert.Equal(BookingStatus.Expired, (await Booking(h, id2)).Status);
+        Assert.Equal(AccessStatus.Expired, (await Access(h, id2)).Status);
 
         await using var other = await Host(x => x.Configure = s => { s.RemoveAll<Gabinety.Booking.Payments.Abstractions.IPaymentProvider>(); s.AddSingleton<Gabinety.Booking.Payments.Abstractions.IPaymentProvider>(new RecordingProvider("Acme")); }, secret: false);
         var (id3, _) = await Pay.CreateBooking(other);
         Assert.Equal(HttpStatusCode.Forbidden, (await Pay.Simulate(other.ClientFor(Client), id3, "succeeded")).StatusCode);
-        Assert.Equal(BookingStatus.PendingPayment, (await Booking(other, id3)).Status);
+        Assert.Equal(AccessStatus.PendingPayment, (await Access(other, id3)).Status);
     }
 
     [Fact]
@@ -250,14 +250,14 @@ public class PaymentWebhookTests
         var body = Pay.EventJson("evt_demo_6", "PaymentSucceeded", pid);
         Assert.Equal("Applied", await Outcome(await Pay.Webhook(h.ClientFor(null), body, null)));
 
-        Assert.Equal(BookingStatus.Expired, (await Booking(h, id)).Status);
+        Assert.Equal(AccessStatus.Expired, (await Access(h, id)).Status);
         var refund = Assert.Single(provider.Refunds);
         Assert.Equal((pid, 10000L), (refund.ProviderPaymentId, refund.AmountMinor));
-        var payment = await h.Query(db => db.Payments.SingleAsync(p => p.BookingId == id));
+        var payment = await h.Query(db => db.Payments.SingleAsync(p => p.AccessId == id));
         Assert.Equal((PaymentStatus.Refunded, 10000L), (payment.Status, payment.RefundedMinor));
         Assert.Equal([LedgerKind.ClientCharge, LedgerKind.Refund], (await Ledger(h, id)).OrderBy(l => l.Kind).Select(l => l.Kind).ToArray());
         Assert.Equal(2, (await Ledger(h, id)).Count);
-        Assert.DoesNotContain(await h.Bookings(), b => b.Id == id && b.Status == BookingStatus.Confirmed);
+        Assert.DoesNotContain(await h.Accesses(), b => b.Id == id && b.Status == AccessStatus.Confirmed);
     }
 
     [Fact]
@@ -269,8 +269,8 @@ public class PaymentWebhookTests
         var r = await Pay.Webhook(h.ClientFor(null), body, Pay.Sign(body));
         Assert.True(r.IsSuccessStatusCode, r.StatusCode + " " + await r.Content.ReadAsStringAsync());
         Assert.Equal("Applied", await Outcome(r));
-        Assert.Equal(BookingStatus.Expired, (await Booking(h, id)).Status);
-        Assert.Equal(PaymentStatus.Failed, (await h.Query(db => db.Payments.SingleAsync(p => p.BookingId == id))).Status);
+        Assert.Equal(AccessStatus.Expired, (await Access(h, id)).Status);
+        Assert.Equal(PaymentStatus.Failed, (await h.Query(db => db.Payments.SingleAsync(p => p.AccessId == id))).Status);
         Assert.Equal(HttpStatusCode.Created, (await CreateHost.Post(h.ClientFor("demo-client-2"), h.Req(), CreateHost.Key())).StatusCode);
     }
 
@@ -304,10 +304,10 @@ public class PaymentWebhookTests
         async Task<string> Send(string evt, string kind, long amount) { var b = Pay.EventJson(evt, kind, pid, amount); return await Outcome(await Pay.Webhook(c, b, Pay.Sign(b))); }
         Assert.Equal("Applied", await Send("evt_demo_10a", "PaymentSucceeded", 10000));
         Assert.Equal("Applied", await Send("evt_demo_10b", "RefundSucceeded", 4000));
-        Assert.Equal(PaymentStatus.PartiallyRefunded, (await h.Query(db => db.Payments.SingleAsync(p => p.BookingId == id))).Status);
+        Assert.Equal(PaymentStatus.PartiallyRefunded, (await h.Query(db => db.Payments.SingleAsync(p => p.AccessId == id))).Status);
         Assert.Equal("Rejected", await Send("evt_demo_10c", "RefundSucceeded", 7000));
         Assert.Equal("Applied", await Send("evt_demo_10d", "RefundSucceeded", 6000));
-        var payment = await h.Query(db => db.Payments.SingleAsync(p => p.BookingId == id));
+        var payment = await h.Query(db => db.Payments.SingleAsync(p => p.AccessId == id));
         Assert.Equal((PaymentStatus.Refunded, 10000L), (payment.Status, payment.RefundedMinor));
         Assert.Equal(10000L, (await Ledger(h, id)).Where(l => l.Kind == LedgerKind.Refund).Sum(l => l.AmountMinor));
     }
@@ -332,7 +332,7 @@ public class PaymentWebhookTests
         var r = await Pay.Webhook(h.ClientFor(null), body, Pay.Sign(body));
         Assert.Equal(HttpStatusCode.ServiceUnavailable, r.StatusCode);
         Assert.True(r.Headers.RetryAfter is not null);
-        Assert.Equal(BookingStatus.PendingPayment, (await Booking(h, id)).Status);
+        Assert.Equal(AccessStatus.PendingPayment, (await Access(h, id)).Status);
         h.Directory.Down = false;
         Assert.Equal("Applied", await Outcome(await Pay.Webhook(h.ClientFor(null), body, Pay.Sign(body))));
     }

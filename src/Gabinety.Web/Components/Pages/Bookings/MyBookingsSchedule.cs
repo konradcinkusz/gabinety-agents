@@ -36,9 +36,9 @@ public static class MyBookingsSchedule
         var time = start.ToString("HH:mm", CultureInfo.InvariantCulture);
         return days switch
         {
-            0 => $"{Pl.Bookings.Today}, {time}",
-            1 => $"{Pl.Bookings.Tomorrow}, {time}",
-            >= 2 and <= 6 => $"{string.Format(CultureInfo.InvariantCulture, Pl.Bookings.InDays, days)}, {time}",
+            0 => $"{Pl.Accesses.Today}, {time}",
+            1 => $"{Pl.Accesses.Tomorrow}, {time}",
+            >= 2 and <= 6 => $"{string.Format(CultureInfo.InvariantCulture, Pl.Accesses.InDays, days)}, {time}",
             _ => $"{PlFormat.DayHeading(day)}, {time}",
         };
     }

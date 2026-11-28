@@ -7,8 +7,8 @@ using Gabinety.Contracts.Booking;
 using Gabinety.Contracts.Common;
 using Gabinety.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Features.Lifecycle.Cancel;
 
@@ -32,7 +32,7 @@ public sealed class CancelFeature : IServiceFeature
         var sub = user.FindFirst("sub")?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (sub is null) return Results.Unauthorized();
 
-        var booking = await db.Bookings.AsNoTracking().SingleOrDefaultAsync(b => b.Id == id, ct);
+        var booking = await db.Accesses.AsNoTracking().SingleOrDefaultAsync(b => b.Id == id, ct);
         if (booking is null || (booking.ClientUserId != sub && booking.PractitionerUserId != sub))
             return PaymentWebhookFeature.Problem(ErrorCodes.NotFound, "Not found", 404); // a stranger learns nothing about whether it exists
 
@@ -53,7 +53,7 @@ public sealed class CancelFeature : IServiceFeature
         RefundTicket? ticket = null;
         if (plan.Value.Refund > 0)
         {
-            var payment = await db.Payments.AsNoTracking().SingleOrDefaultAsync(p => p.BookingId == id, ct);
+            var payment = await db.Payments.AsNoTracking().SingleOrDefaultAsync(p => p.AccessId == id, ct);
             if (payment is null) return PaymentWebhookFeature.Problem(ErrorCodes.NotFound, "Not found", 404);
             // Lost a race: the booking was read as Confirmed, but the winning cancel has refunded the payment since. The transition is gone: 409, no provider call.
             if (payment.RefundedMinor + plan.Value.Refund > payment.AmountMinor)
@@ -68,11 +68,11 @@ public sealed class CancelFeature : IServiceFeature
             Precondition = precondition,
             Effects = c =>
             {
-                c.Booking.StatusReason = reason;
+                c.Access.StatusReason = reason;
                 if (ticket is not null) RefundCoordinator.Record(c, ticket);
             },
         }, ct);
-        return result.ToErrorResult() ?? Results.Ok(BookingViewFeature.ToView(result.Booking!, result.Payment, sub, admin: false, names: (await names.ForAsync([result.Booking!], ct))[result.Booking!.Id]));
+        return result.ToErrorResult() ?? Results.Ok(BookingViewFeature.ToView(result.Access!, result.Payment, sub, admin: false, names: (await names.ForAsync([result.Access!], ct))[result.Access!.Id]));
     }
 
     static IResult Unavailable() =>

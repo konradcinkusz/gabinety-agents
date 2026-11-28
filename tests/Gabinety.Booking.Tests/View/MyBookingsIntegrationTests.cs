@@ -3,8 +3,8 @@ using System.Text.Json;
 using Gabinety.Booking.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -40,10 +40,10 @@ public class MyBookingsIntegrationTests : IAsyncLifetime
         await host.Seed(db =>
         {
             foreach (var id in ids)
-                db.Bookings.Add(new BookingEntity
+                db.Accesses.Add(new BookingEntity
                 {
-                    Id = id, ClientUserId = client, PractitionerId = Guid.NewGuid(), PractitionerUserId = "demo-p", OfferingId = host.Offering, OfferingTitle = "demo-offering",
-                    DurationMinutes = 60, PriceMinor = 10000, StartUtc = start, EndUtc = start.AddHours(1), Status = BookingStatus.Expired, BriefText = "demo-brief",
+                    Id = id, ClientUserId = client, AgentId = Guid.NewGuid(), PractitionerUserId = "demo-p", PackageId = host.Package, PackageTitle = "demo-offering",
+                    DurationMinutes = 60, PriceMinor = 10000, StartUtc = start, EndUtc = start.AddHours(1), Status = AccessStatus.Expired, BriefText = "demo-brief",
                     IdempotencyKey = Guid.NewGuid(), CreatedAt = host.Clock.GetUtcNow(),
                 });
         });

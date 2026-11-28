@@ -50,16 +50,16 @@ public class VerificationIntegrationTests
     {
         var (pg, f) = await Start();
         await using var _ = pg; using var __ = f;
-        await f.Seed(PractitionerStatus.Draft, p => { p.GithubLinked = true; p.GithubLogin = "Demo-Dev"; }, userId: "demo-one-account");
-        await f.Seed(PractitionerStatus.Draft, p => { p.GithubLinked = true; p.GithubLogin = "demo-DEV"; }, userId: "demo-one-account"); // one account, two agents, one profile
+        await f.Seed(AgentStatus.Draft, p => { p.GithubLinked = true; p.GithubLogin = "Demo-Dev"; }, userId: "demo-one-account");
+        await f.Seed(AgentStatus.Draft, p => { p.GithubLinked = true; p.GithubLogin = "demo-DEV"; }, userId: "demo-one-account"); // one account, two agents, one profile
         await using var conn = new NpgsqlConnection(pg.GetConnectionString());
         await conn.OpenAsync();
         async Task<string> Def(string index) { await using var c = new NpgsqlCommand($"select indexdef from pg_indexes where indexname='{index}'", conn); return (string)(await c.ExecuteScalarAsync())!; }
         Assert.DoesNotContain("UNIQUE", await Def("IX_practitioners_user_id"), StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("UNIQUE", await Def("ix_practitioners_github_login_linked"), StringComparison.OrdinalIgnoreCase);
         Assert.Contains("UNIQUE", await Def("IX_practitioners_slug"), StringComparison.OrdinalIgnoreCase);
-        await f.Seed(PractitionerStatus.Draft, p => p.Slug = "demo-same-slug");
-        await Assert.ThrowsAsync<DbUpdateException>(() => f.Seed(PractitionerStatus.Draft, p => p.Slug = "demo-same-slug"));
+        await f.Seed(AgentStatus.Draft, p => p.Slug = "demo-same-slug");
+        await Assert.ThrowsAsync<DbUpdateException>(() => f.Seed(AgentStatus.Draft, p => p.Slug = "demo-same-slug"));
     }
 
     [Fact]
@@ -71,11 +71,11 @@ public class VerificationIntegrationTests
         for (var i = 0; i < 13; i++)
         {
             var at = f.Clock.GetUtcNow().AddHours(-(i / 2)); // pairs share a time: the id breaks the tie
-            var p = await f.Seed(PractitionerStatus.Submitted);
-            await f.Db(async db => { db.VerificationEvents.Add(new VerificationEvent { Id = Guid.NewGuid(), PractitionerId = p.Id, Kind = VerificationEventKind.Submitted, ActorUserId = "demo", At = at }); await db.SaveChangesAsync(); return 0; });
+            var p = await f.Seed(AgentStatus.Submitted);
+            await f.Db(async db => { db.VerificationEvents.Add(new VerificationEvent { Id = Guid.NewGuid(), AgentId = p.Id, Kind = VerificationEventKind.Submitted, ActorUserId = "demo", At = at }); await db.SaveChangesAsync(); return 0; });
             expected.Add((at, p.Id));
         }
-        await f.Seed(PractitionerStatus.Rejected);
+        await f.Seed(AgentStatus.Rejected);
         var c = f.As("demo-admin", "Admin");
         var got = new List<Guid>();
         string? cursor = null;
@@ -92,18 +92,18 @@ public class VerificationIntegrationTests
     {
         var (pg, f) = await Start();
         await using var _ = pg; using var __ = f;
-        var p = await f.Seed(PractitionerStatus.Submitted);
+        var p = await f.Seed(AgentStatus.Submitted);
         var dup = Guid.NewGuid();
         await f.Db(async db => { VerificationEvents.Record(db, p.Id, VerificationEventKind.Submitted, "demo", null, f.Clock, dup); await db.SaveChangesAsync(); return 0; });
 
         await Assert.ThrowsAsync<DbUpdateException>(() => f.Db(async db =>
         {
-            (await db.Practitioners.SingleAsync(x => x.Id == p.Id)).Status = PractitionerStatus.Approved;
+            (await db.Agents.SingleAsync(x => x.Id == p.Id)).Status = AgentStatus.Approved;
             VerificationEvents.Record(db, p.Id, VerificationEventKind.Approved, "demo-admin", null, f.Clock, dup); // same id: the insert fails
             await db.SaveChangesAsync();
             return 0;
         }));
-        Assert.Equal(PractitionerStatus.Submitted, (await f.Load(p.Id)).Status); // the status change rolled back with it
+        Assert.Equal(AgentStatus.Submitted, (await f.Load(p.Id)).Status); // the status change rolled back with it
         Assert.Single(await f.Events(p.Id));
     }
 }

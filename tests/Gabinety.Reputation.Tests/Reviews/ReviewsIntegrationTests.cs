@@ -28,7 +28,7 @@ public class ReviewsIntegrationTests
         await using var pg = new PostgreSqlBuilder("postgres:17-alpine").Build();
         await pg.StartAsync();
         using var h = await StartAsync(pg.GetConnectionString());
-        string user = "demo-user-1"; var pract = Guid.NewGuid(); var booking = h.Booking.Add(user, pract);
+        string user = "demo-user-1"; var pract = Guid.NewGuid(); var booking = h.Access.Add(user, pract);
         var c = h.ClientFor(user);
 
         Assert.Equal(HttpStatusCode.Created, (await ReviewsHost.Post(c, booking)).StatusCode);
@@ -37,7 +37,7 @@ public class ReviewsIntegrationTests
         // the same insert straight into the table: only the index can stop it
         var ex = await Assert.ThrowsAsync<DbUpdateException>(() => h.Seed(db => db.Reviews.Add(new Review
         {
-            Id = Guid.NewGuid(), BookingId = booking, PractitionerId = pract, ClientUserId = user, Rating = 5, Text = ReviewsHost.GoodText,
+            Id = Guid.NewGuid(), AccessId = booking, AgentId = pract, ClientUserId = user, Rating = 5, Text = ReviewsHost.GoodText,
             Status = Gabinety.Contracts.Reputation.ReviewStatus.Published, CreatedAt = h.Clock.GetUtcNow(),
         })));
         Assert.Contains("ux_reviews_booking_id", ex.InnerException?.Message ?? "");
@@ -54,7 +54,7 @@ public class ReviewsIntegrationTests
         var posts = Enumerable.Range(0, 12).Select(i =>
         {
             var user = $"demo-user-{i}";
-            return ReviewsHost.Post(h.ClientFor(user), h.Booking.Add(user, pract), 1 + i % 5);
+            return ReviewsHost.Post(h.ClientFor(user), h.Access.Add(user, pract), 1 + i % 5);
         }).ToList();
 
         Assert.All(await Task.WhenAll(posts), r => Assert.Equal(HttpStatusCode.Created, r.StatusCode));

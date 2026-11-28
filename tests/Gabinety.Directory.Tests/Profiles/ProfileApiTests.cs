@@ -44,7 +44,7 @@ public class ProfileFactory : WebApplicationFactory<Program>
     const string Audience = "directory-test", Issuer = "https://issuer.demo.invalid";
     readonly RSA _rsa = RSA.Create(2048);
     public FakeEmail Email { get; } = new();
-    public FakeBooking Booking { get; } = new();
+    public FakeBooking Access { get; } = new();
     protected virtual string Provider => "InMemory";
     protected virtual string? ConnectionString => null;
 
@@ -70,7 +70,7 @@ public class ProfileFactory : WebApplicationFactory<Program>
         builder.ConfigureTestServices(s =>
         {
             s.AddSingleton<IEmailVerifiedLookup>(Email);
-            s.AddSingleton<Gabinety.Directory.Clients.IBookingClient>(Booking);
+            s.AddSingleton<Gabinety.Directory.Clients.IBookingClient>(Access);
             s.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o =>
             {
                 var cfg = new OpenIdConnectConfiguration { Issuer = Issuer };
@@ -98,16 +98,16 @@ public class ProfileApiTests(ProfileFactory f) : IClassFixture<ProfileFactory>
     }
 
     static readonly string LongBio = new('b', 220);
-    static UpdatePractitionerRequest Full(string? nip = "5260250995") => new("Demo Name", "Senior .NET reviewer", LongBio,
+    static UpdateAgentRequest Full(string? nip = "5260250995") => new("Demo Name", "Senior .NET reviewer", LongBio,
         "https://portfolio.example.test/me", "https://meet.google.com/abc-defg-hij", nip);
 
     [Fact]
     public async Task Create_returns_201_draft_with_generated_slug()
     {
-        var r = await As(Id()).PostAsJsonAsync(Url, new CreatePractitionerRequest("Zażółć Gęślą"));
+        var r = await As(Id()).PostAsJsonAsync(Url, new CreateAgentRequest("Zażółć Gęślą"));
         Assert.Equal(HttpStatusCode.Created, r.StatusCode);
-        var p = (await r.Content.ReadFromJsonAsync<PractitionerPrivate>(J))!;
-        Assert.Equal(PractitionerStatus.Draft, p.Status);
+        var p = (await r.Content.ReadFromJsonAsync<AgentPrivate>(J))!;
+        Assert.Equal(AgentStatus.Draft, p.Status);
         Assert.StartsWith("zazolc-gesla", p.Slug);
     }
 
@@ -115,20 +115,20 @@ public class ProfileApiTests(ProfileFactory f) : IClassFixture<ProfileFactory>
     public async Task A_second_create_by_the_same_account_is_a_new_agent_not_a_409()
     {
         var c = As(Id());
-        var first = await c.PostAsJsonAsync(Url, new CreatePractitionerRequest("Demo One"));
-        var second = await c.PostAsJsonAsync(Url, new CreatePractitionerRequest("Demo One"));
+        var first = await c.PostAsJsonAsync(Url, new CreateAgentRequest("Demo One"));
+        var second = await c.PostAsJsonAsync(Url, new CreateAgentRequest("Demo One"));
         Assert.Equal(HttpStatusCode.Created, first.StatusCode);
         Assert.Equal(HttpStatusCode.Created, second.StatusCode);
-        Assert.NotEqual((await first.Content.ReadFromJsonAsync<PractitionerPrivate>(J))!.Slug, (await second.Content.ReadFromJsonAsync<PractitionerPrivate>(J))!.Slug);
+        Assert.NotEqual((await first.Content.ReadFromJsonAsync<AgentPrivate>(J))!.Slug, (await second.Content.ReadFromJsonAsync<AgentPrivate>(J))!.Slug);
     }
 
     [Fact]
     public async Task Slug_collision_gets_a_numeric_suffix_also_for_an_explicit_slug()
     {
         var name = "Kolizja " + Guid.NewGuid().ToString("n")[..6];
-        var a = (await (await As(Id()).PostAsJsonAsync(Url, new CreatePractitionerRequest(name))).Content.ReadFromJsonAsync<PractitionerPrivate>(J))!;
-        var b = (await (await As(Id()).PostAsJsonAsync(Url, new CreatePractitionerRequest(name))).Content.ReadFromJsonAsync<PractitionerPrivate>(J))!;
-        var c = (await (await As(Id()).PostAsJsonAsync(Url, new CreatePractitionerRequest("Inny", a.Slug))).Content.ReadFromJsonAsync<PractitionerPrivate>(J))!;
+        var a = (await (await As(Id()).PostAsJsonAsync(Url, new CreateAgentRequest(name))).Content.ReadFromJsonAsync<AgentPrivate>(J))!;
+        var b = (await (await As(Id()).PostAsJsonAsync(Url, new CreateAgentRequest(name))).Content.ReadFromJsonAsync<AgentPrivate>(J))!;
+        var c = (await (await As(Id()).PostAsJsonAsync(Url, new CreateAgentRequest("Inny", a.Slug))).Content.ReadFromJsonAsync<AgentPrivate>(J))!;
         Assert.Equal(a.Slug + "-2", b.Slug);
         Assert.Equal(a.Slug + "-3", c.Slug); // -2 is taken by b
     }
@@ -136,7 +136,7 @@ public class ProfileApiTests(ProfileFactory f) : IClassFixture<ProfileFactory>
     [Fact]
     public async Task Invalid_explicit_slug_is_422()
     {
-        var r = await As(Id()).PostAsJsonAsync(Url, new CreatePractitionerRequest("Demo Two", "Bad Slug"));
+        var r = await As(Id()).PostAsJsonAsync(Url, new CreateAgentRequest("Demo Two", "Bad Slug"));
         Assert.Equal(HttpStatusCode.UnprocessableEntity, r.StatusCode);
         var p = await Problem(r);
         Assert.Equal("validation_failed", p.Code);
@@ -147,7 +147,7 @@ public class ProfileApiTests(ProfileFactory f) : IClassFixture<ProfileFactory>
     public async Task Get_without_a_row_is_404_and_a_second_user_cannot_read_the_first_profile()
     {
         var first = As(Id());
-        await first.PostAsJsonAsync(Url, new CreatePractitionerRequest("Prywatny Profil"));
+        await first.PostAsJsonAsync(Url, new CreateAgentRequest("Prywatny Profil"));
         Assert.Equal(HttpStatusCode.OK, (await first.GetAsync(Url)).StatusCode);
         var r = await As(Id()).GetAsync(Url);
         Assert.Equal(HttpStatusCode.NotFound, r.StatusCode);
@@ -158,9 +158,9 @@ public class ProfileApiTests(ProfileFactory f) : IClassFixture<ProfileFactory>
     public async Task Put_replaces_fields_and_stores_nip_validity()
     {
         var c = As(Id());
-        await c.PostAsJsonAsync(Url, new CreatePractitionerRequest("Demo Put"));
+        await c.PostAsJsonAsync(Url, new CreateAgentRequest("Demo Put"));
         Assert.Equal(HttpStatusCode.OK, (await c.PutAsJsonAsync(Url, Full())).StatusCode);
-        var p = (await c.GetFromJsonAsync<PractitionerPrivate>(Url, J))!;
+        var p = (await c.GetFromJsonAsync<AgentPrivate>(Url, J))!;
         Assert.True(p.NipValid);
         Assert.Equal("5260250995", p.Nip);
         Assert.Equal("Senior .NET reviewer", p.Headline);
@@ -172,7 +172,7 @@ public class ProfileApiTests(ProfileFactory f) : IClassFixture<ProfileFactory>
     public async Task Bad_nip_is_422_with_errors_nip(string nip)
     {
         var c = As(Id());
-        await c.PostAsJsonAsync(Url, new CreatePractitionerRequest("Demo Nip"));
+        await c.PostAsJsonAsync(Url, new CreateAgentRequest("Demo Nip"));
         var r = await c.PutAsJsonAsync(Url, Full(nip));
         Assert.Equal(HttpStatusCode.UnprocessableEntity, r.StatusCode);
         var p = await Problem(r);
@@ -188,7 +188,7 @@ public class ProfileApiTests(ProfileFactory f) : IClassFixture<ProfileFactory>
     public async Task Bad_urls_are_422(string portfolio, string meeting)
     {
         var c = As(Id());
-        await c.PostAsJsonAsync(Url, new CreatePractitionerRequest("Demo Url"));
+        await c.PostAsJsonAsync(Url, new CreateAgentRequest("Demo Url"));
         var r = await c.PutAsJsonAsync(Url, Full() with { PortfolioUrl = portfolio, MeetingUrlDefault = meeting });
         Assert.Equal(HttpStatusCode.UnprocessableEntity, r.StatusCode);
         Assert.Equal("validation_failed", (await Problem(r)).Code);
@@ -198,7 +198,7 @@ public class ProfileApiTests(ProfileFactory f) : IClassFixture<ProfileFactory>
     public async Task Meeting_subdomain_of_an_allowed_host_is_accepted()
     {
         var c = As(Id());
-        await c.PostAsJsonAsync(Url, new CreatePractitionerRequest("Demo Sub"));
+        await c.PostAsJsonAsync(Url, new CreateAgentRequest("Demo Sub"));
         Assert.Equal(HttpStatusCode.OK, (await c.PutAsJsonAsync(Url, Full() with { MeetingUrlDefault = "https://eu.zoom.us/j/1" })).StatusCode);
     }
 
@@ -209,7 +209,7 @@ public class ProfileApiTests(ProfileFactory f) : IClassFixture<ProfileFactory>
     public async Task Contact_details_in_headline_are_422(string headline)
     {
         var c = As(Id());
-        await c.PostAsJsonAsync(Url, new CreatePractitionerRequest("Demo Contact"));
+        await c.PostAsJsonAsync(Url, new CreateAgentRequest("Demo Contact"));
         var r = await c.PutAsJsonAsync(Url, Full() with { Headline = headline + " plus tekst" });
         Assert.Equal(HttpStatusCode.UnprocessableEntity, r.StatusCode);
         Assert.Equal("contact_details_not_allowed", (await Problem(r)).Code);
@@ -222,7 +222,7 @@ public class ProfileApiTests(ProfileFactory f) : IClassFixture<ProfileFactory>
         f.Email.Verified = false;
         try
         {
-            await c.PostAsJsonAsync(Url, new CreatePractitionerRequest("Demo Submit"));
+            await c.PostAsJsonAsync(Url, new CreateAgentRequest("Demo Submit"));
             var r = await c.PostAsync(Url + "/submit", null);
             Assert.Equal(HttpStatusCode.UnprocessableEntity, r.StatusCode);
             var p = await Problem(r);
@@ -244,11 +244,11 @@ public class ProfileApiTests(ProfileFactory f) : IClassFixture<ProfileFactory>
     {
         // Only Draft and Rejected may submit. No endpoint yet moves a profile to Submitted, so seed one directly.
         var id = Id();
-        await As(id).PostAsJsonAsync(Url, new CreatePractitionerRequest("Demo Seeded"));
+        await As(id).PostAsJsonAsync(Url, new CreateAgentRequest("Demo Seeded"));
         using (var scope = f.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<Gabinety.Directory.Persistence.DirectoryDbContext>();
-            db.Practitioners.Single(x => x.UserId == id).Status = PractitionerStatus.Approved;
+            db.Agents.Single(x => x.UserId == id).Status = AgentStatus.Approved;
             await db.SaveChangesAsync();
         }
         var r = await As(id).PostAsync(Url + "/submit", null);
@@ -265,16 +265,16 @@ public class ProfileApiTests(ProfileFactory f) : IClassFixture<ProfileFactory>
     {
         var id = Id();
         var c = As(id);
-        await c.PostAsJsonAsync(Url, new CreatePractitionerRequest("Demo Approved"));
+        await c.PostAsJsonAsync(Url, new CreateAgentRequest("Demo Approved"));
         await c.PutAsJsonAsync(Url, Full());
         using (var scope = f.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<Gabinety.Directory.Persistence.DirectoryDbContext>();
-            db.Practitioners.Single(x => x.UserId == id).Status = PractitionerStatus.Approved;
+            db.Agents.Single(x => x.UserId == id).Status = AgentStatus.Approved;
             await db.SaveChangesAsync();
         }
         await c.PutAsJsonAsync(Url, Full("1234563218"));
-        var p = (await c.GetFromJsonAsync<PractitionerPrivate>(Url, J))!;
-        Assert.Equal(PractitionerStatus.Submitted, p.Status);
+        var p = (await c.GetFromJsonAsync<AgentPrivate>(Url, J))!;
+        Assert.Equal(AgentStatus.Submitted, p.Status);
     }
 }

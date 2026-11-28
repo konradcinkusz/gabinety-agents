@@ -164,7 +164,7 @@ public class ClientTests : IClassFixture<WebFactory>
     }
 
     [Theory]
-    [InlineData(Backend.Directory)] [InlineData(Backend.Booking)] [InlineData(Backend.Reputation)] [InlineData(Backend.Assistant)] [InlineData(Backend.Auth)]
+    [InlineData(Backend.Directory)] [InlineData(Backend.Access)] [InlineData(Backend.Reputation)] [InlineData(Backend.Assistant)] [InlineData(Backend.Auth)]
     public void Every_backend_client_has_exactly_one_resilience_handler(string name)
     {
         // ServiceDefaults adds the standard handler to every client; a second AddStandardResilienceHandler multiplies the attempts (BLAZOR-WEB-APP section 5).

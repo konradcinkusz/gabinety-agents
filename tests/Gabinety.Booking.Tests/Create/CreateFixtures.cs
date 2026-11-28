@@ -19,7 +19,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Gabinety.Booking.Tests;
 
-using Booking = Gabinety.Booking.Features.Bookings.Entities.Booking;
+using Access = Gabinety.Booking.Features.Bookings.Entities.Access;
 
 /// <summary>Collects every log line (message, structured values and exception) so a test can assert what was NOT logged.</summary>
 sealed class LogSink : ILoggerProvider
@@ -58,8 +58,8 @@ sealed class CreateHost : WebApplicationFactory<Program>
     /// <summary>Starts in the fake profile (<c>GABINETY_FAKE=1</c>), the only one that may run the Mock payment provider (F-01); a test of a deployed profile calls <see cref="AsDeployed"/>.</summary>
     public Dictionary<string, string?> Settings { get; } = new() { ["GABINETY_FAKE"] = "1" };
 
-    public Guid Practitioner { get; } = Guid.NewGuid();
-    public Guid Offering { get; } = Guid.NewGuid();
+    public Guid Agent { get; } = Guid.NewGuid();
+    public Guid Package { get; } = Guid.NewGuid();
     public string OwnerUserId = "demo-practitioner-user";
     public string Title = "demo-offering";
     public int Minutes = 60;
@@ -91,16 +91,16 @@ sealed class CreateHost : WebApplicationFactory<Program>
 
     public CreateHost()
     {
-        Directory.Override = (r, _) => r.RequestUri!.AbsolutePath == $"/internal/v1/offerings/{Offering}"
+        Directory.Override = (r, _) => r.RequestUri!.AbsolutePath == $"/internal/v1/offerings/{Package}"
             ? FakeDirectory.Json(new
             {
-                offeringId = Offering, practitionerId = Practitioner, practitionerUserId = OwnerUserId, practitionerStatus = Status,
+                offeringId = Package, practitionerId = Agent, practitionerUserId = OwnerUserId, practitionerStatus = Status,
                 title = Title, durationMinutes = Minutes, price = new { amountMinor = PriceMinor, currency = "PLN" },
                 meetingUrl = MeetingUrl, isActive = Active, kind = Kind, units = Units, practitionerSlug = PractitionerSlug,
             })
-            : r.RequestUri!.AbsolutePath == $"/internal/v1/practitioners/{Practitioner}"
+            : r.RequestUri!.AbsolutePath == $"/internal/v1/practitioners/{Agent}"
                 ? (DirectoryDown ? new HttpResponseMessage(System.Net.HttpStatusCode.ServiceUnavailable)
-                    : FakeDirectory.Json(new { practitionerId = Practitioner, displayName = PractitionerName, slug = PractitionerSlug }))
+                    : FakeDirectory.Json(new { practitionerId = Agent, displayName = PractitionerName, slug = PractitionerSlug }))
             : new HttpResponseMessage(System.Net.HttpStatusCode.NotFound);
     }
 
@@ -167,7 +167,7 @@ sealed class CreateHost : WebApplicationFactory<Program>
         return await q(scope.ServiceProvider.GetRequiredService<BookingDbContext>());
     }
 
-    public Task<List<Booking>> Bookings() => Query(db => db.Bookings.AsNoTracking().Where(b => b.PractitionerId == Practitioner).ToListAsync());
+    public Task<List<Access>> Accesses() => Query(db => db.Accesses.AsNoTracking().Where(b => b.AgentId == Agent).ToListAsync());
 
     public static async Task<HttpResponseMessage> Post(HttpClient c, object body, string? key)
     {
@@ -179,7 +179,7 @@ sealed class CreateHost : WebApplicationFactory<Program>
     /// <summary>The body of a purchase; <c>start</c> is only sent when a test asks for it (the server ignores it).</summary>
     public object Req(string? start = null, string? text = null, Guid? offering = null) => new
     {
-        offeringId = offering ?? Offering, startUtc = start,
+        offeringId = offering ?? Package, startUtc = start,
         brief = new { text = text ?? "demo-brief: I need help with a first review of my plan", problemSlug = (string?)null, aiAssisted = false },
     };
 

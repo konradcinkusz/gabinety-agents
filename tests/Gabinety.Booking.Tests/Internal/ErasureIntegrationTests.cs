@@ -4,7 +4,7 @@ using Gabinety.Booking.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -47,18 +47,18 @@ public class ErasureIntegrationTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.NoContent, (await ErasureApiTests.Erase(host, b)).StatusCode);
 
         await using var db = Db();
-        var rows = await db.Bookings.AsNoTracking().Where(x => x.Id == ba || x.Id == bb).OrderBy(x => x.ClientUserId).ToListAsync();
+        var rows = await db.Accesses.AsNoTracking().Where(x => x.Id == ba || x.Id == bb).OrderBy(x => x.ClientUserId).ToListAsync();
         Assert.Equal(new[] { ErasureApiTests.Token(a), ErasureApiTests.Token(b) }.Order().ToArray(), rows.Select(x => x.ClientUserId).ToArray());
         Assert.All(rows, x => { Assert.Equal(shared, x.IdempotencyKey); Assert.Equal("[usunięto]", x.BriefText); Assert.Equal(ErasureApiTests.Token(x.ClientUserId == ErasureApiTests.Token(a) ? a : b), x.ClientUserId); });
         var records = await db.IdempotencyRecords.AsNoTracking().Where(r => r.IdempotencyKey == shared).ToListAsync();
         Assert.Equal(new[] { ErasureApiTests.Token(a), ErasureApiTests.Token(b) }.Order().ToArray(), records.Select(r => r.ClientUserId).Order().ToArray());
-        Assert.Equal(0, await db.Bookings.CountAsync(x => x.ClientUserId == a || x.ClientUserId == b || x.PractitionerUserId == a || x.PractitionerUserId == b));
+        Assert.Equal(0, await db.Accesses.CountAsync(x => x.ClientUserId == a || x.ClientUserId == b || x.PractitionerUserId == a || x.PractitionerUserId == b));
 
         // the index still guards: a second row of the same (token, key) is refused
-        db.Bookings.Add(new Gabinety.Booking.Features.Bookings.Entities.Booking
+        db.Accesses.Add(new Gabinety.Booking.Features.Bookings.Entities.Access
         {
-            Id = Guid.NewGuid(), ClientUserId = ErasureApiTests.Token(a), PractitionerId = Guid.NewGuid(), PractitionerUserId = practitionerUser, OfferingId = host.Offering, OfferingTitle = "demo-offering",
-            DurationMinutes = 60, PriceMinor = 1, StartUtc = host.Clock.GetUtcNow().AddDays(5), EndUtc = host.Clock.GetUtcNow().AddDays(5).AddHours(1), Status = BookingStatus.Confirmed,
+            Id = Guid.NewGuid(), ClientUserId = ErasureApiTests.Token(a), AgentId = Guid.NewGuid(), PractitionerUserId = practitionerUser, PackageId = host.Package, PackageTitle = "demo-offering",
+            DurationMinutes = 60, PriceMinor = 1, StartUtc = host.Clock.GetUtcNow().AddDays(5), EndUtc = host.Clock.GetUtcNow().AddDays(5).AddHours(1), Status = AccessStatus.Confirmed,
             BriefText = "x", IdempotencyKey = shared, CreatedAt = host.Clock.GetUtcNow(),
         });
         await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
@@ -71,16 +71,16 @@ public class ErasureIntegrationTests : IAsyncLifetime
         await host.Seed(db =>
         {
             for (var i = 0; i < 1203; i++)
-                db.Bookings.Add(new Gabinety.Booking.Features.Bookings.Entities.Booking
+                db.Accesses.Add(new Gabinety.Booking.Features.Bookings.Entities.Access
                 {
-                    Id = Guid.NewGuid(), ClientUserId = u, PractitionerId = Guid.NewGuid(), PractitionerUserId = p, OfferingId = host.Offering, OfferingTitle = "demo-offering",
+                    Id = Guid.NewGuid(), ClientUserId = u, AgentId = Guid.NewGuid(), PractitionerUserId = p, PackageId = host.Package, PackageTitle = "demo-offering",
                     DurationMinutes = 60, PriceMinor = 1, StartUtc = host.Clock.GetUtcNow().AddDays(1), EndUtc = host.Clock.GetUtcNow().AddDays(1).AddHours(1),
-                    Status = BookingStatus.Completed, BriefText = "demo-brief", IdempotencyKey = Guid.NewGuid(), CreatedAt = host.Clock.GetUtcNow(),
+                    Status = AccessStatus.Completed, BriefText = "demo-brief", IdempotencyKey = Guid.NewGuid(), CreatedAt = host.Clock.GetUtcNow(),
                 });
         });
         Assert.Equal(HttpStatusCode.NoContent, (await ErasureApiTests.Erase(host, u)).StatusCode);
         await using var db = Db();
-        Assert.Equal(0, await db.Bookings.CountAsync(x => x.ClientUserId == u));
-        Assert.Equal(1203, await db.Bookings.CountAsync(x => x.ClientUserId == ErasureApiTests.Token(u) && x.BriefText == "[usunięto]"));
+        Assert.Equal(0, await db.Accesses.CountAsync(x => x.ClientUserId == u));
+        Assert.Equal(1203, await db.Accesses.CountAsync(x => x.ClientUserId == ErasureApiTests.Token(u) && x.BriefText == "[usunięto]"));
     }
 }

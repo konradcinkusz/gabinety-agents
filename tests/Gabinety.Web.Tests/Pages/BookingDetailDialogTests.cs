@@ -7,13 +7,13 @@ namespace Gabinety.Web.Tests.Pages;
 /// <summary>UX-031: the header block of each state, the cancel / dispute / no-show actions as native dialogs (enhance.js upgrades them, the markup alone is a visible block), the rebook link.</summary>
 public class BookingDetailDialogTests
 {
-    static readonly string Detail_ = $"/moje/dostepy/{BookingId}";
+    static readonly string Detail_ = $"/moje/dostepy/{AccessId}";
     static readonly string Client = Detail_ + "?role=client";
 
     static async Task<ClientAreaFixture> Open(BookingDetailDto booking)
     {
         var f = await ClientAreaFixture.SignedIn();
-        f.Web.Booking.Respond = _ => FakeBackend.Json(booking);
+        f.Web.Access.Respond = _ => FakeBackend.Json(booking);
         return f;
     }
 
@@ -103,7 +103,7 @@ public class BookingDetailDialogTests
         await using var f = await Open(Detail("Completed", review: true));
         var page = await f.Browser.GetAsync(Client);
         var review = page.One("[data-testid=booking-head] a.btn--primary")!;
-        Assert.Equal(("Wystaw opinię", $"/moje/opinie/{BookingId}"), (review.TextContent, review.GetAttribute("href")!));
+        Assert.Equal(("Wystaw opinię", $"/moje/opinie/{AccessId}"), (review.TextContent, review.GetAttribute("href")!));
         Assert.Single(page.All("a"), a => a.TextContent == "Wystaw opinię");
         var rebook = page.All("a").Single(a => a.TextContent == "Wykup ponownie");
         Assert.Equal(("btn btn--secondary", "/agent/demo-anna-demowska"), (rebook.ClassName, rebook.GetAttribute("href")!));
@@ -135,7 +135,7 @@ public class BookingDetailDialogTests
     public async Task Without_a_slug_or_in_a_state_that_is_not_finished_there_is_no_rebook_link()
     {
         var noSlug = Detail("Completed");
-        await using var f = await Open(noSlug with { Practitioner = noSlug.Practitioner with { Slug = " " } });
+        await using var f = await Open(noSlug with { Agent = noSlug.Agent with { Slug = " " } });
         Assert.DoesNotContain((await f.Browser.GetAsync(Client)).All("a"), a => a.TextContent == "Wykup ponownie");
         await using var g = await Open(Detail("Confirmed"));
         Assert.DoesNotContain((await g.Browser.GetAsync(Client)).All("a"), a => a.TextContent == "Wykup ponownie");

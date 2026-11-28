@@ -93,7 +93,7 @@ sealed class ModerationHost : WebApplicationFactory<Program>
 
     public static Review NewReview(Guid practitionerId, ReviewStatus status, int rating = 5, DateTimeOffset? at = null) => new()
     {
-        Id = Guid.CreateVersion7(), BookingId = Guid.NewGuid(), PractitionerId = practitionerId, ClientUserId = "demo-reviewer", Rating = (short)rating,
+        Id = Guid.CreateVersion7(), AccessId = Guid.NewGuid(), AgentId = practitionerId, ClientUserId = "demo-reviewer", Rating = (short)rating,
         Text = ReviewText, Status = status, HoldReasons = status == ReviewStatus.Held ? ["spam"] : [],
         CreatedAt = at ?? new DateTimeOffset(2026, 11, 1, 10, 0, 0, TimeSpan.Zero),
         PublishedAt = status == ReviewStatus.Published ? at ?? new DateTimeOffset(2026, 11, 1, 10, 0, 0, TimeSpan.Zero) : null,
@@ -107,7 +107,7 @@ sealed class ModerationHost : WebApplicationFactory<Program>
         db.Reviews.AddRange(reviews);
         var pub = reviews.Where(r => r.Status == ReviewStatus.Published).ToList();
         if (pub.Count > 0)
-            db.RatingSummaries.Add(new RatingSummary { PractitionerId = practitionerId, Count = pub.Count, Sum = pub.Sum(r => (int)r.Rating), Version = pub.Count });
+            db.RatingSummaries.Add(new RatingSummary { AgentId = practitionerId, Count = pub.Count, Sum = pub.Sum(r => (int)r.Rating), Version = pub.Count });
         db.ModerationEvents.AddRange(reviews.Select(r => new ModerationEvent
             { Id = Guid.CreateVersion7(), ReviewId = r.Id, Kind = ModerationEventKind.Created, Actor = "system", At = r.CreatedAt }));
         await db.SaveChangesAsync();
@@ -120,14 +120,14 @@ sealed class ModerationHost : WebApplicationFactory<Program>
     }
 
     public Task<Review> ReviewOf(Guid id) => Query(db => db.Reviews.AsNoTracking().SingleAsync(r => r.Id == id));
-    public Task<RatingSummary?> SummaryOf(Guid p) => Query(db => db.RatingSummaries.AsNoTracking().SingleOrDefaultAsync(s => s.PractitionerId == p));
+    public Task<RatingSummary?> SummaryOf(Guid p) => Query(db => db.RatingSummaries.AsNoTracking().SingleOrDefaultAsync(s => s.AgentId == p));
     public Task<List<ModerationEvent>> EventsOf(Guid reviewId) =>
         Query(db => db.ModerationEvents.AsNoTracking().Where(e => e.ReviewId == reviewId).OrderBy(e => e.At).ThenBy(e => e.Id).ToListAsync());
 
     /// <summary>The summary a recount of the Published rows gives.</summary>
     public async Task<(int Count, int Sum)> Recount(Guid p)
     {
-        var rows = await Query(db => db.Reviews.AsNoTracking().Where(r => r.PractitionerId == p && r.Status == ReviewStatus.Published).ToListAsync());
+        var rows = await Query(db => db.Reviews.AsNoTracking().Where(r => r.AgentId == p && r.Status == ReviewStatus.Published).ToListAsync());
         return (rows.Count, rows.Sum(r => (int)r.Rating));
     }
 

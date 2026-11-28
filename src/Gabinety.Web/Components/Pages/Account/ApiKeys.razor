@@ -2,7 +2,7 @@
 @attribute [Authorize]
 @using Gabinety.Web.Components.Pages.Bookings
 @using Gabinety.Web.Components.Pages.Shared
-@inject BookingClient Bookings
+@inject BookingClient Accesses
 @inject NavigationManager Navigation
 @* Static server rendering with plain form posts and antiforgery. A key is created by a POST and shown in THAT response, once: it is not in a URL, not in a redirect and not in the list (which has the prefix only).
    Revoking opens a confirmation (?revoke=<id>), the same pattern as the other client actions. The name of a key is the user's text: sent as a body, never logged. *@
@@ -124,7 +124,7 @@ else
 
     async Task LoadAsync()
     {
-        var result = await Bookings.ApiKeysAsync();
+        var result = await Accesses.ApiKeysAsync();
         if (!result.IsOk) { _failure = result.Failure; return; }
         _keys = [.. result.Value!.OrderBy(k => k.CreatedAt)];
         _revoking = RevokeParam is { } id ? _keys.FirstOrDefault(k => k.Id == id) : null;
@@ -136,7 +136,7 @@ else
         _nameError = name.Length is 0 or > 60 ? BookingsText.Keys.NameRequired : null;
         _problems = _nameError is null ? [] : [new FormProblem("key-name", _nameError)];
         if (_nameError is not null) return;
-        var result = await Bookings.CreateApiKeyAsync(name);
+        var result = await Accesses.CreateApiKeyAsync(name);
         if (result.IsOk)
         {
             _created = result.Value; // shown in this response only
@@ -152,7 +152,7 @@ else
     async Task RevokeAsync()
     {
         if (RevokeModel?.Id is not { } id) return;
-        var result = await Bookings.RevokeApiKeyAsync(id);
+        var result = await Accesses.RevokeApiKeyAsync(id);
         if (result.IsOk) { Navigation.NavigateTo("/moje/klucze?done=revoked"); return; }
         if (result.Failure!.IsUnauthenticated) { Navigation.NavigateTo(ReturnTarget.LoginUrl(ReturnTarget.Safe("/moje/klucze"))); return; }
         _actionFailure = result.Failure;

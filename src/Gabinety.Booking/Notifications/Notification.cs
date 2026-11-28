@@ -14,7 +14,7 @@ public enum NotificationKind { BookingConfirmed, Reminder24h, Reminder1h, Cancel
 public sealed class Notification
 {
     public Guid Id { get; set; }
-    public Guid BookingId { get; set; }
+    public Guid AccessId { get; set; }
     public NotificationKind Kind { get; set; }
     public string ToUserId { get; set; } = "";
     public DateTimeOffset DueAt { get; set; }
@@ -29,12 +29,12 @@ sealed class NotificationConfiguration : IEntityTypeConfiguration<Notification>
         b.ToTable("notifications");
         b.HasKey(x => x.Id);
         b.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
-        b.Property(x => x.BookingId).HasColumnName("booking_id");
+        b.Property(x => x.AccessId).HasColumnName("booking_id");
         b.Property(x => x.Kind).HasColumnName("kind").HasConversion<string>().HasMaxLength(30);
         b.Property(x => x.ToUserId).HasColumnName("to_user_id").HasMaxLength(64);
         b.Property(x => x.DueAt).HasColumnName("due_at");
         b.Property(x => x.SentAt).HasColumnName("sent_at");
         b.Property(x => x.Attempts).HasColumnName("attempts").IsConcurrencyToken();
-        b.HasIndex(x => new { x.BookingId, x.Kind, x.ToUserId }).IsUnique();
+        b.HasIndex(x => new { x.AccessId, x.Kind, x.ToUserId }).IsUnique();
     }
 }

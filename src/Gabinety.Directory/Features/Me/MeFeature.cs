@@ -20,7 +20,7 @@ public sealed class MeFeature : IServiceFeature
             // "sub" stays "sub" or is mapped to NameIdentifier, depending on the handler's inbound mapping.
             var userId = user.FindFirst("sub")?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (userId is null) return Results.Unauthorized();
-            var rows = await db.Practitioners.AsNoTracking().Where(p => p.UserId == userId).OrderBy(p => p.CreatedAt).ThenBy(p => p.Id).ToListAsync(ct); // order, then project
+            var rows = await db.Agents.AsNoTracking().Where(p => p.UserId == userId).OrderBy(p => p.CreatedAt).ThenBy(p => p.Id).ToListAsync(ct); // order, then project
             var agents = rows.Select(p => new MeAgent(p.Id, p.Slug, p.DisplayName, p.Status)).ToList();
             return Results.Ok(new MeDto(userId, agents.Count > 0 ? agents[0].Id : null, agents.Count > 0 ? agents[0].Status : null,
                 user.IsInRole("Admin") || user.IsInRole("SuperAdmin"), false, agents));

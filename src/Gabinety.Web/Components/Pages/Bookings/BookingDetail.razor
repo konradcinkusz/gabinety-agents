@@ -1,7 +1,7 @@
 @page "/moje/dostepy/{BookingId:guid}"
 @attribute [Authorize]
 @using Gabinety.Web.Components.Pages.Shared
-@inject BookingClient Bookings
+@inject BookingClient Accesses
 @inject NavigationManager Navigation
 @inject TimeProvider Clock
 @* Static server rendering. Every action is driven ONLY by the server's can* flags: the windows are never recomputed here. An action opens as a state of the page (?action=), shown as a
@@ -26,7 +26,7 @@ else if (_booking is { } b)
     <div class="stack">
         @if (DoneText is { } done) {<div class="callout callout--success" role="status" data-testid="done">@done</div>}
         <section class="card" aria-labelledby="booking-title">
-            <h2 id="booking-title">@b.OfferingTitle</h2>
+            <h2 id="booking-title">@b.PackageTitle</h2>
             @if (b.Status == "Confirmed")
             {
                 <div class="head" data-testid="booking-head">
@@ -45,7 +45,7 @@ else if (_booking is { } b)
                 <p class="callout callout--info" data-testid="booking-head">@refundLine</p>
             }
             <dl class="dl">
-                @if (BookingFormat.Name(_role == BookingClient.ClientRole ? b.Practitioner.DisplayName : b.Client?.DisplayName) is { } party)
+                @if (BookingFormat.Name(_role == BookingClient.ClientRole ? b.Agent.DisplayName : b.Client?.DisplayName) is { } party)
                 {
                     <dt>@(_role == BookingClient.ClientRole ? BookingsText.PartyPractitioner : BookingsText.PartyClient)</dt><dd>@party @if (_role == BookingClient.ClientRole) {<AiBadge />}</dd>
                 }
@@ -117,7 +117,7 @@ else if (_booking is { } b)
         {
             <div class="form-actions">
                 @if (b.CanReview && b.Status != "Completed") {<a class="btn btn--primary" href="@($"/moje/opinie/{b.Id}")">@BookingsText.Review</a>}
-                @if (_role == BookingClient.ClientRole && BookingFormat.RebookHref(b.Status, b.Practitioner.Slug) is { } rebook) {<a class="btn btn--secondary" href="@rebook">@BookingsText.Detail.Rebook</a>}
+                @if (_role == BookingClient.ClientRole && BookingFormat.RebookHref(b.Status, b.Agent.Slug) is { } rebook) {<a class="btn btn--secondary" href="@rebook">@BookingsText.Detail.Rebook</a>}
                 @if (b.CanCancel || b.CanDispute)
                 {
                     @* a GET form: the buttons open the action without a script and without a state change (a link would not be a button) *@
@@ -239,7 +239,7 @@ else if (_booking is { } b)
         DisputeModel ??= new();
         TaskModel ??= new();
         _role = BookingFormat.Role(RoleParam);
-        var result = await Bookings.GetAsync(BookingId);
+        var result = await Accesses.GetAsync(BookingId);
         if (result.IsOk)
         {
             _booking = result.Value;
@@ -254,7 +254,7 @@ else if (_booking is { } b)
 
     async Task LoadTasksAsync()
     {
-        var result = await Bookings.TasksAsync(BookingId);
+        var result = await Accesses.TasksAsync(BookingId);
         if (result.IsOk) { _tasks = [.. result.Value!.OrderByDescending(t => t.CreatedAt)]; _tasksFailed = false; }
         else { _tasks = []; _tasksFailed = true; }
     }
@@ -270,7 +270,7 @@ else if (_booking is { } b)
         _taskError = length < 20 ? BookingsText.Tasks.TooShort : length > 20000 ? BookingsText.Tasks.TooLong : null;
         _taskProblems = _taskError is null ? [] : [new FormProblem("task-input", _taskError)];
         if (_taskError is not null) return;
-        var result = await Bookings.CreateTaskAsync(BookingId, TaskModel.Input!);
+        var result = await Accesses.CreateTaskAsync(BookingId, TaskModel.Input!);
         if (result.IsOk) { Navigation.NavigateTo(DetailHref(done: "task") + "#zadania"); return; } // a redirect with a fixed key: a reload never orders the task twice
         if (result.Failure!.IsUnauthenticated) { SignIn(); return; }
         _taskFailure = result.Failure;
@@ -282,7 +282,7 @@ else if (_booking is { } b)
     {
         _reasonError = DisputeRules.ReasonProblem(CancelModel!.Reason);
         _problems = _reasonError is null ? [] : [new FormProblem("reason", _reasonError)];
-        return _reasonError is not null ? Task.CompletedTask : RunAsync(() => Bookings.CancelAsync(BookingId, CancelModel.Reason), "cancelled", "cancel");
+        return _reasonError is not null ? Task.CompletedTask : RunAsync(() => Accesses.CancelAsync(BookingId, CancelModel.Reason), "cancelled", "cancel");
     }
 
     Task DisputeAsync()
@@ -293,7 +293,7 @@ else if (_booking is { } b)
         _textError = DisputeRules.TextProblem(DisputeModel.Text);
         if (_textError is not null) problems.Add(new("text", _textError));
         _problems = problems;
-        return problems.Count > 0 ? Task.CompletedTask : RunAsync(() => Bookings.DisputeAsync(BookingId, DisputeModel.Kind!, DisputeModel.Text!), "disputed", "dispute");
+        return problems.Count > 0 ? Task.CompletedTask : RunAsync(() => Accesses.DisputeAsync(BookingId, DisputeModel.Kind!, DisputeModel.Text!), "disputed", "dispute");
     }
 
 

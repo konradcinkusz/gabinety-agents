@@ -7,7 +7,7 @@ using Gabinety.Contracts.Booking;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -47,7 +47,7 @@ public class CancelFutureBookingsApiTests
     }
 
     static async Task<JsonElement> Json(HttpResponseMessage r) => JsonDocument.Parse(await r.Content.ReadAsStringAsync()).RootElement.Clone();
-    static Task<List<Notification>> Notes(CreateHost h, Guid id) => h.Query(db => db.Notifications.AsNoTracking().Where(n => n.BookingId == id).ToListAsync());
+    static Task<List<Notification>> Notes(CreateHost h, Guid id) => h.Query(db => db.Notifications.AsNoTracking().Where(n => n.AccessId == id).ToListAsync());
 
     [Theory]
     [InlineData(null)]
@@ -55,9 +55,9 @@ public class CancelFutureBookingsApiTests
     public async Task Without_the_internal_key_nothing_happens(string? key)
     {
         await using var h = Host(new RecordingProvider());
-        var id = await Life.Seed(h, BookingStatus.Confirmed, 3 * Day);
-        Assert.Equal(HttpStatusCode.Unauthorized, (await Call(h, h.Practitioner, key)).StatusCode);
-        Assert.Equal(BookingStatus.Confirmed, (await Life.Row(h, id)).Status);
+        var id = await Life.Seed(h, AccessStatus.Confirmed, 3 * Day);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await Call(h, h.Agent, key)).StatusCode);
+        Assert.Equal(AccessStatus.Confirmed, (await Life.Row(h, id)).Status);
     }
 
     [Fact]
@@ -65,15 +65,15 @@ public class CancelFutureBookingsApiTests
     {
         var provider = new RecordingProvider();
         await using var h = Host(provider);
-        var id = await Life.Seed(h, BookingStatus.Confirmed, 3 * Day);
+        var id = await Life.Seed(h, AccessStatus.Confirmed, 3 * Day);
 
-        var r = await Call(h, h.Practitioner);
+        var r = await Call(h, h.Agent);
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
         var body = await Json(r);
         Assert.Equal((1, 0, 0), (body.GetProperty("cancelled").GetInt32(), body.GetProperty("holdsExpired").GetInt32(), body.GetProperty("failed").GetInt32()));
 
         var row = await Life.Row(h, id);
-        Assert.Equal(BookingStatus.CancelledByPractitioner, row.Status);
+        Assert.Equal(AccessStatus.CancelledByPractitioner, row.Status);
         Assert.Equal("practitioner_suspended", row.StatusReason);
         Assert.Equal(h.Clock.GetUtcNow(), row.CancelledAt);
         Assert.Null(row.PayoutDueAt); // the client pays nothing and the practitioner earns nothing (CONTRACTS 9.2)
@@ -88,21 +88,21 @@ public class CancelFutureBookingsApiTests
     public async Task Even_a_booking_inside_the_24h_window_is_refunded_in_full()
     {
         await using var h = Host(new RecordingProvider());
-        var id = await Life.Seed(h, BookingStatus.Confirmed, TimeSpan.FromHours(3)); // a client cancel here would be late and refund nothing
-        Assert.Equal(HttpStatusCode.OK, (await Call(h, h.Practitioner)).StatusCode);
-        Assert.Equal((BookingStatus.CancelledByPractitioner, h.PriceMinor), ((await Life.Row(h, id)).Status, (await Life.PaymentOf(h, id)).RefundedMinor));
+        var id = await Life.Seed(h, AccessStatus.Confirmed, TimeSpan.FromHours(3)); // a client cancel here would be late and refund nothing
+        Assert.Equal(HttpStatusCode.OK, (await Call(h, h.Agent)).StatusCode);
+        Assert.Equal((AccessStatus.CancelledByPractitioner, h.PriceMinor), ((await Life.Row(h, id)).Status, (await Life.PaymentOf(h, id)).RefundedMinor));
     }
 
     [Fact]
     public async Task The_client_is_told_with_the_existing_Cancelled_notification_and_the_unsent_reminders_go()
     {
         await using var h = Host(new RecordingProvider());
-        var id = await Life.Seed(h, BookingStatus.Confirmed, 3 * Day);
+        var id = await Life.Seed(h, AccessStatus.Confirmed, 3 * Day);
         await h.Seed(db => db.Notifications.AddRange(
-            new Notification { Id = Guid.NewGuid(), BookingId = id, Kind = NotificationKind.Reminder24h, ToUserId = Life.Client, DueAt = h.Clock.GetUtcNow().AddDays(2) },
-            new Notification { Id = Guid.NewGuid(), BookingId = id, Kind = NotificationKind.ReviewRequest, ToUserId = Life.Client, DueAt = h.Clock.GetUtcNow().AddDays(4) }));
+            new Notification { Id = Guid.NewGuid(), AccessId = id, Kind = NotificationKind.Reminder24h, ToUserId = Life.Client, DueAt = h.Clock.GetUtcNow().AddDays(2) },
+            new Notification { Id = Guid.NewGuid(), AccessId = id, Kind = NotificationKind.ReviewRequest, ToUserId = Life.Client, DueAt = h.Clock.GetUtcNow().AddDays(4) }));
 
-        await Call(h, h.Practitioner);
+        await Call(h, h.Agent);
         var notes = await Notes(h, id);
         var cancelled = Assert.Single(notes);
         Assert.Equal((NotificationKind.Cancelled, Life.Client, h.Clock.GetUtcNow()), (cancelled.Kind, cancelled.ToUserId, cancelled.DueAt));
@@ -112,25 +112,25 @@ public class CancelFutureBookingsApiTests
     public async Task Only_future_confirmed_bookings_of_that_practitioner_are_touched_and_holds_expire()
     {
         await using var h = Host(new RecordingProvider());
-        var future = await Life.Seed(h, BookingStatus.Confirmed, 3 * Day);
-        var hold = await Life.Seed(h, BookingStatus.PendingPayment, 5 * Day);
-        var started = await Life.Seed(h, BookingStatus.Confirmed, -TimeSpan.FromMinutes(10), TimeSpan.FromHours(1)); // under way: it runs its course
-        var finished = await Life.Seed(h, BookingStatus.Completed, -3 * Day);
-        var clientCancelled = await Life.Seed(h, BookingStatus.CancelledByClient, 4 * Day);
-        var disputed = await Life.Seed(h, BookingStatus.Disputed, -Day);
-        var elsewhere = await Life.Seed(h, BookingStatus.Confirmed, 3 * Day);
-        await h.Seed(db => db.Bookings.Single(b => b.Id == elsewhere).PractitionerId = Guid.NewGuid());
+        var future = await Life.Seed(h, AccessStatus.Confirmed, 3 * Day);
+        var hold = await Life.Seed(h, AccessStatus.PendingPayment, 5 * Day);
+        var started = await Life.Seed(h, AccessStatus.Confirmed, -TimeSpan.FromMinutes(10), TimeSpan.FromHours(1)); // under way: it runs its course
+        var finished = await Life.Seed(h, AccessStatus.Completed, -3 * Day);
+        var clientCancelled = await Life.Seed(h, AccessStatus.CancelledByClient, 4 * Day);
+        var disputed = await Life.Seed(h, AccessStatus.Disputed, -Day);
+        var elsewhere = await Life.Seed(h, AccessStatus.Confirmed, 3 * Day);
+        await h.Seed(db => db.Accesses.Single(b => b.Id == elsewhere).AgentId = Guid.NewGuid());
 
-        var body = await Json(await Call(h, h.Practitioner));
+        var body = await Json(await Call(h, h.Agent));
         Assert.Equal((1, 1), (body.GetProperty("cancelled").GetInt32(), body.GetProperty("holdsExpired").GetInt32()));
 
-        Assert.Equal(BookingStatus.CancelledByPractitioner, (await Life.Row(h, future)).Status);
-        Assert.Equal(BookingStatus.Expired, (await Life.Row(h, hold)).Status);
-        Assert.Equal(BookingStatus.Confirmed, (await Life.Row(h, started)).Status);
-        Assert.Equal(BookingStatus.Completed, (await Life.Row(h, finished)).Status);
-        Assert.Equal(BookingStatus.CancelledByClient, (await Life.Row(h, clientCancelled)).Status);
-        Assert.Equal(BookingStatus.Disputed, (await Life.Row(h, disputed)).Status);
-        Assert.Equal(BookingStatus.Confirmed, (await Life.Row(h, elsewhere)).Status);
+        Assert.Equal(AccessStatus.CancelledByPractitioner, (await Life.Row(h, future)).Status);
+        Assert.Equal(AccessStatus.Expired, (await Life.Row(h, hold)).Status);
+        Assert.Equal(AccessStatus.Confirmed, (await Life.Row(h, started)).Status);
+        Assert.Equal(AccessStatus.Completed, (await Life.Row(h, finished)).Status);
+        Assert.Equal(AccessStatus.CancelledByClient, (await Life.Row(h, clientCancelled)).Status);
+        Assert.Equal(AccessStatus.Disputed, (await Life.Row(h, disputed)).Status);
+        Assert.Equal(AccessStatus.Confirmed, (await Life.Row(h, elsewhere)).Status);
     }
 
     [Fact]
@@ -138,9 +138,9 @@ public class CancelFutureBookingsApiTests
     {
         var provider = new RecordingProvider();
         await using var h = Host(provider);
-        var id = await Life.Seed(h, BookingStatus.Confirmed, 3 * Day);
-        await Call(h, h.Practitioner);
-        var again = await Call(h, h.Practitioner);
+        var id = await Life.Seed(h, AccessStatus.Confirmed, 3 * Day);
+        await Call(h, h.Agent);
+        var again = await Call(h, h.Agent);
         Assert.Equal(HttpStatusCode.OK, again.StatusCode);
         Assert.Equal(0, (await Json(again)).GetProperty("cancelled").GetInt32());
         Assert.Single(provider.Refunds);
@@ -162,17 +162,17 @@ public class CancelFutureBookingsApiTests
     {
         var provider = new FlakyProvider(new RecordingProvider()) { Down = true };
         await using var h = Host(provider);
-        var broken = await Life.Seed(h, BookingStatus.Confirmed, 3 * Day);
+        var broken = await Life.Seed(h, AccessStatus.Confirmed, 3 * Day);
 
-        var first = await Call(h, h.Practitioner);
+        var first = await Call(h, h.Agent);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, first.StatusCode);
         Assert.Equal("dependency_unavailable", (await Json(first)).GetProperty("code").GetString());
-        Assert.Equal(BookingStatus.Confirmed, (await Life.Row(h, broken)).Status);
+        Assert.Equal(AccessStatus.Confirmed, (await Life.Row(h, broken)).Status);
         Assert.Empty(await Life.RefundRows(h, broken));
 
         provider.Down = false;
-        Assert.Equal(HttpStatusCode.OK, (await Call(h, h.Practitioner)).StatusCode);
-        Assert.Equal(BookingStatus.CancelledByPractitioner, (await Life.Row(h, broken)).Status);
+        Assert.Equal(HttpStatusCode.OK, (await Call(h, h.Agent)).StatusCode);
+        Assert.Equal(AccessStatus.CancelledByPractitioner, (await Life.Row(h, broken)).Status);
         Assert.Equal(h.PriceMinor, (await Life.PaymentOf(h, broken)).RefundedMinor);
     }
 
@@ -181,21 +181,21 @@ public class CancelFutureBookingsApiTests
     {
         var provider = new FlakyProvider(new RecordingProvider());
         await using var h = Host(provider);
-        var a = await Life.Seed(h, BookingStatus.Confirmed, 3 * Day);
-        var b = await Life.Seed(h, BookingStatus.Confirmed, 4 * Day);
-        await h.Seed(db => db.Payments.Single(p => p.BookingId == a).ProviderPaymentId = null); // cannot be refunded: counted as failed, not thrown
-        var r = await Call(h, h.Practitioner);
+        var a = await Life.Seed(h, AccessStatus.Confirmed, 3 * Day);
+        var b = await Life.Seed(h, AccessStatus.Confirmed, 4 * Day);
+        await h.Seed(db => db.Payments.Single(p => p.AccessId == a).ProviderPaymentId = null); // cannot be refunded: counted as failed, not thrown
+        var r = await Call(h, h.Agent);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, r.StatusCode);
-        Assert.Equal(BookingStatus.Confirmed, (await Life.Row(h, a)).Status);
-        Assert.Equal(BookingStatus.CancelledByPractitioner, (await Life.Row(h, b)).Status);
+        Assert.Equal(AccessStatus.Confirmed, (await Life.Row(h, a)).Status);
+        Assert.Equal(AccessStatus.CancelledByPractitioner, (await Life.Row(h, b)).Status);
     }
 
     [Fact]
     public async Task A_hold_is_expired_at_once_so_a_late_payment_meets_the_existing_expired_and_refund_rule()
     {
         await using var h = Host(new RecordingProvider());
-        var hold = await Life.Seed(h, BookingStatus.PendingPayment, 5 * Day);
-        await Call(h, h.Practitioner);
-        Assert.Equal(BookingStatus.Expired, (await Life.Row(h, hold)).Status); // a later PaymentSucceeded finds Expired: CONTRACTS 8.1 refunds it in full
+        var hold = await Life.Seed(h, AccessStatus.PendingPayment, 5 * Day);
+        await Call(h, h.Agent);
+        Assert.Equal(AccessStatus.Expired, (await Life.Row(h, hold)).Status); // a later PaymentSucceeded finds Expired: CONTRACTS 8.1 refunds it in full
     }
 }

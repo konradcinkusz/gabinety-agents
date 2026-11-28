@@ -8,8 +8,8 @@ using Gabinety.Booking.Persistence;
 using Gabinety.Contracts.Booking;
 using Gabinety.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Jobs.Payout;
 
@@ -47,13 +47,13 @@ public class PayoutJob(IServiceScopeFactory scopes, IPaymentProvider provider, T
 
     /// <summary>The status rule of "money-complete" for the query. <see cref="IsMoneyComplete"/> is the same rule for a loaded row.</summary>
     static readonly Expression<Func<BookingEntity, bool>> MoneyCompleteExpr = b =>
-        b.Status == BookingStatus.Completed || b.Status == BookingStatus.ClientNoShow || b.Status == BookingStatus.LateCancelledByClient
-        || (b.Status == BookingStatus.Resolved && (b.DisputeResolution == "release" || b.DisputeResolution == "refund_partial"));
+        b.Status == AccessStatus.Completed || b.Status == AccessStatus.ClientNoShow || b.Status == AccessStatus.LateCancelledByClient
+        || (b.Status == AccessStatus.Resolved && (b.DisputeResolution == "release" || b.DisputeResolution == "refund_partial"));
     static readonly Func<BookingEntity, bool> IsMoneyComplete = MoneyCompleteExpr.Compile();
 
-    static DateTimeOffset? DueAt(BookingEntity b) => b.PayoutDueAt ?? (b.Status == BookingStatus.Resolved ? b.ResolvedAt : null);
+    static DateTimeOffset? DueAt(BookingEntity b) => b.PayoutDueAt ?? (b.Status == AccessStatus.Resolved ? b.ResolvedAt : null);
 
-    sealed record Prepared(Guid PayoutId, Guid BookingId, Guid PractitionerId, long AmountMinor, int Attempt, string? DestinationAccountId, string? ProviderPaymentId);
+    sealed record Prepared(Guid PayoutId, Guid AccessId, Guid AgentId, long AmountMinor, int Attempt, string? DestinationAccountId, string? ProviderPaymentId);
     enum Outcome { Paid, Skipped, Failed }
 
     public override string Name => JobName;
@@ -101,9 +101,9 @@ public class PayoutJob(IServiceScopeFactory scopes, IPaymentProvider provider, T
         var maxAttempts = MaxAttempts;
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
-        var due = from b in Scope(db.Bookings.AsNoTracking()).Where(MoneyCompleteExpr)
-                  where b.PayoutMinor > 0 && !seen.Contains(b.Id) && (b.PayoutDueAt ?? (b.Status == BookingStatus.Resolved ? b.ResolvedAt : null)) <= now
-                  join p in db.Payouts.AsNoTracking() on b.Id equals p.BookingId into rows
+        var due = from b in Scope(db.Accesses.AsNoTracking()).Where(MoneyCompleteExpr)
+                  where b.PayoutMinor > 0 && !seen.Contains(b.Id) && (b.PayoutDueAt ?? (b.Status == AccessStatus.Resolved ? b.ResolvedAt : null)) <= now
+                  join p in db.Payouts.AsNoTracking() on b.Id equals p.AccessId into rows
                   from p in rows.DefaultIfEmpty()
                   where p == null || (p.Status != PayoutStatus.Sent && p.AttemptCount < maxAttempts && (p.NextAttemptAt == null || p.NextAttemptAt <= now))
                   orderby b.EndUtc, b.Id
@@ -144,7 +144,7 @@ public class PayoutJob(IServiceScopeFactory scopes, IPaymentProvider provider, T
         {
             using var budget = new CancellationTokenSource(ProviderBudget);
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, budget.Token);
-            result = await provider.PayoutAsync(new PayoutRequest(prepared.PractitionerId, prepared.AmountMinor, "PLN", $"payout:{id:N}", prepared.DestinationAccountId, prepared.ProviderPaymentId, id), linked.Token);
+            result = await provider.PayoutAsync(new PayoutRequest(prepared.AgentId, prepared.AmountMinor, "PLN", $"payout:{id:N}", prepared.DestinationAccountId, prepared.ProviderPaymentId, id), linked.Token);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
@@ -171,11 +171,11 @@ public class PayoutJob(IServiceScopeFactory scopes, IPaymentProvider provider, T
                 // re-read under the lock: disputed (or anything else that is not money-complete) since the selection means no payout
                 if (booking is null || !IsMoneyComplete(booking) || booking.PayoutMinor is not > 0 || DueAt(booking) is not { } due || due > now) return null;
 
-                var row = await db.Payouts.SingleOrDefaultAsync(p => p.BookingId == id, ct);
+                var row = await db.Payouts.SingleOrDefaultAsync(p => p.AccessId == id, ct);
                 if (row is null)
                     db.Payouts.Add(row = new Features.Payouts.Payout
                     {
-                        Id = Guid.CreateVersion7(), BookingId = id, PractitionerId = booking.PractitionerId, AmountMinor = booking.PayoutMinor.Value,
+                        Id = Guid.CreateVersion7(), AccessId = id, AgentId = booking.AgentId, AmountMinor = booking.PayoutMinor.Value,
                         Status = PayoutStatus.Pending, CreatedAt = now,
                     });
                 else if (row.Status == PayoutStatus.Sent || row.AttemptCount >= maxAttempts || row.NextAttemptAt > now) return null; // done, out of attempts, backing off, or its owner is at work
@@ -185,9 +185,9 @@ public class PayoutJob(IServiceScopeFactory scopes, IPaymentProvider provider, T
                 row.NextAttemptAt = now + Lease;
                 await db.SaveChangesAsync(ct);
 
-                var account = await db.PaymentAccounts.AsNoTracking().SingleOrDefaultAsync(a => a.PractitionerId == row.PractitionerId, ct);
-                var payment = await db.Payments.AsNoTracking().SingleOrDefaultAsync(p => p.BookingId == id, ct);
-                return new Prepared(row.Id, id, row.PractitionerId, row.AmountMinor, row.AttemptCount, account?.ProviderAccountId, payment?.ProviderPaymentId);
+                var account = await db.PaymentAccounts.AsNoTracking().SingleOrDefaultAsync(a => a.AgentId == row.AgentId, ct);
+                var payment = await db.Payments.AsNoTracking().SingleOrDefaultAsync(p => p.AccessId == id, ct);
+                return new Prepared(row.Id, id, row.AgentId, row.AmountMinor, row.AttemptCount, account?.ProviderAccountId, payment?.ProviderPaymentId);
             }, ct);
         }
         catch (DbUpdateException)
@@ -206,8 +206,8 @@ public class PayoutJob(IServiceScopeFactory scopes, IPaymentProvider provider, T
             row.ProviderRef = result.ProviderPayoutId;
             row.SentAt = now;
             row.NextAttemptAt = null;
-            if (!await db.LedgerEntries.AnyAsync(l => l.BookingId == row.BookingId && l.Kind == LedgerKind.PractitionerPayout, ct))
-                db.LedgerEntries.Add(new LedgerEntry { Id = Guid.CreateVersion7(), BookingId = row.BookingId, Kind = LedgerKind.PractitionerPayout, AmountMinor = row.AmountMinor, CreatedAt = now });
+            if (!await db.LedgerEntries.AnyAsync(l => l.AccessId == row.AccessId && l.Kind == LedgerKind.PractitionerPayout, ct))
+                db.LedgerEntries.Add(new LedgerEntry { Id = Guid.CreateVersion7(), AccessId = row.AccessId, Kind = LedgerKind.PractitionerPayout, AmountMinor = row.AmountMinor, CreatedAt = now });
             await db.SaveChangesAsync(ct);
             return true;
         }, ct);
@@ -231,13 +231,13 @@ public class PayoutJob(IServiceScopeFactory scopes, IPaymentProvider provider, T
     async Task<bool> RowExistsAsync(Guid bookingId, CancellationToken ct)
     {
         using var scope = scopes.CreateScope();
-        return await scope.ServiceProvider.GetRequiredService<BookingDbContext>().Payouts.AsNoTracking().AnyAsync(p => p.BookingId == bookingId, ct);
+        return await scope.ServiceProvider.GetRequiredService<BookingDbContext>().Payouts.AsNoTracking().AnyAsync(p => p.AccessId == bookingId, ct);
     }
 
     static async Task<BookingEntity?> LoadForUpdateAsync(BookingDbContext db, Guid id, CancellationToken ct) =>
         db.Database.IsNpgsql()
-            ? await db.Bookings.FromSql($"SELECT * FROM bookings WHERE id = {id} FOR UPDATE SKIP LOCKED").SingleOrDefaultAsync(ct)
-            : await db.Bookings.SingleOrDefaultAsync(b => b.Id == id, ct);
+            ? await db.Accesses.FromSql($"SELECT * FROM bookings WHERE id = {id} FOR UPDATE SKIP LOCKED").SingleOrDefaultAsync(ct)
+            : await db.Accesses.SingleOrDefaultAsync(b => b.Id == id, ct);
 
     static async Task<Features.Payouts.Payout?> LoadPayoutForUpdateAsync(BookingDbContext db, Guid id, CancellationToken ct) =>
         db.Database.IsNpgsql()

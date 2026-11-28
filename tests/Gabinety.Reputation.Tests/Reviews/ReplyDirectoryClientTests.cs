@@ -21,7 +21,7 @@ public class ReplyDirectoryClientTests
 
         var found = await c.GetPractitionerByUserAsync("demo-user-a", default);
 
-        Assert.Equal(id, found!.PractitionerId);
+        Assert.Equal(id, found!.AgentId);
         Assert.Equal(FakeDirectory.Key, h.LastKeyHeader);
         Assert.Equal("/internal/v1/practitioners/by-user/demo-user-a", h.LastPath);
     }
@@ -50,7 +50,7 @@ public class ReplyDirectoryClientTests
         var id = Guid.NewGuid();
         h.Override = (_, n) => n == 1 ? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
             : new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { practitionerId = id, status = "Approved" }) };
-        Assert.Equal(id, (await c.GetPractitionerByUserAsync("demo-user-a", default))!.PractitionerId);
+        Assert.Equal(id, (await c.GetPractitionerByUserAsync("demo-user-a", default))!.AgentId);
     }
 
     [Fact]

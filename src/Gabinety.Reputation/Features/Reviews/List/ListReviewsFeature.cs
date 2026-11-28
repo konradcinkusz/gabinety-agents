@@ -22,10 +22,10 @@ public sealed class ListReviewsFeature : IServiceFeature
     public void Map(IEndpointRouteBuilder endpoints) =>
         endpoints.MapGet("/api/v1/practitioners/{practitionerId:guid}/reviews", HandleAsync).AllowAnonymous();
 
-    static async Task<IResult> HandleAsync(Guid practitionerId, string? cursor, int? limit, ReputationDbContext db, CancellationToken ct)
+    static async Task<IResult> HandleAsync([Microsoft.AspNetCore.Mvc.FromRoute(Name = "practitionerId")] Guid practitionerId, string? cursor, int? limit, ReputationDbContext db, CancellationToken ct)
     {
         var take = Math.Clamp(limit ?? MaxLimit, 1, MaxLimit);
-        var q = db.Reviews.AsNoTracking().Where(x => x.PractitionerId == practitionerId && x.Status == ReviewStatus.Published);
+        var q = db.Reviews.AsNoTracking().Where(x => x.AgentId == practitionerId && x.Status == ReviewStatus.Published);
         if (cursor is not null)
         {
             if (!TryDecode(cursor, out var at, out var id))

@@ -9,7 +9,7 @@ namespace Gabinety.Integration.Tests.Seeder;
 /// </summary>
 public class DemoCatalogHonestyTests
 {
-    static readonly DemoPractitioner[] Approved = DemoCatalog.Practitioners.Where(p => p.Target == DemoStatus.Approved && p.Offerings.Length > 0).OrderBy(p => p.UserName, StringComparer.Ordinal).ToArray();
+    static readonly DemoPractitioner[] Approved = DemoCatalog.Agents.Where(p => p.Target == DemoStatus.Approved && p.Packages.Length > 0).OrderBy(p => p.UserName, StringComparer.Ordinal).ToArray();
 
     static (int Count, int Sum) Seeded(DemoPractitioner p)
     {
@@ -18,7 +18,7 @@ public class DemoCatalogHonestyTests
             var booking = BookingPlan.All.Single(b => b.Key == r.BookingKey);
             Assert.Equal(BookingTarget.Completed, booking.Target);
             Assert.True(booking.Tasks > 0, $"{booking.Key} is reviewed, so a task must be ordered on it (a review needs UnitsUsed above 0)");
-            return Approved[booking.Practitioner % Approved.Length].Number == p.Number;
+            return Approved[booking.Agent % Approved.Length].Number == p.Number;
         }).ToList();
         return (mine.Count, mine.Sum(r => r.Rating));
     }
@@ -26,7 +26,7 @@ public class DemoCatalogHonestyTests
     [Fact]
     public void Every_catalog_review_count_and_average_is_what_the_seeder_creates()
     {
-        foreach (var p in DemoCatalog.Practitioners.Where(p => p.Stats is not null))
+        foreach (var p in DemoCatalog.Agents.Where(p => p.Stats is not null))
         {
             var (count, sum) = Seeded(p);
             Assert.True(p.Stats!.Reviews == count, $"{p.Slug}: the catalog says {p.Stats.Reviews} reviews, the seeder creates {count}");
@@ -37,14 +37,14 @@ public class DemoCatalogHonestyTests
     [Fact]
     public void Every_seeded_review_lands_on_an_approved_practitioner_so_the_check_above_sees_all_of_them()
     {
-        var total = DemoCatalog.Practitioners.Where(p => p.Stats is not null).Sum(p => Seeded(p).Count);
+        var total = DemoCatalog.Agents.Where(p => p.Stats is not null).Sum(p => Seeded(p).Count);
         Assert.Equal(ReputationPlan.All.Length, total);
     }
 
     [Fact]
     public void The_suspended_practitioner_claims_no_reviews_because_the_seeder_makes_no_booking_for_them()
     {
-        var suspended = DemoCatalog.Practitioners.Single(p => p.Target == DemoStatus.Suspended);
+        var suspended = DemoCatalog.Agents.Single(p => p.Target == DemoStatus.Suspended);
         Assert.Equal(0, suspended.Stats!.Reviews);
     }
 
@@ -61,10 +61,10 @@ public class DemoCatalogHonestyTests
         Assert.Equal(6, Approved.Length);
         foreach (var p in Approved)
         {
-            var tasks = p.Offerings.Where(o => o.Kind == DemoKind.Tasks).ToList();
+            var tasks = p.Packages.Where(o => o.Kind == DemoKind.Tasks).ToList();
             Assert.InRange(tasks.Count, 1, 2);
             Assert.All(tasks, o => Assert.Contains(o.Units, new[] { 1, 5 }));
-            var chat = Assert.Single(p.Offerings, o => o.Kind == DemoKind.Chat);
+            var chat = Assert.Single(p.Packages, o => o.Kind == DemoKind.Chat);
             Assert.Equal((500, 9900L), (chat.Units, chat.PriceMinor));
         }
     }
@@ -72,12 +72,12 @@ public class DemoCatalogHonestyTests
     [Fact]
     public void Texts_are_in_the_first_person_of_the_agent_and_carry_no_contact_detail_or_long_digit_run()
     {
-        foreach (var p in DemoCatalog.Practitioners)
+        foreach (var p in DemoCatalog.Agents)
         {
-            var texts = new[] { p.Headline, p.Bio }.Concat(p.Offerings.SelectMany(o => new[] { o.Title, o.Description }));
+            var texts = new[] { p.Headline, p.Bio }.Concat(p.Packages.SelectMany(o => new[] { o.Title, o.Description }));
             Assert.All(texts, t => Assert.DoesNotMatch(@"@|https?://|www\.|\d{5,}", t));
             if (p.Target is DemoStatus.Approved or DemoStatus.Submitted) Assert.StartsWith("Jestem agentem AI", p.Bio);
-            if (p.Offerings.Length > 0) Assert.InRange(p.Bio.Length, 200, 2000);
+            if (p.Packages.Length > 0) Assert.InRange(p.Bio.Length, 200, 2000);
         }
     }
 
@@ -86,9 +86,9 @@ public class DemoCatalogHonestyTests
     {
         foreach (var b in BookingPlan.All)
         {
-            var agent = Approved[b.Practitioner % Approved.Length];
+            var agent = Approved[b.Agent % Approved.Length];
             var offering = BookingSeedStep.Pick(new SeededPractitioner(agent.UserName, "u", Guid.Empty, agent.Slug), b.Package);
-            Assert.Contains(offering, agent.Offerings);
+            Assert.Contains(offering, agent.Packages);
             if (b.Package == PackagePick.Chat) Assert.Equal(0, b.Tasks);
             else Assert.InRange(b.Tasks, 0, offering.Units);
         }

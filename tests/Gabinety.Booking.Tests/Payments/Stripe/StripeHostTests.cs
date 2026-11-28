@@ -14,7 +14,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests.StripePayments;
 
@@ -55,9 +55,9 @@ public sealed class StripeHostTests : IDisposable
             s.AddSingleton<IPaymentProvider>(sp => Fx.Provider(stripe, h.Clock));
         };
         var original = h.Directory.Override;
-        agents = [(h.Practitioner, h.PractitionerSlug)];
+        agents = [(h.Agent, h.PractitionerSlug)];
         h.Directory.Override = (r, n) => r.RequestUri!.AbsolutePath == $"/internal/v1/practitioners/by-user/{h.OwnerUserId}"
-            ? FakeDirectory.Json(new { practitionerId = h.Practitioner, status = "Approved" })
+            ? FakeDirectory.Json(new { practitionerId = h.Agent, status = "Approved" })
             : r.RequestUri!.AbsolutePath == $"/internal/v1/practitioners/by-user/{h.OwnerUserId}/agents"
                 ? FakeDirectory.Json(new { items = agents.Select(a => new { practitionerId = a.Id, status = "Approved", slug = a.Slug }) })
                 : original!(r, n);
@@ -68,7 +68,7 @@ public sealed class StripeHostTests : IDisposable
     public void Dispose() => h.Dispose();
 
     Task MakeReady(bool ready = true, string provider = "Stripe") => h.Seed(db => db.PaymentAccounts.Add(new PaymentAccount
-        { PractitionerId = h.Practitioner, Provider = provider, ProviderAccountId = "acct_1Qx0demo", Ready = ready, CreatedAt = h.Clock.GetUtcNow(), UpdatedAt = h.Clock.GetUtcNow() }));
+        { AgentId = h.Agent, Provider = provider, ProviderAccountId = "acct_1Qx0demo", Ready = ready, CreatedAt = h.Clock.GetUtcNow(), UpdatedAt = h.Clock.GetUtcNow() }));
 
     async Task<Guid> NewBooking(string start = "2026-11-18T10:00:00Z")
     {
@@ -88,7 +88,7 @@ public sealed class StripeHostTests : IDisposable
     }
 
     async Task<string> Outcome(HttpResponseMessage r) => (await r.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("outcome").GetString()!;
-    Task<BookingStatus> StatusOf(Guid id) => h.Query(db => db.Bookings.Where(b => b.Id == id).Select(b => b.Status).SingleAsync());
+    Task<AccessStatus> StatusOf(Guid id) => h.Query(db => db.Accesses.Where(b => b.Id == id).Select(b => b.Status).SingleAsync());
 
     // ---- booking creation ----
 
@@ -98,7 +98,7 @@ public sealed class StripeHostTests : IDisposable
         var r = await CreateHost.Post(h.ClientFor(Client), h.Req("2026-11-18T10:00:00Z"), CreateHost.Key());
         Assert.Equal(HttpStatusCode.UnprocessableEntity, r.StatusCode);
         Assert.Equal("practitioner_payments_not_ready", (await r.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
-        Assert.Empty(await h.Bookings());
+        Assert.Empty(await h.Accesses());
         Assert.Empty(stripe.Requests);
     }
 
@@ -117,11 +117,11 @@ public sealed class StripeHostTests : IDisposable
     public async Task With_a_ready_account_the_booking_is_created_with_a_Stripe_checkout_and_a_payment_row_for_the_session()
     {
         var id = await NewBooking();
-        var p = await h.Query(db => db.Payments.AsNoTracking().SingleAsync(x => x.BookingId == id));
+        var p = await h.Query(db => db.Payments.AsNoTracking().SingleAsync(x => x.AccessId == id));
         Assert.Equal("Stripe", p.Provider);
         Assert.Equal(session, p.ProviderPaymentId);
         Assert.Equal(10000, p.AmountMinor);
-        Assert.Equal(BookingStatus.PendingPayment, await StatusOf(id));
+        Assert.Equal(AccessStatus.PendingPayment, await StatusOf(id));
     }
 
     // ---- webhook ----
@@ -135,9 +135,9 @@ public sealed class StripeHostTests : IDisposable
         var first = await Webhook(paid);
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);
         Assert.Equal("Applied", await Outcome(first));
-        Assert.Equal(BookingStatus.Confirmed, await StatusOf(id));
+        Assert.Equal(AccessStatus.Confirmed, await StatusOf(id));
         Assert.Equal("Duplicate", await Outcome(await Webhook(paid)));
-        Assert.Single(await h.Query(db => db.LedgerEntries.AsNoTracking().Where(l => l.BookingId == id && l.Kind == LedgerKind.ClientCharge).ToListAsync()));
+        Assert.Single(await h.Query(db => db.LedgerEntries.AsNoTracking().Where(l => l.AccessId == id && l.Kind == LedgerKind.ClientCharge).ToListAsync()));
     }
 
     [Fact]
@@ -151,7 +151,7 @@ public sealed class StripeHostTests : IDisposable
         Assert.Equal(HttpStatusCode.Unauthorized, (await Webhook(paid, Fx.Sign(Encoding.UTF8.GetBytes(paid), h.Clock.GetUtcNow(), "whsec_other"))).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await Webhook(paid, signedAt: h.Clock.GetUtcNow() - TimeSpan.FromMinutes(6))).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await Webhook(paid, "")).StatusCode);
-        Assert.Equal(BookingStatus.PendingPayment, await StatusOf(id));
+        Assert.Equal(AccessStatus.PendingPayment, await StatusOf(id));
         Assert.Contains(h.Logs.Entries, e => e.EventId == PaymentWebhookFeature.SignatureFailedEventId && e.Level == LogLevel.Error && e.Line.Contains($"evt_{tag}_Paid"));
         Assert.DoesNotContain(h.Logs.Lines, l => l.Contains(Fx.WebhookSecret) || l.Contains(Fx.SecretKey));
     }
@@ -164,7 +164,7 @@ public sealed class StripeHostTests : IDisposable
         Assert.Equal("Rejected", await Outcome(await Webhook(cheap)));
         var euro = Load("event.checkout.session.async_payment_succeeded").Replace("\"currency\": \"pln\"", "\"currency\": \"eur\"");
         Assert.Equal("Rejected", await Outcome(await Webhook(euro)));
-        Assert.Equal(BookingStatus.PendingPayment, await StatusOf(id));
+        Assert.Equal(AccessStatus.PendingPayment, await StatusOf(id));
         Assert.Contains(h.Logs.Lines, l => l.Contains("ALERT payment amount or currency mismatch"));
     }
 
@@ -178,7 +178,7 @@ public sealed class StripeHostTests : IDisposable
         var r = await Webhook(Load(fixture));
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
         Assert.Equal("Ignored", await Outcome(r));
-        Assert.Equal(BookingStatus.PendingPayment, await StatusOf(id));
+        Assert.Equal(AccessStatus.PendingPayment, await StatusOf(id));
         Assert.Equal(WebhookOutcome.Ignored, (await h.Query(db => db.WebhookEvents.AsNoTracking().SingleAsync(e => e.Provider == "Stripe" && e.EventId.StartsWith($"evt_{tag}_")))).Outcome);
     }
 
@@ -192,7 +192,7 @@ public sealed class StripeHostTests : IDisposable
         Assert.True(later.Headers.Contains("Retry-After"));
 
         Assert.Equal("Applied", await Outcome(await Webhook(Load("event.checkout.session.expired"))));
-        Assert.Equal(BookingStatus.Expired, await StatusOf(id));
+        Assert.Equal(AccessStatus.Expired, await StatusOf(id));
     }
 
     [Fact]
@@ -202,11 +202,11 @@ public sealed class StripeHostTests : IDisposable
         h.Clock.Advance(TimeSpan.FromMinutes(11)); // the hold is 10 minutes
         Assert.Equal("Applied", await Outcome(await Webhook(Load("event.checkout.session.completed.paid"))));
 
-        Assert.Equal(BookingStatus.Expired, await StatusOf(id));
+        Assert.Equal(AccessStatus.Expired, await StatusOf(id));
         var refund = Assert.Single(stripe.Requests, r => r.PathAndQuery == "/v1/refunds");
         Assert.Equal("10000", refund.Form["amount"]);
         Assert.StartsWith("late:", refund.Headers["Idempotency-Key"]);
-        Assert.Equal(PaymentStatus.Refunded, (await h.Query(db => db.Payments.AsNoTracking().SingleAsync(p => p.BookingId == id))).Status);
+        Assert.Equal(PaymentStatus.Refunded, (await h.Query(db => db.Payments.AsNoTracking().SingleAsync(p => p.AccessId == id))).Status);
     }
 
     [Fact]
@@ -227,20 +227,20 @@ public sealed class StripeHostTests : IDisposable
         var id = await NewBooking();
         Assert.Equal("Applied", await Outcome(await Webhook(Load("event.checkout.session.completed.paid"))));
         // A package starts at purchase, so the 24 h rule would call every cancel late. The rule is replaced in A-03; until then the booking is moved ahead to keep this test on the early path.
-        await h.Seed(db => { var b = db.Bookings.Single(x => x.Id == id); b.StartUtc = b.StartUtc.AddDays(3); b.EndUtc = b.EndUtc.AddDays(3); });
+        await h.Seed(db => { var b = db.Accesses.Single(x => x.Id == id); b.StartUtc = b.StartUtc.AddDays(3); b.EndUtc = b.EndUtc.AddDays(3); });
 
         var cancel = await Life.Cancel(h, id, Client);
         Assert.Equal(HttpStatusCode.OK, cancel.StatusCode);
-        Assert.Equal(BookingStatus.CancelledByClient, await StatusOf(id));
+        Assert.Equal(AccessStatus.CancelledByClient, await StatusOf(id));
         var refund = Assert.Single(stripe.Requests, r => r.PathAndQuery == "/v1/refunds");
         Assert.Equal($"refund:{id:N}:ClientCancelledEarly", refund.Headers["Idempotency-Key"]);
         Assert.Equal("pi_3Qx0demo", refund.Form["payment_intent"]);
-        Assert.Empty(await h.Query(db => db.LedgerEntries.AsNoTracking().Where(l => l.BookingId == id && l.Kind == LedgerKind.Refund).ToListAsync())); // not before Stripe confirms
+        Assert.Empty(await h.Query(db => db.LedgerEntries.AsNoTracking().Where(l => l.AccessId == id && l.Kind == LedgerKind.Refund).ToListAsync())); // not before Stripe confirms
 
         Assert.Equal("Applied", await Outcome(await Webhook(Load("event.refund.created.succeeded"))));
         Assert.Equal("Ignored", await Outcome(await Webhook(Load("event.refund.updated.succeeded")))); // the second event of the same refund adds nothing
-        Assert.Single(await h.Query(db => db.LedgerEntries.AsNoTracking().Where(l => l.BookingId == id && l.Kind == LedgerKind.Refund).ToListAsync()));
-        Assert.Equal(PaymentStatus.Refunded, (await h.Query(db => db.Payments.AsNoTracking().SingleAsync(p => p.BookingId == id))).Status);
+        Assert.Single(await h.Query(db => db.LedgerEntries.AsNoTracking().Where(l => l.AccessId == id && l.Kind == LedgerKind.Refund).ToListAsync()));
+        Assert.Equal(PaymentStatus.Refunded, (await h.Query(db => db.Payments.AsNoTracking().SingleAsync(p => p.AccessId == id))).Status);
     }
 
     // ---- payout ----
@@ -249,12 +249,12 @@ public sealed class StripeHostTests : IDisposable
     public async Task A_due_completed_booking_is_paid_as_a_transfer_to_the_connected_account_and_once()
     {
         await MakeReady();
-        var id = await Life.Seed(h, BookingStatus.Completed, TimeSpan.FromDays(-4), provider: "Stripe");
+        var id = await Life.Seed(h, AccessStatus.Completed, TimeSpan.FromDays(-4), provider: "Stripe");
         await h.Seed(db =>
         {
-            var b = db.Bookings.Single(x => x.Id == id);
+            var b = db.Accesses.Single(x => x.Id == id);
             (b.FeeMinor, b.PayoutMinor, b.PayoutDueAt) = (1500, 8500, h.Clock.GetUtcNow() - TimeSpan.FromMinutes(1));
-            db.Payments.Single(p => p.BookingId == id).ProviderPaymentId = session;
+            db.Payments.Single(p => p.AccessId == id).ProviderPaymentId = session;
         });
         var job = Job();
 
@@ -266,53 +266,53 @@ public sealed class StripeHostTests : IDisposable
         Assert.Equal("8500", t.Form["amount"]);
         Assert.Equal("acct_1Qx0demo", t.Form["destination"]);
         Assert.Equal("ch_3Qx0demo", t.Form["source_transaction"]);
-        var row = await h.Query(db => db.Payouts.AsNoTracking().SingleAsync(p => p.BookingId == id));
+        var row = await h.Query(db => db.Payouts.AsNoTracking().SingleAsync(p => p.AccessId == id));
         Assert.Equal((PayoutStatus.Sent, "tr_1Qx0demo", 1), (row.Status, row.ProviderRef, row.AttemptCount));
     }
 
     [Fact]
     public async Task A_payout_to_a_practitioner_without_an_account_makes_no_Stripe_call_and_is_counted_as_a_failed_attempt()
     {
-        var id = await Life.Seed(h, BookingStatus.Completed, TimeSpan.FromDays(-4), provider: "Stripe");
+        var id = await Life.Seed(h, AccessStatus.Completed, TimeSpan.FromDays(-4), provider: "Stripe");
         await h.Seed(db =>
         {
-            var b = db.Bookings.Single(x => x.Id == id);
+            var b = db.Accesses.Single(x => x.Id == id);
             (b.FeeMinor, b.PayoutMinor, b.PayoutDueAt) = (1500, 8500, h.Clock.GetUtcNow() - TimeSpan.FromMinutes(1));
         });
         await Assert.ThrowsAsync<JobFailedException>(() => Job().PayDueAsync(h.Clock.GetUtcNow(), default));
         Assert.DoesNotContain(stripe.Requests, r => r.Method == HttpMethod.Post);
-        var row = await h.Query(db => db.Payouts.AsNoTracking().SingleAsync(p => p.BookingId == id));
+        var row = await h.Query(db => db.Payouts.AsNoTracking().SingleAsync(p => p.AccessId == id));
         Assert.Equal((PayoutStatus.Failed, 1), (row.Status, row.AttemptCount));
     }
 
     ScopedPayoutJob Job() => new(h.Services.GetRequiredService<IServiceScopeFactory>(), h.Services.GetRequiredService<IPaymentProvider>(), h.Clock,
-        h.Services.GetRequiredService<IConfiguration>(), h.Services.GetRequiredService<JobMetrics>(), h.Services.GetRequiredService<ILogger<Gabinety.Booking.Jobs.Payout.PayoutJob>>(), h.Practitioner);
+        h.Services.GetRequiredService<IConfiguration>(), h.Services.GetRequiredService<JobMetrics>(), h.Services.GetRequiredService<ILogger<Gabinety.Booking.Jobs.Payout.PayoutJob>>(), h.Agent);
 
     // ---- onboarding ----
 
-    HttpClient Practitioner() => h.ClientFor(h.OwnerUserId);
+    HttpClient Agent() => h.ClientFor(h.OwnerUserId);
 
     [Fact]
     public async Task Onboarding_creates_the_account_once_stores_only_its_id_and_hands_out_a_fresh_link_each_time()
     {
-        var first = await Practitioner().PostAsync("/api/v1/me/payments/account/onboarding", null);
+        var first = await Agent().PostAsync("/api/v1/me/payments/account/onboarding", null);
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);
         var body = await first.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("pending", body.GetProperty("state").GetString());
         Assert.StartsWith("https://connect.stripe.com/", body.GetProperty("onboardingUrl").GetString());
 
-        await Practitioner().PostAsync("/api/v1/me/payments/account/onboarding", null);
+        await Agent().PostAsync("/api/v1/me/payments/account/onboarding", null);
         Assert.Single(stripe.Requests, r => r.PathAndQuery == "/v1/accounts" && r.Method == HttpMethod.Post);
         Assert.Equal(2, stripe.Requests.Count(r => r.PathAndQuery == "/v1/account_links"));
-        var row = await h.Query(db => db.PaymentAccounts.AsNoTracking().SingleAsync(a => a.PractitionerId == h.Practitioner));
-        Assert.Equal((h.Practitioner, "Stripe", "acct_1Qx0demo", false), (row.PractitionerId, row.Provider, row.ProviderAccountId, row.Ready));
+        var row = await h.Query(db => db.PaymentAccounts.AsNoTracking().SingleAsync(a => a.AgentId == h.Agent));
+        Assert.Equal((h.Agent, "Stripe", "acct_1Qx0demo", false), (row.AgentId, row.Provider, row.ProviderAccountId, row.Ready));
         Assert.DoesNotContain(h.Logs.Lines, l => l.Contains("connect.stripe.com"));
     }
 
     [Fact]
     public async Task The_status_is_none_then_pending_then_ready_and_a_ready_account_lets_the_booking_through()
     {
-        var c = Practitioner();
+        var c = Agent();
         Assert.Equal("none", (await (await c.GetAsync("/api/v1/me/payments/account")).Content.ReadFromJsonAsync<JsonElement>()).GetProperty("state").GetString());
         await c.PostAsync("/api/v1/me/payments/account/onboarding", null);
         Assert.Equal("pending", (await (await c.GetAsync("/api/v1/me/payments/account")).Content.ReadFromJsonAsync<JsonElement>()).GetProperty("state").GetString());
@@ -320,7 +320,7 @@ public sealed class StripeHostTests : IDisposable
         stripe.On(HttpMethod.Get, "/v1/accounts/acct_1Qx0demo", Load("response.account.ready")); // the practitioner finished at Stripe
         var ready = await (await c.GetAsync("/api/v1/me/payments/account")).Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("ready", ready.GetProperty("state").GetString());
-        Assert.True((await h.Query(db => db.PaymentAccounts.AsNoTracking().SingleAsync(a => a.PractitionerId == h.Practitioner))).Ready);
+        Assert.True((await h.Query(db => db.PaymentAccounts.AsNoTracking().SingleAsync(a => a.AgentId == h.Agent))).Ready);
 
         var again = await (await c.PostAsync("/api/v1/me/payments/account/onboarding", null)).Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("ready", again.GetProperty("state").GetString());
@@ -333,8 +333,8 @@ public sealed class StripeHostTests : IDisposable
     public async Task With_two_agents_the_payment_account_is_per_agent_and_the_agent_parameter_picks_it()
     {
         var other = (Id: Guid.NewGuid(), Slug: "demo-second-agent");
-        agents = [(h.Practitioner, h.PractitionerSlug), other];
-        var c = Practitioner();
+        agents = [(h.Agent, h.PractitionerSlug), other];
+        var c = Agent();
 
         var bare = await c.GetAsync("/api/v1/me/payments/account");
         Assert.Equal(HttpStatusCode.UnprocessableEntity, bare.StatusCode); // two agents: which one?
@@ -345,8 +345,8 @@ public sealed class StripeHostTests : IDisposable
         var started = await c.PostAsync($"/api/v1/me/payments/account/onboarding?agent={other.Slug}", null);
         Assert.Equal(HttpStatusCode.OK, started.StatusCode);
         Assert.Equal("pending", (await started.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("state").GetString());
-        Assert.Equal(other.Id, (await h.Query(db => db.PaymentAccounts.AsNoTracking().SingleAsync(a => a.PractitionerId == other.Id))).PractitionerId);
-        Assert.Empty(await h.Query(db => db.PaymentAccounts.Where(a => a.PractitionerId == h.Practitioner).ToListAsync())); // the first agent has no row
+        Assert.Equal(other.Id, (await h.Query(db => db.PaymentAccounts.AsNoTracking().SingleAsync(a => a.AgentId == other.Id))).AgentId);
+        Assert.Empty(await h.Query(db => db.PaymentAccounts.Where(a => a.AgentId == h.Agent).ToListAsync())); // the first agent has no row
 
         string State(JsonElement e) => e.GetProperty("state").GetString()!;
         Assert.Equal("pending", State(await (await c.GetAsync($"/api/v1/me/payments/account?agent={other.Slug}")).Content.ReadFromJsonAsync<JsonElement>()));
@@ -358,7 +358,7 @@ public sealed class StripeHostTests : IDisposable
     {
         var r = await h.ClientFor("demo-somebody-else").PostAsync($"/api/v1/me/payments/account/onboarding?agent={h.PractitionerSlug}", null);
         Assert.Equal(HttpStatusCode.Forbidden, r.StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await Practitioner().PostAsync("/api/v1/me/payments/account/onboarding?agent=demo-not-mine", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await Agent().PostAsync("/api/v1/me/payments/account/onboarding?agent=demo-not-mine", null)).StatusCode);
         Assert.Empty(stripe.Requests);
     }
 
@@ -374,10 +374,10 @@ public sealed class StripeHostTests : IDisposable
     public async Task A_Stripe_failure_during_onboarding_is_503_and_the_provider_answer_is_not_passed_on()
     {
         stripe.On(HttpMethod.Post, "/v1/accounts", Load("response.error.resource_missing"), HttpStatusCode.BadRequest);
-        var r = await Practitioner().PostAsync("/api/v1/me/payments/account/onboarding", null);
+        var r = await Agent().PostAsync("/api/v1/me/payments/account/onboarding", null);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, r.StatusCode);
         Assert.DoesNotContain("user text", await r.Content.ReadAsStringAsync());
-        Assert.Empty(await h.Query(db => db.PaymentAccounts.Where(a => a.PractitionerId == h.Practitioner).ToListAsync()));
+        Assert.Empty(await h.Query(db => db.PaymentAccounts.Where(a => a.AgentId == h.Agent).ToListAsync()));
         Assert.Contains(h.Logs.Entries, e => e.Level == LogLevel.Error && e.Line.Contains("resource_missing"));
         Assert.DoesNotContain(h.Logs.Lines, l => l.Contains("user text"));
     }
@@ -399,7 +399,7 @@ public sealed class StripeHostTests : IDisposable
         var (id, _) = await Adm.Seed(mock);
         var r = await Adm.Resolve(mock, id, Adm.Body("release"));
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
-        var b = await mock.Query(db => db.Bookings.AsNoTracking().SingleAsync(x => x.Id == id));
+        var b = await mock.Query(db => db.Accesses.AsNoTracking().SingleAsync(x => x.Id == id));
         Assert.Equal(mock.Clock.GetUtcNow(), b.ResolvedAt);
         Assert.Equal(b.ResolvedAt, b.PayoutDueAt);
     }

@@ -6,10 +6,10 @@ namespace Gabinety.Web.Components.Pages.Bookings;
 /// <summary>How a booking is described, in one place so a number or a date reads the same on every page (BLAZOR-WEB-APP section 10). Times are shown in Europe/Warsaw whatever the server's zone (CONTRACTS 0).</summary>
 public static class BookingFormat
 {
-    public static readonly string[] Statuses = [.. Pl.Bookings.Statuses.Keys];
+    public static readonly string[] Statuses = [.. Pl.Accesses.Statuses.Keys];
     public static readonly TimeZoneInfo Warsaw = TimeZoneInfo.FindSystemTimeZoneById("Europe/Warsaw");
 
-    public static string StatusLabel(string status) => Pl.Bookings.Statuses.TryGetValue(status, out var label) ? label : Pl.Bookings.UnknownStatus;
+    public static string StatusLabel(string status) => Pl.Accesses.Statuses.TryGetValue(status, out var label) ? label : Pl.Accesses.UnknownStatus;
 
     /// <summary><c>niedziela, 28 marca, 13:00–14:00</c></summary>
     public static string When(BookingViewDto b)
@@ -29,13 +29,13 @@ public static class BookingFormat
 
     /// <summary><c>10 zadań</c> for a task package, <c>500 tys. tokenów</c> for a chat package: what the package holds, from the booking's kind and total (tokens for chat).</summary>
     public static string UnitsLine(string kind, long total) => kind == "Chat"
-        ? string.Format(Pl.Bookings.TokensThousands, total / 1000)
-        : string.Format(Pl.Bookings.TasksCount, total, Components.Pages.Gabinet.Profile.TaskWord((int)Math.Min(total, int.MaxValue)));
+        ? string.Format(Pl.Accesses.TokensThousands, total / 1000)
+        : string.Format(Pl.Accesses.TasksCount, total, Components.Pages.Gabinet.Profile.TaskWord((int)Math.Min(total, int.MaxValue)));
 
     /// <summary>"wykorzystano X z Y" (tasks) or the same in thousands of tokens (chat); the remainder never goes below zero.</summary>
     public static string UsageLine(string kind, long used, long total) => kind == "Chat"
-        ? string.Format(Pl.Bookings.UsedOfTokens, used / 1000, total / 1000)
-        : string.Format(Pl.Bookings.UsedOf, used, total);
+        ? string.Format(Pl.Accesses.UsedOfTokens, used / 1000, total / 1000)
+        : string.Format(Pl.Accesses.UsedOf, used, total);
 
     /// <summary>Used as a share of the total, 0 to 100, for the progress bar.</summary>
     public static int UsedPercent(long used, long total) => total <= 0 ? 0 : (int)Math.Clamp(used * 100 / total, 0, 100);
@@ -56,18 +56,18 @@ public static class BookingFormat
     /// <summary>The other party's name when the API sent one, else a neutral label.</summary>
     public static string OtherParty(BookingViewDto b, string role)
     {
-        var name = (role == BookingClient.ClientRole ? b.Practitioner.DisplayName : b.Client?.DisplayName)?.Trim();
-        return string.IsNullOrEmpty(name) ? (role == BookingClient.ClientRole ? Pl.Bookings.PartyPractitioner : Pl.Bookings.PartyClient) : name;
+        var name = (role == BookingClient.ClientRole ? b.Agent.DisplayName : b.Client?.DisplayName)?.Trim();
+        return string.IsNullOrEmpty(name) ? (role == BookingClient.ClientRole ? Pl.Accesses.PartyPractitioner : Pl.Accesses.PartyClient) : name;
     }
 
     /// <summary>What to tell the user about a failed call, from its code (never from the server's title or detail).</summary>
     public static string FailureText(ApiFailure f) => f switch
     {
-        { Status: 0 } => Pl.Bookings.ErrorNetwork,
-        { Code: "dependency_unavailable" } or { Status: 503 } => Pl.Bookings.ErrorUnavailable,
-        { Code: "forbidden" } or { Status: 403 } => Pl.Bookings.ErrorForbidden,
-        { Code: "rate_limited" } or { Status: 429 } => Pl.Bookings.ErrorRateLimited,
-        _ => Pl.Bookings.ErrorGeneric,
+        { Status: 0 } => Pl.Accesses.ErrorNetwork,
+        { Code: "dependency_unavailable" } or { Status: 503 } => Pl.Accesses.ErrorUnavailable,
+        { Code: "forbidden" } or { Status: 403 } => Pl.Accesses.ErrorForbidden,
+        { Code: "rate_limited" } or { Status: 429 } => Pl.Accesses.ErrorRateLimited,
+        _ => Pl.Accesses.ErrorGeneric,
     };
 
     /// <summary>The states a booking ended in by a cancellation: the header says what happens to the money.</summary>
@@ -79,5 +79,5 @@ public static class BookingFormat
 
     public static string Role(string? raw) => raw == BookingClient.PractitionerRole ? BookingClient.PractitionerRole : BookingClient.ClientRole;
 
-    public static string StatusFilter(string? raw) => raw is not null && Pl.Bookings.Statuses.ContainsKey(raw) ? raw : "";
+    public static string StatusFilter(string? raw) => raw is not null && Pl.Accesses.Statuses.ContainsKey(raw) ? raw : "";
 }

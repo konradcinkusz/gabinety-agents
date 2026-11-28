@@ -30,7 +30,7 @@ public class PairCountsClientTests
         Assert.Equal("?minBookings=3&limit=20&cursor=a.b-c_d", req.RequestUri.Query);
         Assert.Equal("k-demo-pairs", req.Headers.GetValues("X-Internal-Key").Single());
         Assert.Equal("next-1", page.NextCursor);
-        Assert.Equal(3, Assert.Single(page.Items).Bookings);
+        Assert.Equal(3, Assert.Single(page.Items).Accesses);
     }
 
     [Theory]

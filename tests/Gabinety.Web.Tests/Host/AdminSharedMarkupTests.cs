@@ -7,13 +7,13 @@ namespace Gabinety.Web.Tests.AdminPages;
 /// <summary>UX-050: the administrator area uses the shared vocabulary of app.css (tabs, segmented chips, option cards, row actions) and its counts never fail a page.</summary>
 public class AdminSharedMarkupTests
 {
-    static readonly Guid BookingId = Guid.Parse("0b9e1d2c-7a5f-4c3e-9b1a-2d4e6f8a0b1c");
+    static readonly Guid AccessId = Guid.Parse("0b9e1d2c-7a5f-4c3e-9b1a-2d4e6f8a0b1c");
 
     [Fact]
     public async Task The_section_tabs_are_the_shared_tabs_and_carry_no_count_so_their_names_stay_the_labels()
     {
         await using var host = await AdminHost.StartAsync();
-        host.Web.Booking.Respond = _ => AdminHost.Paged<AdminDisputeDto>();
+        host.Web.Access.Respond = _ => AdminHost.Paged<AdminDisputeDto>();
         var page = await host.Browser.GetAsync("/admin/spory");
 
         var nav = page.One("nav.tabs[aria-label='Sekcje administracji']")!;
@@ -27,7 +27,7 @@ public class AdminSharedMarkupTests
     public async Task The_status_switch_is_the_shared_segmented_of_chips_and_only_the_current_one_is_counted()
     {
         await using var host = await AdminHost.StartAsync();
-        host.Web.Booking.Respond = r => r.RequestUri!.AbsolutePath == "/api/v1/admin/disputes" ? AdminHost.Paged(AdminHost.Dispute(BookingId), AdminHost.Dispute()) : new HttpResponseMessage(HttpStatusCode.NotFound);
+        host.Web.Access.Respond = r => r.RequestUri!.AbsolutePath == "/api/v1/admin/disputes" ? AdminHost.Paged(AdminHost.Dispute(AccessId), AdminHost.Dispute()) : new HttpResponseMessage(HttpStatusCode.NotFound);
         var page = await host.Browser.GetAsync("/admin/spory?status=open");
 
         var chips = page.All("nav[aria-label=Status] ul.segmented a.chip");
@@ -52,7 +52,7 @@ public class AdminSharedMarkupTests
     public async Task A_failing_service_leaves_the_chips_without_a_count_and_the_page_renders()
     {
         await using var host = await AdminHost.StartAsync();
-        host.Web.Booking.Respond = _ => FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable");
+        host.Web.Access.Respond = _ => FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable");
         var page = await host.Browser.GetAsync("/admin/spory");
 
         Assert.Equal(HttpStatusCode.OK, page.Status);
@@ -81,16 +81,16 @@ public class AdminSharedMarkupTests
     public async Task The_resolve_form_offers_its_three_options_as_option_cards_in_an_option_group_and_the_booking_id_is_text_not_a_link()
     {
         await using var host = await AdminHost.StartAsync();
-        var dispute = AdminHost.Dispute(BookingId);
-        host.Web.Booking.Respond = r => r.RequestUri!.AbsolutePath == "/api/v1/admin/disputes" ? AdminHost.Paged(dispute) : FakeBackend.Json(AdminHost.BookingOf(BookingId));
-        var page = await host.Browser.GetAsync($"/admin/spory?status=open&rozstrzygnij={BookingId}");
+        var dispute = AdminHost.Dispute(AccessId);
+        host.Web.Access.Respond = r => r.RequestUri!.AbsolutePath == "/api/v1/admin/disputes" ? AdminHost.Paged(dispute) : FakeBackend.Json(AdminHost.BookingOf(AccessId));
+        var page = await host.Browser.GetAsync($"/admin/spory?status=open&rozstrzygnij={AccessId}");
 
         var card = Assert.Single(page.All("main ul[aria-label] > li.card"));
         var group = card.QuerySelector("fieldset.option-group")!;
         Assert.Equal(3, group.QuerySelectorAll("label.option input[type=radio]").Length);
         Assert.NotNull(card.QuerySelector(".admin-amount")); // the amount field rule stays in CSS
-        Assert.Contains(BookingId.ToString(), card.TextContent);
-        Assert.DoesNotContain(card.QuerySelectorAll("a"), a => (a.GetAttribute("href") ?? "").Contains(BookingId.ToString())); // no admin-readable booking page exists to link to
+        Assert.Contains(AccessId.ToString(), card.TextContent);
+        Assert.DoesNotContain(card.QuerySelectorAll("a"), a => (a.GetAttribute("href") ?? "").Contains(AccessId.ToString())); // no admin-readable booking page exists to link to
     }
 
     [Theory]

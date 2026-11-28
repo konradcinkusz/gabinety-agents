@@ -24,15 +24,15 @@ public sealed class BookingSeedStep : ISeedStep
     {
         if (context.Options.BookingUrl.Length == 0) return -1;
         if (context.Options.BookingKey.Length == 0) throw new SeedException("booking: Internal:Keys:Booking is not configured");
-        return await new BookingApi(context.Http.For(SeedService.Booking), context.Options, context.Time).ResetAsync(ct);
+        return await new BookingApi(context.Http.For(SeedService.Access), context.Options, context.Time).ResetAsync(ct);
     }
 
     public async Task RunAsync(SeedContext context, CancellationToken ct)
     {
         if (context.Options.BookingUrl.Length == 0) { context.Log.Info("booking: skipped (Backend:Booking is not configured)"); return; }
         if (context.Options.BookingKey.Length == 0) throw new SeedException("booking: Internal:Keys:Booking is not configured");
-        var api = new BookingApi(context.Http.For(SeedService.Booking), context.Options, context.Time);
-        var approved = context.Practitioners.Values.Where(p => p.Status == "Approved" && p.Offerings.Count > 0).OrderBy(p => p.Key, StringComparer.Ordinal).ToList();
+        var api = new BookingApi(context.Http.For(SeedService.Access), context.Options, context.Time);
+        var approved = context.Agents.Values.Where(p => p.Status == "Approved" && p.Packages.Count > 0).OrderBy(p => p.Key, StringComparer.Ordinal).ToList();
         if (approved.Count == 0) throw new SeedException("booking: no Approved demo agent with a package (run the directory step first)");
         var clients = context.Clients.OrderBy(c => c.Key, StringComparer.Ordinal).Select(c => c.Value).ToList();
         if (clients.Count == 0) throw new SeedException("booking: no demo clients (run the directory step first)");
@@ -73,12 +73,12 @@ public sealed class BookingSeedStep : ISeedStep
     /// <summary>The offering a plan buys from an agent: its single-task package, its task pack or its Chat package, found in the catalog and then by title among the agent's offerings.</summary>
     public static DemoOffering Pick(SeededPractitioner seeded, PackagePick pick)
     {
-        var demo = DemoCatalog.Practitioners.Single(p => p.UserName == seeded.Key);
+        var demo = DemoCatalog.Agents.Single(p => p.UserName == seeded.Key);
         var offering = pick switch
         {
-            PackagePick.SingleTask => demo.Offerings.FirstOrDefault(o => o.Kind == DemoKind.Tasks && o.Units == 1),
-            PackagePick.TaskPack => demo.Offerings.FirstOrDefault(o => o.Kind == DemoKind.Tasks && o.Units > 1),
-            _ => demo.Offerings.FirstOrDefault(o => o.Kind == DemoKind.Chat),
+            PackagePick.SingleTask => demo.Packages.FirstOrDefault(o => o.Kind == DemoKind.Tasks && o.Units == 1),
+            PackagePick.TaskPack => demo.Packages.FirstOrDefault(o => o.Kind == DemoKind.Tasks && o.Units > 1),
+            _ => demo.Packages.FirstOrDefault(o => o.Kind == DemoKind.Chat),
         };
         return offering ?? throw new SeedException($"booking: {seeded.Key} has no {pick} package in the catalog");
     }
@@ -87,10 +87,10 @@ public sealed class BookingSeedStep : ISeedStep
         Dictionary<string, BookingInfo> known, CancellationToken ct)
     {
         DemoNames.Require(plan.Key);
-        var seeded = approved[plan.Practitioner % approved.Count];
+        var seeded = approved[plan.Agent % approved.Count];
         var client = clients[plan.Client % clients.Count];
         var offering = Pick(seeded, plan.Package);
-        var offeringId = seeded.Offerings.TryGetValue(offering.Title, out var id) ? id : throw new SeedException($"booking: {seeded.Key} has no offering '{plan.Package}' in the Directory");
+        var offeringId = seeded.Packages.TryGetValue(offering.Title, out var id) ? id : throw new SeedException($"booking: {seeded.Key} has no offering '{plan.Package}' in the Directory");
 
         if (known.TryGetValue(plan.Key, out var existing))
         {

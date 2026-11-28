@@ -10,8 +10,8 @@ using Gabinety.Booking.Persistence;
 using Gabinety.Contracts.Common;
 using Gabinety.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Features.Admin.Disputes;
 
@@ -20,7 +20,7 @@ public sealed record ResolveRequest(string? Resolution, long? RefundMinor, strin
 
 /// <summary>One row of the admin list. <see cref="Text"/> and <see cref="Note"/> are user and admin free text: this list is the only response that carries them, and nothing logs them.</summary>
 public sealed record AdminDisputeItem(
-    Guid BookingId, string ClientUserId, string PractitionerUserId, string? Kind, string? Text,
+    [property: JsonPropertyName("bookingId")] Guid AccessId, string ClientUserId, string PractitionerUserId, string? Kind, string? Text,
     [property: JsonConverter(typeof(UtcInstantNullableConverter))] DateTimeOffset? OpenedAt,
     [property: JsonConverter(typeof(UtcInstantNullableConverter))] DateTimeOffset? ResolvedAt,
     string? Resolution, string? Note);
@@ -67,19 +67,19 @@ public sealed class AdminDisputesFeature : IServiceFeature
         if (errors.Count > 0) return PaymentWebhookFeature.Problem(ErrorCodes.ValidationFailed, "Validation failed", 400, null, errors);
 
         var take = Math.Min(limit ?? DefaultLimit, MaxLimit);
-        var want = resolved ? BookingStatus.Resolved : BookingStatus.Disputed;
-        var q = db.Bookings.AsNoTracking().Where(b => b.Status == want)
+        var want = resolved ? AccessStatus.Resolved : AccessStatus.Disputed;
+        var q = db.Accesses.AsNoTracking().Where(b => b.Status == want)
             .Select(b => new
             {
                 Key = resolved ? (b.ResolvedAt ?? b.DisputeOpenedAt ?? b.CreatedAt) : (b.DisputeOpenedAt ?? b.CreatedAt),
                 Item = new AdminDisputeItem(b.Id, b.ClientUserId, b.PractitionerUserId, b.DisputeKind, b.DisputeText, b.DisputeOpenedAt, b.ResolvedAt,
                     b.DisputeResolution, resolved ? b.StatusReason : null),
             });
-        if (cursor is not null) q = q.Where(x => x.Key < at || (x.Key == at && x.Item.BookingId.CompareTo(id) < 0));
-        var rows = await q.OrderByDescending(x => x.Key).ThenByDescending(x => x.Item.BookingId).Take(take + 1).ToListAsync(ct);
+        if (cursor is not null) q = q.Where(x => x.Key < at || (x.Key == at && x.Item.AccessId.CompareTo(id) < 0));
+        var rows = await q.OrderByDescending(x => x.Key).ThenByDescending(x => x.Item.AccessId).Take(take + 1).ToListAsync(ct);
         var more = rows.Count > take;
         if (more) rows.RemoveAt(take);
-        return Results.Json(new Page<AdminDisputeItem>([.. rows.Select(r => r.Item)], more ? Encode(rows[^1].Key, rows[^1].Item.BookingId) : null));
+        return Results.Json(new Page<AdminDisputeItem>([.. rows.Select(r => r.Item)], more ? Encode(rows[^1].Key, rows[^1].Item.AccessId) : null));
     }
 
     static string Encode(DateTimeOffset at, Guid id) =>
@@ -107,7 +107,7 @@ public sealed class AdminDisputesFeature : IServiceFeature
         var sub = user.FindFirst("sub")?.Value ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (sub is null) return Results.Unauthorized();
 
-        var booking = await db.Bookings.AsNoTracking().SingleOrDefaultAsync(b => b.Id == id, ct);
+        var booking = await db.Accesses.AsNoTracking().SingleOrDefaultAsync(b => b.Id == id, ct);
         if (booking is null) return PaymentWebhookFeature.Problem(ErrorCodes.NotFound, "Not found", 404);
 
         var errors = Validate(body, booking.PriceMinor);
@@ -116,13 +116,13 @@ public sealed class AdminDisputesFeature : IServiceFeature
         var note = body.Note!.Trim();
 
         // The state table decides under the lock; this read only avoids calling the provider for a booking that cannot be resolved.
-        if (booking.Status != BookingStatus.Disputed) return PaymentWebhookFeature.Problem(ErrorCodes.InvalidTransition, "Invalid transition", 409);
+        if (booking.Status != AccessStatus.Disputed) return PaymentWebhookFeature.Problem(ErrorCodes.InvalidTransition, "Invalid transition", 409);
 
         var refund = resolution switch { "refund_full" => booking.PriceMinor, "refund_partial" => body.RefundMinor!.Value, _ => 0L };
         RefundTicket? ticket = null;
         if (refund > 0)
         {
-            var payment = await db.Payments.AsNoTracking().SingleOrDefaultAsync(p => p.BookingId == id, ct);
+            var payment = await db.Payments.AsNoTracking().SingleOrDefaultAsync(p => p.AccessId == id, ct);
             // A concurrent resolve may have refunded already (the booking read above is unlocked): answer 409 without calling the provider.
             if (payment is null || payment.RefundedMinor + refund > payment.AmountMinor) return PaymentWebhookFeature.Problem(ErrorCodes.InvalidTransition, "Invalid transition", 409);
             try { ticket = await refunds.RequestAsync(id, payment, refund, DisputeResolvedReason, ct); }
@@ -132,16 +132,16 @@ public sealed class AdminDisputesFeature : IServiceFeature
         }
 
         var now = time.GetUtcNow();
-        var result = await transitions.ApplyAsync(new TransitionRequest(id, BookingTrigger.AdminResolves, now)
+        var result = await transitions.ApplyAsync(new TransitionRequest(id, AccessTrigger.AdminResolves, now)
         {
             Effects = c =>
             {
                 // The stats push (T-04.10) derives the practitioner no-show counter from the stored rows: it counts bookings with status Resolved,
                 // dispute_resolution = refund_full and dispute_kind = practitioner_no_show. Nothing extra is written here for it.
-                c.Booking.DisputeResolution = resolution;
-                c.Booking.ResolvedAt = now;
-                c.Booking.PayoutDueAt = now; // the dispute is over: a resolved booking is paid out at once (ADR proposal 0011); the payout job also falls back to resolved_at for older rows
-                c.Booking.StatusReason = note;
+                c.Access.DisputeResolution = resolution;
+                c.Access.ResolvedAt = now;
+                c.Access.PayoutDueAt = now; // the dispute is over: a resolved booking is paid out at once (ADR proposal 0011); the payout job also falls back to resolved_at for older rows
+                c.Access.StatusReason = note;
                 // Recorded here, before the hooks run, so a hook (the fee on the kept amount, T-04.08c) reads payment.RefundedMinor already set.
                 // With a provider that confirms later (not the Mock) nothing is recorded now: the RefundSucceeded webhook records it, and the fee for
                 // refund_partial must then be settled at that confirmation, because the refunded amount is not known when the hooks run.
@@ -149,7 +149,7 @@ public sealed class AdminDisputesFeature : IServiceFeature
             },
         }, ct);
         if (result.ToErrorResult() is { } error) return error;
-        return Results.Ok(BookingViewFeature.ToView(result.Booking!, result.Payment, sub, admin: true, names: (await names.ForAsync([result.Booking!], ct))[result.Booking!.Id]) with { StatusReason = null }); // the note is for the admin list only
+        return Results.Ok(BookingViewFeature.ToView(result.Access!, result.Payment, sub, admin: true, names: (await names.ForAsync([result.Access!], ct))[result.Access!.Id]) with { StatusReason = null }); // the note is for the admin list only
     }
 
     static Dictionary<string, string[]> Validate(ResolveRequest? body, long price)

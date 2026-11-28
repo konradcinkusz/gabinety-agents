@@ -70,21 +70,21 @@ public class CompletenessTests
 
 public class StateMachineTests
 {
-    static readonly HashSet<(PractitionerStatus, PractitionerTrigger, PractitionerStatus)> Legal =
+    static readonly HashSet<(AgentStatus, PractitionerTrigger, AgentStatus)> Legal =
     [
-        (PractitionerStatus.Draft, PractitionerTrigger.Submit, PractitionerStatus.Submitted),
-        (PractitionerStatus.Rejected, PractitionerTrigger.Submit, PractitionerStatus.Submitted),
-        (PractitionerStatus.Submitted, PractitionerTrigger.Approve, PractitionerStatus.Approved),
-        (PractitionerStatus.Submitted, PractitionerTrigger.Reject, PractitionerStatus.Rejected),
-        (PractitionerStatus.Approved, PractitionerTrigger.Suspend, PractitionerStatus.Suspended),
-        (PractitionerStatus.Suspended, PractitionerTrigger.Reinstate, PractitionerStatus.Approved),
-        (PractitionerStatus.Approved, PractitionerTrigger.NipChanged, PractitionerStatus.Submitted),
+        (AgentStatus.Draft, PractitionerTrigger.Submit, AgentStatus.Submitted),
+        (AgentStatus.Rejected, PractitionerTrigger.Submit, AgentStatus.Submitted),
+        (AgentStatus.Submitted, PractitionerTrigger.Approve, AgentStatus.Approved),
+        (AgentStatus.Submitted, PractitionerTrigger.Reject, AgentStatus.Rejected),
+        (AgentStatus.Approved, PractitionerTrigger.Suspend, AgentStatus.Suspended),
+        (AgentStatus.Suspended, PractitionerTrigger.Reinstate, AgentStatus.Approved),
+        (AgentStatus.Approved, PractitionerTrigger.NipChanged, AgentStatus.Submitted),
     ];
 
     [Fact]
     public void Every_status_times_trigger_is_legal_exactly_when_in_the_table()
     {
-        foreach (var s in Enum.GetValues<PractitionerStatus>())
+        foreach (var s in Enum.GetValues<AgentStatus>())
             foreach (var t in Enum.GetValues<PractitionerTrigger>())
             {
                 var ok = PractitionerStateMachine.TryTransition(s, t, out var to);
@@ -95,6 +95,6 @@ public class StateMachineTests
     }
 
     [Fact] public void Only_the_seven_pairs_exist() =>
-        Assert.Equal(Legal.Count, Enum.GetValues<PractitionerStatus>().SelectMany(s => Enum.GetValues<PractitionerTrigger>()
+        Assert.Equal(Legal.Count, Enum.GetValues<AgentStatus>().SelectMany(s => Enum.GetValues<PractitionerTrigger>()
             .Where(t => PractitionerStateMachine.TryTransition(s, t, out _))).Count());
 }

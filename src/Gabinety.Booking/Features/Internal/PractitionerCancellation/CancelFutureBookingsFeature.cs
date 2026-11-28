@@ -5,7 +5,7 @@ using Gabinety.Booking.Persistence;
 using Gabinety.Contracts.Common;
 using Gabinety.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Features.Internal.PractitionerCancellation;
 
@@ -30,12 +30,12 @@ public sealed class FutureBookingCanceller(IServiceScopeFactory scopes, TimeProv
     public async Task<CancelFutureBookingsResult> CancelAsync(Guid practitionerId, CancellationToken ct)
     {
         var now = time.GetUtcNow();
-        List<(Guid Id, BookingStatus Status)> open;
+        List<(Guid Id, AccessStatus Status)> open;
         using (var scope = scopes.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
-            open = (await db.Bookings.AsNoTracking()
-                    .Where(b => b.PractitionerId == practitionerId && ((b.Status == BookingStatus.Confirmed && b.StartUtc > now) || b.Status == BookingStatus.PendingPayment))
+            open = (await db.Accesses.AsNoTracking()
+                    .Where(b => b.AgentId == practitionerId && ((b.Status == AccessStatus.Confirmed && b.StartUtc > now) || b.Status == AccessStatus.PendingPayment))
                     .OrderBy(b => b.StartUtc).ThenBy(b => b.Id).Select(b => new { b.Id, b.Status }).ToListAsync(ct))
                 .Select(b => (b.Id, b.Status)).ToList();
         }
@@ -46,8 +46,8 @@ public sealed class FutureBookingCanceller(IServiceScopeFactory scopes, TimeProv
             try
             {
                 using var scope = scopes.CreateScope(); // one context, one transaction per booking
-                var applied = status == BookingStatus.PendingPayment ? await ExpireAsync(scope, id, now, ct) : await CancelOneAsync(scope, id, now, ct);
-                if (applied == Outcome.Applied) { if (status == BookingStatus.PendingPayment) expired++; else cancelled++; }
+                var applied = status == AccessStatus.PendingPayment ? await ExpireAsync(scope, id, now, ct) : await CancelOneAsync(scope, id, now, ct);
+                if (applied == Outcome.Applied) { if (status == AccessStatus.PendingPayment) expired++; else cancelled++; }
                 else if (applied == Outcome.Failed) failed++;
             }
             catch (Exception ex) when ((ex is HttpRequestException or TaskCanceledException or InvalidOperationException or DbUpdateException) && !ct.IsCancellationRequested)
@@ -66,7 +66,7 @@ public sealed class FutureBookingCanceller(IServiceScopeFactory scopes, TimeProv
     static async Task<Outcome> ExpireAsync(IServiceScope scope, Guid id, DateTimeOffset now, CancellationToken ct)
     {
         var transitions = scope.ServiceProvider.GetRequiredService<BookingTransitions>();
-        var result = await transitions.ApplyAsync(new TransitionRequest(id, BookingTrigger.HoldExpired, now), ct);
+        var result = await transitions.ApplyAsync(new TransitionRequest(id, AccessTrigger.HoldExpired, now), ct);
         return result.Applied ? Outcome.Applied : Outcome.Skipped; // moved meanwhile: nothing left to do
     }
 
@@ -76,9 +76,9 @@ public sealed class FutureBookingCanceller(IServiceScopeFactory scopes, TimeProv
         var transitions = scope.ServiceProvider.GetRequiredService<BookingTransitions>();
         var refunds = scope.ServiceProvider.GetRequiredService<RefundCoordinator>();
 
-        var booking = await db.Bookings.AsNoTracking().SingleOrDefaultAsync(b => b.Id == id, ct);
-        if (booking is null || booking.Status != BookingStatus.Confirmed || booking.StartUtc <= now) return Outcome.Skipped;
-        var payment = await db.Payments.AsNoTracking().SingleOrDefaultAsync(p => p.BookingId == id, ct);
+        var booking = await db.Accesses.AsNoTracking().SingleOrDefaultAsync(b => b.Id == id, ct);
+        if (booking is null || booking.Status != AccessStatus.Confirmed || booking.StartUtc <= now) return Outcome.Skipped;
+        var payment = await db.Payments.AsNoTracking().SingleOrDefaultAsync(p => p.AccessId == id, ct);
         if (payment is null) return Outcome.Failed;
 
         // the amount is what the policy says for a practitioner cancel (all of the price), not a number of this feature
@@ -87,12 +87,12 @@ public sealed class FutureBookingCanceller(IServiceScopeFactory scopes, TimeProv
         if (refund > 0 && payment.RefundedMinor < payment.AmountMinor) // a refund the provider already holds is not asked for twice
             ticket = await refunds.RequestAsync(id, payment, Math.Min(refund, payment.AmountMinor - payment.RefundedMinor), RefundReason.PractitionerCancelled, ct);
 
-        var result = await transitions.ApplyAsync(new TransitionRequest(id, BookingTrigger.PractitionerCancels, now)
+        var result = await transitions.ApplyAsync(new TransitionRequest(id, AccessTrigger.PractitionerCancels, now)
         {
             Precondition = b => now < b.EndUtc && b.StartUtc > now,
             Effects = c =>
             {
-                c.Booking.StatusReason = Reason;
+                c.Access.StatusReason = Reason;
                 if (ticket is not null) RefundCoordinator.Record(c, ticket);
             },
         }, ct);

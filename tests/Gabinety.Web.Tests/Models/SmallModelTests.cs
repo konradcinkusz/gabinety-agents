@@ -126,8 +126,8 @@ public class BookingFormatTests
     [Fact]
     public void Times_are_shown_in_Warsaw_in_winter_and_in_summer()
     {
-        Assert.Equal("wtorek, 1 grudnia, 13:00–14:00", BookingFormat.When(Sample.Booking())); // 12:00Z, UTC+1
-        var summer = Sample.Booking() with { StartUtc = new DateTimeOffset(2026, 7, 14, 12, 30, 0, TimeSpan.Zero), EndUtc = new DateTimeOffset(2026, 7, 14, 13, 0, 0, TimeSpan.Zero) };
+        Assert.Equal("wtorek, 1 grudnia, 13:00–14:00", BookingFormat.When(Sample.Access())); // 12:00Z, UTC+1
+        var summer = Sample.Access() with { StartUtc = new DateTimeOffset(2026, 7, 14, 12, 30, 0, TimeSpan.Zero), EndUtc = new DateTimeOffset(2026, 7, 14, 13, 0, 0, TimeSpan.Zero) };
         Assert.Equal("wtorek, 14 lipca, 14:30–15:00", BookingFormat.When(summer)); // UTC+2
     }
 
@@ -136,11 +136,11 @@ public class BookingFormatTests
     [Fact]
     public void The_other_party_is_named_or_neutral()
     {
-        var b = Sample.Booking();
+        var b = Sample.Access();
         Assert.Equal("Anna Demowska", BookingFormat.OtherParty(b, "client"));
         Assert.Equal("demo-client", BookingFormat.OtherParty(b, "practitioner"));
         Assert.Equal("Klient", BookingFormat.OtherParty(b with { Client = null }, "practitioner"));
-        Assert.Equal("Agent", BookingFormat.OtherParty(b with { Practitioner = b.Practitioner with { DisplayName = " " } }, "client"));
+        Assert.Equal("Agent", BookingFormat.OtherParty(b with { Agent = b.Agent with { DisplayName = " " } }, "client"));
     }
 
     [Theory]

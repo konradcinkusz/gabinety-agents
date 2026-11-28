@@ -10,7 +10,7 @@ public enum VerificationEventKind { Submitted, Approved, Rejected, Suspended, Re
 public sealed class VerificationEvent
 {
     public Guid Id { get; set; }
-    public Guid PractitionerId { get; set; }
+    public Guid AgentId { get; set; }
     public VerificationEventKind Kind { get; set; }
     public string ActorUserId { get; set; } = "";
     public string? Note { get; set; }
@@ -27,13 +27,13 @@ public sealed class VerificationEventConfiguration : IEntityTypeConfiguration<Ve
         b.ToTable("verification_events");
         b.HasKey(x => x.Id);
         b.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
-        b.Property(x => x.PractitionerId).HasColumnName("practitioner_id");
+        b.Property(x => x.AgentId).HasColumnName("practitioner_id");
         b.Property(x => x.Kind).HasColumnName("kind").HasConversion<string>().HasMaxLength(20);
         b.Property(x => x.ActorUserId).HasColumnName("actor_user_id").HasMaxLength(64).IsRequired();
         b.Property(x => x.Note).HasColumnName("note").HasMaxLength(500);
         b.Property(x => x.At).HasColumnName("at");
-        b.HasOne<Practitioner>().WithMany().HasForeignKey(x => x.PractitionerId).OnDelete(DeleteBehavior.Restrict);
-        b.HasIndex(x => new { x.PractitionerId, x.At });
+        b.HasOne<Agent>().WithMany().HasForeignKey(x => x.AgentId).OnDelete(DeleteBehavior.Restrict);
+        b.HasIndex(x => new { x.AgentId, x.At });
     }
 }
 

@@ -1,5 +1,6 @@
 extern alias BookingApp;
 
+using System.Text.Json.Serialization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Gabinety.DemoSeeder;
@@ -17,8 +18,8 @@ public sealed class ReputationSeedFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _ = World.Booking.Booking.Services;
-        _job = new BookingJobDriver(World.Booking.Booking);
+        _ = World.Access.Access.Services;
+        _job = new BookingJobDriver(World.Access.Access);
         await World.SeedDirectoryAndBookingAsync();
         await ReputationWorld.Step().RunAsync(World.Context, CancellationToken.None);
     }
@@ -31,21 +32,21 @@ public class ReputationSeedStepTests(ReputationSeedFixture fx) : IClassFixture<R
     ReputationWorld _w => fx.World;
 
     // booking key -> (practitioner key, rating): the three Completed demo packages (each with one task used) and what each reviewer gave
-    static readonly (string Booking, string Practitioner, int Rating)[] Expected =
+    static readonly (string Access, string Agent, int Rating)[] Expected =
     [
         ("demo-booking-completed-1", "demo-practitioner-1", 5),
         ("demo-booking-completed-2", "demo-practitioner-2", 4),
         ("demo-booking-completed-3", "demo-practitioner-5", 3),
     ];
 
-    async Task<Dictionary<string, Booking>> CompletedBookingsByKey()
+    async Task<Dictionary<string, Access>> CompletedBookingsByKey()
     {
-        var rows = await _w.Booking.Booking.Bookings();
-        return rows.Where(b => b.Status == Gabinety.Billing.BookingStatus.Completed)
-            .ToDictionary(b => Regex.Match(b.BriefText, @"^\[(demo-[a-z0-9-]+)\]").Groups[1].Value, b => new Booking(b.Id, b.ClientUserId, b.PractitionerId));
+        var rows = await _w.Access.Access.Accesses();
+        return rows.Where(b => b.Status == Gabinety.Billing.AccessStatus.Completed)
+            .ToDictionary(b => Regex.Match(b.BriefText, @"^\[(demo-[a-z0-9-]+)\]").Groups[1].Value, b => new Access(b.Id, b.ClientUserId, b.AgentId));
     }
 
-    sealed record Booking(Guid Id, string ClientUserId, Guid PractitionerId);
+    sealed record Access(Guid Id, string ClientUserId, [property: JsonPropertyName("practitionerId")] Guid AgentId);
 
     [Fact]
     public async Task Exactly_one_review_exists_per_Completed_demo_package_by_that_bookings_client_for_that_bookings_practitioner()
@@ -58,10 +59,10 @@ public class ReputationSeedStepTests(ReputationSeedFixture fx) : IClassFixture<R
         foreach (var (key, practitionerKey, rating) in Expected)
         {
             var booking = completed[key];
-            var review = Assert.Single(reviews, r => r.BookingId == booking.Id);
+            var review = Assert.Single(reviews, r => r.AccessId == booking.Id);
             Assert.Equal(booking.ClientUserId, review.ClientUserId);
-            Assert.Equal(booking.PractitionerId, review.PractitionerId);
-            Assert.Equal(_w.Context.Practitioners[practitionerKey].Id, review.PractitionerId);
+            Assert.Equal(booking.AgentId, review.AgentId);
+            Assert.Equal(_w.Context.Agents[practitionerKey].Id, review.AgentId);
             Assert.Equal(rating, review.Rating);
             Assert.Equal("Published", review.Status);
         }
@@ -72,7 +73,7 @@ public class ReputationSeedStepTests(ReputationSeedFixture fx) : IClassFixture<R
     {
         foreach (var (_, practitionerKey, rating) in Expected)
         {
-            var items = await _w.PublishedFor(_w.Context.Practitioners[practitionerKey].Id);
+            var items = await _w.PublishedFor(_w.Context.Agents[practitionerKey].Id);
             var item = Assert.Single(items);
             Assert.Equal(rating, item.GetProperty("rating").GetInt32());
             var text = item.GetProperty("text").GetString()!;
@@ -89,7 +90,7 @@ public class ReputationSeedStepTests(ReputationSeedFixture fx) : IClassFixture<R
         Assert.Equal(3, summaries.Count);
         foreach (var (_, practitionerKey, rating) in Expected)
         {
-            var s = Assert.Single(summaries, x => x.Practitioner == _w.Context.Practitioners[practitionerKey].Id);
+            var s = Assert.Single(summaries, x => x.Agent == _w.Context.Agents[practitionerKey].Id);
             Assert.Equal((1, rating, 1L), (s.Count, s.Sum, s.Version));
         }
     }
@@ -98,7 +99,7 @@ public class ReputationSeedStepTests(ReputationSeedFixture fx) : IClassFixture<R
     public async Task No_other_booking_is_reviewed_and_the_three_ratings_differ_so_the_averages_differ()
     {
         var completed = await CompletedBookingsByKey();
-        var reviewed = (await _w.Reputation.Reviews()).Select(r => r.BookingId).ToHashSet();
+        var reviewed = (await _w.Reputation.Reviews()).Select(r => r.AccessId).ToHashSet();
         Assert.Subset(completed.Values.Select(c => c.Id).ToHashSet(), reviewed);
         Assert.Equal([3, 4, 5], Expected.Select(e => e.Rating).Order());
     }
@@ -175,7 +176,7 @@ public class ReputationSeedStepTests(ReputationSeedFixture fx) : IClassFixture<R
 
         var reviews = await w.Reputation.Reviews();
         Assert.Equal(3, reviews.Count);
-        Assert.Equal(3, reviews.Select(r => r.BookingId).Distinct().Count());
+        Assert.Equal(3, reviews.Select(r => r.AccessId).Distinct().Count());
         Assert.Equal(3, (await w.Reputation.Summaries()).Sum(s => s.Count));
         Assert.Contains("reputation: 3 demo reviews changes=2", w.Log.Text);
     }
@@ -189,14 +190,14 @@ public class ReputationSeedStepTests(ReputationSeedFixture fx) : IClassFixture<R
         await ReputationWorld.Step().RunAsync(w.Context, CancellationToken.None);
 
         Assert.Equal(3, (await w.Reputation.Reviews()).Count);
-        Assert.Equal(0, (await w.Booking.Booking.Bookings()).Count(b => b.Status == Gabinety.Billing.BookingStatus.Completed));
+        Assert.Equal(0, (await w.Access.Access.Accesses()).Count(b => b.Status == Gabinety.Billing.AccessStatus.Completed));
     }
 
     [Fact]
     public async Task Without_a_used_package_the_step_says_so_creates_nothing_and_does_not_fail()
     {
         await using var w = new ReputationWorld();
-        _ = w.Booking.Booking.Services;
+        _ = w.Access.Access.Services;
         var context = w.NewContext();
         await new DirectorySeedStep().RunAsync(context, CancellationToken.None); // the Booking step did not run: no package, so no used one
 
@@ -247,7 +248,7 @@ public class ReputationSeedStepTests(ReputationSeedFixture fx) : IClassFixture<R
 
     static async Task<BookingJobDriver> StartedAsync(ReputationWorld w)
     {
-        _ = w.Booking.Booking.Services;
-        return new BookingJobDriver(w.Booking.Booking);
+        _ = w.Access.Access.Services;
+        return new BookingJobDriver(w.Access.Access);
     }
 }

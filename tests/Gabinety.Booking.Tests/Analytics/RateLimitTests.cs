@@ -66,7 +66,7 @@ public class RateLimitTests
     {
         using var h = new CreateHost();
         var anon = h.ClientFor(null);
-        var slots = $"/api/v1/practitioners/{h.Practitioner}"; // a public read root: the limiter counts it before routing, whatever service answers (Directory serves it; Booking only counts)
+        var slots = $"/api/v1/practitioners/{h.Agent}"; // a public read root: the limiter counts it before routing, whatever service answers (Directory serves it; Booking only counts)
         for (var i = 0; i < 120; i++) Assert.NotEqual(HttpStatusCode.TooManyRequests, await Code(anon.GetAsync(slots)));
         Assert.Equal(HttpStatusCode.TooManyRequests, await Code(anon.GetAsync(slots))); // reads: 120, not the 60 of the rest
         var me = h.ClientFor("demo-rl-me");

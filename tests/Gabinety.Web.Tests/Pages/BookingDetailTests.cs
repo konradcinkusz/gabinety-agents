@@ -8,13 +8,13 @@ namespace Gabinety.Web.Tests.Pages;
 /// <summary>The booking detail and its actions (journeys J3, J5, J6): what is shown for each state, what the cancel dialog says (F-11), and what each action sends.</summary>
 public class BookingDetailTests
 {
-    static readonly string Detail_ = $"/moje/dostepy/{BookingId}";
+    static readonly string Detail_ = $"/moje/dostepy/{AccessId}";
     static readonly string Client = Detail_ + "?role=client";
 
     static async Task<ClientAreaFixture> Open(BookingDetailDto? booking = null, Func<HttpRequestMessage, HttpResponseMessage>? post = null)
     {
         var f = await ClientAreaFixture.SignedIn();
-        f.Web.Booking.Respond = r => r.Method == HttpMethod.Post && post is not null ? post(r) : FakeBackend.Json(booking ?? Detail());
+        f.Web.Access.Respond = r => r.Method == HttpMethod.Post && post is not null ? post(r) : FakeBackend.Json(booking ?? Detail());
         return f;
     }
 
@@ -123,13 +123,13 @@ public class BookingDetailTests
     public async Task An_unknown_booking_and_somebody_elses_are_the_same_404_and_a_visitor_goes_to_sign_in()
     {
         await using var f = await Open();
-        f.Web.Booking.Respond = _ => FakeBackend.Problem(HttpStatusCode.NotFound, "not_found");
+        f.Web.Access.Respond = _ => FakeBackend.Problem(HttpStatusCode.NotFound, "not_found");
         Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync(Client)).Status);
-        f.Web.Booking.Respond = _ => FakeBackend.Problem(HttpStatusCode.Forbidden, "forbidden");
+        f.Web.Access.Respond = _ => FakeBackend.Problem(HttpStatusCode.Forbidden, "forbidden");
         Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync(Client)).Status);
         Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync("/moje/dostepy/nie-guid")).Status);
         await using var visitor = await ClientAreaFixture.Visitor();
-        Assert.Equal($"/logowanie?redirect=%2Fmoje%2Fdostepy%2F{BookingId}%3Frole%3Dclient", (await visitor.Browser.GetAsync(Client)).Location);
+        Assert.Equal($"/logowanie?redirect=%2Fmoje%2Fdostepy%2F{AccessId}%3Frole%3Dclient", (await visitor.Browser.GetAsync(Client)).Location);
     }
 
     [Theory]
@@ -138,7 +138,7 @@ public class BookingDetailTests
     public async Task A_service_that_cannot_answer_is_an_alert_with_a_reload_and_the_title_stays(HttpStatusCode status, string code, string text)
     {
         await using var f = await Open();
-        f.Web.Booking.Respond = _ => FakeBackend.Problem(status, code);
+        f.Web.Access.Respond = _ => FakeBackend.Problem(status, code);
         var page = await f.Browser.GetAsync(Client);
         var alert = page.One("[data-testid=unavailable]")!;
         Assert.Equal("alert", alert.GetAttribute("role"));
@@ -181,7 +181,7 @@ public class BookingDetailTests
         await using var f = await Open(Detail("Completed", review: true));
         var link = (await f.Browser.GetAsync(Client)).One(".form-actions a.btn--primary")!;
         Assert.Equal("Wystaw opinię", link.TextContent);
-        Assert.Equal($"/moje/opinie/{BookingId}", link.GetAttribute("href"));
+        Assert.Equal($"/moje/opinie/{AccessId}", link.GetAttribute("href"));
     }
 
     [Fact]
@@ -245,9 +245,9 @@ public class BookingDetailTests
         await using var f = await Open(Detail(cancel: true), post: _ => FakeBackend.Json(Detail("CancelledByClient", payment: "Refunded", refunded: 25000)));
         var page = await f.Post(Client + "&action=cancel", "cancel", ("Model.Reason", "  Zmiana planów.  "));
         Assert.Equal(HttpStatusCode.Found, page.Status);
-        Assert.Equal($"/moje/dostepy/{BookingId}?role=client&done=cancelled", page.Location);
-        var call = f.Web.Booking.Requests.Single(r => r.Method == HttpMethod.Post);
-        Assert.Equal($"/api/v1/bookings/{BookingId}/cancel", call.PathAndQuery);
+        Assert.Equal($"/moje/dostepy/{AccessId}?role=client&done=cancelled", page.Location);
+        var call = f.Web.Access.Requests.Single(r => r.Method == HttpMethod.Post);
+        Assert.Equal($"/api/v1/bookings/{AccessId}/cancel", call.PathAndQuery);
         Assert.Equal("Zmiana planów.", JsonDocument.Parse(call.Body!).RootElement.GetProperty("reason").GetString());
         Assert.StartsWith("Bearer eyJ", call.Authorization);
         Assert.DoesNotContain("Zmiana", page.Location); // the reason is never in a URL
@@ -258,7 +258,7 @@ public class BookingDetailTests
     {
         await using var f = await Open(Detail(cancel: true), post: _ => FakeBackend.Json(Detail("CancelledByClient")));
         await f.Post(Client + "&action=cancel", "cancel", ("Model.Reason", "   "));
-        Assert.Equal("{}", f.Web.Booking.Requests.Single(r => r.Method == HttpMethod.Post).Body);
+        Assert.Equal("{}", f.Web.Access.Requests.Single(r => r.Method == HttpMethod.Post).Body);
     }
 
     [Theory]
@@ -291,7 +291,7 @@ public class BookingDetailTests
         var page = await f.Post(Client + "&action=cancel", "cancel", ("Model.Reason", new string('a', 501)));
         Assert.Equal("Powód może mieć najwyżej 500 znaków.", page.TextOf(".form-summary a"));
         Assert.Equal("true", page.One("#reason")!.GetAttribute("aria-invalid"));
-        Assert.DoesNotContain(f.Web.Booking.Requests, r => r.Method == HttpMethod.Post);
+        Assert.DoesNotContain(f.Web.Access.Requests, r => r.Method == HttpMethod.Post);
     }
 
     [Fact]
@@ -335,9 +335,9 @@ public class BookingDetailTests
     {
         await using var f = await Open(Detail(dispute: true), post: _ => FakeBackend.Json(Detail("Disputed", payment: "Succeeded")));
         var page = await f.Post(Client + "&action=dispute", "dispute", ("Model.Kind", "not_as_described"), ("Model.Text", "Agent zrobił coś innego, dane syntetyczne testu."));
-        Assert.Equal($"/moje/dostepy/{BookingId}?role=client&done=disputed", page.Location);
-        var call = f.Web.Booking.Requests.Single(r => r.Method == HttpMethod.Post);
-        Assert.Equal($"/api/v1/bookings/{BookingId}/dispute", call.PathAndQuery);
+        Assert.Equal($"/moje/dostepy/{AccessId}?role=client&done=disputed", page.Location);
+        var call = f.Web.Access.Requests.Single(r => r.Method == HttpMethod.Post);
+        Assert.Equal($"/api/v1/bookings/{AccessId}/dispute", call.PathAndQuery);
         var body = JsonDocument.Parse(call.Body!).RootElement;
         Assert.Equal("not_as_described", body.GetProperty("kind").GetString());
         Assert.Equal("Agent zrobił coś innego, dane syntetyczne testu.", body.GetProperty("text").GetString());
@@ -355,7 +355,7 @@ public class BookingDetailTests
         Assert.Equal("Błąd: " + message, Page.Squash(page.TextOf("#text-error")));
         Assert.Equal(text, page.One("#text")!.TextContent);
         Assert.Equal("6 / 1000", page.TextOf(".field__counter"));
-        Assert.DoesNotContain(f.Web.Booking.Requests, r => r.Method == HttpMethod.Post);
+        Assert.DoesNotContain(f.Web.Access.Requests, r => r.Method == HttpMethod.Post);
     }
 
     [Fact]
@@ -364,7 +364,7 @@ public class BookingDetailTests
         await using var f = await Open(Detail(dispute: true));
         var page = await f.Post(Client + "&action=dispute", "dispute", ("Model.Kind", "fraud"), ("Model.Text", "Wystarczająco długi opis sporu."));
         Assert.Equal("Wybierz rodzaj reklamacji.", page.TextOf(".form-summary a"));
-        Assert.DoesNotContain(f.Web.Booking.Requests, r => r.Method == HttpMethod.Post);
+        Assert.DoesNotContain(f.Web.Access.Requests, r => r.Method == HttpMethod.Post);
     }
 
     [Fact]
@@ -385,7 +385,7 @@ public class BookingDetailTests
         var page = await f.Post(Client + "&action=dispute", "dispute", ("Model.Kind", "other"), ("Model.Text", text));
         await f.Post(Client + "&action=cancel", "cancel", ("Model.Reason", text));
         Assert.DoesNotContain(f.Logs.Lines, l => l.Contains("Znacznik sporu", StringComparison.Ordinal));
-        Assert.DoesNotContain(f.Web.Booking.Requests, r => r.PathAndQuery.Contains("Znacznik"));
+        Assert.DoesNotContain(f.Web.Access.Requests, r => r.PathAndQuery.Contains("Znacznik"));
         Assert.Null(page.Location);
     }
 
@@ -396,6 +396,6 @@ public class BookingDetailTests
         var request = new HttpRequestMessage(HttpMethod.Post, Client + "&action=cancel") { Content = new FormUrlEncodedContent([new("_handler", "cancel"), new("Model.Reason", "x")]) };
         var page = await f.Browser.SendAsync(request);
         Assert.NotEqual(HttpStatusCode.Found, page.Status);
-        Assert.DoesNotContain(f.Web.Booking.Requests, r => r.Method == HttpMethod.Post);
+        Assert.DoesNotContain(f.Web.Access.Requests, r => r.Method == HttpMethod.Post);
     }
 }

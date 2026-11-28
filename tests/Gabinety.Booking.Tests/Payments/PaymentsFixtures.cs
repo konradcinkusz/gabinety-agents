@@ -48,6 +48,6 @@ static class Pay
         var r = await CreateHost.Post(h.ClientFor(client), h.Req(start), CreateHost.Key());
         Assert.Equal(HttpStatusCode.Created, r.StatusCode);
         var id = (await r.Body()).GetProperty("bookingId").GetGuid();
-        return (id, await h.Query(db => db.Payments.Where(p => p.BookingId == id).Select(p => p.ProviderPaymentId!).SingleAsync()));
+        return (id, await h.Query(db => db.Payments.Where(p => p.AccessId == id).Select(p => p.ProviderPaymentId!).SingleAsync()));
     }
 }

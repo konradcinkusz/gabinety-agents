@@ -110,7 +110,7 @@ public class CreateTriageTests
     {
         using var h = new TriageHost();
         var (user, pract, booking) = h.NewBooking();
-        var notReviewable = h.Booking.Add(user, pract, reviewable: false);
+        var notReviewable = h.Access.Add(user, pract, reviewable: false);
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, (await h.Post(user, booking, text: "za krótko")).StatusCode);
         Assert.Equal(HttpStatusCode.UnprocessableEntity, (await h.Post(user, notReviewable)).StatusCode);

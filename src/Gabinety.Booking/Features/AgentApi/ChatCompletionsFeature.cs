@@ -5,7 +5,7 @@ using System.Text.Json.Nodes;
 using Gabinety.Booking.Agents.Abstractions;
 using Gabinety.Contracts.Directory;
 using Gabinety.ServiceDefaults;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
+using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 
 namespace Gabinety.Booking.Features.AgentApi;
 
@@ -33,9 +33,9 @@ public sealed class ChatCompletionsFeature : IServiceFeature
             return OpenAiError.BadRequest("The model field is required.");
 
         var sub = user.FindFirst("sub")!.Value;
-        var package = await entitlements.FindAsync(sub, model, OfferingKind.Chat, null, ct);
+        var package = await entitlements.FindAsync(sub, model, PackageKind.Chat, null, ct);
         if (package is null)
-            return await entitlements.HasExhaustedAsync(sub, model, OfferingKind.Chat, null, ct) ? OpenAiError.QuotaExhausted() : OpenAiError.ModelNotFound_();
+            return await entitlements.HasExhaustedAsync(sub, model, PackageKind.Chat, null, ct) ? OpenAiError.QuotaExhausted() : OpenAiError.ModelNotFound_();
 
         Guid.TryParse(user.FindFirst(ApiKeyAuthentication.KeyIdClaim)?.Value, out var keyId);
         var apiKeyId = keyId == Guid.Empty ? (Guid?)null : keyId;

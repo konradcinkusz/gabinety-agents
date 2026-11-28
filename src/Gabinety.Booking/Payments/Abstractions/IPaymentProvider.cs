@@ -1,15 +1,15 @@
 namespace Gabinety.Booking.Payments.Abstractions;
 
 /// <summary>What the provider needs to open a checkout for one booking (ADR-0005: the platform never holds funds).</summary>
-public sealed record CheckoutRequest(Guid BookingId, long AmountMinor, string Currency, string Description, string SuccessUrl);
+public sealed record CheckoutRequest(Guid AccessId, long AmountMinor, string Currency, string Description, string SuccessUrl);
 public sealed record CheckoutResult(string ProviderPaymentId, string CheckoutUrl);
 public sealed record RefundRequest(string ProviderPaymentId, long AmountMinor, string IdempotencyKey);
 public sealed record RefundResult(string ProviderRefundId);
 /// <param name="DestinationAccountId">The practitioner's connected account at the provider; null for a provider that needs none (the Mock).</param>
 /// <param name="ProviderPaymentId">The booking's payment id at the provider (<c>payments.provider_payment_id</c>): the money paid out is tied to that charge.</param>
-/// <param name="BookingId">The booking the payout is for; a provider may use it to group the money movements of one booking.</param>
-public sealed record PayoutRequest(Guid PractitionerId, long AmountMinor, string Currency, string IdempotencyKey,
-    string? DestinationAccountId = null, string? ProviderPaymentId = null, Guid? BookingId = null);
+/// <param name="AccessId">The booking the payout is for; a provider may use it to group the money movements of one booking.</param>
+public sealed record PayoutRequest(Guid AgentId, long AmountMinor, string Currency, string IdempotencyKey,
+    string? DestinationAccountId = null, string? ProviderPaymentId = null, Guid? AccessId = null);
 public sealed record PayoutResult(string ProviderPayoutId);
 
 public enum WebhookEventKind { PaymentSucceeded, PaymentFailed, RefundSucceeded, Unknown }

@@ -54,17 +54,17 @@ public class AdminClientTests : IClassFixture<WebFactory>
     public async Task A_dispute_page_and_the_resolve_call_use_the_services_wire_names()
     {
         var (client, scope) = Get<BookingClient>(); using var _ = scope;
-        _web.Booking.Respond = r => r.Method == HttpMethod.Post
+        _web.Access.Respond = r => r.Method == HttpMethod.Post
             ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{\"anything\":1}") }
             : FakeBackend.Raw($$"""{"items":[{"bookingId":"{{Id}}","clientUserId":"u-1","practitionerUserId":"u-2","kind":"not_as_described","text":"T","openedAt":"2026-11-24T12:00:09.1234567Z","resolvedAt":null,"resolution":null,"note":null}],"nextCursor":null}""");
-        var before = _web.Booking.Calls;
+        var before = _web.Access.Calls;
         var page = await client.AdminDisputesAsync("tok", "open", null, 20);
         var dispute = Assert.Single(page.Value!.Items);
-        Assert.Equal((Id, "not_as_described", "u-1"), (dispute.BookingId, dispute.Kind, dispute.ClientUserId));
-        Assert.Equal("/api/v1/admin/disputes?status=open&limit=20", _web.Booking.Requests[before].PathAndQuery);
+        Assert.Equal((Id, "not_as_described", "u-1"), (dispute.AccessId, dispute.Kind, dispute.ClientUserId));
+        Assert.Equal("/api/v1/admin/disputes?status=open&limit=20", _web.Access.Requests[before].PathAndQuery);
 
         Assert.True((await client.AdminResolveAsync("tok", Id, "refund_partial", 10000, "  Notatka testowa.  ")).IsOk); // a 200 with a body is a success too
-        var post = _web.Booking.Requests[^1];
+        var post = _web.Access.Requests[^1];
         Assert.Equal($"/api/v1/admin/bookings/{Id}/resolve", post.PathAndQuery);
         var json = JsonDocument.Parse(post.Body!).RootElement;
         Assert.Equal(("refund_partial", 10000L, "Notatka testowa."), (json.GetProperty("resolution").GetString(), json.GetProperty("refundMinor").GetInt64(), json.GetProperty("note").GetString()));
@@ -80,7 +80,7 @@ public class AdminClientTests : IClassFixture<WebFactory>
         var before = _web.Reputation.Calls;
         var reviews = await client.AdminReviewsAsync("tok", "Held", null, 20);
         Assert.Equal(("Held", "hold", "spam"), (reviews.Value!.Items[0].Status, reviews.Value.Items[0].TriageFlag, reviews.Value.Items[0].HoldReasons![0]));
-        Assert.Equal(4, (await client.AdminSuspiciousPairsAsync("tok", null, 20)).Value!.Items[0].Bookings);
+        Assert.Equal(4, (await client.AdminSuspiciousPairsAsync("tok", null, 20)).Value!.Items[0].Accesses);
         Assert.True((await client.AdminPublishReviewAsync("tok", Id)).IsOk);
         Assert.True((await client.AdminRejectReviewAsync("tok", Id, "  Powód odrzucenia opinii.  ")).IsOk);
         var sent = _web.Reputation.Requests.Skip(before).ToList();
@@ -118,25 +118,25 @@ public class AdminClientTests : IClassFixture<WebFactory>
     {
         var (client, scope) = Get<BookingClient>(); using var _ = scope;
         var csv = "booking_id,kind,amount_minor,currency,created_at\n" + string.Join("", Enumerable.Range(0, 5).Select(i => $"0b9e1d2c-0000-0000-0000-{i:D12},Refund,{100 + i},PLN,2026-12-01T10:00:00Z\n")) + "garbage line\n";
-        _web.Booking.Respond = _ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(csv) };
+        _web.Access.Respond = _ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(csv) };
         var preview = await client.AdminLedgerPreviewAsync("tok", "2026-12-01", "2026-12-31", 3);
         Assert.Equal((3, true, 100L), (preview.Value!.Rows.Count, preview.Value.HasMore, preview.Value.Rows[0].AmountMinor));
         var all = await client.AdminLedgerPreviewAsync("tok", "2026-12-01", "2026-12-31", 50);
         Assert.Equal((5, false), (all.Value!.Rows.Count, all.Value.HasMore)); // the garbage line is skipped, not counted
-        Assert.Equal("/api/v1/admin/ledger.csv?from=2026-12-01&to=2026-12-31", _web.Booking.Requests[^1].PathAndQuery);
+        Assert.Equal("/api/v1/admin/ledger.csv?from=2026-12-01&to=2026-12-31", _web.Access.Requests[^1].PathAndQuery);
     }
 
     [Fact]
     public async Task Without_a_signed_in_user_the_facade_answers_401_and_calls_no_backend()
     {
         using var scope = _web.Services.CreateScope();
-        var before = (_web.Directory.Calls, _web.Booking.Calls, _web.Reputation.Calls);
+        var before = (_web.Directory.Calls, _web.Access.Calls, _web.Reputation.Calls);
         var api = scope.ServiceProvider.GetRequiredService<AdminApi>();
         // nobody signed in: the state of this scope is the anonymous user (what a circuit that outlived its cookie ends up with)
         ((Microsoft.AspNetCore.Components.Authorization.IHostEnvironmentAuthenticationStateProvider)scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider>())
             .SetAuthenticationState(Task.FromResult(new Microsoft.AspNetCore.Components.Authorization.AuthenticationState(new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity()))));
         var result = await api.Disputes("open", null, 20).WaitAsync(TimeSpan.FromSeconds(5));
         Assert.Equal(401, result.Failure!.Status);
-        Assert.Equal(before, (_web.Directory.Calls, _web.Booking.Calls, _web.Reputation.Calls));
+        Assert.Equal(before, (_web.Directory.Calls, _web.Access.Calls, _web.Reputation.Calls));
     }
 }

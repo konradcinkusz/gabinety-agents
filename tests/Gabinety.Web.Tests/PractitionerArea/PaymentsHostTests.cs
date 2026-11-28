@@ -84,7 +84,7 @@ public class PaymentsHostTests
         Assert.Equal("Przejdź do konfiguracji w Stripe", link.TextContent);
         Assert.Equal("noopener noreferrer", link.GetAttribute("rel"));
         Assert.Equal(1, world.OnboardingCalls);
-        Assert.StartsWith("Bearer ", web.Booking.Requests.Single(r => r.Method == HttpMethod.Post).Authorization);
+        Assert.StartsWith("Bearer ", web.Access.Requests.Single(r => r.Method == HttpMethod.Post).Authorization);
         var again = await browser.GetAsync("/panel-agenta/platnosci"); // a reload does not show (or request) the link again
         Assert.Null(again.One("[data-testid=payments-link]"));
         Assert.Equal(1, world.OnboardingCalls);

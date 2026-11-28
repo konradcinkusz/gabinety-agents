@@ -1,7 +1,7 @@
 @page "/dostep/{OfferingId:guid}"
 @attribute [Authorize]
 @inject DirectoryClient Directory
-@inject BookingClient Bookings
+@inject BookingClient Accesses
 @inject BriefAssistantClient Assistant
 @inject NavigationManager Navigation
 @inject Gabinety.Web.Hosting.WebOptions Site
@@ -29,7 +29,7 @@ else if (_offering is not null)
     <BookingSteps Current="0" />
     <div class="booking-layout">
         <div class="booking-layout__summary">
-            <ConsultationSummary Offering="@_offering.Title" Party="@BookingFormat.Name(_practitionerName)" Units="@Gabinety.Web.Components.Pages.Gabinet.Profile.UnitsLine(_offering)"
+            <ConsultationSummary Package="@_offering.Title" Party="@BookingFormat.Name(_practitionerName)" Units="@Gabinety.Web.Components.Pages.Gabinet.Profile.UnitsLine(_offering)"
                                  Validity="@string.Format(BookFlowText.Summary.ValidFor, PlPages.Profile.ValidityDays)" PriceMinor="_offering.Price.AmountMinor">
                 <div class="callout callout--info stack stack--tight">
                     <p>@BookFlowText.Summary.Hold</p>
@@ -111,7 +111,7 @@ else if (_offering is not null)
             _unavailable = true;
             return;
         }
-        _offering = profile.Value!.Offerings.FirstOrDefault(o => o.Id == OfferingId);
+        _offering = profile.Value!.Packages.FirstOrDefault(o => o.Id == OfferingId);
         if (_offering is null) { Navigation.NotFound(); return; }
         _practitionerName = profile.Value.DisplayName;
     }
@@ -171,7 +171,7 @@ else if (_offering is not null)
         var key = BookingAttempt.KeyFor(Model.AttemptKey, Model.AttemptFingerprint, fingerprint, Guid.NewGuid);
         (_attemptKey, _attemptFingerprint) = (key.ToString(), fingerprint); // kept in the form: a retry of this same request reuses the key
 
-        var result = await Bookings.CreateAsync(key, new CreateBookingRequestDto(_offering.Id, new BriefDto(text, applied, applied is not null)));
+        var result = await Accesses.CreateAsync(key, new CreateBookingRequestDto(_offering.Id, new BriefDto(text, applied, applied is not null)));
         if (result.IsOk)
         {
             if (CheckoutTarget.Safe(result.Value!.CheckoutUrl, Site.SiteBaseUrl, Site.MockPayments) is { } target) { Navigation.NavigateTo(target); return; }

@@ -15,8 +15,8 @@ using Gabinety.Contracts.Directory;
 using Gabinety.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
-using ContractsStatus = Gabinety.Contracts.Booking.BookingStatus;
+using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using ContractsStatus = Gabinety.Contracts.Booking.AccessStatus;
 
 namespace Gabinety.Booking.Features.Bookings.Create;
 
@@ -60,19 +60,19 @@ public sealed class CreateBookingFeature : IServiceFeature
 
         // 3. the offering
         DirectoryOffering? offering;
-        try { offering = await directory.GetOfferingAsync(req.OfferingId, ct); }
+        try { offering = await directory.GetOfferingAsync(req.PackageId, ct); }
         catch (DirectoryUnavailableException)
         {
             return Problem(ErrorCodes.DependencyUnavailable, "Dependency unavailable", 503, null, "A required service is temporarily unavailable.");
         }
         if (offering is null) return Problem(ErrorCodes.NotFound, "Not found", 404);
-        if (offering.PractitionerUserId == sub) return Problem(ErrorCodes.OwnOffering, "Own offering", 422);
-        if (offering.PractitionerStatus != PractitionerStatus.Approved) return Problem(ErrorCodes.PractitionerNotBookable, "Practitioner not bookable", 422);
-        if (!offering.IsActive) return Problem(ErrorCodes.OfferingInactive, "Offering inactive", 422);
+        if (offering.PractitionerUserId == sub) return Problem(ErrorCodes.OwnPackage, "Own offering", 422);
+        if (offering.AgentStatus != AgentStatus.Approved) return Problem(ErrorCodes.AgentNotBookable, "Practitioner not bookable", 422);
+        if (!offering.IsActive) return Problem(ErrorCodes.PackageInactive, "Offering inactive", 422);
         // A real provider pays the practitioner into a connected account: without a ready one the booking would be charged and could never be paid out (T-09.05). Mock needs none.
         if (payments.RequiresPractitionerAccount
-            && !await db.PaymentAccounts.AsNoTracking().AnyAsync(a => a.PractitionerId == offering.PractitionerId && a.Provider == payments.Name && a.Ready, ct))
-            return Problem(ErrorCodes.PractitionerPaymentsNotReady, "Practitioner payments not ready", 422);
+            && !await db.PaymentAccounts.AsNoTracking().AnyAsync(a => a.AgentId == offering.AgentId && a.Provider == payments.Name && a.Ready, ct))
+            return Problem(ErrorCodes.AgentPaymentsNotReady, "Practitioner payments not ready", 422);
 
         // The provider call (a network call with a real vendor, SPEC 5.1: 10 s) happens BEFORE the transaction, with a
         // pre-allocated booking id, so no database lock is held across it. A request that then fails (a replay won the race) leaves an unused
@@ -84,7 +84,7 @@ public sealed class CreateBookingFeature : IServiceFeature
         var holdUntil = now.AddMinutes(config.GetValue("Booking:HoldMinutes", 10));
         // A package is valid from the purchase for Access:ValidityDays (CONTRACTS section 9 constant, the owner's). Chat counts tokens: the offering holds thousands.
         var validUntil = now.AddDays(config.GetValue("Access:ValidityDays", 30));
-        var unitsTotal = offering.Kind == OfferingKind.Chat ? offering.Units * 1000L : offering.Units;
+        var unitsTotal = offering.Kind == PackageKind.Chat ? offering.Units * 1000L : offering.Units;
 
         try
         {
@@ -94,28 +94,28 @@ public sealed class CreateBookingFeature : IServiceFeature
                 if (await db.IdempotencyRecords.AsNoTracking().SingleOrDefaultAsync(x => x.ClientUserId == sub && x.IdempotencyKey == key, ct) is { } won)
                     return Replay(won, hash, now);
 
-                var response = new CreateBookingResponse(bookingId, Enum.Parse<ContractsStatus>(BookingStateMachine.Create().ToString()), holdUntil, checkout.CheckoutUrl);
+                var response = new CreateAccessResponse(bookingId, Enum.Parse<ContractsStatus>(AccessStateMachine.Create().ToString()), holdUntil, checkout.CheckoutUrl);
                 var body = JsonSerializer.Serialize(response, Json);
-                db.Bookings.Add(new BookingEntity
+                db.Accesses.Add(new BookingEntity
                 {
                     Id = bookingId, ClientUserId = sub, ClientEmail = UserEmail.From(user), ClientDisplayName = clientName,
-                    PractitionerId = offering.PractitionerId, PractitionerUserId = offering.PractitionerUserId,
-                    OfferingId = offering.OfferingId, OfferingTitle = offering.Title, DurationMinutes = (short)offering.DurationMinutes,
+                    AgentId = offering.AgentId, PractitionerUserId = offering.PractitionerUserId,
+                    PackageId = offering.PackageId, PackageTitle = offering.Title, DurationMinutes = (short)offering.DurationMinutes,
                     PriceMinor = offering.Price.AmountMinor, StartUtc = now, EndUtc = validUntil, Kind = offering.Kind, UnitsTotal = unitsTotal, UnitsUsed = 0,
-                    PractitionerSlug = offering.PractitionerSlug, Status = BookingStateMachine.Create(),
+                    PractitionerSlug = offering.PractitionerSlug, Status = AccessStateMachine.Create(),
                     BriefText = text, BriefProblemSlug = req.Brief.ProblemSlug, BriefAiAssisted = req.Brief.AiAssisted,
                     HoldExpiresAt = holdUntil, IdempotencyKey = key, CreatedAt = now,
                 });
                 db.Payments.Add(new Payment
                 {
-                    Id = Guid.CreateVersion7(), BookingId = bookingId, Provider = payments.Name, ProviderPaymentId = checkout.ProviderPaymentId,
+                    Id = Guid.CreateVersion7(), AccessId = bookingId, Provider = payments.Name, ProviderPaymentId = checkout.ProviderPaymentId,
                     AmountMinor = offering.Price.AmountMinor, Status = PaymentStatus.Created, RefundedMinor = 0, CreatedAt = now, UpdatedAt = now,
                 });
                 db.IdempotencyRecords.Add(new IdempotencyRecord
                     { ClientUserId = sub, IdempotencyKey = key, RequestHash = hash, ResponseStatus = 201, ResponseBody = body, CreatedAt = now });
                 await db.SaveChangesAsync(ct);
 
-                log.LogInformation("Booking {BookingId} created for practitioner {PractitionerId}", bookingId, offering.PractitionerId);
+                log.LogInformation("Booking {BookingId} created for practitioner {PractitionerId}", bookingId, offering.AgentId);
                 http.Response.Headers.Location = $"/api/v1/bookings/{bookingId}";
                 return Results.Text(body, "application/json", Encoding.UTF8, 201);
             }, ct);
@@ -163,15 +163,15 @@ public sealed class CreateBookingFeature : IServiceFeature
     }
 
     /// <summary>startUtc, when present, is ignored (A-02), so the body is deserialized directly.</summary>
-    static async Task<(CreateBookingRequest? Request, Dictionary<string, string[]> Errors)> ReadBodyAsync(HttpRequest request, CancellationToken ct)
+    static async Task<(CreateAccessRequest? Request, Dictionary<string, string[]> Errors)> ReadBodyAsync(HttpRequest request, CancellationToken ct)
     {
         var errors = new Dictionary<string, string[]>();
-        CreateBookingRequest? req;
-        try { req = await JsonSerializer.DeserializeAsync<CreateBookingRequest>(request.Body, Json, ct); }
+        CreateAccessRequest? req;
+        try { req = await JsonSerializer.DeserializeAsync<CreateAccessRequest>(request.Body, Json, ct); }
         catch (Exception e) when (e is JsonException or FormatException) { return (null, new() { ["body"] = ["The body must be a valid JSON object"] }); }
         if (req is null) return (null, new() { ["body"] = ["The body must be a valid JSON object"] });
 
-        if (req.OfferingId == Guid.Empty) errors["offeringId"] = ["offeringId is required"];
+        if (req.PackageId == Guid.Empty) errors["offeringId"] = ["offeringId is required"];
         if (req.Brief is null) errors["brief"] = ["brief is required"];
         else
         {
@@ -183,10 +183,10 @@ public sealed class CreateBookingFeature : IServiceFeature
     }
 
     /// <summary>SHA-256 hex of the canonical body: offeringId, brief.text trimmed, problemSlug, aiAssisted (startUtc is ignored).</summary>
-    static string Hash(CreateBookingRequest r, string trimmedText) =>
+    static string Hash(CreateAccessRequest r, string trimmedText) =>
         Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new object?[]
         {
-            r.OfferingId.ToString("D"), trimmedText, r.Brief.ProblemSlug, r.Brief.AiAssisted,
+            r.PackageId.ToString("D"), trimmedText, r.Brief.ProblemSlug, r.Brief.AiAssisted,
         }))).ToLowerInvariant();
 
     static IResult Problem(string code, string title, int status, Dictionary<string, string[]>? errors = null, string? detail = null) =>

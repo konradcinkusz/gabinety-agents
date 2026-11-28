@@ -14,9 +14,9 @@ public sealed class AdminApi(DirectoryClient directory, BookingClient booking, R
         await tokens.AccessTokenAsync(ct) is { Length: > 0 } token ? await call(token) : ApiResult<T>.Fail(Unauthenticated);
 
     // ---- verification (Directory)
-    public Task<ApiResult<PageDto<AdminPractitionerRowDto>>> Practitioners(string status, string? cursor, int limit, CancellationToken ct = default) =>
+    public Task<ApiResult<PageDto<AdminPractitionerRowDto>>> Agents(string status, string? cursor, int limit, CancellationToken ct = default) =>
         With(t => directory.AdminPractitionersAsync(t, status, cursor, limit, ct), ct);
-    public Task<ApiResult<AdminPractitionerDetailDto>> Practitioner(Guid id, CancellationToken ct = default) => With(t => directory.AdminPractitionerAsync(t, id, ct), ct);
+    public Task<ApiResult<AdminPractitionerDetailDto>> Agent(Guid id, CancellationToken ct = default) => With(t => directory.AdminPractitionerAsync(t, id, ct), ct);
     public Task<ApiResult<AdminVerificationEventsDto>> VerificationEvents(Guid id, CancellationToken ct = default) => With(t => directory.AdminVerificationEventsAsync(t, id, ct), ct);
     public Task<ApiResult<Unit>> PractitionerAction(Guid id, string action, string? reason, CancellationToken ct = default) =>
         With(t => directory.AdminPractitionerActionAsync(t, id, action, reason, ct), ct);
@@ -24,7 +24,7 @@ public sealed class AdminApi(DirectoryClient directory, BookingClient booking, R
     // ---- disputes and the ledger (Booking)
     public Task<ApiResult<PageDto<AdminDisputeDto>>> Disputes(string status, string? cursor, int limit, CancellationToken ct = default) =>
         With(t => booking.AdminDisputesAsync(t, status, cursor, limit, ct), ct);
-    public Task<ApiResult<AdminBookingDto>> Booking(Guid id, CancellationToken ct = default) => With(t => booking.AdminBookingAsync(t, id, ct), ct);
+    public Task<ApiResult<AdminBookingDto>> Access(Guid id, CancellationToken ct = default) => With(t => booking.AdminBookingAsync(t, id, ct), ct);
     public Task<ApiResult<Unit>> Resolve(Guid bookingId, string resolution, long? refundMinor, string note, CancellationToken ct = default) =>
         With(t => booking.AdminResolveAsync(t, bookingId, resolution, refundMinor, note, ct), ct);
     public Task<ApiResult<LedgerPreviewDto>> LedgerPreview(string from, string to, int max, CancellationToken ct = default) =>
@@ -46,7 +46,7 @@ public sealed class AdminApi(DirectoryClient directory, BookingClient booking, R
     public async Task<IReadOnlyDictionary<Guid, string>> PractitionerNames(IEnumerable<Guid> ids, int max = 20, CancellationToken ct = default)
     {
         var distinct = ids.Distinct().Take(max).ToList();
-        var found = await Task.WhenAll(distinct.Select(async id => (id, result: await Practitioner(id, ct))));
+        var found = await Task.WhenAll(distinct.Select(async id => (id, result: await Agent(id, ct))));
         return found.Where(f => f.result.IsOk && !string.IsNullOrWhiteSpace(f.result.Value!.DisplayName)).ToDictionary(f => f.id, f => f.result.Value!.DisplayName);
     }
 }

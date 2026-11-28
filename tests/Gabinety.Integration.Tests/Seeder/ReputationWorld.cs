@@ -1,6 +1,7 @@
 extern alias BookingApp;
 extern alias ReputationApp;
 
+using System.Text.Json.Serialization;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Gabinety.DemoSeeder;
@@ -53,16 +54,16 @@ public sealed class ReputationHost : WebApplicationFactory<ReputationApp::Progra
 
     /// <summary>Every review row as plain values, ordered by booking id, so two snapshots compare with Assert.Equal.</summary>
     public Task<List<ReviewRow>> Reviews() => Db(async db =>
-        (await db.Reviews.AsNoTracking().ToListAsync()).OrderBy(r => r.BookingId)
-            .Select(r => new ReviewRow(r.Id, r.BookingId, r.PractitionerId, r.ClientUserId, r.Rating, r.Text, r.Status.ToString(), r.CreatedAt)).ToList());
+        (await db.Reviews.AsNoTracking().ToListAsync()).OrderBy(r => r.AccessId)
+            .Select(r => new ReviewRow(r.Id, r.AccessId, r.AgentId, r.ClientUserId, r.Rating, r.Text, r.Status.ToString(), r.CreatedAt)).ToList());
 
-    public Task<List<(Guid Practitioner, int Count, int Sum, long Version)>> Summaries() => Db(async db =>
-        (await db.RatingSummaries.AsNoTracking().ToListAsync()).OrderBy(s => s.PractitionerId).Select(s => (s.PractitionerId, s.Count, s.Sum, s.Version)).ToList());
+    public Task<List<(Guid Agent, int Count, int Sum, long Version)>> Summaries() => Db(async db =>
+        (await db.RatingSummaries.AsNoTracking().ToListAsync()).OrderBy(s => s.AgentId).Select(s => (s.AgentId, s.Count, s.Sum, s.Version)).ToList());
 
     public Task<int> ModerationEvents() => Db(db => db.ModerationEvents.CountAsync());
 }
 
-public sealed record ReviewRow(Guid Id, Guid BookingId, Guid PractitionerId, string ClientUserId, int Rating, string Text, string Status, DateTimeOffset CreatedAt);
+public sealed record ReviewRow(Guid Id, [property: JsonPropertyName("bookingId")] Guid AccessId, [property: JsonPropertyName("practitionerId")] Guid AgentId, string ClientUserId, int Rating, string Text, string Status, DateTimeOffset CreatedAt);
 
 /// <summary>Request log of the Reputation client the seeder uses; a test can fail the requests it names.</summary>
 public sealed class ReputationCalls : DelegatingHandler
@@ -87,19 +88,19 @@ public sealed class ReputationSeedHttp(WorldSeedHttp inner, ReputationHost reput
 /// <summary>Identity, Directory, Booking and Reputation in process. The Directory and Booking steps are run by the test; so is the Reputation step.</summary>
 public sealed class ReputationWorld : IAsyncDisposable
 {
-    public BookingWorld Booking { get; } = new();
+    public BookingWorld Access { get; } = new();
     public ReputationHost Reputation { get; }
     public ReputationCalls Calls { get; } = new();
     public SeedContext Context { get; private set; } = null!;
 
     public ReputationWorld()
     {
-        Reputation = new ReputationHost(Booking.Identity, Booking.Booking);
-        Http = new ReputationSeedHttp(Booking.Http, Reputation, Calls);
+        Reputation = new ReputationHost(Access.Identity, Access.Access);
+        Http = new ReputationSeedHttp(Access.Http, Reputation, Calls);
     }
 
     public ISeedHttp Http { get; }
-    public CapturedLog Log => Booking.Log;
+    public CapturedLog Log => Access.Log;
 
     SeedOptions _options = null!;
 
@@ -112,7 +113,7 @@ public sealed class ReputationWorld : IAsyncDisposable
     /// <summary>The real Directory and Booking steps (Booking with the completion stand-in running by the caller), leaving a context the Reputation step can use.</summary>
     public async Task SeedDirectoryAndBookingAsync(bool withCompletionJob = true)
     {
-        _ = Booking.Booking.Services;
+        _ = Access.Access.Services;
         _ = Reputation.Services;
         Context = NewContext();
         await new DirectorySeedStep().RunAsync(Context, CancellationToken.None);
@@ -129,5 +130,5 @@ public sealed class ReputationWorld : IAsyncDisposable
         return page.GetProperty("items").EnumerateArray().Select(i => i.Clone()).ToList();
     }
 
-    public async ValueTask DisposeAsync() { Reputation.Dispose(); await Booking.DisposeAsync(); }
+    public async ValueTask DisposeAsync() { Reputation.Dispose(); await Access.DisposeAsync(); }
 }

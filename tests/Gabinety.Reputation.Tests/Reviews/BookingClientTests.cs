@@ -5,7 +5,7 @@ namespace Gabinety.Reputation.Tests.Reviews;
 
 public class BookingClientTests
 {
-    static readonly Guid Booking = Guid.NewGuid();
+    static readonly Guid Access = Guid.NewGuid();
 
     static (BookingClient Client, FakeBooking Handler) Make()
     {
@@ -18,13 +18,13 @@ public class BookingClientTests
     {
         var (client, h) = Make();
         var pract = Guid.NewGuid();
-        h.Bookings[Booking] = (true, "demo-user-1", pract);
+        h.Accesses[Access] = (true, "demo-user-1", pract);
 
-        var dto = await client.GetReviewabilityAsync(Booking, default);
+        var dto = await client.GetReviewabilityAsync(Access, default);
 
-        Assert.Equal($"/internal/v1/bookings/{Booking}/reviewability", h.LastPath);
+        Assert.Equal($"/internal/v1/bookings/{Access}/reviewability", h.LastPath);
         Assert.Equal(FakeBooking.Key, h.LastKeyHeader);
-        Assert.Equal((true, "demo-user-1", pract), (dto!.Reviewable, dto.ClientUserId, dto.PractitionerId));
+        Assert.Equal((true, "demo-user-1", pract), (dto!.Reviewable, dto.ClientUserId, dto.AgentId));
         Assert.Equal(new DateTimeOffset(2026, 11, 15, 10, 0, 0, TimeSpan.Zero), dto.CompletedAt);
     }
 
@@ -32,7 +32,7 @@ public class BookingClientTests
     public async Task A_404_is_null_and_is_not_retried()
     {
         var (client, h) = Make();
-        Assert.Null(await client.GetReviewabilityAsync(Booking, default));
+        Assert.Null(await client.GetReviewabilityAsync(Access, default));
         Assert.Equal(1, h.Calls);
     }
 
@@ -41,7 +41,7 @@ public class BookingClientTests
     {
         var (client, h) = Make();
         h.Override = (_, n) => n == 1 ? new HttpResponseMessage(HttpStatusCode.BadGateway) : FakeBooking.Json(new { reviewable = true, clientUserId = "demo-u", practitionerId = Guid.NewGuid(), completedAt = (string?)null });
-        Assert.True((await client.GetReviewabilityAsync(Booking, default))!.Reviewable);
+        Assert.True((await client.GetReviewabilityAsync(Access, default))!.Reviewable);
         Assert.Equal(2, h.Calls);
     }
 
@@ -51,7 +51,7 @@ public class BookingClientTests
         var (client, h) = Make();
         h.Down = true;
 
-        var ex = await Assert.ThrowsAsync<BookingUnavailableException>(() => client.GetReviewabilityAsync(Booking, default));
+        var ex = await Assert.ThrowsAsync<BookingUnavailableException>(() => client.GetReviewabilityAsync(Access, default));
 
         Assert.Equal(2, h.Calls);
         Assert.DoesNotContain(FakeBooking.Key, ex.Message);
@@ -63,7 +63,7 @@ public class BookingClientTests
     {
         var (client, h) = Make();
         h.Override = (_, _) => new HttpResponseMessage(HttpStatusCode.Unauthorized);
-        await Assert.ThrowsAsync<BookingUnavailableException>(() => client.GetReviewabilityAsync(Booking, default));
+        await Assert.ThrowsAsync<BookingUnavailableException>(() => client.GetReviewabilityAsync(Access, default));
         Assert.Equal(1, h.Calls);
     }
 
@@ -73,7 +73,7 @@ public class BookingClientTests
         var slow = new SlowHandler();
         var c = new BookingClient(new HttpClient(slow) { BaseAddress = new Uri(FakeBooking.BaseUrl + "/") }, FakeBooking.Key, TimeSpan.Zero, TimeSpan.FromMilliseconds(50));
 
-        await Assert.ThrowsAsync<BookingUnavailableException>(() => c.GetReviewabilityAsync(Booking, default));
+        await Assert.ThrowsAsync<BookingUnavailableException>(() => c.GetReviewabilityAsync(Access, default));
 
         Assert.Equal(2, slow.Calls);
     }

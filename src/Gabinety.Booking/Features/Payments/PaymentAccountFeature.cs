@@ -30,7 +30,7 @@ public sealed class PaymentAccountFeature : IServiceFeature
         g.MapGet("", (string? agent, ClaimsPrincipal user, PractitionerResolver who, BookingDbContext db, IPaymentProvider payments, TimeProvider time, ILogger<PaymentAccountFeature> log, CancellationToken ct) =>
             AsPractitioner(user, agent, who, payments, log, async (id, accounts) =>
             {
-                var row = await db.PaymentAccounts.SingleOrDefaultAsync(a => a.PractitionerId == id && a.Provider == payments.Name, ct);
+                var row = await db.PaymentAccounts.SingleOrDefaultAsync(a => a.AgentId == id && a.Provider == payments.Name, ct);
                 if (row is null) return Results.Ok(new AccountStateDto(payments.Name, "none"));
                 if (!row.Ready) await RefreshAsync(db, accounts, row, time.GetUtcNow(), ct);
                 return Results.Ok(new AccountStateDto(payments.Name, row.Ready ? "ready" : "pending"));
@@ -41,16 +41,16 @@ public sealed class PaymentAccountFeature : IServiceFeature
             AsPractitioner(user, agent, who, payments, log, async (id, accounts) =>
             {
                 var now = time.GetUtcNow();
-                var row = await db.PaymentAccounts.SingleOrDefaultAsync(a => a.PractitionerId == id && a.Provider == payments.Name, ct);
+                var row = await db.PaymentAccounts.SingleOrDefaultAsync(a => a.AgentId == id && a.Provider == payments.Name, ct);
                 if (row is null)
                 {
                     var accountId = await accounts.CreateAccountAsync(id, ct); // idempotent at the provider: the key is the practitioner
-                    db.PaymentAccounts.Add(row = new PaymentAccount { PractitionerId = id, Provider = payments.Name, ProviderAccountId = accountId, Ready = false, CreatedAt = now, UpdatedAt = now });
+                    db.PaymentAccounts.Add(row = new PaymentAccount { AgentId = id, Provider = payments.Name, ProviderAccountId = accountId, Ready = false, CreatedAt = now, UpdatedAt = now });
                     try { await db.SaveChangesAsync(ct); }
                     catch (DbUpdateException e) when (IsUnique(e))
                     {
                         db.ChangeTracker.Clear(); // a concurrent request stored the same account first (same id: the provider call was idempotent)
-                        row = await db.PaymentAccounts.SingleAsync(a => a.PractitionerId == id && a.Provider == payments.Name, ct);
+                        row = await db.PaymentAccounts.SingleAsync(a => a.AgentId == id && a.Provider == payments.Name, ct);
                     }
                     log.LogInformation("Payment account created for practitioner {PractitionerId}", id);
                 }
@@ -85,7 +85,7 @@ public sealed class PaymentAccountFeature : IServiceFeature
             if (resolved.Ambiguous)
                 return Results.Json(ApiProblem.Of(ErrorCodes.ValidationFailed, "Validation failed", 422, null,
                     new Dictionary<string, string[]> { ["agent"] = ["required when the account has more than one agent"] }), statusCode: 422, contentType: "application/problem+json");
-            if (resolved.PractitionerId is not { } practitioner) return Problem(ErrorCodes.Forbidden, "Forbidden", 403, "The caller is not a practitioner of that agent.");
+            if (resolved.AgentId is not { } practitioner) return Problem(ErrorCodes.Forbidden, "Forbidden", 403, "The caller is not a practitioner of that agent.");
             return await run(practitioner, accounts);
         }
         catch (DirectoryUnavailableException) { return Unavailable(); }

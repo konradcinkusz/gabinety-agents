@@ -8,7 +8,7 @@ using Gabinety.Contracts.Common;
 using Gabinety.Contracts.Directory;
 using Gabinety.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
+using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 
 namespace Gabinety.Booking.Features.AgentApi;
 
@@ -36,7 +36,7 @@ public sealed class TasksFeature : IServiceFeature
         me.MapGet("me/bookings/{bookingId:guid}/tasks", ListForBookingAsync);
     }
 
-    sealed record CreateTaskBody([property: JsonPropertyName("model")] string? Model, [property: JsonPropertyName("offering_id")] string? OfferingId, [property: JsonPropertyName("input")] string? Input);
+    sealed record CreateTaskBody([property: JsonPropertyName("model")] string? Model, [property: JsonPropertyName("offering_id")] string? PackageId, [property: JsonPropertyName("input")] string? Input);
     sealed record BrowserTaskBody([property: JsonPropertyName("input")] string? Input);
 
     static string Sub(ClaimsPrincipal user) => (user.FindFirst("sub") ?? user.FindFirst(ClaimTypes.NameIdentifier))?.Value ?? "";
@@ -60,15 +60,15 @@ public sealed class TasksFeature : IServiceFeature
         ILogger<TasksFeature> log, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(body?.Model)) return OpenAiError.BadRequest("The model field is required.");
-        if (!Guid.TryParse(body.OfferingId, out var offeringId)) return OpenAiError.BadRequest("The offering_id field must be the id of a package.");
+        if (!Guid.TryParse(body.PackageId, out var offeringId)) return OpenAiError.BadRequest("The offering_id field must be the id of a package.");
         if (!ValidInput(body.Input)) return OpenAiError.BadRequest($"The input must be {MinInputLength} to {MaxInputLength} characters.");
 
         var sub = Sub(user);
         for (var attempt = 0; attempt < 3; attempt++)
         {
-            var package = await entitlements.FindAsync(sub, body.Model, OfferingKind.Tasks, offeringId, ct);
+            var package = await entitlements.FindAsync(sub, body.Model, PackageKind.Tasks, offeringId, ct);
             if (package is null)
-                return await entitlements.HasExhaustedAsync(sub, body.Model, OfferingKind.Tasks, offeringId, ct) ? OpenAiError.QuotaExhausted() : OpenAiError.ModelNotFound_();
+                return await entitlements.HasExhaustedAsync(sub, body.Model, PackageKind.Tasks, offeringId, ct) ? OpenAiError.QuotaExhausted() : OpenAiError.ModelNotFound_();
             if (!await entitlements.TryConsumeAsync(package.Id, 1, ct)) continue; // another request took the last unit between the find and the take: look again
             var task = await QueueAsync(package, body.Input!, ApiKeyId(user), entitlements, db, time, log, ct);
             return Json(new { id = task.Id, status = "queued" }, 202);
@@ -85,11 +85,11 @@ public sealed class TasksFeature : IServiceFeature
         var now = time.GetUtcNow();
         var task = new AgentTask
         {
-            Id = Guid.NewGuid(), BookingId = package.Id, ClientUserId = package.ClientUserId, PractitionerSlug = package.PractitionerSlug, OfferingId = package.OfferingId,
+            Id = Guid.NewGuid(), AccessId = package.Id, ClientUserId = package.ClientUserId, PractitionerSlug = package.PractitionerSlug, PackageId = package.PackageId,
             Status = AgentTaskStatus.Queued, InputText = input, CreatedAt = now,
         };
         db.AgentTasks.Add(task);
-        db.UsageRecords.Add(new UsageRecord { Id = Guid.NewGuid(), BookingId = package.Id, ApiKeyId = apiKeyId, Kind = OfferingKind.Tasks, Units = 1, CreatedAt = now });
+        db.UsageRecords.Add(new UsageRecord { Id = Guid.NewGuid(), AccessId = package.Id, ApiKeyId = apiKeyId, Kind = PackageKind.Tasks, Units = 1, CreatedAt = now });
         try { await db.SaveChangesAsync(CancellationToken.None); }
         catch
         {
@@ -110,10 +110,10 @@ public sealed class TasksFeature : IServiceFeature
                 new() { ["input"] = [$"The input must be {MinInputLength} to {MaxInputLength} characters."] });
 
         var sub = Sub(user);
-        var package = await db.Bookings.AsNoTracking().SingleOrDefaultAsync(b => b.Id == id && b.ClientUserId == sub, ct);
+        var package = await db.Accesses.AsNoTracking().SingleOrDefaultAsync(b => b.Id == id && b.ClientUserId == sub, ct);
         if (package is null) return PaymentWebhookFeature.Problem(ErrorCodes.NotFound, "Not found", 404);
         var now = time.GetUtcNow();
-        if (package.Kind != OfferingKind.Tasks || package.Status != BookingStatus.Confirmed || package.EndUtc <= now || package.UnitsUsed >= package.UnitsTotal)
+        if (package.Kind != PackageKind.Tasks || package.Status != AccessStatus.Confirmed || package.EndUtc <= now || package.UnitsUsed >= package.UnitsTotal)
             return PaymentWebhookFeature.Problem(ErrorCodes.InvalidTransition, "Invalid transition", 409);
         if (!await entitlements.TryConsumeAsync(package.Id, 1, ct)) return PaymentWebhookFeature.Problem(ErrorCodes.InvalidTransition, "Invalid transition", 409);
 
@@ -137,11 +137,11 @@ public sealed class TasksFeature : IServiceFeature
         return task is null ? PaymentWebhookFeature.Problem(ErrorCodes.NotFound, "Not found", 404) : Json(View(task));
     }
 
-    static async Task<IResult> ListForBookingAsync(Guid bookingId, ClaimsPrincipal user, BookingDbContext db, CancellationToken ct)
+    static async Task<IResult> ListForBookingAsync([Microsoft.AspNetCore.Mvc.FromRoute(Name = "bookingId")] Guid bookingId, ClaimsPrincipal user, BookingDbContext db, CancellationToken ct)
     {
         var sub = Sub(user);
-        if (!await db.Bookings.AnyAsync(b => b.Id == bookingId && b.ClientUserId == sub, ct)) return PaymentWebhookFeature.Problem(ErrorCodes.NotFound, "Not found", 404);
-        var tasks = await db.AgentTasks.AsNoTracking().Where(t => t.BookingId == bookingId && t.ClientUserId == sub).OrderByDescending(t => t.CreatedAt).ThenBy(t => t.Id).ToListAsync(ct);
+        if (!await db.Accesses.AnyAsync(b => b.Id == bookingId && b.ClientUserId == sub, ct)) return PaymentWebhookFeature.Problem(ErrorCodes.NotFound, "Not found", 404);
+        var tasks = await db.AgentTasks.AsNoTracking().Where(t => t.AccessId == bookingId && t.ClientUserId == sub).OrderByDescending(t => t.CreatedAt).ThenBy(t => t.Id).ToListAsync(ct);
         return Json(tasks.Select(View).ToList());
     }
 }

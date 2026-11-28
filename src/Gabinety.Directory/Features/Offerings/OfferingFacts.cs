@@ -11,6 +11,6 @@ public sealed class OfferingFacts(IServiceScopeFactory scopes) : IChecklistFacts
     {
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<DirectoryDbContext>();
-        return await db.Set<Offering>().CountAsync(o => o.PractitionerId == practitionerId && o.IsActive, ct);
+        return await db.Set<Package>().CountAsync(o => o.AgentId == practitionerId && o.IsActive, ct);
     }
 }

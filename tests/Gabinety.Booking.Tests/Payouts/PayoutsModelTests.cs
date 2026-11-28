@@ -14,7 +14,7 @@ public class PayoutsModelTests
         Assert.Equal("payouts", e.GetTableName());
         Assert.Equal(new[] { "amount_minor", "attempt_count", "booking_id", "created_at", "id", "next_attempt_at", "practitioner_id", "provider_ref", "sent_at", "status" },
             e.GetProperties().Select(p => p.GetColumnName()).Order().ToArray());
-        Assert.Contains(e.GetIndexes(), i => i.IsUnique && i.Properties.Select(p => p.Name).SequenceEqual(["BookingId"]));
+        Assert.Contains(e.GetIndexes(), i => i.IsUnique && i.Properties.Select(p => p.Name).SequenceEqual(["AccessId"]));
         Assert.Equal(typeof(string), e.FindProperty(nameof(Payout.Status))!.GetProviderClrType());
         Assert.True(e.FindProperty(nameof(Payout.ProviderRef))!.IsNullable);
         Assert.True(e.FindProperty(nameof(Payout.SentAt))!.IsNullable);

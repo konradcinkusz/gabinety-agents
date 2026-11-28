@@ -60,7 +60,7 @@ public sealed class NotificationDispatcher(IServiceScopeFactory scopes, TimeProv
         var n = await db.Notifications.SingleOrDefaultAsync(x => x.Id == id, ct);
         if (n is null || n.SentAt != null || n.Attempts >= MaxAttempts || n.DueAt > now) return false;
 
-        var booking = await db.Bookings.AsNoTracking().Where(b => b.Id == n.BookingId)
+        var booking = await db.Accesses.AsNoTracking().Where(b => b.Id == n.AccessId)
             .Select(b => new { b.StartUtc, b.PractitionerUserId, b.ClientEmail }).SingleOrDefaultAsync(ct);
         if (booking is not null && IsReminder(n.Kind) && booking.StartUtc <= now)
         {
@@ -84,7 +84,7 @@ public sealed class NotificationDispatcher(IServiceScopeFactory scopes, TimeProv
         catch (Exception ex) when (ex is not OperationCanceledException) { return Failed(n, "the address lookup failed: " + ex.GetType().Name); }
         if (string.IsNullOrWhiteSpace(address)) return Failed(n, "the user has no address");
 
-        var mail = NotificationTemplates.Render(n.Kind, SiteUrl.From(sp.GetRequiredService<IConfiguration>()), n.BookingId, booking.StartUtc, forPractitioner);
+        var mail = NotificationTemplates.Render(n.Kind, SiteUrl.From(sp.GetRequiredService<IConfiguration>()), n.AccessId, booking.StartUtc, forPractitioner);
         try { await sp.GetRequiredService<IEmailSender>().SendAsync(new EmailMessage(address, n.ToUserId, n.Kind, mail.Subject, mail.Text, mail.Html), ct); }
         catch (Exception ex) when (ex is not OperationCanceledException) { return Failed(n, "the sender failed: " + ex.GetType().Name); }
 

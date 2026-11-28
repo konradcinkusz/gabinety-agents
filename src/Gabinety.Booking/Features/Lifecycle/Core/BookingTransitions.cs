@@ -6,14 +6,14 @@ using Gabinety.Booking.Persistence;
 using Gabinety.Contracts.Common;
 using Gabinety.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Features.Lifecycle.Core;
 
 /// <summary>What a hook or an effect sees while the transition's transaction is open. <see cref="Db"/> is the transaction's own context: add rows to it, never save.</summary>
-public sealed record BookingTransitionContext(BookingDbContext Db, BookingEntity Booking, Payment? Payment, BookingStatus From, BookingStatus To,
-    BookingTrigger Trigger, DateTimeOffset Now);
+public sealed record BookingTransitionContext(BookingDbContext Db, BookingEntity Access, Payment? Payment, AccessStatus From, AccessStatus To,
+    AccessTrigger Trigger, DateTimeOffset Now);
 
 /// <summary>
 /// Extension point: called inside the transition's transaction, after the status changed and before it is saved, for EVERY transition.
@@ -30,7 +30,7 @@ public interface IBookingTransitionHook
 /// <see cref="Effects"/> sets what is specific to the trigger (a reason, a dispute timestamp, a refund record); it runs inside the transaction,
 /// possibly more than once if the database retries, so it must only set values and add rows.
 /// </summary>
-public sealed record TransitionRequest(Guid BookingId, BookingTrigger Trigger, DateTimeOffset Now)
+public sealed record TransitionRequest(Guid AccessId, AccessTrigger Trigger, DateTimeOffset Now)
 {
     public Func<BookingEntity, bool>? Precondition { get; init; }
     /// <summary>A rule that needs the database (a row of another table), checked inside the transaction under the booking's row lock, after <see cref="Precondition"/>: false means 409. Read only.</summary>
@@ -41,7 +41,7 @@ public sealed record TransitionRequest(Guid BookingId, BookingTrigger Trigger, D
 public enum TransitionKind { Applied, NotFound, Invalid }
 
 /// <summary>Applied carries the committed booking and its payment; From is the status before (the one that refused, for Invalid).</summary>
-public sealed record BookingTransitionResult(TransitionKind Kind, BookingEntity? Booking = null, Payment? Payment = null, BookingStatus? From = null)
+public sealed record BookingTransitionResult(TransitionKind Kind, BookingEntity? Access = null, Payment? Payment = null, AccessStatus? From = null)
 {
     public bool Applied => Kind == TransitionKind.Applied;
 
@@ -55,7 +55,7 @@ public sealed record BookingTransitionResult(TransitionKind Kind, BookingEntity?
 }
 
 /// <summary>
-/// The only place a <see cref="BookingTrigger"/> is applied to a booking by the lifecycle (CONTRACTS 8.1). It runs <see cref="BookingStateMachine.Next"/>
+/// The only place a <see cref="AccessTrigger"/> is applied to a booking by the lifecycle (CONTRACTS 8.1). It runs <see cref="AccessStateMachine.Next"/>
 /// on the booking row under a lock (SELECT ... FOR UPDATE on PostgreSQL, so a concurrent request waits and then sees the new status),
 /// sets the status and the timestamps every cancellation shares, lets the request's effects and the registered hooks write their rows, and commits once.
 /// A new trigger needs no change here: add it to the state table and pass its own precondition and effects.
@@ -69,19 +69,19 @@ public sealed class BookingTransitions(BookingDbContext db, IEnumerable<IBooking
         {
             db.ChangeTracker.Clear(); // a retry starts from the database
             var booking = db.Database.IsNpgsql()
-                ? await db.Bookings.FromSql($"SELECT * FROM bookings WHERE id = {request.BookingId} FOR UPDATE").SingleOrDefaultAsync(ct)
-                : await db.Bookings.SingleOrDefaultAsync(b => b.Id == request.BookingId, ct);
+                ? await db.Accesses.FromSql($"SELECT * FROM bookings WHERE id = {request.AccessId} FOR UPDATE").SingleOrDefaultAsync(ct)
+                : await db.Accesses.SingleOrDefaultAsync(b => b.Id == request.AccessId, ct);
             if (booking is null) return new(TransitionKind.NotFound);
 
             var from = booking.Status;
-            var next = BookingStateMachine.Next(from, request.Trigger, booking.StartUtc, request.Now);
+            var next = AccessStateMachine.Next(from, request.Trigger, booking.StartUtc, request.Now);
             if (!next.Allowed || request.Precondition?.Invoke(booking) == false) return new(TransitionKind.Invalid, From: from);
             if (request.DbPrecondition is { } dbRule && !await dbRule(db, booking, ct)) return new(TransitionKind.Invalid, From: from);
 
             var to = next.Next!.Value;
             booking.Status = to;
             StampCancellation(booking, to, request.Now);
-            var payment = await db.Payments.SingleOrDefaultAsync(p => p.BookingId == booking.Id, ct);
+            var payment = await db.Payments.SingleOrDefaultAsync(p => p.AccessId == booking.Id, ct);
             var context = new BookingTransitionContext(db, booking, payment, from, to, request.Trigger, request.Now);
             request.Effects?.Invoke(context);
             foreach (var hook in hooks) await hook.OnTransitionAsync(context, ct);
@@ -107,16 +107,16 @@ public sealed class BookingTransitions(BookingDbContext db, IEnumerable<IBooking
                 return r;
             });
 
-        if (result.Applied) log.LogInformation("Booking {BookingId} moved {From} -> {To} by {Trigger}", request.BookingId, result.From, result.Booking!.Status, request.Trigger);
+        if (result.Applied) log.LogInformation("Booking {BookingId} moved {From} -> {To} by {Trigger}", request.AccessId, result.From, result.Access!.Status, request.Trigger);
         return result;
     }
 
     /// <summary>What the three cancellations share (CONTRACTS 8.1): the time, and for a late client cancel the payout date. Other triggers set theirs in their effects.</summary>
-    static void StampCancellation(BookingEntity b, BookingStatus to, DateTimeOffset now)
+    static void StampCancellation(BookingEntity b, AccessStatus to, DateTimeOffset now)
     {
-        if (to is not (BookingStatus.CancelledByClient or BookingStatus.LateCancelledByClient or BookingStatus.CancelledByPractitioner)) return;
+        if (to is not (AccessStatus.CancelledByClient or AccessStatus.LateCancelledByClient or AccessStatus.CancelledByPractitioner)) return;
         b.CancelledAt = now;
-        if (to == BookingStatus.LateCancelledByClient) b.PayoutDueAt = b.StartUtc;
+        if (to == AccessStatus.LateCancelledByClient) b.PayoutDueAt = b.StartUtc;
     }
 }
 

@@ -9,7 +9,7 @@ public static class VerificationEvents
     public static VerificationEvent Record(DirectoryDbContext db, Guid practitionerId, VerificationEventKind kind, string actorUserId,
         string? note, TimeProvider time, Guid? id = null)
     {
-        var e = new VerificationEvent { Id = id ?? Guid.NewGuid(), PractitionerId = practitionerId, Kind = kind, ActorUserId = actorUserId, Note = note, At = time.GetUtcNow() };
+        var e = new VerificationEvent { Id = id ?? Guid.NewGuid(), AgentId = practitionerId, Kind = kind, ActorUserId = actorUserId, Note = note, At = time.GetUtcNow() };
         db.VerificationEvents.Add(e);
         return e;
     }

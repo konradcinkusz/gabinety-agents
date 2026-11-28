@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using System.Security.Claims;
 using Gabinety.Contracts.Assistant;
 using Gabinety.Contracts.Common;
@@ -38,20 +39,20 @@ public sealed class CreateReviewFeature : IServiceFeature
 
         var errors = new Dictionary<string, string[]>();
         if (req is null) return Problem(ErrorCodes.ValidationFailed, "Validation failed", 400, new() { ["body"] = ["The body must be a valid JSON object"] });
-        if (req.BookingId == Guid.Empty) errors["bookingId"] = ["bookingId is required"];
+        if (req.AccessId == Guid.Empty) errors["bookingId"] = ["bookingId is required"];
         if (req.Rating is < 1 or > 5) errors["rating"] = ["rating must be 1 to 5"];
         var decision = decider.Decide(req.Text);
         if (decision is PublicationDecision.Invalid invalid) errors["text"] = [.. invalid.Errors]; // codes only, never the text
         if (errors.Count > 0) return Problem(ErrorCodes.ValidationFailed, "Validation failed", 422, errors);
 
         ReviewabilityDtoView? view;
-        try { view = await booking.GetReviewabilityAsync(req.BookingId, ct) is { } r ? new(r.Reviewable, r.ClientUserId, r.PractitionerId) : null; }
+        try { view = await booking.GetReviewabilityAsync(req.AccessId, ct) is { } r ? new(r.Reviewable, r.ClientUserId, r.AgentId) : null; }
         catch (BookingUnavailableException)
         {
             return Problem(ErrorCodes.DependencyUnavailable, "Dependency unavailable", 503, null, "A required service is temporarily unavailable.");
         }
         if (view is null || view.ClientUserId != sub) return Problem(ErrorCodes.NotFound, "Not found", 404);
-        if (await db.Reviews.AsNoTracking().AnyAsync(x => x.BookingId == req.BookingId, ct))
+        if (await db.Reviews.AsNoTracking().AnyAsync(x => x.AccessId == req.AccessId, ct))
             return Problem(ErrorCodes.AlreadyReviewed, "Already reviewed", 409);
         if (!view.Reviewable) return Problem(ErrorCodes.NotReviewable, "Not reviewable", 422);
 
@@ -65,7 +66,7 @@ public sealed class CreateReviewFeature : IServiceFeature
         var status = held is null && triageHold is null ? ReviewStatus.Published : ReviewStatus.Held;
         var review = new Review
         {
-            Id = Guid.CreateVersion7(), BookingId = req.BookingId, PractitionerId = view.PractitionerId, ClientUserId = sub,
+            Id = Guid.CreateVersion7(), AccessId = req.AccessId, AgentId = view.AgentId, ClientUserId = sub,
             Rating = (short)req.Rating, Text = text, Status = status,
             HoldReasons = held is not null ? [.. held.Reasons] : triageHold is not null ? [.. triageHold.Reasons.Select(TriageWire.Code)] : [],
             TriageFlag = triage switch
@@ -94,7 +95,7 @@ public sealed class CreateReviewFeature : IServiceFeature
         }
 
         if (status == ReviewStatus.Published) pushSignal.Notify(); // the summary changed and is committed: push it now, not at the next tick
-        log.LogInformation("Review {ReviewId} created for practitioner {PractitionerId} as {Status} (triage {TriageFlag})", review.Id, review.PractitionerId, status, review.TriageFlag);
+        log.LogInformation("Review {ReviewId} created for practitioner {PractitionerId} as {Status} (triage {TriageFlag})", review.Id, review.AgentId, status, review.TriageFlag);
         return Results.Json(new CreateReviewResponse(review.Id, status), statusCode: 201);
     }
 
@@ -106,10 +107,10 @@ public sealed class CreateReviewFeature : IServiceFeature
             await RatingSummaryStore.InMemoryGate.WaitAsync(ct);
             try
             {
-                if (await db.Reviews.AnyAsync(x => x.BookingId == review.BookingId, ct)) return false;
+                if (await db.Reviews.AnyAsync(x => x.AccessId == review.AccessId, ct)) return false;
                 db.Reviews.Add(review); db.ModerationEvents.AddRange(events);
                 await db.SaveChangesAsync(ct);
-                if (review.Status == ReviewStatus.Published) await RatingSummaryStore.ApplyAsync(db, review.PractitionerId, 1, review.Rating, ct);
+                if (review.Status == ReviewStatus.Published) await RatingSummaryStore.ApplyAsync(db, review.AgentId, 1, review.Rating, ct);
                 return true;
             }
             finally { RatingSummaryStore.InMemoryGate.Release(); }
@@ -120,7 +121,7 @@ public sealed class CreateReviewFeature : IServiceFeature
             await using var tx = await db.Database.BeginTransactionAsync(ct);
             db.Reviews.Add(review); db.ModerationEvents.AddRange(events);
             await db.SaveChangesAsync(ct);
-            if (review.Status == ReviewStatus.Published) await RatingSummaryStore.ApplyAsync(db, review.PractitionerId, 1, review.Rating, ct);
+            if (review.Status == ReviewStatus.Published) await RatingSummaryStore.ApplyAsync(db, review.AgentId, 1, review.Rating, ct);
             await tx.CommitAsync(ct);
         });
         return true;
@@ -146,7 +147,7 @@ public sealed class CreateReviewFeature : IServiceFeature
         return false;
     }
 
-    sealed record ReviewabilityDtoView(bool Reviewable, string ClientUserId, Guid PractitionerId);
+    sealed record ReviewabilityDtoView(bool Reviewable, string ClientUserId, [property: JsonPropertyName("practitionerId")] Guid AgentId);
 
     static IResult Problem(string code, string title, int status, Dictionary<string, string[]>? errors = null, string? detail = null) =>
         Results.Json(ApiProblem.Of(code, title, status, detail, errors), statusCode: status, contentType: "application/problem+json");

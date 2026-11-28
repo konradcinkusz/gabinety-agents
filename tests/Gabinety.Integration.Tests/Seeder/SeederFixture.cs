@@ -23,7 +23,7 @@ public sealed class EchoGithub(IServiceProvider services) : IGithubProfileLookup
     {
         using var scope = services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<DirectoryDbContext>();
-        var code = await db.Practitioners.AsNoTracking().Where(p => p.GithubChallengeLogin == login).Select(p => p.GithubChallengeCode).FirstOrDefaultAsync(ct);
+        var code = await db.Agents.AsNoTracking().Where(p => p.GithubChallengeLogin == login).Select(p => p.GithubChallengeCode).FirstOrDefaultAsync(ct);
         return code is null ? GithubProfile.NotFound : GithubProfile.Found("demo bio " + code);
     }
 }

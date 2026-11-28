@@ -28,14 +28,14 @@ public sealed class DemoResetFeature : IServiceFeature
     static async Task<IResult> ResetAsync(BookingDbContext db, PractitionerResolver practitioners, CancellationToken ct)
     {
         // StartsWith translates to a case-sensitive prefix match on PostgreSQL (LIKE) and on the in-memory provider (ordinal).
-        var bookings = await db.Bookings.Where(b => b.ClientUserId.StartsWith(Ns) || b.PractitionerUserId.StartsWith(Ns)).ToListAsync(ct);
+        var bookings = await db.Accesses.Where(b => b.ClientUserId.StartsWith(Ns) || b.PractitionerUserId.StartsWith(Ns)).ToListAsync(ct);
         var ids = bookings.Select(b => b.Id).ToList();
-        var payments = await db.Payments.Where(p => ids.Contains(p.BookingId)).ToListAsync(ct);
-        var ledger = await db.LedgerEntries.Where(l => ids.Contains(l.BookingId)).ToListAsync(ct);
+        var payments = await db.Payments.Where(p => ids.Contains(p.AccessId)).ToListAsync(ct);
+        var ledger = await db.LedgerEntries.Where(l => ids.Contains(l.AccessId)).ToListAsync(ct);
         var idempotency = await db.IdempotencyRecords.Where(r => r.ClientUserId.StartsWith(Ns)).ToListAsync(ct);
         var apiKeys = await db.ApiKeys.Where(k => k.ClientUserId.StartsWith(Ns)).ToListAsync(ct);
-        var usage = await db.UsageRecords.Where(u => ids.Contains(u.BookingId)).ToListAsync(ct);
-        var tasks = await db.AgentTasks.Where(t => t.ClientUserId.StartsWith(Ns) || ids.Contains(t.BookingId)).ToListAsync(ct);
+        var usage = await db.UsageRecords.Where(u => ids.Contains(u.AccessId)).ToListAsync(ct);
+        var tasks = await db.AgentTasks.Where(t => t.ClientUserId.StartsWith(Ns) || ids.Contains(t.AccessId)).ToListAsync(ct);
         var events = await db.WebhookEvents.Where(e => e.EventId.StartsWith(Ns)).ToListAsync(ct);
 
         db.RemoveRange(payments);

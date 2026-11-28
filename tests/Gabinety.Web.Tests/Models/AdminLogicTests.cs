@@ -179,7 +179,7 @@ public class AdminLogicTests
     [Fact]
     public void An_unknown_status_is_never_shown_as_its_wire_value()
     {
-        Assert.Equal(PlAdmin.Common.Unknown, AdminFormat.PractitionerStatus("Banana"));
+        Assert.Equal(PlAdmin.Common.Unknown, AdminFormat.AgentStatus("Banana"));
         Assert.Equal(PlAdmin.Verification.EventUnknown, AdminFormat.VerificationEvent("Banana"));
         Assert.Equal(PlAdmin.Disputes.KindUnknown, AdminFormat.DisputeKind("Banana"));
         Assert.Equal(PlAdmin.Reviews.TriageUnknown, AdminFormat.Triage("Banana"));

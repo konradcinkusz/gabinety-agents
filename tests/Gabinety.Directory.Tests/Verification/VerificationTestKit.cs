@@ -89,24 +89,24 @@ public class VerificationFactory : OfferingFactory
         return await work(scope.ServiceProvider.GetRequiredService<DirectoryDbContext>());
     }
 
-    public Task<Practitioner> Seed(PractitionerStatus status, Action<Practitioner>? configure = null, string? userId = null) => Db(async db =>
+    public Task<Agent> Seed(AgentStatus status, Action<Agent>? configure = null, string? userId = null) => Db(async db =>
     {
         var n = Guid.NewGuid().ToString("n");
-        var p = new Practitioner
+        var p = new Agent
         {
             Id = Guid.NewGuid(), UserId = userId ?? "demo-" + n, Slug = "demo-" + n[..16], DisplayName = "Demo " + n[..8], Headline = "Senior .NET reviewer",
             Status = status, CreatedAt = Clock.GetUtcNow(), UpdatedAt = Clock.GetUtcNow(),
         };
         configure?.Invoke(p);
-        db.Practitioners.Add(p);
+        db.Agents.Add(p);
         await db.SaveChangesAsync();
         return p;
     });
 
     public Task<List<VerificationEvent>> Events(Guid practitionerId) =>
-        Db(db => db.VerificationEvents.AsNoTracking().Where(e => e.PractitionerId == practitionerId).OrderBy(e => e.At).ToListAsync());
+        Db(db => db.VerificationEvents.AsNoTracking().Where(e => e.AgentId == practitionerId).OrderBy(e => e.At).ToListAsync());
 
-    public Task<Practitioner> Load(Guid id) => Db(db => db.Practitioners.AsNoTracking().SingleAsync(p => p.Id == id));
+    public Task<Agent> Load(Guid id) => Db(db => db.Agents.AsNoTracking().SingleAsync(p => p.Id == id));
 }
 
 public static class Vk

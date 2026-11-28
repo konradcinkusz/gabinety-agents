@@ -16,7 +16,7 @@ public class AdminDetailTests(VerificationFactory f) : IClassFixture<Verificatio
     [InlineData("")] [InlineData("/verification-events")]
     public async Task Unauthenticated_is_401_and_a_user_without_the_role_is_403(string tail)
     {
-        var p = await f.Seed(PractitionerStatus.Submitted);
+        var p = await f.Seed(AgentStatus.Submitted);
         var url = $"{Base}/{p.Id}{tail}";
         Assert.Equal(HttpStatusCode.Unauthorized, (await f.As(null).GetAsync(url)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await f.As("demo-plain").GetAsync(url)).StatusCode);
@@ -37,7 +37,7 @@ public class AdminDetailTests(VerificationFactory f) : IClassFixture<Verificatio
     [Fact]
     public async Task Detail_returns_the_review_fields_of_any_status()
     {
-        foreach (var status in Enum.GetValues<PractitionerStatus>())
+        foreach (var status in Enum.GetValues<AgentStatus>())
         {
             var p = await f.Seed(status, x =>
             {
@@ -65,7 +65,7 @@ public class AdminDetailTests(VerificationFactory f) : IClassFixture<Verificatio
     [Fact]
     public async Task Detail_never_exposes_the_github_challenge_or_the_owner_user_id()
     {
-        var p = await f.Seed(PractitionerStatus.Submitted, x =>
+        var p = await f.Seed(AgentStatus.Submitted, x =>
         {
             x.GithubChallengeCode = "gabinety-verify-abcdefghij"; x.GithubChallengeLogin = "demo-gh"; x.GithubChallengeExpiresAt = f.Clock.GetUtcNow().AddMinutes(5);
             x.UserId = "demo-owner-secret-id";
@@ -79,7 +79,7 @@ public class AdminDetailTests(VerificationFactory f) : IClassFixture<Verificatio
     [Fact]
     public async Task Detail_submittedAt_is_the_latest_Submitted_event_else_null()
     {
-        var p = await f.Seed(PractitionerStatus.Submitted);
+        var p = await f.Seed(AgentStatus.Submitted);
         var c = f.As("demo-admin", "Admin");
         Assert.Equal(JsonValueKind.Null, (await c.GetFromJsonAsync<JsonElement>($"{Base}/{p.Id}", J)).GetProperty("submittedAt").ValueKind);
         var first = f.Clock.GetUtcNow();
@@ -93,8 +93,8 @@ public class AdminDetailTests(VerificationFactory f) : IClassFixture<Verificatio
     [Fact]
     public async Task Events_are_oldest_first_for_that_practitioner_only_with_actor_note_and_kind()
     {
-        var p = await f.Seed(PractitionerStatus.Submitted);
-        var other = await f.Seed(PractitionerStatus.Submitted);
+        var p = await f.Seed(AgentStatus.Submitted);
+        var other = await f.Seed(AgentStatus.Submitted);
         var start = f.Clock.GetUtcNow();
         await f.Db(async db =>
         {
@@ -120,7 +120,7 @@ public class AdminDetailTests(VerificationFactory f) : IClassFixture<Verificatio
     [Fact]
     public async Task Events_of_a_practitioner_without_history_is_an_empty_list_not_404()
     {
-        var p = await f.Seed(PractitionerStatus.Draft);
+        var p = await f.Seed(AgentStatus.Draft);
         var r = await f.As("demo-admin", "Admin").GetAsync($"{Base}/{p.Id}/verification-events");
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
         Assert.Empty((await r.Content.ReadFromJsonAsync<JsonElement>(J)).GetProperty("items").EnumerateArray());
@@ -129,7 +129,7 @@ public class AdminDetailTests(VerificationFactory f) : IClassFixture<Verificatio
     [Fact]
     public async Task Events_equal_timestamps_are_ordered_by_id_for_a_stable_answer()
     {
-        var p = await f.Seed(PractitionerStatus.Submitted);
+        var p = await f.Seed(AgentStatus.Submitted);
         var ids = new[] { Guid.Parse("00000000-0000-0000-0000-000000000002"), Guid.Parse("00000000-0000-0000-0000-000000000001"), Guid.Parse("00000000-0000-0000-0000-000000000003") };
         await f.Db(async db => { foreach (var id in ids) VerificationEvents.Record(db, p.Id, VerificationEventKind.NipChanged, "demo-a", null, f.Clock, id); await db.SaveChangesAsync(); return 0; });
         var items = (await f.As("demo-admin", "Admin").GetFromJsonAsync<JsonElement>($"{Base}/{p.Id}/verification-events", J)).GetProperty("items").EnumerateArray().Select(e => e.GetProperty("id").GetGuid());

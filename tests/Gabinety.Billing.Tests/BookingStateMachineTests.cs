@@ -1,6 +1,6 @@
 using Gabinety.Billing;
-using S = Gabinety.Billing.BookingStatus;
-using T = Gabinety.Billing.BookingTrigger;
+using S = Gabinety.Billing.AccessStatus;
+using T = Gabinety.Billing.AccessTrigger;
 
 namespace Gabinety.Billing.Tests;
 
@@ -11,7 +11,7 @@ public class BookingStateMachineTests
     private static readonly DateTimeOffset Late = Start.AddHours(-24).AddSeconds(1);
 
     [Fact]
-    public void Create_gives_PendingPayment() => Assert.Equal(S.PendingPayment, BookingStateMachine.Create());
+    public void Create_gives_PendingPayment() => Assert.Equal(S.PendingPayment, AccessStateMachine.Create());
 
     // Every legal row of §8.1. Everything else must be rejected.
     private static readonly (S From, T Trigger, DateTimeOffset Now, S To)[] Legal =
@@ -35,7 +35,7 @@ public class BookingStateMachineTests
     {
         foreach (var (from, trigger, now, to) in Legal)
         {
-            var r = BookingStateMachine.Next(from, trigger, Start, now);
+            var r = AccessStateMachine.Next(from, trigger, Start, now);
             Assert.True(r.Allowed, $"{from}+{trigger}");
             Assert.Equal(to, r.Next);
         }
@@ -52,7 +52,7 @@ public class BookingStateMachineTests
                 if (legal.Contains((from, trigger))) continue;
                 foreach (var now in new[] { Early, Late, Start.AddDays(1) })
                 {
-                    var r = BookingStateMachine.Next(from, trigger, Start, now);
+                    var r = AccessStateMachine.Next(from, trigger, Start, now);
                     Assert.False(r.Allowed, $"{from}+{trigger}");
                     Assert.Null(r.Next);
                 }
@@ -67,16 +67,16 @@ public class BookingStateMachineTests
         S[] terminal = [S.CancelledByClient, S.LateCancelledByClient, S.CancelledByPractitioner, S.Expired, S.ClientNoShow, S.Resolved];
         foreach (var from in terminal)
             foreach (var trigger in Enum.GetValues<T>())
-                Assert.False(BookingStateMachine.Next(from, trigger, Start, Early).Allowed);
+                Assert.False(AccessStateMachine.Next(from, trigger, Start, Early).Allowed);
         // Completed accepts two things: the client's dispute (the caller bounds it by start + 72 h, ADR proposal 0011) and a refunded unit (reopens the package, ADR-0013)
         foreach (var trigger in Enum.GetValues<T>().Where(t => t != T.ClientDisputes && t != T.UnitRefunded))
-            Assert.False(BookingStateMachine.Next(S.Completed, trigger, Start, Early).Allowed);
+            Assert.False(AccessStateMachine.Next(S.Completed, trigger, Start, Early).Allowed);
     }
 
     [Fact]
     public void Client_cancel_is_always_CancelledByClient_whatever_the_time()
     {
         foreach (var now in new[] { Start.AddDays(-30), Start.AddHours(-24), Start.AddHours(-24).AddSeconds(1), Start, Start.AddDays(5) })
-            Assert.Equal(S.CancelledByClient, BookingStateMachine.Next(S.Confirmed, T.ClientCancels, Start, now).Next);
+            Assert.Equal(S.CancelledByClient, AccessStateMachine.Next(S.Confirmed, T.ClientCancels, Start, now).Next);
     }
 }

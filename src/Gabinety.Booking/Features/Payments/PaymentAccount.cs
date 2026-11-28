@@ -10,7 +10,7 @@ namespace Gabinety.Booking.Features.Payments;
 /// </summary>
 public sealed class PaymentAccount
 {
-    public Guid PractitionerId { get; set; }
+    public Guid AgentId { get; set; }
     public string Provider { get; set; } = "";
     public string ProviderAccountId { get; set; } = "";
     public bool Ready { get; set; }
@@ -23,8 +23,8 @@ sealed class PaymentAccountConfiguration : IEntityTypeConfiguration<PaymentAccou
     public void Configure(EntityTypeBuilder<PaymentAccount> b)
     {
         b.ToTable("practitioner_payment_accounts");
-        b.HasKey(x => x.PractitionerId);
-        b.Property(x => x.PractitionerId).HasColumnName("practitioner_id").ValueGeneratedNever();
+        b.HasKey(x => x.AgentId);
+        b.Property(x => x.AgentId).HasColumnName("practitioner_id").ValueGeneratedNever();
         b.Property(x => x.Provider).HasColumnName("provider").HasMaxLength(20);
         b.Property(x => x.ProviderAccountId).HasColumnName("provider_account_id").HasMaxLength(100);
         b.Property(x => x.Ready).HasColumnName("ready");

@@ -4,8 +4,8 @@ using Gabinety.Booking.Jobs.Base;
 using Gabinety.Booking.Persistence;
 using Gabinety.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Jobs.HoldExpiry;
 
@@ -66,7 +66,7 @@ public class HoldExpiryJob(IServiceScopeFactory scopes, TimeProvider time, IConf
     {
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
-        var due = Scope(db.Bookings.AsNoTracking()).Where(b => b.Status == BookingStatus.PendingPayment && b.HoldExpiresAt <= now);
+        var due = Scope(db.Accesses.AsNoTracking()).Where(b => b.Status == AccessStatus.PendingPayment && b.HoldExpiresAt <= now);
         if (exclude.Count > 0) due = due.Where(b => !exclude.Contains(b.Id));
         return await due.OrderBy(b => b.HoldExpiresAt).ThenBy(b => b.Id).Select(b => b.Id).Take(take).ToListAsync(ct);
     }
@@ -80,7 +80,7 @@ public class HoldExpiryJob(IServiceScopeFactory scopes, TimeProvider time, IConf
             {
                 using var scope = scopes.CreateScope(); // one context, one transaction per booking
                 var transitions = scope.ServiceProvider.GetRequiredService<BookingTransitions>();
-                var result = await transitions.ApplyAsync(new TransitionRequest(id, BookingTrigger.HoldExpired, now) { Precondition = b => b.HoldExpiresAt <= now }, ct);
+                var result = await transitions.ApplyAsync(new TransitionRequest(id, AccessTrigger.HoldExpired, now) { Precondition = b => b.HoldExpiresAt <= now }, ct);
                 if (result.Applied) applied++; // Invalid (moved meanwhile, or the hold is not due) and NotFound are no-ops
             }
             catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)

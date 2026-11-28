@@ -102,7 +102,7 @@ public class PractitionerClientTests
         Assert.Equal("https://connect.stripe.com/setup/e/acct_test/abc", (await client.StartPaymentOnboardingAsync()).Value!.OnboardingUrl);
         world.PaymentState = null;
         Assert.Equal(404, (await client.PaymentAccountAsync()).Failure!.Status);
-        Assert.All(web.Booking.Requests, r => Assert.StartsWith("Bearer ", r.Authorization));
+        Assert.All(web.Access.Requests, r => Assert.StartsWith("Bearer ", r.Authorization));
     }
 
     [Fact]

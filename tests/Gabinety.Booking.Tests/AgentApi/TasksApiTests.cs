@@ -45,12 +45,12 @@ public class TasksApiTests
     readonly string Me = AgentApiFx.NewUser(), Other = AgentApiFx.NewUser(), Slug = "demo-agent-" + Guid.NewGuid().ToString("N")[..8];
     readonly Guid Offer = Guid.NewGuid();
 
-    Task<Guid> TasksPackage(CreateHost h, string? client = null, long total = 5, long used = 0, BookingStatus status = BookingStatus.Confirmed, TimeSpan? validFor = null, Guid? offering = null) =>
-        AgentApiFx.Package(h, client ?? Me, Slug, OfferingKind.Tasks, total, used, status, validFor, offering: offering ?? Offer);
+    Task<Guid> TasksPackage(CreateHost h, string? client = null, long total = 5, long used = 0, AccessStatus status = AccessStatus.Confirmed, TimeSpan? validFor = null, Guid? offering = null) =>
+        AgentApiFx.Package(h, client ?? Me, Slug, PackageKind.Tasks, total, used, status, validFor, offering: offering ?? Offer);
 
     static async Task<JsonElement> Error(HttpResponseMessage r) => JsonDocument.Parse(await r.Content.ReadAsStringAsync()).RootElement.GetProperty("error");
 
-    static async Task<long> Used(CreateHost h, Guid package) => (await h.Query(db => db.Bookings.AsNoTracking().SingleAsync(b => b.Id == package))).UnitsUsed;
+    static async Task<long> Used(CreateHost h, Guid package) => (await h.Query(db => db.Accesses.AsNoTracking().SingleAsync(b => b.Id == package))).UnitsUsed;
 
     // ---- POST /v1/tasks
 
@@ -66,10 +66,10 @@ public class TasksApiTests
         var j = JsonDocument.Parse(await r.Content.ReadAsStringAsync()).RootElement;
         Assert.Equal("queued", j.GetProperty("status").GetString());
         var task = await TaskFx.Task(h, j.GetProperty("id").GetGuid());
-        Assert.Equal((package, Me, Slug, Offer, AgentTaskStatus.Queued, TaskFx.Input, 0), (task.BookingId, task.ClientUserId, task.PractitionerSlug, task.OfferingId, task.Status, task.InputText, task.Attempts));
+        Assert.Equal((package, Me, Slug, Offer, AgentTaskStatus.Queued, TaskFx.Input, 0), (task.AccessId, task.ClientUserId, task.PractitionerSlug, task.PackageId, task.Status, task.InputText, task.Attempts));
         Assert.Equal(1, await Used(h, package));
-        var usage = Assert.Single(await h.Query(db => db.UsageRecords.AsNoTracking().Where(u => u.BookingId == package).ToListAsync()));
-        Assert.Equal((1L, keyId, OfferingKind.Tasks), (usage.Units, usage.ApiKeyId, usage.Kind));
+        var usage = Assert.Single(await h.Query(db => db.UsageRecords.AsNoTracking().Where(u => u.AccessId == package).ToListAsync()));
+        Assert.Equal((1L, keyId, PackageKind.Tasks), (usage.Units, usage.ApiKeyId, usage.Kind));
     }
 
     [Theory]
@@ -113,7 +113,7 @@ public class TasksApiTests
         Assert.Equal(HttpStatusCode.NotFound, none.StatusCode);
         Assert.Equal("model_not_found", (await Error(none)).GetProperty("code").GetString());
 
-        await AgentApiFx.Package(h, Me, Slug, OfferingKind.Chat, offering: Offer); // a Chat package is not a Tasks package
+        await AgentApiFx.Package(h, Me, Slug, PackageKind.Chat, offering: Offer); // a Chat package is not a Tasks package
         await TasksPackage(h, Other);                                              // someone else's
         await TasksPackage(h, validFor: TimeSpan.Zero, offering: Guid.NewGuid());  // expired
         Assert.Equal(HttpStatusCode.NotFound, (await Post(Offer)).StatusCode);
@@ -135,7 +135,7 @@ public class TasksApiTests
         Assert.Equal(3, results.Count(r => r.StatusCode == HttpStatusCode.Accepted));
         Assert.Equal(7, results.Count(r => r.StatusCode == HttpStatusCode.TooManyRequests));
         Assert.Equal(3, await Used(h, package));
-        Assert.Equal(3, await h.Query(db => db.AgentTasks.CountAsync(t => t.BookingId == package)));
+        Assert.Equal(3, await h.Query(db => db.AgentTasks.CountAsync(t => t.AccessId == package)));
     }
 
     // ---- GET /v1/tasks/{id}
@@ -185,7 +185,7 @@ public class TasksApiTests
         h.Clock.Advance(TimeSpan.FromMinutes(1));
         var second = (await (await me.PostAsJsonAsync($"/api/v1/bookings/{package}/tasks", new { input = TaskFx.Input + " 2" })).Body()).GetProperty("id").GetGuid();
         Assert.Equal(2, await Used(h, package));
-        var usage = await h.Query(db => db.UsageRecords.AsNoTracking().Where(u => u.BookingId == package).ToListAsync());
+        var usage = await h.Query(db => db.UsageRecords.AsNoTracking().Where(u => u.AccessId == package).ToListAsync());
         Assert.All(usage, u => Assert.Null(u.ApiKeyId)); // the web panel is not an API key
 
         var one = await me.GetAsync($"/api/v1/me/tasks/{first}");
@@ -220,10 +220,10 @@ public class TasksApiTests
         Assert.Equal(HttpStatusCode.UnprocessableEntity, short_.StatusCode);
         Assert.Equal("validation_failed", (await short_.Body()).GetProperty("code").GetString());
 
-        var chat = await AgentApiFx.Package(h, Me, Slug, OfferingKind.Chat);
+        var chat = await AgentApiFx.Package(h, Me, Slug, PackageKind.Chat);
         var used = await TasksPackage(h, total: 1, used: 1, offering: Guid.NewGuid());
         var expired = await TasksPackage(h, validFor: TimeSpan.Zero, offering: Guid.NewGuid());
-        var pending = await TasksPackage(h, status: BookingStatus.PendingPayment, offering: Guid.NewGuid());
+        var pending = await TasksPackage(h, status: AccessStatus.PendingPayment, offering: Guid.NewGuid());
         foreach (var id in new[] { chat, used, expired, pending })
         {
             var r = await me.PostAsJsonAsync($"/api/v1/bookings/{id}/tasks", new { input = TaskFx.Input });
@@ -240,8 +240,8 @@ public class TasksApiTests
     {
         await using var h = ErasureApiTests.NewHost();
         var user = ErasureApiTests.NewUser("client");
-        var package = await AgentApiFx.Package(h, user, Slug, OfferingKind.Tasks, 5, offering: Offer);
-        var other = await AgentApiFx.Package(h, Other, Slug, OfferingKind.Tasks, 5, offering: Offer);
+        var package = await AgentApiFx.Package(h, user, Slug, PackageKind.Tasks, 5, offering: Offer);
+        var other = await AgentApiFx.Package(h, Other, Slug, PackageKind.Tasks, 5, offering: Offer);
         var mine = (await (await h.ClientFor(user).PostAsJsonAsync($"/api/v1/bookings/{package}/tasks", new { input = TaskFx.Input })).Body()).GetProperty("id").GetGuid();
         var theirs = (await (await h.ClientFor(Other).PostAsJsonAsync($"/api/v1/bookings/{other}/tasks", new { input = TaskFx.Input })).Body()).GetProperty("id").GetGuid();
         await h.Seed(db => { var t = db.AgentTasks.Single(x => x.Id == mine); t.Status = AgentTaskStatus.Succeeded; t.OutputText = "demo-answer"; });
@@ -269,7 +269,7 @@ public class TasksApiTests
                 s.AddDbContext<BookingDbContext>(o => o.UseInMemoryDatabase(dbName));
             };
         });
-        var package = await AgentApiFx.Package(h, Me, Slug, OfferingKind.Tasks, 5, offering: Offer);
+        var package = await AgentApiFx.Package(h, Me, Slug, PackageKind.Tasks, 5, offering: Offer);
         var task = (await (await h.ClientFor(Me).PostAsJsonAsync($"/api/v1/bookings/{package}/tasks", new { input = TaskFx.Input })).Body()).GetProperty("id").GetGuid();
 
         var r = await ClockApiTests.PostRaw(h, "/internal/v1/demo/reset", "{}", ClockApiTests.InternalKey);

@@ -42,7 +42,7 @@ public class ProfilePageTests
         var book = page.All("ul.offerings > li")[1].QuerySelector("a.btn--primary")!;
         Assert.Equal("Wykup dostęp", book.TextContent); Assert.Equal("Wykup dostęp: Krótka konsultacja", book.GetAttribute("aria-label"));
         Assert.Equal($"/dostep/{PublicSupport.OfferB}?gabinet=demo-anna-demowska", book.GetAttribute("href"));
-        Assert.Empty(web.Booking.Requests); // no slot is read: the Booking service is not asked at all
+        Assert.Empty(web.Access.Requests); // no slot is read: the Booking service is not asked at all
         Assert.Null(page.One(".slot-days")); Assert.Null(page.One("a.slot"));
     }
 
@@ -163,7 +163,7 @@ public class ProfilePageTests
         await using var none = PublicSupport.Host(PublicSupport.DefaultDirectory(PublicSupport.Profile(offerings: [])));
         var noOffers = await Get(none);
         Assert.Equal("Ten agent nie ma teraz aktywnych pakietów.", noOffers.TextOf("[data-testid=no-offerings]"));
-        Assert.Empty(none.Booking.Requests);
+        Assert.Empty(none.Access.Requests);
     }
 
     [Fact]
@@ -181,7 +181,7 @@ public class ProfilePageTests
         var review = new ReviewDto(Guid.NewGuid(), 5, "<b>Świetnie</b> & szybko", new DateTimeOffset(2026, 11, 20, 12, 0, 0, TimeSpan.Zero), new ReplyDto("Dziękuję!", new DateTimeOffset(2026, 11, 21, 12, 0, 0, TimeSpan.Zero)));
         await using var web = PublicSupport.Host(reputation: r => FakeBackend.Json(new PageDto<ReviewDto>([review], "CUR2")));
         var page = await Get(web, "/agent/demo-anna-demowska?opinie=CUR1");
-        Assert.Equal($"/api/v1/practitioners/{PublicSupport.PractitionerId}/reviews?cursor=CUR1", web.Reputation.Requests[0].PathAndQuery);
+        Assert.Equal($"/api/v1/practitioners/{PublicSupport.AgentId}/reviews?cursor=CUR1", web.Reputation.Requests[0].PathAndQuery);
         var item = page.One("section#opinie li")!;
         Assert.Contains("Zweryfikowany klient · Ocena: 5 z 5 · 20 listopada 2026", item.TextContent);
         Assert.Contains("<b>Świetnie</b> & szybko", item.TextContent);

@@ -19,7 +19,7 @@ public sealed class WebhookEvent
 public sealed class LedgerEntry
 {
     public Guid Id { get; set; }
-    public Guid BookingId { get; set; }
+    public Guid AccessId { get; set; }
     public LedgerKind Kind { get; set; }
     public long AmountMinor { get; set; }
     public string? PairKey { get; set; }
@@ -46,12 +46,12 @@ sealed class LedgerEntryConfiguration : IEntityTypeConfiguration<LedgerEntry>
         b.ToTable("ledger_entries");
         b.HasKey(x => x.Id);
         b.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
-        b.Property(x => x.BookingId).HasColumnName("booking_id");
+        b.Property(x => x.AccessId).HasColumnName("booking_id");
         b.Property(x => x.Kind).HasColumnName("kind").HasConversion<string>().HasMaxLength(30);
         b.Property(x => x.AmountMinor).HasColumnName("amount_minor");
         b.Property(x => x.PairKey).HasColumnName("pair_key").HasMaxLength(80);
         b.Property(x => x.CreatedAt).HasColumnName("created_at");
-        b.HasIndex(x => x.BookingId);
+        b.HasIndex(x => x.AccessId);
         // One platform fee per client/practitioner pair, race-safe: the loser's insert fails (CONTRACTS 4.1, 9.1).
         b.HasIndex(x => x.PairKey).IsUnique().HasFilter("kind = 'PlatformFee'");
     }

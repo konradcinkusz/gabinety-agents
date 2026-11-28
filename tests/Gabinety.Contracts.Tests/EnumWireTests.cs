@@ -28,8 +28,8 @@ public sealed class EnumWireTests
     // CONTRACTS 3.1, 4.1, 5.1 and 6 spell these in PascalCase.
     public static TheoryData<Type, object, string> Pascal => new()
     {
-        { typeof(PractitionerStatus), PractitionerStatus.Suspended, "Suspended" },
-        { typeof(BookingStatus), BookingStatus.LateCancelledByClient, "LateCancelledByClient" },
+        { typeof(AgentStatus), AgentStatus.Suspended, "Suspended" },
+        { typeof(AccessStatus), AccessStatus.LateCancelledByClient, "LateCancelledByClient" },
         { typeof(PaymentStatus), PaymentStatus.PartiallyRefunded, "PartiallyRefunded" },
         { typeof(LedgerKind), LedgerKind.PractitionerPayout, "PractitionerPayout" },
         { typeof(ReviewStatus), ReviewStatus.Held, "Held" },

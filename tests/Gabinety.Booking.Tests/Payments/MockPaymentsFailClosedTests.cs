@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 using Gabinety.Booking.Payments.Abstractions;
 using Gabinety.Booking.Payments.Mock;
 using Microsoft.EntityFrameworkCore;
@@ -104,7 +104,7 @@ public class MockPaymentsFailClosedTests
             var r = await Pay.Simulate(h.ClientFor(Stranger), id, outcome);
             Assert.Equal(HttpStatusCode.NotFound, r.StatusCode); // 404, same as an unknown id: the booking's existence is not confirmed
         }
-        Assert.Equal(BookingStatus.PendingPayment, (await h.Query(db => db.Bookings.Where(b => b.Id == id).Select(b => b.Status).SingleAsync())));
+        Assert.Equal(AccessStatus.PendingPayment, (await h.Query(db => db.Accesses.Where(b => b.Id == id).Select(b => b.Status).SingleAsync())));
         Assert.Equal(0, await h.Query(db => db.WebhookEvents.CountAsync(e => e.EventId.StartsWith($"sim_{id:N}"))));
     }
 
@@ -130,7 +130,7 @@ public class MockPaymentsFailClosedTests
         await using var h = new CreateHost { MeetingUrl = "https://meet.demo.invalid/room-1" };
         var (id, _) = await Pay.CreateBooking(h, Owner);
         Assert.Equal(HttpStatusCode.OK, (await Pay.Simulate(h.ClientFor(Owner), id, "succeeded")).StatusCode);
-        Assert.Equal(BookingStatus.Confirmed, (await h.Query(db => db.Bookings.Where(b => b.Id == id).Select(b => b.Status).SingleAsync())));
+        Assert.Equal(AccessStatus.Confirmed, (await h.Query(db => db.Accesses.Where(b => b.Id == id).Select(b => b.Status).SingleAsync())));
     }
 
     // ---- webhook: no secret means Mock only ----
@@ -148,6 +148,6 @@ public class MockPaymentsFailClosedTests
         var body2 = Pay.EventJson("evt-2", "PaymentSucceeded", pid2);
         Assert.Equal(HttpStatusCode.Unauthorized, (await Pay.Webhook(other.ClientFor(null), body2, null, "acme")).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await Pay.Webhook(other.ClientFor(null), body2, "00", "acme")).StatusCode);
-        Assert.Equal(BookingStatus.PendingPayment, await other.Query(db => db.Bookings.Where(b => b.Id == id2).Select(b => b.Status).SingleAsync()));
+        Assert.Equal(AccessStatus.PendingPayment, await other.Query(db => db.Accesses.Where(b => b.Id == id2).Select(b => b.Status).SingleAsync()));
     }
 }

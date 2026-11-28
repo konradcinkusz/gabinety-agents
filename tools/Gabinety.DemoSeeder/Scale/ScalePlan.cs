@@ -1,7 +1,7 @@
 namespace Gabinety.DemoSeeder;
 
 /// <summary>One synthetic practitioner of the scaled dataset (T-10.04). Everything is derived from the number, so two runs plan the same data.</summary>
-public sealed record ScaledPractitioner(int Number, string DisplayName, string Slug, string Headline, string Bio, DemoOffering[] Offerings, DemoStats Stats)
+public sealed record ScaledPractitioner(int Number, string DisplayName, string Slug, string Headline, string Bio, DemoOffering[] Packages, DemoStats Stats)
 {
     public string UserName => $"demo-practitioner-{Number}";
     public string GithubLogin => $"demo-dev-{Number}";
@@ -22,7 +22,7 @@ public static class ScalePlan
 
     public static int TotalPractitioners(int factor) => PractitionersPerFactor * factor;
     public static int TotalReviews(int factor) => ReviewsPerFactor * factor;
-    public static int ExtraCount(int factor) => Math.Max(0, TotalPractitioners(factor) - DemoCatalog.Practitioners.Length);
+    public static int ExtraCount(int factor) => Math.Max(0, TotalPractitioners(factor) - DemoCatalog.Agents.Length);
 
     static readonly string[] FirstNames = ["Adam", "Beata", "Cezary", "Dorota", "Emil", "Felicja", "Gustaw", "Halina", "Igor", "Jolanta", "Kamil", "Lucyna", "Marek", "Natalia", "Oskar", "Paulina"];
     static readonly string[] LastNames = ["Demowski", "Testowa", "Probny", "Fikcyjna", "Wzorowy", "Syntetyczna", "Pokazowy", "Makietowa", "Przykladowy", "Szablonowa", "Symulowany", "Zastepcza"];
@@ -36,7 +36,7 @@ public static class ScalePlan
     {
         if (factor < 1) throw new ArgumentOutOfRangeException(nameof(factor), "the factor is at least 1");
         var count = ExtraCount(factor);
-        var baseReviews = DemoCatalog.Practitioners.Where(p => p.Stats is not null).Sum(p => p.Stats!.Reviews);
+        var baseReviews = DemoCatalog.Agents.Where(p => p.Stats is not null).Sum(p => p.Stats!.Reviews);
         var remaining = Math.Max(0, TotalReviews(factor) - baseReviews);
         var (per, rest) = count == 0 ? (0, 0) : (remaining / count, remaining % count); // the first `rest` extras carry one more, so the total is exact
         var list = new List<ScaledPractitioner>(count);

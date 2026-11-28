@@ -19,7 +19,7 @@ public sealed record GithubLinkRequest(string? GithubLogin);
 public sealed record GithubLinkChallenge(string Code, string Instruction);
 public sealed record RejectRequest(string? Reason);
 public sealed record SuspendRequest(string? Reason);
-public sealed record AdminPractitionerRow(Guid Id, string Slug, string DisplayName, string Headline, PractitionerStatus Status,
+public sealed record AdminPractitionerRow(Guid Id, string Slug, string DisplayName, string Headline, AgentStatus Status,
     string? StatusReason, bool GithubLinked, string? GithubLogin, bool NipValid, DateTimeOffset CreatedAt, DateTimeOffset? SubmittedAt);
 public sealed record AdminPractitionerPage(IReadOnlyList<AdminPractitionerRow> Items, string? NextCursor);
 
@@ -99,7 +99,7 @@ public sealed class VerificationFeature : IServiceFeature
 
         var lower = login.ToLowerInvariant();
         // One GitHub profile belongs to one provider account (E-04): the agents of one account may share it, another account's agent may not.
-        if (await db.Practitioners.AnyAsync(x => x.UserId != p.UserId && x.GithubLinked && x.GithubLogin != null && x.GithubLogin.ToLower() == lower, ct))
+        if (await db.Agents.AnyAsync(x => x.UserId != p.UserId && x.GithubLinked && x.GithubLogin != null && x.GithubLogin.ToLower() == lower, ct))
             return NotLinked(new() { ["githubLogin"] = ["this GitHub account is already linked to another profile"] });
 
         GithubProfile profile;
@@ -138,7 +138,7 @@ public sealed class VerificationFeature : IServiceFeature
             note = reason.Trim();
             if (note.Length is < 10 or > 500) return Invalid("reason", "10 to 500 characters");
         }
-        var p = await db.Practitioners.SingleOrDefaultAsync(x => x.Id == id, ct);
+        var p = await db.Agents.SingleOrDefaultAsync(x => x.Id == id, ct);
         if (p is null) return Problem(404, ErrorCodes.NotFound, "Not found");
         if (!PractitionerStateMachine.TryTransition(p.Status, trigger, out var next)) return Problem(409, ErrorCodes.InvalidTransition, "Invalid transition");
 
@@ -171,7 +171,7 @@ public sealed class VerificationFeature : IServiceFeature
 
     static async Task<IResult> List(string? status, string? cursor, int? limit, DirectoryDbContext db, CancellationToken ct)
     {
-        var wanted = PractitionerStatus.Submitted;
+        var wanted = AgentStatus.Submitted;
         if (status is not null && !(Enum.TryParse(status, true, out wanted) && Enum.IsDefined(wanted) && !char.IsDigit(status[0])))
             return Invalid("status", "one of Draft, Submitted, Approved, Rejected, Suspended");
         (DateTimeOffset At, Guid Id)? after = null;
@@ -183,11 +183,11 @@ public sealed class VerificationFeature : IServiceFeature
         var take = Math.Clamp(limit ?? DefaultLimit, 1, MaxLimit);
 
         // Sort key: the time of the latest Submitted event, else created_at; then id. Order BEFORE projecting to the record (Npgsql cannot translate it after).
-        var q = db.Practitioners.AsNoTracking().Where(p => p.Status == wanted)
+        var q = db.Agents.AsNoTracking().Where(p => p.Status == wanted)
             .Select(p => new
             {
                 P = p,
-                Submitted = db.VerificationEvents.Where(e => e.PractitionerId == p.Id && e.Kind == VerificationEventKind.Submitted).Max(e => (DateTimeOffset?)e.At),
+                Submitted = db.VerificationEvents.Where(e => e.AgentId == p.Id && e.Kind == VerificationEventKind.Submitted).Max(e => (DateTimeOffset?)e.At),
             })
             .Select(x => new { x.P, x.Submitted, Key = x.Submitted ?? x.P.CreatedAt });
         if (after is { } a) q = q.Where(x => x.Key > a.At || (x.Key == a.At && x.P.Id.CompareTo(a.Id) > 0));

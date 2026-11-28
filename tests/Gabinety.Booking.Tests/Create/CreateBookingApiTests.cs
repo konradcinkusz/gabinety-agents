@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Gabinety.Booking.Tests;
 
-using Booking = Gabinety.Booking.Features.Bookings.Entities.Booking;
+using Access = Gabinety.Booking.Features.Bookings.Entities.Access;
 
 public class CreateBookingApiTests
 {
@@ -41,18 +41,18 @@ public class CreateBookingApiTests
         Assert.Equal($"http://localhost:3000/checkout/mock/{id}", body.GetProperty("checkoutUrl").GetString());
         Assert.Equal($"/api/v1/bookings/{id}", r.Headers.Location?.ToString());
 
-        var b = Assert.Single(await h.Bookings());
+        var b = Assert.Single(await h.Accesses());
         Assert.Equal(id, b.Id);
-        Assert.Equal(BookingStatus.PendingPayment, b.Status);
-        Assert.Equal((Client, "demo-practitioner-user", h.Offering), (b.ClientUserId, b.PractitionerUserId, b.OfferingId));
-        Assert.Equal(("demo-offering", (short)60, 10000L), (b.OfferingTitle, b.DurationMinutes, b.PriceMinor));
+        Assert.Equal(AccessStatus.PendingPayment, b.Status);
+        Assert.Equal((Client, "demo-practitioner-user", h.Package), (b.ClientUserId, b.PractitionerUserId, b.PackageId));
+        Assert.Equal(("demo-offering", (short)60, 10000L), (b.PackageTitle, b.DurationMinutes, b.PriceMinor));
         Assert.Equal(h.Clock.GetUtcNow(), b.StartUtc);                 // valid from the purchase, not from a slot
         Assert.Equal(TimeSpan.FromDays(30), b.EndUtc - b.StartUtc);   // Access:ValidityDays default
-        Assert.Equal((OfferingKind.Tasks, 1L, 0L, "demo-practitioner"), (b.Kind, b.UnitsTotal, b.UnitsUsed, b.PractitionerSlug));
+        Assert.Equal((PackageKind.Tasks, 1L, 0L, "demo-practitioner"), (b.Kind, b.UnitsTotal, b.UnitsUsed, b.PractitionerSlug));
         Assert.Equal(new DateTimeOffset(2026, 11, 16, 12, 10, 0, TimeSpan.Zero), b.HoldExpiresAt);
         Assert.Equal(Guid.Parse(key), b.IdempotencyKey);
 
-        var (payment, record) = await h.Query(async db => (await db.Payments.SingleAsync(p => p.BookingId == id), await db.IdempotencyRecords.SingleAsync(x => x.ClientUserId == Client && x.IdempotencyKey == Guid.Parse(key))));
+        var (payment, record) = await h.Query(async db => (await db.Payments.SingleAsync(p => p.AccessId == id), await db.IdempotencyRecords.SingleAsync(x => x.ClientUserId == Client && x.IdempotencyKey == Guid.Parse(key))));
         Assert.Equal((Contracts.Booking.PaymentStatus.Created, "Mock", 10000L, 0L), (payment.Status, payment.Provider, payment.AmountMinor, payment.RefundedMinor));
         Assert.StartsWith("mock_", payment.ProviderPaymentId);
         Assert.Equal((201, 64), (record.ResponseStatus, record.RequestHash.Length));
@@ -67,7 +67,7 @@ public class CreateBookingApiTests
         Assert.Equal(HttpStatusCode.Created, (await CreateHost.Post(c, h.Req(), CreateHost.Key())).StatusCode);
         Assert.Equal(HttpStatusCode.Created, (await CreateHost.Post(c, h.Req("2026-12-24T03:07:00Z"), CreateHost.Key())).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await CreateHost.Post(c, h.Req("not a date"), CreateHost.Key())).StatusCode); // malformed JSON value, not a 500
-        var rows = await h.Bookings();
+        var rows = await h.Accesses();
         Assert.Equal(2, rows.Count);
         Assert.All(rows, b => Assert.Equal(h.Clock.GetUtcNow(), b.StartUtc));
     }
@@ -78,12 +78,12 @@ public class CreateBookingApiTests
         await using var h = await Host(x => { x.Kind = "Chat"; x.Units = 500; });
         var c = h.ClientFor(Client);
         Assert.Equal(HttpStatusCode.Created, (await CreateHost.Post(c, h.Req(), CreateHost.Key())).StatusCode);
-        var chat = Assert.Single(await h.Bookings());
-        Assert.Equal((OfferingKind.Chat, 500_000L, 0L), (chat.Kind, chat.UnitsTotal, chat.UnitsUsed));
+        var chat = Assert.Single(await h.Accesses());
+        Assert.Equal((PackageKind.Chat, 500_000L, 0L), (chat.Kind, chat.UnitsTotal, chat.UnitsUsed));
 
         h.Kind = "Tasks"; h.Units = 7;
         Assert.Equal(HttpStatusCode.Created, (await CreateHost.Post(c, h.Req(), CreateHost.Key())).StatusCode);
-        var tasks = (await h.Bookings()).Single(b => b.Kind == OfferingKind.Tasks);
+        var tasks = (await h.Accesses()).Single(b => b.Kind == PackageKind.Tasks);
         Assert.Equal((7L, "demo-practitioner"), (tasks.UnitsTotal, tasks.PractitionerSlug));
     }
 
@@ -92,7 +92,7 @@ public class CreateBookingApiTests
     {
         await using var h = await Host(x => x.Settings["Access:ValidityDays"] = "7");
         Assert.Equal(HttpStatusCode.Created, (await CreateHost.Post(h.ClientFor(Client), h.Req(), CreateHost.Key())).StatusCode);
-        var b = Assert.Single(await h.Bookings());
+        var b = Assert.Single(await h.Accesses());
         Assert.Equal(TimeSpan.FromDays(7), b.EndUtc - b.StartUtc);
     }
 
@@ -104,14 +104,14 @@ public class CreateBookingApiTests
         Assert.Equal(HttpStatusCode.Created, (await CreateHost.Post(c, h.Req(), CreateHost.Key())).StatusCode);
         (h.PriceMinor, h.Title, h.Minutes) = (99900, "demo-renamed", 90);
 
-        var first = Assert.Single(await h.Bookings());
-        Assert.Equal((10000L, "demo-offering", (short)60), (first.PriceMinor, first.OfferingTitle, first.DurationMinutes));
+        var first = Assert.Single(await h.Accesses());
+        Assert.Equal((10000L, "demo-offering", (short)60), (first.PriceMinor, first.PackageTitle, first.DurationMinutes));
 
         // A booking created AFTER the change takes the new values: the snapshot is read at creation, not cached.
         Assert.Equal(HttpStatusCode.Created, (await CreateHost.Post(c, h.Req(), CreateHost.Key())).StatusCode);
-        var second = (await h.Bookings()).Single(b => b.PriceMinor == 99900);
-        Assert.Equal(("demo-renamed", (short)90), (second.OfferingTitle, second.DurationMinutes));
-        Assert.Equal(10000, (await h.Query(db => db.Payments.Where(p => p.BookingId == first.Id).Select(p => p.AmountMinor).SingleAsync())));
+        var second = (await h.Accesses()).Single(b => b.PriceMinor == 99900);
+        Assert.Equal(("demo-renamed", (short)90), (second.PackageTitle, second.DurationMinutes));
+        Assert.Equal(10000, (await h.Query(db => db.Payments.Where(p => p.AccessId == first.Id).Select(p => p.AmountMinor).SingleAsync())));
     }
 
     [Fact]
@@ -119,7 +119,7 @@ public class CreateBookingApiTests
     {
         await using var h = await Host(x => x.OwnerUserId = Client);
         await Problem(await CreateHost.Post(h.ClientFor(Client), h.Req(), CreateHost.Key()), (HttpStatusCode)422, "own_offering");
-        Assert.Empty(await h.Bookings());
+        Assert.Empty(await h.Accesses());
     }
 
     [Fact]
@@ -138,7 +138,7 @@ public class CreateBookingApiTests
     {
         await using var h = await Host(x => x.Status = status);
         await Problem(await CreateHost.Post(h.ClientFor(Client), h.Req(), CreateHost.Key()), (HttpStatusCode)422, "practitioner_not_bookable");
-        Assert.Empty(await h.Bookings());
+        Assert.Empty(await h.Accesses());
     }
 
     [Fact]
@@ -174,9 +174,9 @@ public class CreateBookingApiTests
         var second = await CreateHost.Post(c, h.Req(), key);
         Assert.Equal(HttpStatusCode.Created, second.StatusCode);
         Assert.Equal(await first.Content.ReadAsStringAsync(), await second.Content.ReadAsStringAsync());
-        Assert.Single(await h.Bookings());
-        var ids = (await h.Bookings()).Select(b => b.Id).ToList();
-        Assert.Equal(1, await h.Query(db => db.Payments.CountAsync(p => ids.Contains(p.BookingId))));
+        Assert.Single(await h.Accesses());
+        var ids = (await h.Accesses()).Select(b => b.Id).ToList();
+        Assert.Equal(1, await h.Query(db => db.Payments.CountAsync(p => ids.Contains(p.AccessId))));
     }
 
     [Fact]
@@ -187,7 +187,7 @@ public class CreateBookingApiTests
         var key = CreateHost.Key();
         Assert.Equal(HttpStatusCode.Created, (await CreateHost.Post(c, h.Req(), key)).StatusCode);
         await Problem(await CreateHost.Post(c, h.Req(text: "demo-brief: a completely different request text"), key), HttpStatusCode.Conflict, "idempotency_conflict");
-        Assert.Single(await h.Bookings());
+        Assert.Single(await h.Accesses());
     }
 
     [Fact]
@@ -212,7 +212,7 @@ public class CreateBookingApiTests
         Assert.Equal(HttpStatusCode.Created, a.StatusCode);
         Assert.Equal(HttpStatusCode.Created, b.StatusCode);
         Assert.NotEqual((await a.Body()).GetProperty("bookingId").GetGuid(), (await b.Body()).GetProperty("bookingId").GetGuid());
-        Assert.Equal(2, (await h.Bookings()).Count);
+        Assert.Equal(2, (await h.Accesses()).Count);
     }
 
     [Fact]
@@ -224,7 +224,7 @@ public class CreateBookingApiTests
         Assert.Equal(HttpStatusCode.Created, (await CreateHost.Post(c, h.Req(), key)).StatusCode);
         h.Clock.Advance(TimeSpan.FromHours(25));
         await Problem(await CreateHost.Post(c, h.Req(), key), HttpStatusCode.Conflict, "idempotency_conflict");
-        Assert.Single(await h.Bookings());
+        Assert.Single(await h.Accesses());
     }
 
     [Fact]
@@ -238,7 +238,7 @@ public class CreateBookingApiTests
             await Problem(r, HttpStatusCode.BadRequest, "validation_failed");
             Assert.True((await r.Body()).GetProperty("errors").TryGetProperty("Idempotency-Key", out _));
         }
-        Assert.Empty(await h.Bookings());
+        Assert.Empty(await h.Accesses());
     }
 
     [Fact]
@@ -260,7 +260,7 @@ public class CreateBookingApiTests
             else Assert.Equal(HttpStatusCode.Created, r.StatusCode);
         }
         Assert.Equal(HttpStatusCode.Created, (await CreateHost.Post(c, h.Req(text: new string('e', 2000)), CreateHost.Key())).StatusCode);
-        Assert.Equal(2, (await h.Bookings()).Count);
+        Assert.Equal(2, (await h.Accesses()).Count);
     }
 
     [Fact]
@@ -269,8 +269,8 @@ public class CreateBookingApiTests
         await using var h = await Host();
         var c = h.ClientFor(Client);
         await Problem(await CreateHost.Post(c, h.Req(offering: Guid.Empty), CreateHost.Key()), (HttpStatusCode)422, "validation_failed");
-        await Problem(await CreateHost.Post(c, new { offeringId = h.Offering, startUtc = CreateHost.Tuesday10 }, CreateHost.Key()), (HttpStatusCode)422, "validation_failed");
-        Assert.Empty(await h.Bookings());
+        await Problem(await CreateHost.Post(c, new { offeringId = h.Package, startUtc = CreateHost.Tuesday10 }, CreateHost.Key()), (HttpStatusCode)422, "validation_failed");
+        Assert.Empty(await h.Accesses());
     }
 
     [Fact]
@@ -309,7 +309,7 @@ public class CreateBookingApiTests
         var b = h.ClientFor("demo-client-b");
         var rs = await Task.WhenAll(CreateHost.Post(a, h.Req(), CreateHost.Key()), CreateHost.Post(b, h.Req(), CreateHost.Key()));
         Assert.All(rs, r => Assert.Equal(HttpStatusCode.Created, r.StatusCode));
-        Assert.Equal(2, (await h.Bookings()).Count);
+        Assert.Equal(2, (await h.Accesses()).Count);
     }
 
     [Fact]
@@ -321,15 +321,15 @@ public class CreateBookingApiTests
         var rs = await Task.WhenAll(CreateHost.Post(c, h.Req(), key), CreateHost.Post(c, h.Req(), key));
         Assert.All(rs, r => Assert.Equal(HttpStatusCode.Created, r.StatusCode));
         Assert.Equal((await rs[0].Body()).GetProperty("bookingId").GetGuid(), (await rs[1].Body()).GetProperty("bookingId").GetGuid());
-        Assert.Single(await h.Bookings());
+        Assert.Single(await h.Accesses());
     }
 
     [Fact]
     public void Every_Billing_BookingStatus_exists_in_the_Contracts_enum_and_vice_versa()
     {
-        var billing = Enum.GetNames<BookingStatus>().Order().ToArray();
-        var contracts = Enum.GetNames<Contracts.Booking.BookingStatus>().Order().ToArray();
+        var billing = Enum.GetNames<AccessStatus>().Order().ToArray();
+        var contracts = Enum.GetNames<Contracts.Booking.AccessStatus>().Order().ToArray();
         Assert.Equal(contracts, billing);
-        foreach (var n in billing) Assert.True(Enum.TryParse<Contracts.Booking.BookingStatus>(n, out _));
+        foreach (var n in billing) Assert.True(Enum.TryParse<Contracts.Booking.AccessStatus>(n, out _));
     }
 }

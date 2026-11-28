@@ -18,8 +18,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using BookingEntity = BookingApp::Gabinety.Booking.Features.Bookings.Entities.Booking;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using BookingEntity = BookingApp::Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Integration.Tests.Seeder;
 
@@ -61,7 +61,7 @@ public sealed class BookingHost : WebApplicationFactory<BookingApp::Program>
         return await work(scope.ServiceProvider.GetRequiredService<BookingDbContext>());
     }
 
-    public Task<List<BookingEntity>> Bookings() => Db(db => db.Bookings.AsNoTracking().OrderBy(b => b.CreatedAt).ThenBy(b => b.Id).ToListAsync());
+    public Task<List<BookingEntity>> Accesses() => Db(db => db.Accesses.AsNoTracking().OrderBy(b => b.CreatedAt).ThenBy(b => b.Id).ToListAsync());
 }
 
 /// <summary>
@@ -119,7 +119,7 @@ public sealed class WorldSeedHttp(DevIdentityHost identity, DirectoryHost direct
     {
         SeedService.Identity => identity.CreateClient(),
         SeedService.Directory => directory.CreateClient(),
-        SeedService.Booking => _booking ??= booking.CreateDefaultClient(bookingCalls),
+        SeedService.Access => _booking ??= booking.CreateDefaultClient(bookingCalls),
         _ => throw new InvalidOperationException(service),
     };
 }
@@ -129,7 +129,7 @@ public sealed class BookingWorld : IAsyncDisposable
 {
     public DevIdentityHost Identity { get; } = new();
     public DirectoryHost Directory { get; }
-    public BookingHost Booking { get; }
+    public BookingHost Access { get; }
     public BookingCalls Calls { get; } = new();
     public SeedOptions Options { get; }
     public CapturedLog Log { get; } = new();
@@ -139,15 +139,15 @@ public sealed class BookingWorld : IAsyncDisposable
     public BookingWorld()
     {
         Directory = new DirectoryHost(Identity);
-        Booking = new BookingHost(Identity, Directory);
+        Access = new BookingHost(Identity, Directory);
         Options = new SeedOptions("http://localhost", DirectoryHost.Key, DirectoryHost.Authority, SeedOptions.DevIdentityPassword)
             { BookingUrl = "http://localhost", BookingKey = BookingHost.Key };
-        Http = new WorldSeedHttp(Identity, Directory, Booking, Calls);
+        Http = new WorldSeedHttp(Identity, Directory, Access, Calls);
     }
 
     public async Task SeedDirectoryAsync()
     {
-        _ = Booking.Services; // one server, built before anything else touches the factory
+        _ = Access.Services; // one server, built before anything else touches the factory
         Context = NewContext();
         await new DirectorySeedStep().RunAsync(Context, CancellationToken.None);
     }
@@ -161,7 +161,7 @@ public sealed class BookingWorld : IAsyncDisposable
     /// <summary>What a person would read: a client's own bookings through the public API, by the client's demo name.</summary>
     public async Task<List<JsonElement>> BookingsOf(string clientName)
     {
-        using var http = Booking.CreateClient();
+        using var http = Access.CreateClient();
         http.DefaultRequestHeaders.Authorization = new("Bearer", await TokenAsync(clientName));
         var all = new List<JsonElement>();
         string? cursor = null;
@@ -194,5 +194,5 @@ public sealed class BookingWorld : IAsyncDisposable
     public static Dictionary<string, int> StatusCounts(IEnumerable<JsonElement> bookings) =>
         bookings.GroupBy(b => b.GetProperty("status").GetString()!).ToDictionary(g => g.Key, g => g.Count());
 
-    public async ValueTask DisposeAsync() { Booking.Dispose(); Directory.Dispose(); Identity.Dispose(); await Task.CompletedTask; }
+    public async ValueTask DisposeAsync() { Access.Dispose(); Directory.Dispose(); Identity.Dispose(); await Task.CompletedTask; }
 }

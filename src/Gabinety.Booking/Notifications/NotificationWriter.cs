@@ -1,6 +1,6 @@
 using Gabinety.Booking.Persistence;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
+using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 
 namespace Gabinety.Booking.Notifications;
 
@@ -25,24 +25,24 @@ public sealed class NotificationWriter(BookingDbContext db) : INotificationWrite
     public bool Schedule(BookingEntity booking, NotificationKind kind, string toUserId, DateTimeOffset dueAt)
     {
         var id = booking.Id;
-        if (db.Notifications.Local.Any(n => n.BookingId == id && n.Kind == kind && n.ToUserId == toUserId)) return false;
-        db.Notifications.Add(new Notification { Id = Guid.NewGuid(), BookingId = id, Kind = kind, ToUserId = toUserId, DueAt = dueAt });
+        if (db.Notifications.Local.Any(n => n.AccessId == id && n.Kind == kind && n.ToUserId == toUserId)) return false;
+        db.Notifications.Add(new Notification { Id = Guid.NewGuid(), AccessId = id, Kind = kind, ToUserId = toUserId, DueAt = dueAt });
         return true;
     }
 
     public async Task<bool> ScheduleAsync(BookingEntity booking, NotificationKind kind, string toUserId, DateTimeOffset dueAt, CancellationToken ct)
     {
         var id = booking.Id;
-        if (db.Notifications.Local.Any(n => n.BookingId == id && n.Kind == kind && n.ToUserId == toUserId)) return false;
-        if (await db.Notifications.AnyAsync(n => n.BookingId == id && n.Kind == kind && n.ToUserId == toUserId, ct)) return false;
+        if (db.Notifications.Local.Any(n => n.AccessId == id && n.Kind == kind && n.ToUserId == toUserId)) return false;
+        if (await db.Notifications.AnyAsync(n => n.AccessId == id && n.Kind == kind && n.ToUserId == toUserId, ct)) return false;
         return Schedule(booking, kind, toUserId, dueAt);
     }
 
     public async Task<int> CancelUnsentAsync(Guid bookingId, IReadOnlyCollection<NotificationKind> kinds, CancellationToken ct)
     {
         var named = kinds.ToList();
-        var saved = await db.Notifications.Where(n => n.BookingId == bookingId && n.SentAt == null && named.Contains(n.Kind)).ToListAsync(ct);
-        var pending = db.Notifications.Local.Where(n => n.BookingId == bookingId && n.SentAt == null && named.Contains(n.Kind));
+        var saved = await db.Notifications.Where(n => n.AccessId == bookingId && n.SentAt == null && named.Contains(n.Kind)).ToListAsync(ct);
+        var pending = db.Notifications.Local.Where(n => n.AccessId == bookingId && n.SentAt == null && named.Contains(n.Kind));
         var doomed = saved.Concat(pending).Distinct().ToList(); // a tracked row appears in both lists: one instance
         db.Notifications.RemoveRange(doomed);
         return doomed.Count;

@@ -29,10 +29,10 @@ public class PublicCacheTests
         var browser = web.NewBrowser();
         var first = await browser.GetAsync(path);
         Assert.Equal(HttpStatusCode.OK, first.Status);
-        var calls = web.Directory.Calls + web.Booking.Calls + web.Reputation.Calls;
+        var calls = web.Directory.Calls + web.Access.Calls + web.Reputation.Calls;
         var second = await browser.GetAsync(path);
         Assert.Equal(first.Html, second.Html);
-        Assert.Equal(calls, web.Directory.Calls + web.Booking.Calls + web.Reputation.Calls); // no backend was asked again
+        Assert.Equal(calls, web.Directory.Calls + web.Access.Calls + web.Reputation.Calls); // no backend was asked again
     }
 
     [Fact]

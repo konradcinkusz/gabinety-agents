@@ -5,14 +5,14 @@ using Gabinety.Booking.Features.Payments;
 using Gabinety.Booking.Features.Payouts;
 using Gabinety.Booking.Notifications;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
+using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 
 namespace Gabinety.Booking.Persistence;
 
 /// <summary>Owns bookingdb (P3). The other Booking tables arrive with later tasks.</summary>
 public sealed class BookingDbContext(DbContextOptions<BookingDbContext> options) : DbContext(options)
 {
-    public DbSet<BookingEntity> Bookings => Set<BookingEntity>();
+    public DbSet<BookingEntity> Accesses => Set<BookingEntity>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
     public DbSet<WebhookEvent> WebhookEvents => Set<WebhookEvent>();

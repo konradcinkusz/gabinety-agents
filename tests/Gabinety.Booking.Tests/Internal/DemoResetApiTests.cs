@@ -1,5 +1,6 @@
+using System.Text.Json.Serialization;
 using System.Net;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 using Gabinety.Booking.Features.Bookings.Create;
 using Gabinety.Booking.Features.Internal.TestClock;
 using Gabinety.Booking.Features.Payments;
@@ -9,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
+using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 
 namespace Gabinety.Booking.Tests;
 
@@ -33,24 +34,24 @@ public class DemoResetApiTests
         });
     }
 
-    sealed record Rows(Guid Booking, Guid Payment, Guid Ledger);
+    sealed record Rows([property: JsonPropertyName("booking")] Guid Access, Guid Payment, Guid Ledger);
 
     static Rows SeedChain(BookingDbContext db, CreateHost h, string clientUser, string practitionerUser, string provider, string? eventId)
     {
         var now = h.Clock.GetUtcNow();
         var key = Guid.NewGuid();
         var id = Guid.NewGuid();
-        db.Bookings.Add(new BookingEntity
+        db.Accesses.Add(new BookingEntity
         {
-            Id = id, ClientUserId = clientUser, PractitionerId = h.Practitioner, PractitionerUserId = practitionerUser,
-            OfferingId = h.Offering, OfferingTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 10000,
-            StartUtc = now.AddDays(2), EndUtc = now.AddDays(2).AddHours(1), Status = BookingStatus.Confirmed, BriefText = "demo-brief",
+            Id = id, ClientUserId = clientUser, AgentId = h.Agent, PractitionerUserId = practitionerUser,
+            PackageId = h.Package, PackageTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 10000,
+            StartUtc = now.AddDays(2), EndUtc = now.AddDays(2).AddHours(1), Status = AccessStatus.Confirmed, BriefText = "demo-brief",
             IdempotencyKey = key, CreatedAt = now,
         });
         var pay = Guid.NewGuid();
-        db.Payments.Add(new Payment { Id = pay, BookingId = id, Provider = "Mock", ProviderPaymentId = "mock_" + pay.ToString("N"), AmountMinor = 10000, Status = PaymentStatus.Succeeded, CreatedAt = now, UpdatedAt = now });
+        db.Payments.Add(new Payment { Id = pay, AccessId = id, Provider = "Mock", ProviderPaymentId = "mock_" + pay.ToString("N"), AmountMinor = 10000, Status = PaymentStatus.Succeeded, CreatedAt = now, UpdatedAt = now });
         var led = Guid.NewGuid();
-        db.LedgerEntries.Add(new LedgerEntry { Id = led, BookingId = id, Kind = LedgerKind.PlatformFee, AmountMinor = 1500, PairKey = Guid.NewGuid().ToString("N"), CreatedAt = now });
+        db.LedgerEntries.Add(new LedgerEntry { Id = led, AccessId = id, Kind = LedgerKind.PlatformFee, AmountMinor = 1500, PairKey = Guid.NewGuid().ToString("N"), CreatedAt = now });
         db.IdempotencyRecords.Add(new IdempotencyRecord { ClientUserId = clientUser, IdempotencyKey = key, RequestHash = "h", ResponseStatus = 201, ResponseBody = "{}", CreatedAt = now });
         if (eventId != null) db.WebhookEvents.Add(new WebhookEvent { Provider = provider, EventId = eventId, ReceivedAt = now, Outcome = WebhookOutcome.Applied });
         return new(id, pay, led);
@@ -59,7 +60,7 @@ public class DemoResetApiTests
     static Task<HttpResponseMessage> Reset(CreateHost h, string? key = ClockApiTests.InternalKey) => ClockApiTests.PostRaw(h, "/internal/v1/demo/reset", "{}", key);
 
     static async Task<(int bookings, int payments, int ledger, int idem, int events)> Counts(CreateHost h) =>
-        await h.Query(async db => (await db.Bookings.CountAsync(), await db.Payments.CountAsync(), await db.LedgerEntries.CountAsync(),
+        await h.Query(async db => (await db.Accesses.CountAsync(), await db.Payments.CountAsync(), await db.LedgerEntries.CountAsync(),
             await db.IdempotencyRecords.CountAsync(), await db.WebhookEvents.CountAsync()));
 
     [Fact]
@@ -84,7 +85,7 @@ public class DemoResetApiTests
         Assert.Equal(1, j.GetProperty("webhookEvents").GetInt32());
 
         Assert.Equal((1, 1, 1, 2, 1), await Counts(h)); // the practitioner-side demo booking's idempotency record belongs to a real client and stays
-        Assert.Equal(other.Booking, await h.Query(db => db.Bookings.Select(b => b.Id).SingleAsync()));
+        Assert.Equal(other.Access, await h.Query(db => db.Accesses.Select(b => b.Id).SingleAsync()));
         Assert.Equal(other.Payment, await h.Query(db => db.Payments.Select(b => b.Id).SingleAsync()));
         Assert.Equal(other.Ledger, await h.Query(db => db.LedgerEntries.Select(b => b.Id).SingleAsync()));
         Assert.Equal("evt-real-1", await h.Query(db => db.WebhookEvents.Select(b => b.EventId).SingleAsync()));

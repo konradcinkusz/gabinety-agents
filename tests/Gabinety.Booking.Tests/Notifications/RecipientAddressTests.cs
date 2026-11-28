@@ -67,7 +67,7 @@ public class RecipientAddressTests
             return id;
         }
 
-        public Task<List<Notification>> Rows(Guid booking) => Host.Query(db => db.Notifications.AsNoTracking().Where(n => n.BookingId == booking).ToListAsync());
+        public Task<List<Notification>> Rows(Guid booking) => Host.Query(db => db.Notifications.AsNoTracking().Where(n => n.AccessId == booking).ToListAsync());
         public void Dispose() { Host.Dispose(); Smtp.Dispose(); }
     }
 

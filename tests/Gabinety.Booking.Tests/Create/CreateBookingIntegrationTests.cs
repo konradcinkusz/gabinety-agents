@@ -52,7 +52,7 @@ public class CreateBookingIntegrationTests : IAsyncLifetime
             Assert.All(rs, r => Assert.Equal(HttpStatusCode.Created, r.StatusCode));
             Assert.Equal((await rs[0].Body()).GetProperty("bookingId").GetGuid(), (await rs[1].Body()).GetProperty("bookingId").GetGuid());
             await using var db = Db();
-            Assert.Equal(1, await db.Bookings.CountAsync(x => x.IdempotencyKey == Guid.Parse(key)));
+            Assert.Equal(1, await db.Accesses.CountAsync(x => x.IdempotencyKey == Guid.Parse(key)));
             Assert.Equal(1, await db.IdempotencyRecords.CountAsync(x => x.IdempotencyKey == Guid.Parse(key)));
         }
     }

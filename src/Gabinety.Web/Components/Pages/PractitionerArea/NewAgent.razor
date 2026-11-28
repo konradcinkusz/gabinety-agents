@@ -27,7 +27,7 @@
     {
         _name = Posted.Text("displayName");
         if (_name.Length is < 2 or > 80) { _nameError = FieldErrors.From(new ApiFailure(422, "validation_failed", ["displayName"]), new Dictionary<string, string?>())["displayName"]; return; }
-        var r = await Practitioner.CreateProfileAsync(_name);
+        var r = await Agent.CreateProfileAsync(_name);
         if (r.IsOk) { Navigation.NavigateTo($"{PractitionerPaths.Home}?agent={Uri.EscapeDataString(r.Value!.Slug)}&{FlashKey.Parameter}={FlashKey.GabinetCreated}"); return; }
         if (r.Failure!.Names("displayName")) _nameError = FieldErrors.From(r.Failure, new Dictionary<string, string?>())["displayName"];
         else _general = r.Failure.Code == "too_many_agents" ? PlPractitioner.Agents.TooMany : r.Failure.Status is 0 or 503 ? PlPractitioner.Common.Unavailable : PlPractitioner.Agents.Failed;

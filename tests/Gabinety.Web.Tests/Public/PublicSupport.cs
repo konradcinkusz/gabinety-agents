@@ -7,7 +7,7 @@ namespace Gabinety.Web.Tests;
 /// <summary>Synthetic public data (`demo-`) and a host whose backends answer the public reads of the wave-2 pages.</summary>
 public static class PublicSupport
 {
-    public static readonly Guid PractitionerId = Guid.Parse("018f0000-0000-7000-8000-0000000000aa");
+    public static readonly Guid AgentId = Guid.Parse("018f0000-0000-7000-8000-0000000000aa");
     public static readonly Guid OfferA = Guid.Parse("018f0000-0000-7000-8000-0000000000b1");
     public static readonly Guid OfferB = Guid.Parse("018f0000-0000-7000-8000-0000000000b2");
     /// <summary>The fixed clock of the page tests: Monday 2026-11-23 10:00 UTC (11:00 in Warsaw).</summary>
@@ -15,7 +15,7 @@ public static class PublicSupport
 
     public static PractitionerProfileDto Profile(string headline = "Audyty kodu .NET", string? portfolio = "https://demo.example/portfolio", string? github = "demo-anna", bool isNew = true,
         RatingDto? rating = null, IReadOnlyList<OfferingDto>? offerings = null, string bio = "Pracuję z systemami demo od lat.") =>
-        new(PractitionerId, "demo-anna-demowska", "Anna Ąćęł Demowska", headline, github, ["email", "github", "nip", "approved"], rating, isNew, new MoneyDto(18000, "PLN"), bio, portfolio,
+        new(AgentId, "demo-anna-demowska", "Anna Ąćęł Demowska", headline, github, ["email", "github", "nip", "approved"], rating, isNew, new MoneyDto(18000, "PLN"), bio, portfolio,
             offerings ?? [new(OfferA, "Audyt kodu .NET", "Przegląd repozytorium demo", 60, new MoneyDto(18000, "PLN"), "audyt-kodu", ["dotnet"]),
                           new(OfferB, "Krótka konsultacja", "Pytania o architekturę", 30, new MoneyDto(11000, "PLN"), "audyt-kodu", ["dotnet"])],
             4, new DateTimeOffset(2026, 11, 3, 9, 0, 0, TimeSpan.Zero));
@@ -26,7 +26,7 @@ public static class PublicSupport
     {
         var web = new WebFactory().Configure(s => s.AddSingleton<TimeProvider>(new FixedTime(Now)));
         web.Directory.Respond = directory ?? DefaultDirectory();
-        web.Booking.Respond = booking ?? (_ => new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
+        web.Access.Respond = booking ?? (_ => new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
         web.Reputation.Respond = reputation ?? (_ => FakeBackend.Json(new PageDto<ReviewDto>([], null)));
         return web;
     }

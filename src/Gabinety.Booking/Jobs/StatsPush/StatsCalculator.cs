@@ -1,7 +1,7 @@
 using Gabinety.Booking.Features.Internal.PractitionerCancellation;
 using Gabinety.Booking.Persistence;
 using Microsoft.EntityFrameworkCore;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Jobs.StatsPush;
 
@@ -27,20 +27,20 @@ public sealed class StatsCalculator(BookingDbContext db, IConfiguration config)
 
     public async Task<Dictionary<Guid, BookingStats>> ComputeAsync(CancellationToken ct)
     {
-        var groups = await db.Bookings.AsNoTracking()
-            .GroupBy(b => new { b.PractitionerId, b.Status, b.DisputeResolution, b.DisputeKind, Cascade = b.StatusReason == FutureBookingCanceller.Reason })
-            .Select(g => new { g.Key.PractitionerId, g.Key.Status, g.Key.DisputeResolution, g.Key.DisputeKind, g.Key.Cascade, N = g.Count(), Shortest = g.Min(b => (int)b.DurationMinutes) })
+        var groups = await db.Accesses.AsNoTracking()
+            .GroupBy(b => new { b.AgentId, b.Status, b.DisputeResolution, b.DisputeKind, Cascade = b.StatusReason == FutureBookingCanceller.Reason })
+            .Select(g => new { g.Key.AgentId, g.Key.Status, g.Key.DisputeResolution, g.Key.DisputeKind, g.Key.Cascade, N = g.Count(), Shortest = g.Min(b => (int)b.DurationMinutes) })
             .ToListAsync(ct);
 
         var openSlots = config.GetValue("Access:ReportedOpenSlots", DefaultReportedOpenSlots);
         var result = new Dictionary<Guid, BookingStats>();
-        foreach (var id in groups.Select(g => g.PractitionerId).Distinct())
+        foreach (var id in groups.Select(g => g.AgentId).Distinct())
         {
             ct.ThrowIfCancellationRequested();
-            var mine = groups.Where(g => g.PractitionerId == id).ToList();
-            var completed = mine.Where(g => g.Status == BookingStatus.Completed || (g.Status == BookingStatus.Resolved && g.DisputeResolution == "release")).Sum(g => g.N);
-            var cancelled = mine.Where(g => g.Status == BookingStatus.CancelledByPractitioner && !g.Cascade).Sum(g => g.N);
-            var upheld = mine.Where(g => g.Status == BookingStatus.Resolved && g.DisputeResolution == "refund_full" && g.DisputeKind == "practitioner_no_show").Sum(g => g.N);
+            var mine = groups.Where(g => g.AgentId == id).ToList();
+            var completed = mine.Where(g => g.Status == AccessStatus.Completed || (g.Status == AccessStatus.Resolved && g.DisputeResolution == "release")).Sum(g => g.N);
+            var cancelled = mine.Where(g => g.Status == AccessStatus.CancelledByPractitioner && !g.Cascade).Sum(g => g.N);
+            var upheld = mine.Where(g => g.Status == AccessStatus.Resolved && g.DisputeResolution == "refund_full" && g.DisputeKind == "practitioner_no_show").Sum(g => g.N);
 
             result[id] = new BookingStats(completed, cancelled, upheld, openSlots);
         }

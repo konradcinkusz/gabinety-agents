@@ -3,7 +3,7 @@ namespace Gabinety.DemoSeeder;
 /// <summary>
 /// The scaled dataset (T-10.04): with <c>--factor N</c> above 1 it adds <see cref="ScalePlan.Extras"/> Approved practitioners to the Directory, each registered in the identity provider,
 /// with a complete profile, a linked GitHub account, offerings, and the rating and booking figures pushed at the baseline version. Idempotent like the Directory step it mirrors.
-/// Runs last (order 400) and leaves <see cref="SeedContext.Practitioners"/> alone, so Booking and Reputation see only the ordinary demo data.
+/// Runs last (order 400) and leaves <see cref="SeedContext.Agents"/> alone, so Booking and Reputation see only the ordinary demo data.
 /// Reset needs nothing here: the Directory's reset removes the whole <c>demo-</c> namespace, the extras included.
 /// </summary>
 public sealed class ScaleSeedStep : ISeedStep
@@ -48,7 +48,7 @@ public sealed class ScaleSeedStep : ISeedStep
         if (!mine.GithubLinked) { await api.LinkGithubAsync(user, p.GithubLogin, ct); changes++; }
 
         var existing = (await api.OfferingsAsync(user, ct)).Select(o => o.Title).ToHashSet();
-        foreach (var o in p.Offerings.Where(o => !existing.Contains(o.Title)))
+        foreach (var o in p.Packages.Where(o => !existing.Contains(o.Title)))
         {
             await api.CreateOfferingAsync(user, new
             {

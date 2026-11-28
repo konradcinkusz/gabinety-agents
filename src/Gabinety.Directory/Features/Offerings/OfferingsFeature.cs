@@ -39,7 +39,7 @@ public sealed class OfferingsFeature : IServiceFeature
 
     static string? UserId(ClaimsPrincipal u) => u.FindFirst("sub")?.Value ?? u.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-    static OfferingPrivate View(Offering o) => new(o.Id, o.Title, o.Description, (int)o.DurationMinutes, new MoneyDto(o.PriceMinor, o.Currency),
+    static PackagePrivate View(Package o) => new(o.Id, o.Title, o.Description, (int)o.DurationMinutes, new MoneyDto(o.PriceMinor, o.Currency),
         o.ProblemSlug, o.TechSlugs, o.IsActive, o.MeetingUrl, o.Kind, o.Units);
 
     /// <summary>
@@ -47,7 +47,7 @@ public sealed class OfferingsFeature : IServiceFeature
     /// row is read `FOR UPDATE` inside a transaction, so two requests of one agent run one after the other (the 5-active-offerings check and the
     /// insert cannot interleave); the retrying execution strategy needs the whole unit inside one delegate. InMemory has no transactions or locks.
     /// </summary>
-    static async Task<IResult> OnOwnRow(DirectoryDbContext db, string uid, string? agent, CancellationToken ct, Func<Practitioner, Task<IResult>> body)
+    static async Task<IResult> OnOwnRow(DirectoryDbContext db, string uid, string? agent, CancellationToken ct, Func<Agent, Task<IResult>> body)
     {
         if (!db.Database.IsRelational())
         {
@@ -60,7 +60,7 @@ public sealed class OfferingsFeature : IServiceFeature
         {
             db.ChangeTracker.Clear(); // a retry starts from the database, not from a half-applied attempt
             await using var tx = await db.Database.BeginTransactionAsync(ct);
-            var rows = await db.Practitioners.FromSql($"SELECT * FROM practitioners WHERE user_id = {uid} AND (CAST({slug} AS text) IS NULL OR slug = {slug}) ORDER BY created_at, id FOR UPDATE").ToListAsync(ct);
+            var rows = await db.Agents.FromSql($"SELECT * FROM practitioners WHERE user_id = {uid} AND (CAST({slug} AS text) IS NULL OR slug = {slug}) ORDER BY created_at, id FOR UPDATE").ToListAsync(ct);
             if (OwnAgents.Reject(rows.Count, slug) is { } rejected) return rejected;
             var result = await body(rows[0]);
             await tx.CommitAsync(ct);
@@ -73,29 +73,29 @@ public sealed class OfferingsFeature : IServiceFeature
         if (UserId(user) is not { } uid) return Results.Unauthorized();
         var (p, rejected) = await OwnAgents.FindAsync(db, uid, agent, ct);
         if (p is null) return rejected!;
-        var rows = await db.Offerings.AsNoTracking().Where(o => o.PractitionerId == p.Id).OrderBy(o => o.CreatedAt).ThenBy(o => o.Id).ToListAsync(ct); // order, then project
+        var rows = await db.Packages.AsNoTracking().Where(o => o.AgentId == p.Id).OrderBy(o => o.CreatedAt).ThenBy(o => o.Id).ToListAsync(ct); // order, then project
         return Results.Ok(new { items = rows.Select(View) });
     }
 
-    static Task<IResult> Create(OfferingRequest req, string? agent, ClaimsPrincipal user, DirectoryDbContext db, IContactDetailDetector contact,
+    static Task<IResult> Create(PackageRequest req, string? agent, ClaimsPrincipal user, DirectoryDbContext db, IContactDetailDetector contact,
         IConfiguration config, TimeProvider time, CancellationToken ct) =>
         UserId(user) is not { } uid ? Task.FromResult(Results.Unauthorized()) : OnOwnRow(db, uid, agent, ct, async p =>
         {
             if (await Validate(req, db, contact, config, ct) is { } rejected) return rejected;
-            if (await db.Offerings.CountAsync(o => o.PractitionerId == p.Id && o.IsActive, ct) >= MaxActive)
-                return Problem(422, ErrorCodes.TooManyOfferings, "At most 5 active offerings");
-            var o = new Offering { Id = Guid.NewGuid(), PractitionerId = p.Id, Currency = "PLN", IsActive = true, CreatedAt = time.GetUtcNow() };
+            if (await db.Packages.CountAsync(o => o.AgentId == p.Id && o.IsActive, ct) >= MaxActive)
+                return Problem(422, ErrorCodes.TooManyPackages, "At most 5 active offerings");
+            var o = new Package { Id = Guid.NewGuid(), AgentId = p.Id, Currency = "PLN", IsActive = true, CreatedAt = time.GetUtcNow() };
             Apply(o, req);
-            db.Offerings.Add(o);
+            db.Packages.Add(o);
             await Save(db, p, time, ct);
             return Results.Created($"{Route}/{o.Id}", View(o));
         });
 
-    static Task<IResult> Update(Guid id, OfferingRequest req, string? agent, ClaimsPrincipal user, DirectoryDbContext db, IContactDetailDetector contact,
+    static Task<IResult> Update(Guid id, PackageRequest req, string? agent, ClaimsPrincipal user, DirectoryDbContext db, IContactDetailDetector contact,
         IConfiguration config, TimeProvider time, CancellationToken ct) =>
         UserId(user) is not { } uid ? Task.FromResult(Results.Unauthorized()) : OnOwnRow(db, uid, agent, ct, async p =>
         {
-            var o = await db.Offerings.SingleOrDefaultAsync(x => x.Id == id && x.PractitionerId == p.Id, ct);
+            var o = await db.Packages.SingleOrDefaultAsync(x => x.Id == id && x.AgentId == p.Id, ct);
             if (o is null) return Problem(404, ErrorCodes.NotFound, "Not found");
             if (await Validate(req, db, contact, config, ct) is { } rejected) return rejected;
             Apply(o, req); // IsActive is not touched: reactivation is its own route (activate)
@@ -106,7 +106,7 @@ public sealed class OfferingsFeature : IServiceFeature
     static Task<IResult> Deactivate(Guid id, string? agent, ClaimsPrincipal user, DirectoryDbContext db, TimeProvider time, CancellationToken ct) =>
         UserId(user) is not { } uid ? Task.FromResult(Results.Unauthorized()) : OnOwnRow(db, uid, agent, ct, async p =>
         {
-            var o = await db.Offerings.SingleOrDefaultAsync(x => x.Id == id && x.PractitionerId == p.Id, ct);
+            var o = await db.Packages.SingleOrDefaultAsync(x => x.Id == id && x.AgentId == p.Id, ct);
             if (o is null) return Problem(404, ErrorCodes.NotFound, "Not found");
             o.IsActive = false; // already inactive: nothing changes, still 204
             await Save(db, p, time, ct);
@@ -117,17 +117,17 @@ public sealed class OfferingsFeature : IServiceFeature
     static Task<IResult> Activate(Guid id, string? agent, ClaimsPrincipal user, DirectoryDbContext db, TimeProvider time, CancellationToken ct) =>
         UserId(user) is not { } uid ? Task.FromResult(Results.Unauthorized()) : OnOwnRow(db, uid, agent, ct, async p =>
         {
-            var o = await db.Offerings.SingleOrDefaultAsync(x => x.Id == id && x.PractitionerId == p.Id, ct);
+            var o = await db.Packages.SingleOrDefaultAsync(x => x.Id == id && x.AgentId == p.Id, ct);
             if (o is null) return Problem(404, ErrorCodes.NotFound, "Not found");
             if (o.IsActive) return Results.NoContent();
-            if (await db.Offerings.CountAsync(x => x.PractitionerId == p.Id && x.IsActive, ct) >= MaxActive)
-                return Problem(422, ErrorCodes.TooManyOfferings, "At most 5 active offerings");
+            if (await db.Packages.CountAsync(x => x.AgentId == p.Id && x.IsActive, ct) >= MaxActive)
+                return Problem(422, ErrorCodes.TooManyPackages, "At most 5 active offerings");
             o.IsActive = true;
             await Save(db, p, time, ct);
             return Results.NoContent();
         });
 
-    static void Apply(Offering o, OfferingRequest r)
+    static void Apply(Package o, PackageRequest r)
     {
         o.Title = r.Title.Trim();
         o.Description = r.Description?.Trim() ?? "";
@@ -141,10 +141,10 @@ public sealed class OfferingsFeature : IServiceFeature
     }
 
     /// <summary>Stores the change, then recomputes the practitioner's completeness from the offerings as they now are (the "one active offering" component).</summary>
-    static async Task Save(DirectoryDbContext db, Practitioner p, TimeProvider time, CancellationToken ct)
+    static async Task Save(DirectoryDbContext db, Agent p, TimeProvider time, CancellationToken ct)
     {
         await db.SaveChangesAsync(ct);
-        var hasActive = await db.Offerings.AnyAsync(o => o.PractitionerId == p.Id && o.IsActive, ct);
+        var hasActive = await db.Packages.AnyAsync(o => o.AgentId == p.Id && o.IsActive, ct);
         p.ProfileCompleteness = ProfileCompleteness.Compute(p.Headline.Length > 0, p.Bio.Length >= 200, hasActive, p.GithubLinked,
             p.PortfolioUrl is not null, p.NipValid, p.OpenSlots14d > 0);
         Ranking.RankingRecalculator.Recompute(p);
@@ -153,7 +153,7 @@ public sealed class OfferingsFeature : IServiceFeature
     }
 
     /// <summary>CONTRACTS 3.5. Returns the 422 to send, or null when the request is acceptable. Field errors come first, then the contact-detail check.</summary>
-    static async Task<IResult?> Validate(OfferingRequest r, DirectoryDbContext db, IContactDetailDetector contact, IConfiguration config, CancellationToken ct)
+    static async Task<IResult?> Validate(PackageRequest r, DirectoryDbContext db, IContactDetailDetector contact, IConfiguration config, CancellationToken ct)
     {
         var errors = new Dictionary<string, string[]>();
         var title = r.Title?.Trim() ?? "";
@@ -161,7 +161,7 @@ public sealed class OfferingsFeature : IServiceFeature
         if (title.Length is < 5 or > 80 || title.Any(char.IsControl)) errors["title"] = ["5 to 80 characters, no control characters"];
         if (description.Length > 600) errors["description"] = ["at most 600 characters"];
         if (r.DurationMinutes is not (30 or 60)) errors["durationMinutes"] = ["30 or 60"];
-        var (minUnits, maxUnits) = r.Kind == OfferingKind.Chat ? (100, 100000) : (1, 1000);
+        var (minUnits, maxUnits) = r.Kind == PackageKind.Chat ? (100, 100000) : (1, 1000);
         if (!Enum.IsDefined(r.Kind)) errors["kind"] = ["Tasks or Chat"];
         else if (r.Units < minUnits || r.Units > maxUnits) errors["units"] = [$"{minUnits} to {maxUnits}"];
         var min = config.GetValue<long?>("Directory:Price:MinMinor") ?? DefaultMinPrice;

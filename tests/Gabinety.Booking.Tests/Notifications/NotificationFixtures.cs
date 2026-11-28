@@ -4,8 +4,8 @@ using Gabinety.Booking.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -67,7 +67,7 @@ sealed class NotificationHost : IDisposable
 
     public Notification Add(Guid bookingId, NotificationKind kind, string userId, DateTimeOffset? due = null, int attempts = 0, DateTimeOffset? sentAt = null)
     {
-        var n = new Notification { Id = Guid.NewGuid(), BookingId = bookingId, Kind = kind, ToUserId = userId, DueAt = due ?? Now, Attempts = attempts, SentAt = sentAt };
+        var n = new Notification { Id = Guid.NewGuid(), AccessId = bookingId, Kind = kind, ToUserId = userId, DueAt = due ?? Now, Attempts = attempts, SentAt = sentAt };
         Host.Seed(db => db.Notifications.Add(n)).GetAwaiter().GetResult();
         return n;
     }
@@ -76,12 +76,12 @@ sealed class NotificationHost : IDisposable
     {
         var b = new BookingEntity
         {
-            Id = id ?? Guid.NewGuid(), ClientUserId = "demo-client", PractitionerUserId = "demo-practitioner", PractitionerId = Guid.NewGuid(), OfferingId = Guid.NewGuid(),
-            OfferingTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 10000, StartUtc = Now.AddDays(2), EndUtc = Now.AddDays(2).AddHours(1),
-            Status = BookingStatus.Confirmed, IdempotencyKey = Guid.NewGuid(), CreatedAt = Now,
+            Id = id ?? Guid.NewGuid(), ClientUserId = "demo-client", PractitionerUserId = "demo-practitioner", AgentId = Guid.NewGuid(), PackageId = Guid.NewGuid(),
+            PackageTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 10000, StartUtc = Now.AddDays(2), EndUtc = Now.AddDays(2).AddHours(1),
+            Status = AccessStatus.Confirmed, IdempotencyKey = Guid.NewGuid(), CreatedAt = Now,
         };
         edit?.Invoke(b);
-        return Host.Seed(db => db.Bookings.Add(b)).ContinueWith(_ => b);
+        return Host.Seed(db => db.Accesses.Add(b)).ContinueWith(_ => b);
     }
 
     public Task<Notification> Row(Guid id) => Host.Query(db => db.Notifications.AsNoTracking().SingleAsync(n => n.Id == id));

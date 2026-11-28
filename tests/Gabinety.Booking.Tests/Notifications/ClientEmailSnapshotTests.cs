@@ -1,7 +1,7 @@
 using System.Net;
 using Gabinety.Booking.Features.Internal.Erasure;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
+using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 
 namespace Gabinety.Booking.Tests;
 
@@ -33,7 +33,7 @@ public class ClientEmailSnapshotTests
     {
         using var h = await Host();
         var (id, _) = await Create(h);
-        Assert.Equal(Address, (await h.Bookings()).Single(b => b.Id == id).ClientEmail);
+        Assert.Equal(Address, (await h.Accesses()).Single(b => b.Id == id).ClientEmail);
     }
 
     [Theory]
@@ -45,7 +45,7 @@ public class ClientEmailSnapshotTests
     {
         using var h = await Host(claim);
         var (id, _) = await Create(h);
-        Assert.Null((await h.Bookings()).Single(b => b.Id == id).ClientEmail);
+        Assert.Null((await h.Accesses()).Single(b => b.Id == id).ClientEmail);
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public class ClientEmailSnapshotTests
         h.Emails[Client] = "demo-later@demo.invalid";
         var r = await CreateHost.Post(h.ClientFor(Client), h.Req("2026-11-17T13:00:00Z"), CreateHost.Key());
         Assert.Equal(HttpStatusCode.Created, r.StatusCode);
-        var rows = (await h.Bookings()).OrderBy(b => b.CreatedAt).ThenBy(b => b.StartUtc).Select(b => b.ClientEmail).ToList();
+        var rows = (await h.Accesses()).OrderBy(b => b.CreatedAt).ThenBy(b => b.StartUtc).Select(b => b.ClientEmail).ToList();
         Assert.Contains(Address, rows);
         Assert.Contains("demo-later@demo.invalid", rows);
     }
@@ -71,7 +71,7 @@ public class ClientEmailSnapshotTests
         seen.Add(await (await c.GetAsync($"/api/v1/bookings/{id}")).Content.ReadAsStringAsync());
         seen.Add(await (await c.GetAsync("/api/v1/me/bookings?role=client")).Content.ReadAsStringAsync());
         // the practitioner's view of the same booking (the client is visible to them by display name only)
-        await h.Seed(db => db.Bookings.Single(b => b.Id == id).Status = Gabinety.Billing.BookingStatus.Confirmed);
+        await h.Seed(db => db.Accesses.Single(b => b.Id == id).Status = Gabinety.Billing.AccessStatus.Confirmed);
         seen.Add(await (await h.ClientFor(h.OwnerUserId).GetAsync($"/api/v1/bookings/{id}")).Content.ReadAsStringAsync());
         seen.Add(await (await h.ClientFor(h.OwnerUserId).GetAsync("/api/v1/me/bookings?role=practitioner")).Content.ReadAsStringAsync());
 
@@ -85,7 +85,7 @@ public class ClientEmailSnapshotTests
         using var h = ErasureApiTests.NewHost();
         var client = ErasureApiTests.NewUser("c"); var practitioner = ErasureApiTests.NewUser("p");
         var id = await ErasureApiTests.SeedBooking(h, client, practitioner);
-        await h.Seed(db => db.Bookings.Single(b => b.Id == id).ClientEmail = Address);
+        await h.Seed(db => db.Accesses.Single(b => b.Id == id).ClientEmail = Address);
 
         Assert.Equal(HttpStatusCode.NoContent, (await ErasureApiTests.Erase(h, practitioner)).StatusCode);
         Assert.Equal(Address, (await Row(h, id)).ClientEmail); // the client's own data: a practitioner's erasure does not touch it
@@ -96,7 +96,7 @@ public class ClientEmailSnapshotTests
         Assert.Equal(ErasureApiTests.Token(client), after.ClientUserId);
     }
 
-    static Task<BookingEntity> Row(CreateHost h, Guid id) => h.Query(db => db.Bookings.AsNoTracking().SingleAsync(b => b.Id == id));
+    static Task<BookingEntity> Row(CreateHost h, Guid id) => h.Query(db => db.Accesses.AsNoTracking().SingleAsync(b => b.Id == id));
 
     [Fact]
     public void The_column_is_a_nullable_254_character_string_named_client_email()

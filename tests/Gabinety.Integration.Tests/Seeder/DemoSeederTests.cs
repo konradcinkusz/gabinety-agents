@@ -18,7 +18,7 @@ public class DemoSeederTests(SeederFixture fx) : IClassFixture<SeederFixture>
     static readonly JsonSerializerOptions J = new(JsonSerializerDefaults.Web);
 
     async Task<List<(string Slug, string Status)>> Rows() =>
-        (await fx.Db(db => db.Practitioners.AsNoTracking().Select(p => new { p.Slug, p.Status }).ToListAsync())).Select(p => (p.Slug, p.Status.ToString())).ToList();
+        (await fx.Db(db => db.Agents.AsNoTracking().Select(p => new { p.Slug, p.Status }).ToListAsync())).Select(p => (p.Slug, p.Status.ToString())).ToList();
 
     [Fact]
     public void The_first_run_succeeds_and_logs_its_steps()
@@ -46,8 +46,8 @@ public class DemoSeederTests(SeederFixture fx) : IClassFixture<SeederFixture>
         var taxonomy = await http.GetFromJsonAsync<JsonElement>("/api/v1/taxonomy", J);
         var known = taxonomy.GetProperty("problems").EnumerateArray().Concat(taxonomy.GetProperty("techs").EnumerateArray()).Select(c => c.GetProperty("slug").GetString()!).ToHashSet();
 
-        var all = await fx.Db(db => (from o in db.Offerings.AsNoTracking()
-                                    join p in db.Practitioners.AsNoTracking() on o.PractitionerId equals p.Id
+        var all = await fx.Db(db => (from o in db.Packages.AsNoTracking()
+                                    join p in db.Agents.AsNoTracking() on o.AgentId equals p.Id
                                     select new { o.ProblemSlug, o.TechSlugs, p.Status }).ToListAsync());
         var offerings = all.Where(x => x.Status.ToString() == "Approved").ToList();
         Assert.True(offerings.Select(o => o.ProblemSlug).Distinct().Count() >= 3);
@@ -57,7 +57,7 @@ public class DemoSeederTests(SeederFixture fx) : IClassFixture<SeederFixture>
     [Fact]
     public async Task At_least_three_agents_have_task_packages_and_a_Chat_package_priced_in_grosz()
     {
-        var perPractitioner = await fx.Db(db => db.Offerings.AsNoTracking().Where(o => o.IsActive).GroupBy(o => o.PractitionerId).Select(g => new { g.Key, N = g.Count(), Min = g.Min(o => o.PriceMinor), Max = g.Max(o => o.PriceMinor) }).ToListAsync());
+        var perPractitioner = await fx.Db(db => db.Packages.AsNoTracking().Where(o => o.IsActive).GroupBy(o => o.AgentId).Select(g => new { g.Key, N = g.Count(), Min = g.Min(o => o.PriceMinor), Max = g.Max(o => o.PriceMinor) }).ToListAsync());
         Assert.True(perPractitioner.Count(p => p.N >= 3) >= 3);
         Assert.All(perPractitioner, p => Assert.InRange(p.Min, 5000, 150000));
         Assert.All(perPractitioner, p => Assert.InRange(p.Max, 5000, 150000));
@@ -67,12 +67,12 @@ public class DemoSeederTests(SeederFixture fx) : IClassFixture<SeederFixture>
     public async Task Every_slug_and_every_user_name_is_in_the_demo_namespace()
     {
         Assert.All(await Rows(), r => Assert.StartsWith("demo-", r.Slug));
-        Assert.Equal(10, fx.FirstRun.Practitioners.Count);
-        Assert.All(fx.FirstRun.Practitioners.Keys, k => Assert.StartsWith("demo-", k));
+        Assert.Equal(10, fx.FirstRun.Agents.Count);
+        Assert.All(fx.FirstRun.Agents.Keys, k => Assert.StartsWith("demo-", k));
         Assert.All(fx.FirstRun.Clients.Keys, k => Assert.StartsWith("demo-", k));
         // the Directory rows belong to exactly the identity users the seeder signed in as
-        var userIds = await fx.Db(db => db.Practitioners.AsNoTracking().Select(p => p.UserId).ToListAsync());
-        Assert.Equal(userIds.Order(), fx.FirstRun.Practitioners.Values.Select(p => p.UserId).Order());
+        var userIds = await fx.Db(db => db.Agents.AsNoTracking().Select(p => p.UserId).ToListAsync());
+        Assert.Equal(userIds.Order(), fx.FirstRun.Agents.Values.Select(p => p.UserId).Order());
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public class DemoSeederTests(SeederFixture fx) : IClassFixture<SeederFixture>
         // the three seeded reviews are one each on three practitioners: below the three it takes to show a rating (CONTRACTS 3.2)
         Assert.All(items, i => Assert.True(i.GetProperty("isNew").GetBoolean(), i.GetProperty("slug").GetString()));
         Assert.All(items, i => Assert.False(i.TryGetProperty("rating", out var r) && r.ValueKind != JsonValueKind.Null, i.GetProperty("slug").GetString()));
-        Assert.True(DemoCatalog.Practitioners.Sum(p => p.Stats?.Reviews ?? 0) <= ReputationPlan.All.Length);
+        Assert.True(DemoCatalog.Agents.Sum(p => p.Stats?.Reviews ?? 0) <= ReputationPlan.All.Length);
     }
 
     [Fact]
@@ -121,8 +121,8 @@ public class DemoSeederTests(SeederFixture fx) : IClassFixture<SeederFixture>
 
     async Task<string> Snapshot() => await fx.Db(async db => JsonSerializer.Serialize(new
     {
-        P = await db.Practitioners.AsNoTracking().OrderBy(p => p.Slug).ToListAsync(),
-        O = await db.Offerings.AsNoTracking().OrderBy(o => o.PractitionerId).ThenBy(o => o.Title).ToListAsync(),
+        P = await db.Agents.AsNoTracking().OrderBy(p => p.Slug).ToListAsync(),
+        O = await db.Packages.AsNoTracking().OrderBy(o => o.AgentId).ThenBy(o => o.Title).ToListAsync(),
         E = await db.VerificationEvents.AsNoTracking().CountAsync(),
     }));
 

@@ -194,7 +194,7 @@ else if (_loaded)
     protected override async Task OnInitializedAsync()
     {
         if (!await LoadProfileAsync()) return;
-        var offers = Practitioner.OfferingsAsync();
+        var offers = Agent.OfferingsAsync();
         var taxonomy = Directory.TaxonomyAsync();
         await Task.WhenAll(offers, taxonomy);
         if (!offers.Result.IsOk) { LoadFailure = offers.Result.Failure; return; }
@@ -209,7 +209,7 @@ else if (_loaded)
 
     async Task Reload()
     {
-        var r = await Practitioner.OfferingsAsync();
+        var r = await Agent.OfferingsAsync();
         if (r.IsOk) { _offers = r.Value!; _active = _offers.Count(o => o.IsActive); }
     }
 
@@ -220,7 +220,7 @@ else if (_loaded)
         _editing = Guid.TryParse(Posted.Get("id"), out var id) && _offers.Any(o => o.Id == id) ? id : null; // only an offer of this practitioner
         var local = _f.Validate();
         if (local.Count > 0) { foreach (var (field, message) in local) _errors[field] = message; return; }
-        var r = await Practitioner.SaveOfferingAsync(_editing, _f.ToBody());
+        var r = await Agent.SaveOfferingAsync(_editing, _f.ToBody());
         if (r.IsOk) { Done(PractitionerPaths.Offers, FlashKey.Saved); return; }
         foreach (var (field, message) in FieldErrors.From(r.Failure!, new Dictionary<string, string?> { ["title"] = _f.Title, ["description"] = _f.Description })) _errors[field] = message;
         if (r.Failure!.Code == "too_many_offerings") _general = PlPractitioner.Offers.TooMany;
@@ -230,7 +230,7 @@ else if (_loaded)
     async Task DisableAsync()
     {
         if (!Guid.TryParse(Posted.Get("id"), out var id) || !_offers.Any(o => o.Id == id)) { _listNote = PlPractitioner.Offers.NotFound; return; }
-        var r = await Practitioner.DeactivateOfferingAsync(id);
+        var r = await Agent.DeactivateOfferingAsync(id);
         if (r.IsOk) { Done(PractitionerPaths.Offers, FlashKey.OfferDisabled); return; }
         _listNote = FieldErrors.General(r.Failure!, PlPractitioner.Offers.Failed);
     }
@@ -238,7 +238,7 @@ else if (_loaded)
     async Task EnableAsync()
     {
         if (!Guid.TryParse(Posted.Get("enable"), out var id) || !_offers.Any(o => o.Id == id)) { _listNote = PlPractitioner.Offers.NotFound; return; }
-        var r = await Practitioner.ActivateOfferingAsync(id);
+        var r = await Agent.ActivateOfferingAsync(id);
         if (r.IsOk) { Done(PractitionerPaths.Offers, FlashKey.OfferEnabled); return; }
         _listNote = r.Failure!.Code == "too_many_offerings" ? PlPractitioner.Offers.TooMany : FieldErrors.General(r.Failure, PlPractitioner.Offers.Failed);
         await Reload();

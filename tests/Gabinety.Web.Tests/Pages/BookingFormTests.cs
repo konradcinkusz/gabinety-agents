@@ -17,7 +17,7 @@ public class BookingFormTests
     static async Task<ClientAreaFixture> Open(Func<HttpRequestMessage, HttpResponseMessage>? booking = null, Func<HttpRequestMessage, HttpResponseMessage>? assistant = null)
     {
         var f = await ClientAreaFixture.SignedIn();
-        f.Web.Booking.Respond = booking ?? (_ => Created());
+        f.Web.Access.Respond = booking ?? (_ => Created());
         f.Web.Assistant.Respond = assistant ?? (_ => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
         return f;
     }
@@ -71,7 +71,7 @@ public class BookingFormTests
         await using var f = await Open();
         await f.Browser.GetAsync(BookingUrl);
         Assert.Equal(["/api/v1/practitioners/demo-anna-demowska"], f.Web.Directory.Requests.Where(r => r.PathAndQuery != "/api/v1/me").Select(r => r.PathAndQuery));
-        Assert.Empty(f.Web.Booking.Requests);
+        Assert.Empty(f.Web.Access.Requests);
         Assert.Empty(f.Web.Assistant.Requests);
     }
 
@@ -80,7 +80,7 @@ public class BookingFormTests
     public async Task Without_a_profile_slug_the_page_says_the_address_is_incomplete_and_goes_to_the_search(string slug)
     {
         await using var f = await Open();
-        var page = await f.Browser.GetAsync($"/dostep/{OfferingId}{slug}");
+        var page = await f.Browser.GetAsync($"/dostep/{PackageId}{slug}");
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Contains("Adres jest niepełny.", page.Text);
         Assert.Equal("/agenci", page.One("a.btn")!.GetAttribute("href"));
@@ -103,7 +103,7 @@ public class BookingFormTests
     {
         await using var f = await Open();
         f.Web.Directory.Respond = r => r.RequestUri!.AbsolutePath.EndsWith("demo-anna-demowska") ? FakeBackend.Json(Profile()) : FakeBackend.Problem(HttpStatusCode.NotFound, "not_found");
-        Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync($"/dostep/{OfferingId}?gabinet=demo-nikt")).Status);
+        Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync($"/dostep/{PackageId}?gabinet=demo-nikt")).Status);
         Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync($"/dostep/{Guid.NewGuid()}?gabinet=demo-anna-demowska")).Status);
         Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync("/dostep/nie-guid?gabinet=demo-anna-demowska")).Status);
     }
@@ -141,7 +141,7 @@ public class BookingFormTests
         Assert.NotNull(field.GetAttribute("autofocus")); // focus goes to the one invalid control
         Assert.Equal("9 / 2000", page.TextOf(".field__counter")); // the counter sits inside the field, under the control
         Assert.Equal("za krótki", field.TextContent); // what was typed is still there
-        Assert.Empty(f.Web.Booking.Requests);
+        Assert.Empty(f.Web.Access.Requests);
     }
 
     [Fact]
@@ -150,7 +150,7 @@ public class BookingFormTests
         await using var f = await Open();
         var page = await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", new string('a', 2001)));
         Assert.Equal("Opis może mieć najwyżej 2000 znaków.", page.TextOf(".form-summary a"));
-        Assert.Empty(f.Web.Booking.Requests);
+        Assert.Empty(f.Web.Access.Requests);
     }
 
     // ---- paying
@@ -162,12 +162,12 @@ public class BookingFormTests
         var page = await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", $"  {Brief}  "));
         Assert.Equal(HttpStatusCode.Found, page.Status);
         Assert.Equal($"/checkout/mock/{NewBooking}", page.Location);
-        var request = Assert.Single(f.Web.Booking.Requests);
+        var request = Assert.Single(f.Web.Access.Requests);
         Assert.Equal(HttpMethod.Post, request.Method);
         Assert.Equal("/api/v1/bookings", request.PathAndQuery);
         Assert.StartsWith("Bearer eyJ", request.Authorization);
         using var body = JsonDocument.Parse(request.Body!);
-        Assert.Equal(OfferingId.ToString(), body.RootElement.GetProperty("offeringId").GetString());
+        Assert.Equal(PackageId.ToString(), body.RootElement.GetProperty("offeringId").GetString());
         Assert.False(body.RootElement.TryGetProperty("startUtc", out _)); // C-02: a package has no start
         Assert.Equal(Brief, body.RootElement.GetProperty("brief").GetProperty("text").GetString());
         Assert.False(body.RootElement.GetProperty("brief").GetProperty("aiAssisted").GetBoolean());
@@ -179,7 +179,7 @@ public class BookingFormTests
     {
         await using var f = await Open();
         var seen = new List<string?>();
-        f.Web.Booking.Respond = r => { seen.Add(r.Headers.TryGetValues("Idempotency-Key", out var v) ? v.Single() : null); return Created(); };
+        f.Web.Access.Respond = r => { seen.Add(r.Headers.TryGetValues("Idempotency-Key", out var v) ? v.Single() : null); return Created(); };
         await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", Brief));
         Assert.True(Guid.TryParse(Assert.Single(seen), out var key) && key != Guid.Empty);
     }
@@ -235,7 +235,7 @@ public class BookingFormTests
         await using var f = await Open(booking: FakeBackend.Throw(new HttpRequestException("down")));
         var page = await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", Brief));
         Assert.Contains("nie zostaniesz obciążony dwa razy", page.TextOf("[data-testid=booking-error]"));
-        Assert.Equal(1, f.Web.Booking.Calls); // SPEC 5 rule 8: a write is never retried by the client
+        Assert.Equal(1, f.Web.Access.Calls); // SPEC 5 rule 8: a write is never retried by the client
     }
 
     [Fact]
@@ -254,7 +254,7 @@ public class BookingFormTests
     {
         await using var f = await Open(booking: _ => FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable"));
         var keys = new List<string>();
-        f.Web.Booking.Respond = r => { keys.Add(r.Headers.GetValues("Idempotency-Key").Single()); return FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable"); };
+        f.Web.Access.Respond = r => { keys.Add(r.Headers.GetValues("Idempotency-Key").Single()); return FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable"); };
 
         var first = await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", Brief));
         var key = first.One("input[name='Model.AttemptKey']")!.GetAttribute("value")!;
@@ -349,7 +349,7 @@ public class BookingFormTests
 
         // the next post (pay) carries the applied slug
         await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", Brief + "\n\nMoja poprawiona wersja propozycji."), ("Model.AppliedSlug", "audyt-kodu"));
-        using var body = JsonDocument.Parse(f.Web.Booking.Requests.Single().Body!);
+        using var body = JsonDocument.Parse(f.Web.Access.Requests.Single().Body!);
         Assert.True(body.RootElement.GetProperty("brief").GetProperty("aiAssisted").GetBoolean());
         Assert.Equal("audyt-kodu", body.RootElement.GetProperty("brief").GetProperty("problemSlug").GetString());
     }
@@ -372,7 +372,7 @@ public class BookingFormTests
         await using var f = await Open(booking: _ => FakeBackend.Problem(HttpStatusCode.UnprocessableEntity, "slot_taken"), assistant: _ => Suggestion(summary: "Znacznik podpowiedzi asystenta"));
         await f.Post(BookingUrl, "booking", Intent("assist"), ("Model.Brief", userText));
         await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", userText));
-        f.Web.Booking.Respond = FakeBackend.Throw(new HttpRequestException("boom"));
+        f.Web.Access.Respond = FakeBackend.Throw(new HttpRequestException("boom"));
         await f.Post(BookingUrl, "booking", Intent("pay"), ("Model.Brief", userText));
         Assert.NotEmpty(f.Logs.Lines);
         Assert.DoesNotContain(f.Logs.Lines, l => l.Contains("Znacznik opisu", StringComparison.Ordinal) || l.Contains("Znacznik podpowiedzi", StringComparison.Ordinal));
@@ -385,6 +385,6 @@ public class BookingFormTests
         var request = new HttpRequestMessage(HttpMethod.Post, BookingUrl) { Content = new FormUrlEncodedContent([new("_handler", "booking"), new("Model.Intent", "pay"), new("Model.Brief", Brief)]) };
         var page = await f.Browser.SendAsync(request);
         Assert.True((int)page.Status is 400 or 403 or 404, $"{(int)page.Status}");
-        Assert.Empty(f.Web.Booking.Requests);
+        Assert.Empty(f.Web.Access.Requests);
     }
 }

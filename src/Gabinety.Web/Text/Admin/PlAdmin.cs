@@ -35,7 +35,7 @@ public static class PlAdmin
         public const string Network = "Nie udało się połączyć z serwerem. Spróbuj ponownie.", RateLimited = "Zbyt wiele zapytań. Spróbuj ponownie za chwilę.";
         public const string Generic = "Nie udało się wykonać akcji. Spróbuj ponownie.";
         public const string StaleForm = "Ten wpis już się zmienił. Lista została odświeżona.";
-        public const string Client = "Klient", ClientRef = "Klient {0}", PractitionerRef = "Agent {0}";
+        public const string Client = "Klient", ClientRef = "Klient {0}", AgentRef = "Agent {0}";
         public const string ErrorPrefix = "Błąd:";
         /// <summary>Months of a short date ("24 lis 2026, 13:00": P-ADM-3).</summary>
         public static readonly string[] MonthsShort = ["sty", "lut", "mar", "kwi", "maj", "cze", "lip", "sie", "wrz", "paź", "lis", "gru"];
@@ -93,7 +93,7 @@ public static class PlAdmin
         public const string FilterLabel = "Status", Open = "Otwarte", Resolved = "Rozstrzygnięte";
         public const string EmptyOpen = "Brak otwartych reklamacji.", EmptyResolved = "Brak rozstrzygniętych reklamacji.";
         public const string Refunded = "Zwrócono: {0}";
-        public const string Offer = "Pakiet", Client = "Klient", Practitioner = "Agent", Price = "Cena pakietu", Usage = "Wykorzystanie pakietu", MaxRefund = "Najwyższy możliwy zwrot", Payment = "Płatność", Booking = "Dostęp";
+        public const string Offer = "Pakiet", Client = "Klient", Agent = "Agent", Price = "Cena pakietu", Usage = "Wykorzystanie pakietu", MaxRefund = "Najwyższy możliwy zwrot", Payment = "Płatność", Access = "Dostęp";
         public const string Opened = "Otwarto", ResolvedAt = "Rozstrzygnięto", Text = "Treść zgłoszenia", Outcome = "Rozstrzygnięcie", Note = "Notatka moderatora", BookingUnreadable = "Szczegóły dostępu są chwilowo niedostępne.";
         public const string ResolveOpen = "Rozstrzygnij", Legend = "Rozstrzygnięcie reklamacji";
         public const string Release = "Wypłać dostawcy", RefundFull = "Zwróć klientowi całość", RefundPartial = "Zwróć klientowi część";
@@ -141,7 +141,7 @@ public static class PlAdmin
         public const string Unavailable = "Lista opinii jest chwilowo niedostępna. Spróbuj ponownie za chwilę.", Next = "Starsze wpisy dalej";
         public const string FilterLabel = "Status", Held = "Wstrzymane", Published = "Opublikowane", Rejected = "Odrzucone";
         public const string EmptyHeld = "Brak opinii oczekujących na sprawdzenie.", EmptyPublished = "Brak opublikowanych opinii.", EmptyRejected = "Brak odrzuconych opinii.";
-        public const string Rating = "Ocena", RatingOf = "{0}/5", Created = "Dodano", PublishedAt = "Opublikowano", Practitioner = "Agent", Triage = "Wstępna ocena asystenta", Reasons = "Powody wstrzymania";
+        public const string Rating = "Ocena", RatingOf = "{0}/5", Created = "Dodano", PublishedAt = "Opublikowano", Agent = "Agent", Triage = "Wstępna ocena asystenta", Reasons = "Powody wstrzymania";
         public const string Text = "Treść opinii", Note = "Powód odrzucenia", Moderator = "Moderator";
         public const string TriageNone = "Bez zastrzeżeń", TriageHold = "Wstrzymana przez asystenta", TriageUnavailable = "Asystent był niedostępny, opinię opublikowano bez wstępnej oceny", TriageUnknown = "Brak informacji";
         public const string ReasonSpam = "Spam", ReasonAbuse = "Obraźliwa treść", ReasonPersonalData = "Dane osobowe", ReasonOffTopic = "Niezwiązana z tematem", ReasonThreat = "Groźby", ReasonOther = "Inny powód", ReasonNone = "Brak podanych powodów";

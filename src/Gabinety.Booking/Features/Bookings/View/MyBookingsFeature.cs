@@ -9,7 +9,7 @@ using Gabinety.Contracts.Booking;
 using Gabinety.Contracts.Common;
 using Gabinety.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Features.Bookings.View;
 
@@ -38,10 +38,10 @@ public sealed class MyBookingsFeature : IServiceFeature
 
         var errors = new Dictionary<string, string[]>();
         if (role is not ("client" or "practitioner")) errors["role"] = ["The role is required: client or practitioner."];
-        BookingStatus? statusFilter = null;
+        AccessStatus? statusFilter = null;
         if (!string.IsNullOrEmpty(status))
         {
-            if (Enum.TryParse<BookingStatus>(status, ignoreCase: false, out var st) && Enum.IsDefined(st) && !char.IsDigit(status[0])) statusFilter = st;
+            if (Enum.TryParse<AccessStatus>(status, ignoreCase: false, out var st) && Enum.IsDefined(st) && !char.IsDigit(status[0])) statusFilter = st;
             else errors["status"] = ["The status is not a booking status."];
         }
         var take = DefaultLimit;
@@ -56,7 +56,7 @@ public sealed class MyBookingsFeature : IServiceFeature
         if (errors.Count > 0) return PaymentWebhookFeature.Problem(ErrorCodes.ValidationFailed, "Validation failed", 400, null, errors);
 
         var asClient = role == "client";
-        var q = db.Bookings.AsNoTracking().Where(b => asClient ? b.ClientUserId == sub : b.PractitionerUserId == sub);
+        var q = db.Accesses.AsNoTracking().Where(b => asClient ? b.ClientUserId == sub : b.PractitionerUserId == sub);
         if (statusFilter is { } s) q = q.Where(b => b.Status == s);
         if (after is { } p) q = q.Where(b => b.StartUtc < p.Start || (b.StartUtc == p.Start && b.Id.CompareTo(p.Id) < 0));
 
@@ -65,7 +65,7 @@ public sealed class MyBookingsFeature : IServiceFeature
         if (more) rows.RemoveAt(take);
 
         var ids = rows.Select(b => b.Id).ToList();
-        var payments = (await db.Payments.AsNoTracking().Where(pm => ids.Contains(pm.BookingId)).ToListAsync(ct)).ToDictionary(pm => pm.BookingId);
+        var payments = (await db.Payments.AsNoTracking().Where(pm => ids.Contains(pm.AccessId)).ToListAsync(ct)).ToDictionary(pm => pm.AccessId);
         var admin = BookingViewFeature.IsAdmin(user);
         var nameOf = await names.ForAsync(rows, ct);
         var items = rows.Select(b => BookingViewFeature.ToView(b, payments.GetValueOrDefault(b.Id), sub, admin, time, nameOf[b.Id])).ToList();
@@ -77,19 +77,19 @@ public sealed class MyBookingsFeature : IServiceFeature
 
     readonly record struct Position(DateTimeOffset Start, Guid Id);
 
-    static string Payload(Position p, string role, BookingStatus? status) =>
+    static string Payload(Position p, string role, AccessStatus? status) =>
         string.Join('|', role, status?.ToString() ?? "-", p.Start.UtcTicks.ToString(CultureInfo.InvariantCulture), p.Id.ToString("N"));
 
     static string Check(string payload) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload)), 0, 6);
 
-    static string Encode(Position p, string role, BookingStatus? status)
+    static string Encode(Position p, string role, AccessStatus? status)
     {
         var payload = Payload(p, role, status);
         return Convert.ToBase64String(Encoding.UTF8.GetBytes(payload)).TrimEnd('=').Replace('+', '-').Replace('/', '_') + "." + Check(payload);
     }
 
     /// <summary>The position, or null for anything that is not a cursor made by <see cref="Encode"/> for this role and status.</summary>
-    static Position? Decode(string cursor, string? role, BookingStatus? status)
+    static Position? Decode(string cursor, string? role, AccessStatus? status)
     {
         try
         {
@@ -110,5 +110,5 @@ public sealed class MyBookingsFeature : IServiceFeature
 }
 
 /// <summary><c>nextCursor</c> is omitted from the JSON on the last page (CONTRACTS 0).</summary>
-public sealed record MyBookingsPage(IReadOnlyList<BookingView> Items,
+public sealed record MyBookingsPage(IReadOnlyList<AccessView> Items,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] string? NextCursor);

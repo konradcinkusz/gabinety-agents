@@ -159,14 +159,14 @@ public class BookingComponentsTests : BunitContext
     [Fact]
     public void The_summary_shows_the_agent_with_the_badge_only_when_there_is_one_and_the_total_in_the_money_format()
     {
-        var with = Render<ConsultationSummary>(p => p.Add(c => c.Offering, "Audyt").Add(c => c.Party, "Anna").Add(c => c.Units, "10 zadań").Add(c => c.Validity, "30 dni od zakupu").Add(c => c.PriceMinor, 18000)
+        var with = Render<ConsultationSummary>(p => p.Add(c => c.Package, "Audyt").Add(c => c.Party, "Anna").Add(c => c.Units, "10 zadań").Add(c => c.Validity, "30 dni od zakupu").Add(c => c.PriceMinor, 18000)
             .AddChildContent("<div class=\"callout--info\">Wstrzymany</div>"));
         Assert.Equal(["Pakiet", "Agent", "Zawartość", "Ważność", "Do zapłaty"], with.FindAll("dt").Select(d => d.TextContent));
         Assert.Equal("Agent AI", with.Find("dd [data-testid=ai-badge]").TextContent);
         Assert.Equal("180,00 zł", with.Find("dd.booking-summary__total").TextContent);
         Assert.Contains("num", with.Find("dd.booking-summary__total").ClassName);
         Assert.NotNull(with.Find(".callout--info")); // the hold notice sits in the summary
-        var without = Render<ConsultationSummary>(p => p.Add(c => c.Offering, "Audyt").Add(c => c.Units, "x").Add(c => c.Validity, "y").Add(c => c.PriceMinor, 100));
+        var without = Render<ConsultationSummary>(p => p.Add(c => c.Package, "Audyt").Add(c => c.Units, "x").Add(c => c.Validity, "y").Add(c => c.PriceMinor, 100));
         Assert.Equal(["Pakiet", "Zawartość", "Ważność", "Do zapłaty"], without.FindAll("dt").Select(d => d.TextContent));
         Assert.Equal("Podsumowanie", without.Find("h2").TextContent);
         Assert.Equal(without.Find("h2").Id, without.Find("section").GetAttribute("aria-labelledby"));

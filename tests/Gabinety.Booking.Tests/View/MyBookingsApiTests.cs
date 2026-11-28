@@ -1,11 +1,12 @@
+using System.Text.Json.Serialization;
 using System.Net;
 using System.Text;
 using System.Text.Json;
 using Gabinety.Contracts.Booking;
 using Gabinety.Booking.Features.Bookings.Create;
 using Gabinety.Booking.Features.Payments;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -14,29 +15,29 @@ public class MyBookingsApiTests
 {
     static readonly TimeSpan H = TimeSpan.FromHours(1);
 
-    sealed record Who(string Client, string Practitioner)
+    sealed record Who(string Client, [property: JsonPropertyName("practitioner")] string Agent)
     {
         public static Who New() => new("demo-c-" + Guid.NewGuid().ToString("N"), "demo-p-" + Guid.NewGuid().ToString("N"));
     }
 
-    static async Task<Guid> Seed(CreateHost h, Who w, TimeSpan startIn, BookingStatus status = BookingStatus.Confirmed, Guid? id = null,
+    static async Task<Guid> Seed(CreateHost h, Who w, TimeSpan startIn, AccessStatus status = AccessStatus.Confirmed, Guid? id = null,
         string? clientOverride = null, string? practitionerOverride = null, long? fee = null, long? payout = null)
     {
         id ??= Guid.NewGuid();
         var start = h.Clock.GetUtcNow() + startIn;
         await h.Seed(db =>
         {
-            db.Bookings.Add(new BookingEntity
+            db.Accesses.Add(new BookingEntity
             {
-                Id = id.Value, ClientUserId = clientOverride ?? w.Client, PractitionerId = h.Practitioner, PractitionerUserId = practitionerOverride ?? w.Practitioner,
-                OfferingId = h.Offering, OfferingTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 10000, StartUtc = start, EndUtc = start + H,
+                Id = id.Value, ClientUserId = clientOverride ?? w.Client, AgentId = h.Agent, PractitionerUserId = practitionerOverride ?? w.Agent,
+                PackageId = h.Package, PackageTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 10000, StartUtc = start, EndUtc = start + H,
                 Status = status, BriefText = "demo-brief: private words of the client", IdempotencyKey = Guid.NewGuid(), CreatedAt = h.Clock.GetUtcNow(),
-                MeetingUrlSnapshot = status == BookingStatus.Confirmed ? "https://meet.demo.invalid/secret-room" : null,
-                HoldExpiresAt = status == BookingStatus.PendingPayment ? h.Clock.GetUtcNow() + H : null, FeeMinor = fee, PayoutMinor = payout,
+                MeetingUrlSnapshot = status == AccessStatus.Confirmed ? "https://meet.demo.invalid/secret-room" : null,
+                HoldExpiresAt = status == AccessStatus.PendingPayment ? h.Clock.GetUtcNow() + H : null, FeeMinor = fee, PayoutMinor = payout,
             });
             db.Payments.Add(new Payment
             {
-                Id = Guid.NewGuid(), BookingId = id.Value, Provider = "Mock", AmountMinor = 10000, Status = PaymentStatus.Succeeded,
+                Id = Guid.NewGuid(), AccessId = id.Value, Provider = "Mock", AmountMinor = 10000, Status = PaymentStatus.Succeeded,
                 CreatedAt = h.Clock.GetUtcNow(), UpdatedAt = h.Clock.GetUtcNow(),
             });
         });
@@ -179,8 +180,8 @@ public class MyBookingsApiTests
         await using var h = Host();
         var w = Who.New();
         var confirmed = await Seed(h, w, TimeSpan.FromDays(1));
-        await Seed(h, w, TimeSpan.FromDays(2), BookingStatus.PendingPayment);
-        await Seed(h, w, TimeSpan.FromDays(3), BookingStatus.CancelledByClient);
+        await Seed(h, w, TimeSpan.FromDays(2), AccessStatus.PendingPayment);
+        await Seed(h, w, TimeSpan.FromDays(3), AccessStatus.CancelledByClient);
         var (_, body) = await List(h, w.Client, "?role=client&status=Confirmed");
         Assert.Equal([confirmed], Ids(body));
         Assert.Equal(3, Ids((await List(h, w.Client, "?role=client")).Item2).Count);
@@ -191,7 +192,7 @@ public class MyBookingsApiTests
     {
         await using var h = Host();
         var w = Who.New();
-        var pending = await Seed(h, w, TimeSpan.FromDays(1), BookingStatus.PendingPayment, fee: 1500, payout: 8500);
+        var pending = await Seed(h, w, TimeSpan.FromDays(1), AccessStatus.PendingPayment, fee: 1500, payout: 8500);
         var confirmed = await Seed(h, w, TimeSpan.FromDays(2), fee: 1500, payout: 8500);
 
         var (_, client) = await List(h, w.Client, "?role=client");
@@ -204,7 +205,7 @@ public class MyBookingsApiTests
             Assert.True(Absent(i, "payout"));
         }
 
-        var (_, prac) = await List(h, w.Practitioner, "?role=practitioner");
+        var (_, prac) = await List(h, w.Agent, "?role=practitioner");
         var byId = prac.GetProperty("items").EnumerateArray().ToDictionary(i => i.GetProperty("id").GetGuid());
         Assert.False(byId[pending].TryGetProperty("brief", out var pb) && pb.ValueKind == JsonValueKind.Object);
         Assert.True(Absent(byId[pending], "meetingUrl"));
@@ -225,7 +226,7 @@ public class MyBookingsApiTests
         var id = await Seed(h, w, TimeSpan.FromMinutes(20), fee: 1500, payout: 8500); // starts in 20 min
         h.Clock.Advance(TimeSpan.FromMinutes(40));                                    // 20 min after the start
 
-        foreach (var (user, role) in new[] { (w.Client, "client"), (w.Practitioner, "practitioner") })
+        foreach (var (user, role) in new[] { (w.Client, "client"), (w.Agent, "practitioner") })
         {
             var single = await (await h.ClientFor(user).GetAsync($"/api/v1/bookings/{id}")).Body();
             var (_, list) = await List(h, user, $"?role={role}");
@@ -236,7 +237,7 @@ public class MyBookingsApiTests
         Assert.True(c.GetProperty("canDispute").GetBoolean());
         Assert.False(c.GetProperty("canReportNoShow").GetBoolean());
         Assert.False(c.GetProperty("canReview").GetBoolean());
-        var p = await (await h.ClientFor(w.Practitioner).GetAsync($"/api/v1/bookings/{id}")).Body();
+        var p = await (await h.ClientFor(w.Agent).GetAsync($"/api/v1/bookings/{id}")).Body();
         Assert.True(p.GetProperty("canCancel").GetBoolean());
         Assert.False(p.GetProperty("canDispute").GetBoolean());
         Assert.False(p.GetProperty("canReportNoShow").GetBoolean()); // never offered any more (A-03)
@@ -248,7 +249,7 @@ public class MyBookingsApiTests
         await using var h = Host();
         var w = Who.New();
         var id = await Seed(h, w, TimeSpan.FromDays(1));
-        var v = await (await h.ClientFor(w.Practitioner).GetAsync($"/api/v1/bookings/{id}")).Body();
+        var v = await (await h.ClientFor(w.Agent).GetAsync($"/api/v1/bookings/{id}")).Body();
         Assert.Equal("Demo Practitioner", v.GetProperty("practitioner").GetProperty("displayName").GetString());
         Assert.Equal("demo-practitioner", v.GetProperty("practitioner").GetProperty("slug").GetString());
         Assert.Equal("Klient", v.GetProperty("client").GetProperty("displayName").GetString()); // no snapshot on the seeded row

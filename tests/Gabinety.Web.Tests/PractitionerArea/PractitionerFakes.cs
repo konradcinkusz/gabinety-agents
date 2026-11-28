@@ -23,7 +23,7 @@ public sealed class PractitionerWorld
     public bool DirectoryDown { get; set; }
     public bool BookingDown { get; set; }
     public bool BookingsFail { get; set; }
-    public List<BookingViewDto> Bookings { get; } = [];
+    public List<BookingViewDto> Accesses { get; } = [];
     public string OnboardingUrl { get; set; } = "https://connect.stripe.com/setup/e/acct_test/abc";
     public int OnboardingCalls { get; private set; }
 
@@ -34,7 +34,7 @@ public sealed class PractitionerWorld
     public void Attach(WebFactory web)
     {
         web.Directory.Respond = Directory;
-        web.Booking.Respond = Booking;
+        web.Access.Respond = Access;
     }
 
     public void HaveProfile(string status = "Draft", string name = "Demo Programista") =>
@@ -183,14 +183,14 @@ public sealed class PractitionerWorld
         o.ProblemSlug = S(b, "problemSlug"); o.MeetingUrl = S(b, "meetingUrl"); o.Kind = b["kind"] is { } k ? k.GetValue<string>() : "Tasks"; o.Units = b["units"] is { } u ? u.GetValue<int>() : 1; o.Techs = [.. (b["techSlugs"] as JsonArray ?? []).Select(x => x!.GetValue<string>())];
     }
 
-    HttpResponseMessage Booking(HttpRequestMessage r)
+    HttpResponseMessage Access(HttpRequestMessage r)
     {
         if (BookingDown) throw new HttpRequestException("booking is down");
         var path = r.RequestUri!.AbsolutePath;
         if (path == "/api/v1/me/bookings" && r.Method == HttpMethod.Get)
         {
             if (BookingsFail) return Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable");
-            return FakeBackend.Json(new PageDto<BookingViewDto>(Bookings, null));
+            return FakeBackend.Json(new PageDto<BookingViewDto>(Accesses, null));
         }
         if (path == "/api/v1/me/payments/account")
         {

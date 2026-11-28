@@ -54,7 +54,7 @@ public sealed class ReplyReviewFeature : IServiceFeature
         try
         {
             if (await directory.GetPractitionerByUserAsync(sub, ct) is not { } found) return Problem(ErrorCodes.NotFound, "Not found", 404);
-            practitionerId = found.PractitionerId;
+            practitionerId = found.AgentId;
         }
         catch (DirectoryUnavailableException)
         {
@@ -85,7 +85,7 @@ public sealed class ReplyReviewFeature : IServiceFeature
             try
             {
                 var review = await db.Reviews.SingleOrDefaultAsync(x => x.Id == id, ct);
-                if (review is null || review.PractitionerId != practitionerId || review.Status != ReviewStatus.Published) return ReplyOutcome.NotFound;
+                if (review is null || review.AgentId != practitionerId || review.Status != ReviewStatus.Published) return ReplyOutcome.NotFound;
                 if (review.ReplyText is not null) return ReplyOutcome.AlreadyReplied;
                 review.ReplyText = text; review.RepliedAt = now;
                 db.ModerationEvents.Add(@event);
@@ -102,11 +102,11 @@ public sealed class ReplyReviewFeature : IServiceFeature
             await using var tx = await db.Database.BeginTransactionAsync(ct);
             // The WHERE clause is the decision: a concurrent reply (or rejection) that committed first makes this update match no row.
             var changed = await db.Reviews
-                .Where(x => x.Id == id && x.PractitionerId == practitionerId && x.Status == ReviewStatus.Published && x.ReplyText == null)
+                .Where(x => x.Id == id && x.AgentId == practitionerId && x.Status == ReviewStatus.Published && x.ReplyText == null)
                 .ExecuteUpdateAsync(s => s.SetProperty(x => x.ReplyText, text).SetProperty(x => x.RepliedAt, now), ct);
             if (changed == 0)
             {
-                var current = await db.Reviews.AsNoTracking().Where(x => x.Id == id && x.PractitionerId == practitionerId)
+                var current = await db.Reviews.AsNoTracking().Where(x => x.Id == id && x.AgentId == practitionerId)
                     .Select(x => new { x.ReplyText }).SingleOrDefaultAsync(ct);
                 outcome = current?.ReplyText is not null ? ReplyOutcome.AlreadyReplied : ReplyOutcome.NotFound;
                 return;

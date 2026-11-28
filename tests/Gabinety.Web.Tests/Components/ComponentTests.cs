@@ -18,7 +18,7 @@ public class PresentationalComponentTests : BunitContext
     [Fact]
     public void A_card_shows_the_practitioner_with_the_hooks_the_journey_uses()
     {
-        var cut = Render<PractitionerCard>(p => p.Add(c => c.Practitioner, Sample.Card(badges: ["email", "approved"], rating: new RatingDto(4.5, 12), isNew: false)));
+        var cut = Render<AgentCard>(p => p.Add(c => c.Agent, Sample.Card(badges: ["email", "approved"], rating: new RatingDto(4.5, 12), isNew: false)));
         Assert.Equal("practitioner-card", cut.Find("article").GetAttribute("data-testid"));
         var link = cut.Find("h2 a");
         Assert.Equal(("Anna Demowska", "/agent/demo-anna-demowska"), (link.TextContent, link.GetAttribute("href")));
@@ -35,14 +35,14 @@ public class PresentationalComponentTests : BunitContext
     [Fact]
     public void A_new_practitioner_is_marked_new_and_a_rating_below_the_threshold_is_not_shown()
     {
-        var cut = Render<PractitionerCard>(p => p.Add(c => c.Practitioner, Sample.Card(badges: [], rating: new RatingDto(5.0, 2), isNew: true)));
+        var cut = Render<AgentCard>(p => p.Add(c => c.Agent, Sample.Card(badges: [], rating: new RatingDto(5.0, 2), isNew: true)));
         Assert.Equal(["Agent AI", "Nowy"], cut.FindAll(".badge").Select(b => b.TextContent));
     }
 
     [Fact]
     public void Text_from_the_directory_is_text_not_markup()
     {
-        var cut = Render<PractitionerCard>(p => p.Add(c => c.Practitioner, Sample.Card(name: "<b>Pogrubiony</b>", headline: "<img src=x onerror=alert(1)>")));
+        var cut = Render<AgentCard>(p => p.Add(c => c.Agent, Sample.Card(name: "<b>Pogrubiony</b>", headline: "<img src=x onerror=alert(1)>")));
         Assert.Empty(cut.FindAll("b"));
         Assert.Empty(cut.FindAll("img"));
         Assert.Equal("<b>Pogrubiony</b>", cut.Find("h2 a").TextContent);
@@ -190,7 +190,7 @@ public class MyBookingsTests : BunitContext
         _me.Respond = _ => FakeBackend.Json(new MeDto("demo-client", Guid.NewGuid(), "Approved", false, false)); // a practitioner too: the role tabs show
         Services.AddSingleton(new MeClient(new HttpClient(_me) { BaseAddress = new Uri("http://directory.test") }, new VisitorAddressAccessor(new HttpContextAccessor()), new Token("tok")));
         Services.AddSingleton<TimeProvider>(_clock);
-        _booking.Respond = _ => FakeBackend.Json(new PageDto<BookingViewDto>([Sample.Booking("Pierwsza"), Sample.Booking("Druga", "PendingPayment")], null));
+        _booking.Respond = _ => FakeBackend.Json(new PageDto<BookingViewDto>([Sample.Access("Pierwsza"), Sample.Access("Druga", "PendingPayment")], null));
     }
 
     // A SupplyParameterFromQuery parameter takes its value from the URL, as in the browser: navigate, then render.
@@ -230,7 +230,7 @@ public class MyBookingsTests : BunitContext
     [Fact]
     public void A_row_names_the_agent_with_the_badge_for_a_client_and_the_client_for_a_provider_F03()
     {
-        _booking.Respond = _ => FakeBackend.Json(new PageDto<BookingViewDto>([Sample.Booking("Z imieniem"), Sample.Booking("Bez imienia", practitioner: "")], null));
+        _booking.Respond = _ => FakeBackend.Json(new PageDto<BookingViewDto>([Sample.Access("Z imieniem"), Sample.Access("Bez imienia", practitioner: "")], null));
         var cut = Open();
         var lines = cut.FindAll("[data-testid=booking-party]").Select(p => Page.Squash(p.TextContent)).ToList();
         Assert.Equal("Anna DemowskaAgent AI", lines[0]);
@@ -241,7 +241,7 @@ public class MyBookingsTests : BunitContext
     [Fact]
     public void A_row_shows_the_usage_and_the_validity_of_the_package_C03()
     {
-        _booking.Respond = _ => FakeBackend.Json(new PageDto<BookingViewDto>([Sample.Booking("Pakiet") with { UnitsTotal = 10, UnitsUsed = 3 }, Sample.Booking("Czat", "Confirmed") with { Kind = "Chat", UnitsTotal = 500000, UnitsUsed = 120000 }], null));
+        _booking.Respond = _ => FakeBackend.Json(new PageDto<BookingViewDto>([Sample.Access("Pakiet") with { UnitsTotal = 10, UnitsUsed = 3 }, Sample.Access("Czat", "Confirmed") with { Kind = "Chat", UnitsTotal = 500000, UnitsUsed = 120000 }], null));
         var rows = Open().FindAll("[data-testid=booking-row]");
         Assert.Equal("wykorzystano 3 z 10", rows[0].QuerySelector(".usage__text")!.TextContent);
         Assert.Equal("wykorzystano 120 z 500 tys. tokenów", rows[1].QuerySelector(".usage__text")!.TextContent);
@@ -318,8 +318,8 @@ public class MyBookingsTests : BunitContext
     public void More_is_a_link_with_the_cursor_that_keeps_the_view_and_the_last_page_has_none()
     {
         _booking.Respond = r => r.RequestUri!.Query.Contains("cursor=C2")
-            ? FakeBackend.Json(new PageDto<BookingViewDto>([Sample.Booking("Strona druga")], null))
-            : FakeBackend.Json(new PageDto<BookingViewDto>([Sample.Booking("Strona pierwsza")], "C 2"));
+            ? FakeBackend.Json(new PageDto<BookingViewDto>([Sample.Access("Strona druga")], null))
+            : FakeBackend.Json(new PageDto<BookingViewDto>([Sample.Access("Strona pierwsza")], "C 2"));
         var cut = Open("practitioner", "Confirmed");
         Assert.Equal("/moje/dostepy?role=practitioner&status=Confirmed&cursor=C%202", cut.Find("a[rel=next]").GetAttribute("href")); // the cursor is escaped
         var second = Open("practitioner", "Confirmed", "C2");
@@ -382,7 +382,7 @@ public class MyBookingsTests : BunitContext
     static DateTimeOffset Utc(int month, int day, int hour, int minute = 0) => new(2026, month, day, hour, minute, 0, TimeSpan.Zero);
 
     static BookingViewDto Dated(string title, string status, DateTimeOffset start) =>
-        Sample.Booking(title, status) with { StartUtc = start, EndUtc = start.AddHours(1) };
+        Sample.Access(title, status) with { StartUtc = start, EndUtc = start.AddHours(1) };
 
     [Fact]
     public void The_list_is_two_sections_split_by_the_end_of_validity_from_the_clock_active_soonest_to_expire_first_and_past_newest_first()

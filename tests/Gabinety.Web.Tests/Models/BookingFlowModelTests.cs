@@ -149,7 +149,7 @@ public class BookingFlowModelTests
     [Fact]
     public void Every_booking_status_the_contract_has_is_mapped_and_the_css_class_follows_the_kind()
     {
-        foreach (var s in BookingFormat.Statuses) Assert.NotEqual(Pl.Bookings.UnknownStatus, Badge.ForBooking(s).Label);
+        foreach (var s in BookingFormat.Statuses) Assert.NotEqual(Pl.Accesses.UnknownStatus, Badge.ForBooking(s).Label);
         Assert.Equal("badge badge--warning", Badge.ForBooking("Disputed").CssClass);
     }
 

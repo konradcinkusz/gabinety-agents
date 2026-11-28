@@ -45,7 +45,7 @@ public class PractitionerListTests : BunitContext
     [Fact]
     public void The_whole_card_is_the_link_and_its_only_link_is_named_by_the_display_name()
     {
-        var cut = Render<PractitionerCard>(p => p.Add(c => c.Practitioner, Card()));
+        var cut = Render<AgentCard>(p => p.Add(c => c.Agent, Card()));
         Assert.NotNull(cut.Find("article.card.card--link"));
         var links = cut.FindAll("a");
         Assert.Single(links); // one link: the stretched link of the card, with no second target inside it
@@ -59,7 +59,7 @@ public class PractitionerListTests : BunitContext
     public void A_practitioner_without_a_rating_is_marked_with_the_exact_Nowy_badge(bool isNew, double? average, int count)
     {
         var rating = average is { } a ? new RatingDto(a, count) : null;
-        var cut = Render<PractitionerCard>(p => p.Add(c => c.Practitioner, Card(rating: rating, isNew: isNew)));
+        var cut = Render<AgentCard>(p => p.Add(c => c.Agent, Card(rating: rating, isNew: isNew)));
         Assert.Equal(["Agent AI", "Nowy"], cut.FindAll(".badge").Select(b => b.TextContent));
         Assert.Empty(cut.FindAll(".practitioner-card__rating"));
     }
@@ -67,7 +67,7 @@ public class PractitionerListTests : BunitContext
     [Fact]
     public void A_verified_practitioner_has_one_success_badge_and_no_other_check()
     {
-        var cut = Render<PractitionerCard>(p => p.Add(c => c.Practitioner, Card(badges: ["email", "github", "nip", "approved"], rating: new RatingDto(4.8, 25))));
+        var cut = Render<AgentCard>(p => p.Add(c => c.Agent, Card(badges: ["email", "github", "nip", "approved"], rating: new RatingDto(4.8, 25))));
         var badges = cut.FindAll(".badge");
         Assert.Equal(["Agent AI", "Zweryfikowany"], badges.Select(b => b.TextContent));
         Assert.Contains("badge--success", badges[1].ClassName);
@@ -78,14 +78,14 @@ public class PractitionerListTests : BunitContext
     public void Categories_are_the_names_of_the_first_three_known_problems()
     {
         var card = Card(problems: ["migracja", "nieznany", "audyt-kodu", "ai", "testy"]);
-        var cut = Render<PractitionerCard>(p => p.Add(c => c.Practitioner, card).Add(c => c.CategoryNames, Names));
+        var cut = Render<AgentCard>(p => p.Add(c => c.Agent, card).Add(c => c.CategoryNames, Names));
         Assert.Equal(["Migracja", "Audyt kodu", "Integracja AI"], cut.FindAll(".practitioner-card__categories span").Select(s => s.TextContent));
     }
 
     [Fact]
     public void Without_category_names_no_category_is_shown()
     {
-        var cut = Render<PractitionerCard>(p => p.Add(c => c.Practitioner, Card(problems: ["migracja"])));
+        var cut = Render<AgentCard>(p => p.Add(c => c.Agent, Card(problems: ["migracja"])));
         Assert.Empty(cut.FindAll(".practitioner-card__categories"));
     }
 
@@ -95,7 +95,7 @@ public class PractitionerListTests : BunitContext
     [InlineData(120000, "od 1 200 zł")] // thousands are grouped
     public void The_price_is_the_compact_from_price_in_the_large_size(long price, string expected)
     {
-        var cut = Render<PractitionerCard>(p => p.Add(c => c.Practitioner, Card(price: price)));
+        var cut = Render<AgentCard>(p => p.Add(c => c.Agent, Card(price: price)));
         Assert.Equal(expected, cut.Find(".practitioner-card__from").TextContent);
         Assert.Equal("30 min, 60 min", cut.Find(".practitioner-card__durations").TextContent);
     }
@@ -104,7 +104,7 @@ public class PractitionerListTests : BunitContext
     [InlineData(0, "0 agentów")] [InlineData(1, "1 agent")] [InlineData(2, "2 agentów")] [InlineData(4, "4 agentów")]
     [InlineData(5, "5 agentów")] [InlineData(12, "12 agentów")] [InlineData(21, "21 agentów")] [InlineData(22, "22 agentów")]
     [InlineData(24, "24 agentów")] [InlineData(25, "25 agentów")] [InlineData(101, "101 agentów")]
-    public void The_count_is_singular_only_for_one(int count, string expected) => Assert.Equal(expected, ListFormat.PractitionerCount(count));
+    public void The_count_is_singular_only_for_one(int count, string expected) => Assert.Equal(expected, ListFormat.AgentCount(count));
 
     [Theory]
     [InlineData(12000, "120 zł")] [InlineData(12050, "120,50 zł")] [InlineData(0, "0 zł")] [InlineData(30000, "300 zł")]

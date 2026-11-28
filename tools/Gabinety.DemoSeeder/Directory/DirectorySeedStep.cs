@@ -24,7 +24,7 @@ public sealed class DirectorySeedStep : ISeedStep
         context.Log.Info($"directory: {context.Clients.Count} demo clients");
 
         var admin = await context.Identity.SignInAsync("demo-admin", ct);
-        foreach (var demo in DemoCatalog.Practitioners)
+        foreach (var demo in DemoCatalog.Agents)
             await SeedPractitionerAsync(context, api, admin, taxonomy, demo, ct);
     }
 
@@ -81,22 +81,22 @@ public sealed class DirectorySeedStep : ISeedStep
             await api.PushStatsAsync(mine.Id, s, BaselineVersion, ct);
         }
 
-        context.Practitioners[demo.UserName] = seeded;
-        context.Log.Info($"directory: {demo.UserName} {demo.Slug} {seeded.Status} offerings={seeded.Offerings.Count} {(changes == 0 ? "unchanged" : $"changes={changes}")}");
+        context.Agents[demo.UserName] = seeded;
+        context.Log.Info($"directory: {demo.UserName} {demo.Slug} {seeded.Status} offerings={seeded.Packages.Count} {(changes == 0 ? "unchanged" : $"changes={changes}")}");
     }
 
     static async Task<int> EnsureOfferingsAsync(DirectoryApi api, DemoUser user, TaxonomyView taxonomy, DemoPractitioner demo, SeededPractitioner seeded, CancellationToken ct)
     {
-        if (demo.Offerings.Length == 0) return 0;
+        if (demo.Packages.Length == 0) return 0;
         var existing = (await api.OfferingsAsync(user, ct)).ToDictionary(o => o.Title);
         var changes = 0;
-        foreach (var o in demo.Offerings)
+        foreach (var o in demo.Packages)
         {
             var problem = Pick(taxonomy.Problems, o.ProblemSlot);
             var techs = o.TechSlots.Select(t => Pick(taxonomy.Techs, t)).Distinct().ToArray();
             var body = new { title = o.Title, description = o.Description, durationMinutes = o.Minutes, priceMinor = o.PriceMinor, problemSlug = problem, techSlugs = techs, kind = o.Kind, units = o.Units };
-            if (!existing.TryGetValue(o.Title, out var have)) { seeded.Offerings[o.Title] = await api.CreateOfferingAsync(user, body, ct); changes++; continue; }
-            seeded.Offerings[o.Title] = have.Id;
+            if (!existing.TryGetValue(o.Title, out var have)) { seeded.Packages[o.Title] = await api.CreateOfferingAsync(user, body, ct); changes++; continue; }
+            seeded.Packages[o.Title] = have.Id;
             if (have.Description != o.Description || have.DurationMinutes != o.Minutes || have.PriceMinor != o.PriceMinor || have.ProblemSlug != problem || !have.TechSlugs.SequenceEqual(techs) || have.Kind != o.Kind || have.Units != o.Units)
             {
                 await api.UpdateOfferingAsync(user, have.Id, body, ct); changes++;

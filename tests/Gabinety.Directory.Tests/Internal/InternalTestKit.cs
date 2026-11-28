@@ -29,19 +29,19 @@ public class InternalFactory : VerificationFactory
         return c;
     }
 
-    public Task<Offering> SeedOffering(Practitioner p, string? meetingUrl = null, bool active = true, long price = 15000, short minutes = 60) => Db(async db =>
+    public Task<Package> SeedOffering(Agent p, string? meetingUrl = null, bool active = true, long price = 15000, short minutes = 60) => Db(async db =>
     {
-        var o = new Offering
+        var o = new Package
         {
-            Id = Guid.NewGuid(), PractitionerId = p.Id, Title = "Demo review", Description = "demo description", DurationMinutes = minutes, PriceMinor = price,
+            Id = Guid.NewGuid(), AgentId = p.Id, Title = "Demo review", Description = "demo description", DurationMinutes = minutes, PriceMinor = price,
             Currency = "PLN", ProblemSlug = "code-review", TechSlugs = ["dotnet"], MeetingUrl = meetingUrl, IsActive = active, CreatedAt = Clock.GetUtcNow(),
         };
-        db.Offerings.Add(o);
+        db.Packages.Add(o);
         await db.SaveChangesAsync();
         return o;
     });
 
-    public Task<List<Offering>> OfferingsOf(Guid practitionerId) => Db(db => db.Offerings.AsNoTracking().Where(o => o.PractitionerId == practitionerId).ToListAsync());
+    public Task<List<Package>> OfferingsOf(Guid practitionerId) => Db(db => db.Packages.AsNoTracking().Where(o => o.AgentId == practitionerId).ToListAsync());
 }
 
 public static class Ik

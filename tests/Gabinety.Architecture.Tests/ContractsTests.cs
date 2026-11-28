@@ -19,7 +19,7 @@ public class ContractsTests
     [Fact]
     public void Enums_are_strings_and_names_are_camelCase()
     {
-        var json = JsonSerializer.Serialize(new MeDto("u1", null, PractitionerStatus.Approved, false, false), Web);
+        var json = JsonSerializer.Serialize(new MeDto("u1", null, AgentStatus.Approved, false, false), Web);
         Assert.Contains("\"practitionerStatus\":\"Approved\"", json);
         Assert.Contains("\"userId\":\"u1\"", json);
     }
@@ -29,7 +29,7 @@ public class ContractsTests
     {
         var expected = new[] { "PendingPayment", "Confirmed", "CancelledByClient", "LateCancelledByClient", "CancelledByPractitioner",
             "Expired", "Completed", "ClientNoShow", "Disputed", "Resolved" };
-        Assert.Equal(expected.Order(), Enum.GetNames<BookingStatus>().Order());
+        Assert.Equal(expected.Order(), Enum.GetNames<AccessStatus>().Order());
     }
 
     [Fact]
@@ -55,11 +55,11 @@ public class ContractsTests
     [Fact]
     public void A_booking_request_round_trips()
     {
-        var req = new CreateBookingRequest(Guid.NewGuid(), new BriefDto("Opis problemu dłuższy niż dwadzieścia znaków", "audyt-kodu", true),
+        var req = new CreateAccessRequest(Guid.NewGuid(), new BriefDto("Opis problemu dłuższy niż dwadzieścia znaków", "audyt-kodu", true),
             new DateTimeOffset(2026, 12, 1, 9, 30, 0, TimeSpan.Zero));
         var json = JsonSerializer.Serialize(req, Web);
         Assert.Contains("\"startUtc\":\"2026-12-01T09:30:00Z\"", json); // CONTRACTS 0: UTC with Z, not +00:00
-        var back = JsonSerializer.Deserialize<CreateBookingRequest>(json, Web)!;
+        var back = JsonSerializer.Deserialize<CreateAccessRequest>(json, Web)!;
         Assert.Equal(req.Brief, back.Brief);
         Assert.Equal(req.StartUtc, back.StartUtc);
     }
@@ -67,7 +67,7 @@ public class ContractsTests
     [Fact]
     public void A_booking_request_does_not_need_startUtc()
     {
-        var back = JsonSerializer.Deserialize<CreateBookingRequest>(
+        var back = JsonSerializer.Deserialize<CreateAccessRequest>(
             """{"offeringId":"5b0f4f0e-3a56-4c2b-9d5e-0a1b2c3d4e5f","brief":{"text":"Opis problemu dłuższy niż dwadzieścia znaków","aiAssisted":false}}""", Web)!;
         Assert.Null(back.StartUtc);
         Assert.False(JsonSerializer.Serialize(back, Web).Contains("\"startUtc\":\"", StringComparison.Ordinal));
@@ -81,8 +81,8 @@ public class InstantTests
     [Fact]
     public void Nullable_and_non_zero_offset_instants_are_written_in_UTC_with_Z()
     {
-        var v = new BookingView(Guid.Empty, BookingStatus.PendingPayment, null, new DateTimeOffset(2026, 12, 1, 10, 30, 0, TimeSpan.FromHours(1)),
-            new DateTimeOffset(2026, 12, 1, 11, 0, 0, TimeSpan.FromHours(1)), 30, "t", new MoneyDto(1), new PractitionerRef(Guid.Empty, "d", "s"),
+        var v = new AccessView(Guid.Empty, AccessStatus.PendingPayment, null, new DateTimeOffset(2026, 12, 1, 10, 30, 0, TimeSpan.FromHours(1)),
+            new DateTimeOffset(2026, 12, 1, 11, 0, 0, TimeSpan.FromHours(1)), 30, "t", new MoneyDto(1), new AgentRef(Guid.Empty, "d", "s"),
             null, null, null, null, new PaymentView(PaymentStatus.Created, new MoneyDto(0)), null, null, false, false, false, false);
         var json = JsonSerializer.Serialize(v, Web);
         Assert.Contains("\"startUtc\":\"2026-12-01T09:30:00Z\"", json);

@@ -97,7 +97,7 @@ public class AgentTaskJob(IServiceScopeFactory scopes, TimeProvider time, IConfi
             {
                 ["model"] = task.PractitionerSlug, ["stream"] = false,
                 ["messages"] = new JsonArray(new JsonObject { ["role"] = "user", ["content"] = task.InputText }),
-                ["metadata"] = new JsonObject { ["gabinety_offering_id"] = task.OfferingId.ToString(), ["gabinety_task_id"] = task.Id.ToString() },
+                ["metadata"] = new JsonObject { ["gabinety_offering_id"] = task.PackageId.ToString(), ["gabinety_task_id"] = task.Id.ToString() },
             };
             var result = await scope.ServiceProvider.GetRequiredService<IAgentUpstream>().CompleteAsync(task.PractitionerSlug, body, ct);
             if (result.StatusCode is >= 200 and < 300) output = AnswerOf(result.Json);
@@ -137,13 +137,13 @@ public class AgentTaskJob(IServiceScopeFactory scopes, TimeProvider time, IConfi
         }
         t.Status = AgentTaskStatus.Failed;
         t.CompletedAt = now;
-        db.UsageRecords.Add(new UsageRecord { Id = Guid.NewGuid(), BookingId = t.BookingId, ApiKeyId = null, Kind = OfferingKind.Tasks, Units = -1, CreatedAt = now });
+        db.UsageRecords.Add(new UsageRecord { Id = Guid.NewGuid(), AccessId = t.AccessId, ApiKeyId = null, Kind = PackageKind.Tasks, Units = -1, CreatedAt = now });
         await db.SaveChangesAsync(ct);
-        await sp.GetRequiredService<EntitlementStore>().RefundUnitsAsync(t.BookingId, 1, ct);
+        await sp.GetRequiredService<EntitlementStore>().RefundUnitsAsync(t.AccessId, 1, ct);
         // The refunded unit may belong to a package AutoCompleteJob completed because its units ran out: bring it back so the client can use the unit (ADR-0013). A no-op in every other case.
-        if (await PackageReopening.TryAsync(sp.GetRequiredService<BookingTransitions>(), t.BookingId, now, ct))
-            log.LogInformation("AgentTasks: package {BookingId} is open again after the refund of a failed task", t.BookingId);
-        log.LogWarning("AgentTasks: task {TaskId} failed after {Attempts} attempts, its unit went back to package {BookingId}", t.Id, t.Attempts, t.BookingId);
+        if (await PackageReopening.TryAsync(sp.GetRequiredService<BookingTransitions>(), t.AccessId, now, ct))
+            log.LogInformation("AgentTasks: package {BookingId} is open again after the refund of a failed task", t.AccessId);
+        log.LogWarning("AgentTasks: task {TaskId} failed after {Attempts} attempts, its unit went back to package {BookingId}", t.Id, t.Attempts, t.AccessId);
     }
 
     /// <summary><c>choices[0].message.content</c> when it is text, else null (also for a body that is not JSON). Nothing of the body is put in an exception or a log.</summary>

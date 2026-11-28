@@ -31,7 +31,7 @@ public sealed record HeaderModel(IReadOnlyList<NavItem> Links, NavItem? SignIn, 
 }
 
 /// <summary>What the footer shows: the product links, one call to action for programmers (the practitioner panel or the way to become one) and the legal links.</summary>
-public sealed record FooterModel(IReadOnlyList<NavItem> Product, NavItem Practitioner, IReadOnlyList<NavItem> Legal);
+public sealed record FooterModel(IReadOnlyList<NavItem> Product, NavItem Agent, IReadOnlyList<NavItem> Legal);
 
 /// <summary>
 /// The navigation of the header and the footer (DESIGN-CONTRACT 5.1). The ORDER of the primary links is a product decision pinned by a test: <c>Programiści</c>, <c>Jak to działa</c>,
@@ -41,16 +41,16 @@ public sealed record FooterModel(IReadOnlyList<NavItem> Product, NavItem Practit
 /// </summary>
 public static class SiteNavigation
 {
-    public static readonly NavItem Practitioners = new("/agenci", Pl.Nav.Search);
+    public static readonly NavItem Agents = new("/agenci", Pl.Nav.Search);
     public static readonly NavItem HowItWorks = new("/jak-to-dziala", Pl.Nav.HowItWorks);
     public static readonly NavItem Pricing = new("/cennik", Pl.Nav.Pricing);
     public static readonly NavItem RankingRules = new("/zasady-rankingu", Pl.Nav.RankingRules);
 
     /// <summary>The primary navigation of everybody, in order.</summary>
-    public static IReadOnlyList<NavItem> Primary { get; } = [Practitioners, HowItWorks, Pricing];
+    public static IReadOnlyList<NavItem> Primary { get; } = [Agents, HowItWorks, Pricing];
 
     /// <summary>The footer's product column: the primary links and the ranking rules.</summary>
-    public static IReadOnlyList<NavItem> Product { get; } = [Practitioners, HowItWorks, Pricing, RankingRules];
+    public static IReadOnlyList<NavItem> Product { get; } = [Agents, HowItWorks, Pricing, RankingRules];
 
     public static readonly NavItem SignIn = new(ReturnTarget.LoginPath, Pl.Nav.SignIn), Register = new(ReturnTarget.RegisterPath, Pl.Nav.Register);
     public static readonly NavItem MyBookings = new("/moje/dostepy", Pl.Nav.MyBookings), ApiKeys = new("/moje/klucze", Pl.Nav.ApiKeys), Account = new("/konto", Pl.Nav.Account), SignOut = new(ReturnTarget.LogoutPath, Pl.Nav.SignOut);

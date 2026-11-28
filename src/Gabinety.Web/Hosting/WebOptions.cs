@@ -9,7 +9,7 @@ namespace Gabinety.Web.Hosting;
 /// </summary>
 public sealed class WebOptions
 {
-    public static readonly string[] BackendNames = [Backend.Directory, Backend.Booking, Backend.Reputation, Backend.Assistant, Backend.Auth];
+    public static readonly string[] BackendNames = [Backend.Directory, Backend.Access, Backend.Reputation, Backend.Assistant, Backend.Auth];
 
     /// <summary><c>Site:BaseUrl</c>: the public address. Decides the Secure flag of the cookies and is an allowed origin of the guard (a TLS-terminating proxy hides it from the request).</summary>
     public string SiteBaseUrl { get; init; } = "http://localhost:3000";

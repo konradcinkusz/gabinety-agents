@@ -111,7 +111,7 @@ else if (_page is not null)
             Fail(me.Failure);
             return;
         }
-        if (me.Value!.PractitionerId is not { } id) { _noProfile = true; return; }
+        if (me.Value!.AgentId is not { } id) { _noProfile = true; return; }
         _practitionerId = id;
         await LoadAsync();
     }

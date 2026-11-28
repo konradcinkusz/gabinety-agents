@@ -42,7 +42,7 @@ sealed class TriageHost : WebApplicationFactory<Program>
     public const string GoodText = "Synthetyczna opinia TRIAGE-TEKST-NIE-DO-LOGU: spotkanie było rzeczowe i pomocne.";
     readonly RSA _rsa = RSA.Create(2048);
     readonly string _db = "triage-" + Guid.NewGuid();
-    public FakeBooking Booking { get; } = new();
+    public FakeBooking Access { get; } = new();
     public ReviewsClock Clock { get; } = new();
     public ReviewsLogSink Logs { get; } = new();
     public FakeAssistant Assistant { get; } = new();
@@ -64,7 +64,7 @@ sealed class TriageHost : WebApplicationFactory<Program>
         builder.ConfigureServices(s =>
         {
             s.RemoveAll<IBookingClient>();
-            s.AddSingleton<IBookingClient>(new BookingClient(new HttpClient(Booking) { BaseAddress = new Uri(FakeBooking.BaseUrl) }, FakeBooking.Key, retryDelay: TimeSpan.Zero));
+            s.AddSingleton<IBookingClient>(new BookingClient(new HttpClient(Access) { BaseAddress = new Uri(FakeBooking.BaseUrl) }, FakeBooking.Key, retryDelay: TimeSpan.Zero));
             s.RemoveAll<IAssistantClient>();
             s.AddSingleton<IAssistantClient>(Assistant);
             s.RemoveAll<TimeProvider>();
@@ -90,16 +90,16 @@ sealed class TriageHost : WebApplicationFactory<Program>
         return await q(scope.ServiceProvider.GetRequiredService<ReputationDbContext>());
     }
 
-    public Task<List<Review>> ReviewsOf(Guid p) => Query(db => db.Reviews.AsNoTracking().Where(r => r.PractitionerId == p).ToListAsync());
-    public Task<RatingSummary?> SummaryOf(Guid p) => Query(db => db.RatingSummaries.AsNoTracking().SingleOrDefaultAsync(s => s.PractitionerId == p));
+    public Task<List<Review>> ReviewsOf(Guid p) => Query(db => db.Reviews.AsNoTracking().Where(r => r.AgentId == p).ToListAsync());
+    public Task<RatingSummary?> SummaryOf(Guid p) => Query(db => db.RatingSummaries.AsNoTracking().SingleOrDefaultAsync(s => s.AgentId == p));
     public Task<List<ModerationEvent>> EventsOf(Guid reviewId) => Query(db => db.ModerationEvents.AsNoTracking().Where(e => e.ReviewId == reviewId).OrderBy(e => e.At).ThenBy(e => e.Kind).ToListAsync());
 
     /// <summary>A reviewable booking for a new user; returns (user, practitioner, booking).</summary>
-    public (string User, Guid Practitioner, Guid Booking) NewBooking()
+    public (string User, Guid Agent, Guid Access) NewBooking()
     {
         var user = "demo-" + Guid.NewGuid().ToString("N")[..8];
         var pract = Guid.NewGuid();
-        return (user, pract, Booking.Add(user, pract));
+        return (user, pract, Access.Add(user, pract));
     }
 
     public Task<HttpResponseMessage> Post(string user, Guid booking, int rating = 5, string? text = null) =>

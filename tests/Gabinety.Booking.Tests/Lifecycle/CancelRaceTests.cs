@@ -2,7 +2,7 @@ using System.Net;
 using Gabinety.Booking.Features.Bookings.Create;
 using Gabinety.Contracts.Booking;
 using Microsoft.EntityFrameworkCore;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -19,16 +19,16 @@ public class CancelRaceTests
     {
         var provider = new RecordingProvider();
         await using var h = Life.Host(provider);
-        var id = await Life.Seed(h, BookingStatus.Confirmed, TimeSpan.FromDays(3));
+        var id = await Life.Seed(h, AccessStatus.Confirmed, TimeSpan.FromDays(3));
         // What the loser sees: the booking row it already read says Confirmed, but the winner has committed the refund by the time it reads the payment.
         await h.Seed(db =>
         {
-            var p = db.Payments.Single(x => x.BookingId == id);
+            var p = db.Payments.Single(x => x.AccessId == id);
             p.Status = PaymentStatus.Refunded;
             p.RefundedMinor = p.AmountMinor;
         });
 
-        var r = await Life.Cancel(h, id, byClient ? Life.Client : Life.Practitioner);
+        var r = await Life.Cancel(h, id, byClient ? Life.Client : Life.Agent);
 
         Assert.Equal(HttpStatusCode.Conflict, r.StatusCode);
         Assert.Equal("invalid_transition", (await r.Body()).GetProperty("code").GetString());

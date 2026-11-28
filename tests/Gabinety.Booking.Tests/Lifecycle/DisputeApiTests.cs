@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Gabinety.Billing;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -41,19 +41,19 @@ public class DisputeApiTests
     public async Task The_window_edges_are_exact(string kind, int startInSeconds, bool allowed)
     {
         await using var h = Life.Host(new RecordingProvider());
-        var id = await Life.Seed(h, BookingStatus.Confirmed, TimeSpan.FromSeconds(startInSeconds));
+        var id = await Life.Seed(h, AccessStatus.Confirmed, TimeSpan.FromSeconds(startInSeconds));
         var r = await Dispute(h, id, Life.Client, Body(kind));
         var row = await Life.Row(h, id);
         if (allowed)
         {
             Assert.Equal(HttpStatusCode.OK, r.StatusCode);
-            Assert.Equal(BookingStatus.Disputed, row.Status);
+            Assert.Equal(AccessStatus.Disputed, row.Status);
         }
         else
         {
             Assert.Equal(HttpStatusCode.Conflict, r.StatusCode);
             Assert.Equal("invalid_transition", await Code(r));
-            Assert.Equal(BookingStatus.Confirmed, row.Status);
+            Assert.Equal(AccessStatus.Confirmed, row.Status);
             Assert.Null(row.DisputeOpenedAt);
             Assert.Null(row.DisputeKind);
             Assert.Null(row.DisputeText);
@@ -64,7 +64,7 @@ public class DisputeApiTests
     public async Task It_stores_kind_and_text_freezes_the_payout_and_returns_the_view_without_the_text()
     {
         await using var h = Life.Host(new RecordingProvider());
-        var id = await Life.Seed(h, BookingStatus.Confirmed, -2 * H);
+        var id = await Life.Seed(h, AccessStatus.Confirmed, -2 * H);
         var r = await Dispute(h, id, Life.Client, Body("practitioner_no_show", "  " + Text + "  "));
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
         var raw = await r.Content.ReadAsStringAsync();
@@ -75,7 +75,7 @@ public class DisputeApiTests
         Assert.Equal("Disputed", view.GetProperty("status").GetString());
 
         var row = await Life.Row(h, id);
-        Assert.Equal(BookingStatus.Disputed, row.Status);
+        Assert.Equal(AccessStatus.Disputed, row.Status);
         Assert.Equal(h.Clock.GetUtcNow(), row.DisputeOpenedAt);
         Assert.Equal("practitioner_no_show", row.DisputeKind);
         Assert.Equal(Text, row.DisputeText); // trimmed
@@ -88,7 +88,7 @@ public class DisputeApiTests
     public async Task A_second_dispute_of_the_same_booking_is_409()
     {
         await using var h = Life.Host(new RecordingProvider());
-        var id = await Life.Seed(h, BookingStatus.Confirmed, -2 * H);
+        var id = await Life.Seed(h, AccessStatus.Confirmed, -2 * H);
         Assert.Equal(HttpStatusCode.OK, (await Dispute(h, id, Life.Client, Body())).StatusCode);
         var again = await Dispute(h, id, Life.Client, Body("other", "demo-second-text-attempt"));
         Assert.Equal(HttpStatusCode.Conflict, again.StatusCode);
@@ -97,11 +97,11 @@ public class DisputeApiTests
         Assert.Equal(Text, row.DisputeText);
     }
 
-    public static TheoryData<BookingStatus> Illegal => new(Enum.GetValues<BookingStatus>().Where(s => s is not (BookingStatus.Confirmed or BookingStatus.Completed))); // Completed: DisputeFromCompletedTests
+    public static TheoryData<AccessStatus> Illegal => new(Enum.GetValues<AccessStatus>().Where(s => s is not (AccessStatus.Confirmed or AccessStatus.Completed))); // Completed: DisputeFromCompletedTests
 
     [Theory]
     [MemberData(nameof(Illegal))]
-    public async Task From_any_status_but_Confirmed_and_Completed_it_is_409_invalid_transition(BookingStatus status)
+    public async Task From_any_status_but_Confirmed_and_Completed_it_is_409_invalid_transition(AccessStatus status)
     {
         await using var h = Life.Host(new RecordingProvider());
         var id = await Life.Seed(h, status, -2 * H);
@@ -115,25 +115,25 @@ public class DisputeApiTests
     }
 
     [Theory]
-    [InlineData(Life.Practitioner)]
+    [InlineData(Life.Agent)]
     [InlineData("demo-stranger")]
     public async Task Only_the_client_may_dispute_anyone_else_gets_404(string caller)
     {
         await using var h = Life.Host(new RecordingProvider());
-        var id = await Life.Seed(h, BookingStatus.Confirmed, -2 * H);
+        var id = await Life.Seed(h, AccessStatus.Confirmed, -2 * H);
         var r = await Dispute(h, id, caller, Body());
         Assert.Equal(HttpStatusCode.NotFound, r.StatusCode);
         Assert.Equal("not_found", await Code(r));
         // the party check comes before body validation: a stranger with a bad body still learns nothing
         Assert.Equal(HttpStatusCode.NotFound, (await Dispute(h, id, caller, Body("nope", "x"))).StatusCode);
-        Assert.Equal(BookingStatus.Confirmed, (await Life.Row(h, id)).Status);
+        Assert.Equal(AccessStatus.Confirmed, (await Life.Row(h, id)).Status);
     }
 
     [Fact]
     public async Task An_unknown_booking_is_404_and_no_token_is_401()
     {
         await using var h = Life.Host(new RecordingProvider());
-        var id = await Life.Seed(h, BookingStatus.Confirmed, -2 * H);
+        var id = await Life.Seed(h, AccessStatus.Confirmed, -2 * H);
         Assert.Equal(HttpStatusCode.NotFound, (await Dispute(h, Guid.NewGuid(), Life.Client, Body())).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await Dispute(h, id, null, Body())).StatusCode);
     }
@@ -157,22 +157,22 @@ public class DisputeApiTests
     public async Task An_invalid_kind_or_text_is_422_validation_failed(string? kind, string? text)
     {
         await using var h = Life.Host(new RecordingProvider());
-        var id = await Life.Seed(h, BookingStatus.Confirmed, -2 * H);
+        var id = await Life.Seed(h, AccessStatus.Confirmed, -2 * H);
         var r = await Dispute(h, id, Life.Client, new { kind, text });
         Assert.Equal(HttpStatusCode.UnprocessableEntity, r.StatusCode);
         Assert.Equal("validation_failed", await Code(r));
-        Assert.Equal(BookingStatus.Confirmed, (await Life.Row(h, id)).Status);
+        Assert.Equal(AccessStatus.Confirmed, (await Life.Row(h, id)).Status);
     }
 
     [Fact]
     public async Task A_missing_body_is_422_and_the_boundary_lengths_pass()
     {
         await using var h = Life.Host(new RecordingProvider());
-        var id = await Life.Seed(h, BookingStatus.Confirmed, -2 * H);
+        var id = await Life.Seed(h, AccessStatus.Confirmed, -2 * H);
         var r = await Dispute(h, id, Life.Client, null);
         Assert.Equal(HttpStatusCode.UnprocessableEntity, r.StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await Dispute(h, id, Life.Client, Body("other", " " + new string('b', 10) + " "))).StatusCode);
-        var id2 = await Life.Seed(h, BookingStatus.Confirmed, -2 * H);
+        var id2 = await Life.Seed(h, AccessStatus.Confirmed, -2 * H);
         Assert.Equal(HttpStatusCode.OK, (await Dispute(h, id2, Life.Client, Body("other", new string('c', 1000)))).StatusCode);
         Assert.Equal(1000, (await Life.Row(h, id2)).DisputeText!.Length);
     }
@@ -182,9 +182,9 @@ public class DisputeApiTests
     {
         await using var h = Life.Host(new RecordingProvider());
         const string marker = "demo-secret-marker-7f3a";
-        var ok = await Life.Seed(h, BookingStatus.Confirmed, -2 * H);
-        var late = await Life.Seed(h, BookingStatus.Confirmed, -100 * H);
-        var other = await Life.Seed(h, BookingStatus.Completed, -2 * H);
+        var ok = await Life.Seed(h, AccessStatus.Confirmed, -2 * H);
+        var late = await Life.Seed(h, AccessStatus.Confirmed, -100 * H);
+        var other = await Life.Seed(h, AccessStatus.Completed, -2 * H);
         await Dispute(h, ok, Life.Client, Body("other", marker + " ok"));
         await Dispute(h, ok, Life.Client, Body("other", marker + " again"));       // 409
         await Dispute(h, late, Life.Client, Body("other", marker + " late"));       // 409

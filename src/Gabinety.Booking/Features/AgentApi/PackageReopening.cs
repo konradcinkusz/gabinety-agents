@@ -4,15 +4,15 @@ using Gabinety.Booking.Features.Payouts;
 using Gabinety.Contracts.Booking;
 using Gabinety.Contracts.Directory;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Features.AgentApi;
 
 /// <summary>
 /// ADR-0013, owner decision 2. <c>AutoCompleteJob</c> completes a <c>Tasks</c> package when its units run out. If the last task then ends <c>Failed</c>, its unit goes back (<c>EntitlementStore.RefundUnitsAsync</c>)
 /// to a package that is <c>Completed</c> and so cannot be used (<c>POST /v1/tasks</c> looks for <c>Confirmed</c>). This puts such a package back to <c>Confirmed</c>, in ONE transaction under the booking's row lock
-/// (<see cref="BookingTransitions"/>, trigger <see cref="BookingTrigger.UnitRefunded"/>, the lock <c>AutoCompleteJob</c> and the payout job also take), and takes the money decision back
+/// (<see cref="BookingTransitions"/>, trigger <see cref="AccessTrigger.UnitRefunded"/>, the lock <c>AutoCompleteJob</c> and the payout job also take), and takes the money decision back
 /// (<see cref="MoneyReopening"/>: the fee, the payout amount and date are cleared and the unpaid <c>PlatformFee</c> row is removed, exactly as a dispute does).
 /// It touches the package ONLY when everything holds, all re-read under the lock:
 /// <list type="bullet">
@@ -28,23 +28,23 @@ public static class PackageReopening
 {
     /// <summary>The rules that need only the row.</summary>
     public static bool CanReopen(BookingEntity b, DateTimeOffset now) =>
-        b.Status == BookingStatus.Completed && b.Kind == OfferingKind.Tasks && b.UnitsTotal > 0 && b.UnitsUsed < b.UnitsTotal && b.EndUtc > now
+        b.Status == AccessStatus.Completed && b.Kind == PackageKind.Tasks && b.UnitsTotal > 0 && b.UnitsUsed < b.UnitsTotal && b.EndUtc > now
         && b.DisputeOpenedAt is null && b.ResolvedAt is null;
 
     /// <summary>True when nothing was paid out for the booking: no payout row and no payout ledger entry.</summary>
     public static async Task<bool> NothingPaidAsync(Persistence.BookingDbContext db, Guid bookingId, CancellationToken ct) =>
-        !await db.Payouts.AnyAsync(p => p.BookingId == bookingId, ct)
-        && !await db.LedgerEntries.AnyAsync(l => l.BookingId == bookingId && l.Kind == LedgerKind.PractitionerPayout, ct);
+        !await db.Payouts.AnyAsync(p => p.AccessId == bookingId, ct)
+        && !await db.LedgerEntries.AnyAsync(l => l.AccessId == bookingId && l.Kind == LedgerKind.PractitionerPayout, ct);
 
     public static async Task<bool> TryAsync(BookingTransitions transitions, Guid bookingId, DateTimeOffset now, CancellationToken ct)
     {
-        var result = await transitions.ApplyAsync(new TransitionRequest(bookingId, BookingTrigger.UnitRefunded, now)
+        var result = await transitions.ApplyAsync(new TransitionRequest(bookingId, AccessTrigger.UnitRefunded, now)
         {
             Precondition = b => CanReopen(b, now),
             DbPrecondition = (db, b, token) => NothingPaidAsync(db, b.Id, token),
             Effects = c =>
             {
-                c.Booking.EndedAt = null; // it did not end
+                c.Access.EndedAt = null; // it did not end
                 MoneyReopening.Reopen(c);
             },
         }, ct);

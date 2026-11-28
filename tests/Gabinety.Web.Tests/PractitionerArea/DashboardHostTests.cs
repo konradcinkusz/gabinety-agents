@@ -175,7 +175,7 @@ public class DashboardHostTests
         Assert.True(page.One("[data-testid=github-code]")!.HasAttribute("hidden")); // the form exists (Blazor dispatches by name) but shows no code
     }
 
-    static BookingViewDto Booking(string title, int days, string? client = "Demo Klient", string status = "Confirmed") =>
+    static BookingViewDto Access(string title, int days, string? client = "Demo Klient", string status = "Confirmed") =>
         new(Guid.NewGuid(), status, DateTimeOffset.UtcNow.AddDays(days), DateTimeOffset.UtcNow.AddDays(days).AddHours(1), 60, title, new MoneyDto(18000, "PLN"), new PractitionerRefDto(Guid.NewGuid(), "Demo Programista", "demo-programista"),
             client is null ? null : new ClientRefDto(client));
 
@@ -206,9 +206,9 @@ public class DashboardHostTests
     {
         var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.CompleteProfile(); });
         await using var _ = web;
-        for (var i = 7; i >= 1; i--) world.Bookings.Add(Booking($"Pakiet {i}", -i, i == 1 ? null : $"Demo Klient {i}") with { UnitsTotal = 10, UnitsUsed = i, EndUtc = DateTimeOffset.UtcNow.AddDays(20) });
-        world.Bookings.Add(Booking("Minione", -3, status: "Completed") with { EndUtc = DateTimeOffset.UtcNow.AddDays(-1) });
-        world.Bookings.Add(Booking("Zrezygnowane", -2, status: "CancelledByClient"));
+        for (var i = 7; i >= 1; i--) world.Accesses.Add(Access($"Pakiet {i}", -i, i == 1 ? null : $"Demo Klient {i}") with { UnitsTotal = 10, UnitsUsed = i, EndUtc = DateTimeOffset.UtcNow.AddDays(20) });
+        world.Accesses.Add(Access("Minione", -3, status: "Completed") with { EndUtc = DateTimeOffset.UtcNow.AddDays(-1) });
+        world.Accesses.Add(Access("Zrezygnowane", -2, status: "CancelledByClient"));
         var page = await browser.GetAsync("/panel-agenta");
         var rows = page.All("[data-testid=recent] [data-booking]");
         Assert.Equal(5, rows.Count);
@@ -221,7 +221,7 @@ public class DashboardHostTests
         var id = second.GetAttribute("data-booking");
         Assert.Equal($"/moje/dostepy/{id}?role=practitioner", second.QuerySelector("a")!.GetAttribute("href"));
         Assert.Equal("Szczegóły", second.QuerySelector("a")!.TextContent);
-        Assert.Contains(web.Booking.Requests, r => r.PathAndQuery == "/api/v1/me/bookings?role=practitioner");
+        Assert.Contains(web.Access.Requests, r => r.PathAndQuery == "/api/v1/me/bookings?role=practitioner");
         Assert.Null(page.One("[data-testid=upcoming]")); // the next appointments are gone
     }
 

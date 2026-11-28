@@ -4,7 +4,7 @@ using Gabinety.Contracts.Booking;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -42,17 +42,17 @@ public class CancelIntegrationTests : IAsyncLifetime
         {
             var before = provider.Refunds.Count;
             // Starts inside the 60-day horizon of the test clock; 2 days ahead is an early cancel, so a refund is due.
-            var id = await Life.Seed(host, BookingStatus.Confirmed, TimeSpan.FromDays(2));
-            var who = round % 2 == 0 ? new[] { Life.Client, Life.Client } : new[] { Life.Client, Life.Practitioner };
+            var id = await Life.Seed(host, AccessStatus.Confirmed, TimeSpan.FromDays(2));
+            var who = round % 2 == 0 ? new[] { Life.Client, Life.Client } : new[] { Life.Client, Life.Agent };
             var rs = await Task.WhenAll(who.Select(u => Task.Run(() => Life.Cancel(host, id, u))));
             var codes = rs.Select(r => (int)r.StatusCode).Order().ToArray();
             Assert.True(codes.SequenceEqual([200, 409]), $"round {round}: {string.Join(",", codes)}");
             await using var db = Db();
-            Assert.Equal(1, await db.LedgerEntries.CountAsync(l => l.BookingId == id && l.Kind == LedgerKind.Refund));
-            var pay = await db.Payments.SingleAsync(p => p.BookingId == id);
+            Assert.Equal(1, await db.LedgerEntries.CountAsync(l => l.AccessId == id && l.Kind == LedgerKind.Refund));
+            var pay = await db.Payments.SingleAsync(p => p.AccessId == id);
             Assert.Equal((PaymentStatus.Refunded, 10000L), (pay.Status, pay.RefundedMinor));
             Assert.True(provider.Refunds.Count - before >= 1);
-            Assert.True((await db.Bookings.SingleAsync(b => b.Id == id)).Status is BookingStatus.CancelledByClient or BookingStatus.CancelledByPractitioner);
+            Assert.True((await db.Accesses.SingleAsync(b => b.Id == id)).Status is AccessStatus.CancelledByClient or AccessStatus.CancelledByPractitioner);
         }
     }
 }

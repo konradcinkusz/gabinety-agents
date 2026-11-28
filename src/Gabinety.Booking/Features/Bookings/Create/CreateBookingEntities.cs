@@ -8,7 +8,7 @@ namespace Gabinety.Booking.Features.Bookings.Create;
 public sealed class Payment
 {
     public Guid Id { get; set; }
-    public Guid BookingId { get; set; }
+    public Guid AccessId { get; set; }
     public string Provider { get; set; } = "";
     public string? ProviderPaymentId { get; set; }
     public long AmountMinor { get; set; }
@@ -36,7 +36,7 @@ sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         b.ToTable("payments");
         b.HasKey(x => x.Id);
         b.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
-        b.Property(x => x.BookingId).HasColumnName("booking_id");
+        b.Property(x => x.AccessId).HasColumnName("booking_id");
         b.Property(x => x.Provider).HasColumnName("provider").HasMaxLength(20);
         b.Property(x => x.ProviderPaymentId).HasColumnName("provider_payment_id").HasMaxLength(100);
         b.Property(x => x.AmountMinor).HasColumnName("amount_minor");
@@ -44,7 +44,7 @@ sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         b.Property(x => x.RefundedMinor).HasColumnName("refunded_minor");
         b.Property(x => x.CreatedAt).HasColumnName("created_at");
         b.Property(x => x.UpdatedAt).HasColumnName("updated_at");
-        b.HasIndex(x => x.BookingId).IsUnique();
+        b.HasIndex(x => x.AccessId).IsUnique();
     }
 }
 

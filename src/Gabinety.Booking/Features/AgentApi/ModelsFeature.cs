@@ -18,7 +18,7 @@ public sealed class ModelsFeature : IServiceFeature
 
     static async Task<IResult> ListAsync(ClaimsPrincipal user, EntitlementStore entitlements, CancellationToken ct)
     {
-        var slugs = await entitlements.UsableSlugsAsync(user.FindFirst("sub")!.Value, OfferingKind.Chat, ct);
+        var slugs = await entitlements.UsableSlugsAsync(user.FindFirst("sub")!.Value, PackageKind.Chat, ct);
         var body = JsonSerializer.Serialize(new
         {
             @object = "list",

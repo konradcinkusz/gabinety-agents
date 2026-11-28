@@ -19,7 +19,7 @@ public class AgentApiProxyTests
     {
         var web = new WebFactory();
         var seen = new List<Seen>();
-        web.Booking.Respond = r =>
+        web.Access.Respond = r =>
         {
             lock (seen)
                 seen.Add(new(r.Method.Method, r.RequestUri!.PathAndQuery,
@@ -52,7 +52,7 @@ public class AgentApiProxyTests
         Assert.Equal("{\"id\":\"1\",\"status\":\"queued\"}", await response.Content.ReadAsStringAsync());
         Assert.Equal("7", response.Headers.GetValues("Retry-After").Single());
         Assert.Equal("yes", response.Headers.GetValues("X-Provider").Single());
-        var call = Assert.Single(web.Booking.Requests);
+        var call = Assert.Single(web.Access.Requests);
         Assert.Equal(HttpMethod.Post, call.Method);
         Assert.Equal("/v1/tasks?x=1", call.PathAndQuery);
         Assert.Equal($"Bearer {Key}", call.Authorization);
@@ -138,7 +138,7 @@ public class AgentApiProxyTests
         var response = await web.CreateClient().SendAsync(request);
         Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
         Assert.Equal("request_too_large", JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement.GetProperty("error").GetProperty("code").GetString());
-        Assert.Empty(web.Booking.Requests);
+        Assert.Empty(web.Access.Requests);
     }
 
     [Fact]
@@ -159,7 +159,7 @@ public class AgentApiProxyTests
         await using var _ = web;
         var request = Post("/v1/models", "{}", ("Authorization", $"Bearer {Key}"), ("Fly-Client-IP", "203.0.113.9"), ("X-Client-Address", "1.2.3.4"), ("X-Edge-Key", "guess"));
         await web.CreateClient().SendAsync(request);
-        var call = Assert.Single(web.Booking.Requests);
+        var call = Assert.Single(web.Access.Requests);
         Assert.Equal("203.0.113.9", call.ClientAddress);
         Assert.Equal(WebFactory.TrustedKey, call.EdgeKey);
     }
@@ -195,7 +195,7 @@ public class AgentApiProxyTests
         var (web, _) = Host();
         await using var _ = web;
         var response = await web.CreateClient(new() { AllowAutoRedirect = false }).GetAsync(path);
-        Assert.Empty(web.Booking.Requests);
+        Assert.Empty(web.Access.Requests);
         Assert.NotEqual(HttpStatusCode.OK, response.StatusCode);
     }
 
@@ -205,7 +205,7 @@ public class AgentApiProxyTests
         var (web, _) = Host();
         await using var _ = web;
         var response = await web.CreateClient(new() { AllowAutoRedirect = false }).GetAsync("/v10/models");
-        Assert.Empty(web.Booking.Requests);
+        Assert.Empty(web.Access.Requests);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 

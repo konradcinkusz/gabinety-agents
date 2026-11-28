@@ -195,7 +195,7 @@ public class ClockApiTests
         var r = await CreateHost.Post(h.ClientFor("demo-client-clock"), h.Req(), CreateHost.Key());
         Assert.Equal(HttpStatusCode.Created, r.StatusCode);
         Assert.Equal("2026-11-16T13:10:00Z", (await r.Body()).GetProperty("holdExpiresAt").GetString());
-        var b = (await h.Bookings()).Single();
+        var b = (await h.Accesses()).Single();
         Assert.Equal(new DateTimeOffset(2026, 11, 16, 13, 0, 0, TimeSpan.Zero), b.CreatedAt);
         Assert.Equal(new DateTimeOffset(2026, 11, 16, 13, 10, 0, TimeSpan.Zero), b.HoldExpiresAt);
     }

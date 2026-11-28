@@ -14,9 +14,9 @@ public class OfferingApiTests(OfferingFactory f) : IClassFixture<OfferingFactory
 
     public Task DisposeAsync() => Task.CompletedTask;
 
-    async Task Rejected(OfferingRequest req, string field, string code = "validation_failed")
+    async Task Rejected(PackageRequest req, string field, string code = "validation_failed")
     {
-        var c = await Practitioner(f);
+        var c = await Agent(f);
         var r = await c.PostAsJsonAsync(Url, req);
         Assert.Equal(HttpStatusCode.UnprocessableEntity, r.StatusCode);
         var p = await ProblemOf(r);
@@ -25,9 +25,9 @@ public class OfferingApiTests(OfferingFactory f) : IClassFixture<OfferingFactory
         Assert.Empty(await List(c)); // nothing was stored
     }
 
-    async Task Accepted(OfferingRequest req)
+    async Task Accepted(PackageRequest req)
     {
-        var c = await Practitioner(f);
+        var c = await Agent(f);
         var r = await c.PostAsJsonAsync(Url, req);
         Assert.Equal(HttpStatusCode.Created, r.StatusCode);
     }
@@ -123,8 +123,8 @@ public class OfferingApiTests(OfferingFactory f) : IClassFixture<OfferingFactory
     [Fact]
     public async Task Sixth_active_offering_is_too_many_and_deactivating_frees_a_place()
     {
-        var c = await Practitioner(f);
-        var made = new List<OfferingPrivate>();
+        var c = await Agent(f);
+        var made = new List<PackagePrivate>();
         for (var i = 0; i < 5; i++) made.Add(await Created(c, Valid(title: $"Oferta numer {i}")));
         var r = await c.PostAsJsonAsync(Url, Valid(title: "Oferta szósta"));
         Assert.Equal(HttpStatusCode.UnprocessableEntity, r.StatusCode);
@@ -139,7 +139,7 @@ public class OfferingApiTests(OfferingFactory f) : IClassFixture<OfferingFactory
     [Fact]
     public async Task Create_returns_the_private_view_and_get_lists_inactive_ones_with_the_meeting_url_in_creation_order()
     {
-        var c = await Practitioner(f);
+        var c = await Agent(f);
         var a = await Created(c, Valid(title: "Pierwsza oferta", price: 7000, meeting: "https://meet.google.com/abc"));
         var b = await Created(c, Valid(title: "Druga oferta", duration: 60));
         Assert.Equal(new MoneyDto(7000, "PLN"), a.Price);
@@ -158,7 +158,7 @@ public class OfferingApiTests(OfferingFactory f) : IClassFixture<OfferingFactory
     [Fact]
     public async Task Deactivate_is_204_and_idempotent()
     {
-        var c = await Practitioner(f);
+        var c = await Agent(f);
         var o = await Created(c, Valid());
         Assert.Equal(HttpStatusCode.NoContent, (await c.PostAsync($"{Url}/{o.Id}/deactivate", null)).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await c.PostAsync($"{Url}/{o.Id}/deactivate", null)).StatusCode);
@@ -168,7 +168,7 @@ public class OfferingApiTests(OfferingFactory f) : IClassFixture<OfferingFactory
     [Fact]
     public async Task Activate_turns_a_deactivated_offering_back_on_and_is_idempotent()
     {
-        var c = await Practitioner(f);
+        var c = await Agent(f);
         var o = await Created(c, Valid());
         await c.PostAsync($"{Url}/{o.Id}/deactivate", null);
         Assert.Equal(HttpStatusCode.NoContent, (await c.PostAsync($"{Url}/{o.Id}/activate", null)).StatusCode);
@@ -180,15 +180,15 @@ public class OfferingApiTests(OfferingFactory f) : IClassFixture<OfferingFactory
     public async Task A_suspended_practitioner_activating_an_offer_stays_unlisted_and_has_no_public_profile()
     {
         var uid = Id();
-        var c = await Practitioner(f, uid);
+        var c = await Agent(f, uid);
         var o = await Created(c, Valid());
         await c.PostAsync($"{Url}/{o.Id}/deactivate", null);
         string slug;
         using (var scope = f.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<Gabinety.Directory.Persistence.DirectoryDbContext>();
-            var p = await db.Practitioners.SingleAsync(x => x.UserId == uid);
-            p.Status = PractitionerStatus.Suspended;
+            var p = await db.Agents.SingleAsync(x => x.UserId == uid);
+            p.Status = AgentStatus.Suspended;
             slug = p.Slug;
             await db.SaveChangesAsync();
         }
@@ -202,7 +202,7 @@ public class OfferingApiTests(OfferingFactory f) : IClassFixture<OfferingFactory
     [Fact]
     public async Task Activate_refuses_a_sixth_active_offering_and_another_practitioners_offering_is_404()
     {
-        var c = await Practitioner(f);
+        var c = await Agent(f);
         var first = await Created(c, Valid(title: "Pierwsza oferta"));
         await c.PostAsync($"{Url}/{first.Id}/deactivate", null);
         for (var i = 0; i < 5; i++) await Created(c, Valid(title: $"Oferta numer {i}"));
@@ -211,19 +211,19 @@ public class OfferingApiTests(OfferingFactory f) : IClassFixture<OfferingFactory
         Assert.Equal("too_many_offerings", (await ProblemOf(r)).Code);
         Assert.False((await List(c)).Single(x => x.Id == first.Id).IsActive);
 
-        var other = await Practitioner(f);
+        var other = await Agent(f);
         Assert.Equal(HttpStatusCode.NotFound, (await other.PostAsync($"{Url}/{first.Id}/activate", null)).StatusCode);
     }
 
     [Fact]
     public async Task Put_changes_the_offering_and_leaves_the_others_untouched_and_does_not_reactivate()
     {
-        var c = await Practitioner(f);
+        var c = await Agent(f);
         var a = await Created(c, Valid(title: "Oferta do zmiany", price: 10000));
         var b = await Created(c, Valid(title: "Oferta sąsiednia", price: 12000));
         var r = await c.PutAsJsonAsync($"{Url}/{a.Id}", Valid(title: "Oferta zmieniona", price: 20000, duration: 60, techs: ["csharp"]));
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
-        var updated = (await r.Content.ReadFromJsonAsync<OfferingPrivate>(J))!;
+        var updated = (await r.Content.ReadFromJsonAsync<PackagePrivate>(J))!;
         Assert.Equal((a.Id, "Oferta zmieniona", 20000L, 60), (updated.Id, updated.Title, updated.Price.AmountMinor, updated.DurationMinutes));
         Assert.Equal(["csharp"], updated.TechSlugs);
 
@@ -239,7 +239,7 @@ public class OfferingApiTests(OfferingFactory f) : IClassFixture<OfferingFactory
     [Fact]
     public async Task Put_validates_like_create()
     {
-        var c = await Practitioner(f);
+        var c = await Agent(f);
         var o = await Created(c, Valid());
         var r = await c.PutAsJsonAsync($"{Url}/{o.Id}", Valid(price: 4999));
         Assert.Equal(HttpStatusCode.UnprocessableEntity, r.StatusCode);
@@ -251,8 +251,8 @@ public class OfferingApiTests(OfferingFactory f) : IClassFixture<OfferingFactory
     [Fact]
     public async Task Another_practitioners_offering_is_404_on_put_and_deactivate_and_absent_from_get()
     {
-        var owner = await Practitioner(f);
-        var other = await Practitioner(f);
+        var owner = await Agent(f);
+        var other = await Agent(f);
         var o = await Created(owner, Valid());
         var put = await other.PutAsJsonAsync($"{Url}/{o.Id}", Valid(title: "Przejęta oferta"));
         Assert.Equal(HttpStatusCode.NotFound, put.StatusCode);
@@ -293,7 +293,7 @@ public class OfferingApiTests(OfferingFactory f) : IClassFixture<OfferingFactory
     public async Task Completeness_rises_by_a_quarter_with_the_first_active_offering_and_falls_back_after_deactivation()
     {
         var sub = Id();
-        var c = await Practitioner(f, sub);
+        var c = await Agent(f, sub);
         var before = await Completeness(f, sub);
         var a = await Created(c, Valid(title: "Pierwsza oferta"));
         Assert.Equal(before + 0.25m, await Completeness(f, sub));
@@ -308,7 +308,7 @@ public class OfferingApiTests(OfferingFactory f) : IClassFixture<OfferingFactory
     [Fact]
     public async Task Submit_no_longer_lists_offering_once_an_active_one_exists()
     {
-        var c = await Practitioner(f);
+        var c = await Agent(f);
         var before = await c.PostAsync("/api/v1/me/practitioner/submit", null);
         Assert.Contains("offering", await before.Content.ReadAsStringAsync());
         await Created(c, Valid());
@@ -327,7 +327,7 @@ public class OfferingPriceConfigTests(PriceConfigFactory f) : IClassFixture<Pric
     public async Task Price_limits_come_from_configuration(long price, bool ok)
     {
         await WaitForSeed(f);
-        var c = await Practitioner(f);
+        var c = await Agent(f);
         var r = await c.PostAsJsonAsync(Url, Valid(price: price));
         Assert.Equal(ok ? HttpStatusCode.Created : HttpStatusCode.UnprocessableEntity, r.StatusCode);
     }

@@ -46,7 +46,7 @@ public sealed partial class SuspiciousPairsFeature : IServiceFeature
             {
                 var page = await booking.GetAsync(MinBookings, next, take, ct);
                 next = page.NextCursor;
-                items.AddRange(await MatchAsync(page.Items.Take(take).Where(p => p.Bookings >= MinBookings).ToList(), db, ct));
+                items.AddRange(await MatchAsync(page.Items.Take(take).Where(p => p.Accesses >= MinBookings).ToList(), db, ct));
                 if (items.Count > 0 || next is null) break;
             }
         }
@@ -62,15 +62,15 @@ public sealed partial class SuspiciousPairsFeature : IServiceFeature
     {
         if (pairs.Count == 0) return [];
         var clients = pairs.Select(p => p.ClientUserId).Distinct().ToList();
-        var practitioners = pairs.Select(p => p.PractitionerId).Distinct().ToList();
+        var practitioners = pairs.Select(p => p.AgentId).Distinct().ToList();
         var rows = await db.Reviews.AsNoTracking()
-            .Where(r => r.Status != ReviewStatus.Rejected && clients.Contains(r.ClientUserId) && practitioners.Contains(r.PractitionerId))
-            .Select(r => new { r.ClientUserId, r.PractitionerId, r.Rating })
+            .Where(r => r.Status != ReviewStatus.Rejected && clients.Contains(r.ClientUserId) && practitioners.Contains(r.AgentId))
+            .Select(r => new { r.ClientUserId, r.AgentId, r.Rating })
             .ToListAsync(ct);
-        var byPair = rows.GroupBy(r => (r.ClientUserId, r.PractitionerId)).ToDictionary(g => g.Key, g => (Count: g.Count(), AllFive: g.All(r => r.Rating == FiveStars)));
+        var byPair = rows.GroupBy(r => (r.ClientUserId, r.AgentId)).ToDictionary(g => g.Key, g => (Count: g.Count(), AllFive: g.All(r => r.Rating == FiveStars)));
         return [.. pairs
-            .Where(p => byPair.TryGetValue((p.ClientUserId, p.PractitionerId), out var r) && r.AllFive)
-            .Select(p => new SuspiciousPairDto(p.PairKey, p.ClientUserId, p.PractitionerId, p.Bookings, byPair[(p.ClientUserId, p.PractitionerId)].Count))];
+            .Where(p => byPair.TryGetValue((p.ClientUserId, p.AgentId), out var r) && r.AllFive)
+            .Select(p => new SuspiciousPairDto(p.PairKey, p.ClientUserId, p.AgentId, p.Accesses, byPair[(p.ClientUserId, p.AgentId)].Count))];
     }
 
     static IResult Problem(int status, string code, string title, Dictionary<string, string[]>? errors = null) =>

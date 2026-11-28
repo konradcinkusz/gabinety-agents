@@ -30,7 +30,7 @@
                 <li class="card" data-testid="verification-row">
                     <div class="admin-row__head">
                         <h2 class="admin-row__title"><a href="/admin/weryfikacja/@id">@row.DisplayName</a></h2>
-                        <AdminBadge Kind="AdminFormat.PractitionerStatusKind(row.Status)">@AdminFormat.PractitionerStatus(row.Status)</AdminBadge>
+                        <AdminBadge Kind="AdminFormat.PractitionerStatusKind(row.Status)">@AdminFormat.AgentStatus(row.Status)</AdminBadge>
                     </div>
                     <p class="admin-row__sub">@row.Headline</p>
                     <dl class="admin-facts admin-facts--inline">
@@ -137,7 +137,7 @@
 
     async Task LoadAsync()
     {
-        var result = await Api.Practitioners(_status, _cursor, VerificationRules.PageSize);
+        var result = await Api.Agents(_status, _cursor, VerificationRules.PageSize);
         _items.Clear();
         (_failure, _next) = (result.Failure, result.Value?.NextCursor);
         if (result.IsOk) _items.AddRange(result.Value!.Items);

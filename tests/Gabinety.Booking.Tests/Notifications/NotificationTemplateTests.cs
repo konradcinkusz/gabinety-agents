@@ -6,7 +6,7 @@ namespace Gabinety.Booking.Tests;
 public class NotificationTemplateTests
 {
     const string Base = "https://site.demo.invalid";
-    static readonly Guid BookingId = Guid.Parse("11111111-2222-3333-4444-555555555555");
+    static readonly Guid AccessId = Guid.Parse("11111111-2222-3333-4444-555555555555");
     static readonly DateTimeOffset Start = new(2026, 12, 1, 9, 30, 0, TimeSpan.Zero); // 10:30 in Warsaw
 
     public static IEnumerable<object[]> Kinds => Enum.GetValues<NotificationKind>().Select(k => new object[] { k });
@@ -15,12 +15,12 @@ public class NotificationTemplateTests
     [MemberData(nameof(Kinds))]
     public void Every_kind_has_a_Polish_text_and_html_version_with_an_absolute_link(NotificationKind kind)
     {
-        var mail = NotificationTemplates.Render(kind, Base, BookingId, Start);
+        var mail = NotificationTemplates.Render(kind, Base, AccessId, Start);
         Assert.False(string.IsNullOrWhiteSpace(mail.Subject));
         Assert.DoesNotContain('\n', mail.Subject);
         foreach (var body in new[] { mail.Text, mail.Html })
         {
-            Assert.Contains(BookingId.ToString(), body);
+            Assert.Contains(AccessId.ToString(), body);
             var link = LinksIn(body).Single();
             Assert.StartsWith(Base + "/", link);
         }
@@ -32,14 +32,14 @@ public class NotificationTemplateTests
     [Fact]
     public void Each_kind_has_its_own_subject()
     {
-        var subjects = Enum.GetValues<NotificationKind>().Select(k => NotificationTemplates.Render(k, Base, BookingId, Start).Subject).ToList();
+        var subjects = Enum.GetValues<NotificationKind>().Select(k => NotificationTemplates.Render(k, Base, AccessId, Start).Subject).ToList();
         Assert.Equal(subjects.Count, subjects.Distinct().Count());
     }
 
     [Fact]
     public void A_reminder_shows_the_start_in_Warsaw_time()
     {
-        var mail = NotificationTemplates.Render(NotificationKind.Reminder24h, Base, BookingId, Start);
+        var mail = NotificationTemplates.Render(NotificationKind.Reminder24h, Base, AccessId, Start);
         Assert.Contains("01.12.2026 10:30", mail.Text);
         Assert.Contains("01.12.2026 10:30", mail.Html);
     }
@@ -67,7 +67,7 @@ public class NotificationTemplateTests
         var booking = await t.AddBooking(edit: b =>
         {
             b.BriefText = marker + " moje dane osobowe";
-            b.OfferingTitle = marker + "-title";
+            b.PackageTitle = marker + "-title";
             b.DisputeText = marker + "-dispute";
             b.DisputeResolution = marker + "-resolution";
             b.StatusReason = marker + "-reason";

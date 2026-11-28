@@ -20,7 +20,7 @@ public class LedgerExportTests
     static string D(DateOnly d) => d.ToString("yyyy-MM-dd");
 
     static LedgerEntry Entry(Guid booking, LedgerKind kind, long amount, DateTimeOffset at, string? pair = null, Guid? id = null) =>
-        new() { Id = id ?? Guid.NewGuid(), BookingId = booking, Kind = kind, AmountMinor = amount, PairKey = pair, CreatedAt = at };
+        new() { Id = id ?? Guid.NewGuid(), AccessId = booking, Kind = kind, AmountMinor = amount, PairKey = pair, CreatedAt = at };
 
     static Task<HttpResponseMessage> Get(CreateHost h, string query, string role = "Admin") =>
         h.ClientFor("demo-admin-1", role).GetAsync("/api/v1/admin/ledger.csv" + query);

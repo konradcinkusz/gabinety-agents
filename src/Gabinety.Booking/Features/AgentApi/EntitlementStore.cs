@@ -2,7 +2,7 @@ using Gabinety.Billing;
 using Gabinety.Booking.Persistence;
 using Gabinety.Contracts.Directory;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
+using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 
 namespace Gabinety.Booking.Features.AgentApi;
 
@@ -17,11 +17,11 @@ public class EntitlementStore(BookingDbContext db, TimeProvider time)
     public static readonly SemaphoreSlim InMemoryGate = new(1, 1);
 
     /// <summary>The oldest usable package of <paramref name="clientUserId"/> for the agent, of the kind, optionally of one offering; null when there is none.</summary>
-    public virtual Task<BookingEntity?> FindAsync(string clientUserId, string practitionerSlug, OfferingKind kind, Guid? offeringId, CancellationToken ct)
+    public virtual Task<BookingEntity?> FindAsync(string clientUserId, string practitionerSlug, PackageKind kind, Guid? offeringId, CancellationToken ct)
     {
         var now = time.GetUtcNow();
         return Candidates(clientUserId, practitionerSlug, kind, offeringId)
-            .Where(b => b.Status == BookingStatus.Confirmed && b.EndUtc > now && b.UnitsUsed < b.UnitsTotal)
+            .Where(b => b.Status == AccessStatus.Confirmed && b.EndUtc > now && b.UnitsUsed < b.UnitsTotal)
             .OrderBy(b => b.CreatedAt).ThenBy(b => b.Id)
             .FirstOrDefaultAsync(ct);
     }
@@ -30,19 +30,19 @@ public class EntitlementStore(BookingDbContext db, TimeProvider time)
     /// True when the client has a package for the agent that has not expired but is used up (still <c>Confirmed</c>, or already <c>Completed</c> by the job because it ran out).
     /// It tells "no package" (404) from "package used up" (429).
     /// </summary>
-    public virtual async Task<bool> HasExhaustedAsync(string clientUserId, string practitionerSlug, OfferingKind kind, Guid? offeringId, CancellationToken ct)
+    public virtual async Task<bool> HasExhaustedAsync(string clientUserId, string practitionerSlug, PackageKind kind, Guid? offeringId, CancellationToken ct)
     {
         var now = time.GetUtcNow();
         return await Candidates(clientUserId, practitionerSlug, kind, offeringId)
-            .AnyAsync(b => (b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.Completed) && b.EndUtc > now && b.UnitsUsed >= b.UnitsTotal, ct);
+            .AnyAsync(b => (b.Status == AccessStatus.Confirmed || b.Status == AccessStatus.Completed) && b.EndUtc > now && b.UnitsUsed >= b.UnitsTotal, ct);
     }
 
     /// <summary>The agents (slugs) the client has a usable package of this kind for, sorted.</summary>
-    public virtual async Task<List<string>> UsableSlugsAsync(string clientUserId, OfferingKind kind, CancellationToken ct)
+    public virtual async Task<List<string>> UsableSlugsAsync(string clientUserId, PackageKind kind, CancellationToken ct)
     {
         var now = time.GetUtcNow();
-        return await db.Bookings.AsNoTracking()
-            .Where(b => b.ClientUserId == clientUserId && b.Kind == kind && b.Status == BookingStatus.Confirmed && b.EndUtc > now && b.UnitsUsed < b.UnitsTotal && b.PractitionerSlug != "")
+        return await db.Accesses.AsNoTracking()
+            .Where(b => b.ClientUserId == clientUserId && b.Kind == kind && b.Status == AccessStatus.Confirmed && b.EndUtc > now && b.UnitsUsed < b.UnitsTotal && b.PractitionerSlug != "")
             .Select(b => b.PractitionerSlug).Distinct().OrderBy(s => s).ToListAsync(ct);
     }
 
@@ -52,7 +52,7 @@ public class EntitlementStore(BookingDbContext db, TimeProvider time)
         ArgumentOutOfRangeException.ThrowIfNegative(units);
         if (db.Database.IsRelational())
         {
-            await db.Bookings.Where(b => b.Id == bookingId).ExecuteUpdateAsync(s => s.SetProperty(b => b.UnitsUsed, b => b.UnitsUsed + units), ct);
+            await db.Accesses.Where(b => b.Id == bookingId).ExecuteUpdateAsync(s => s.SetProperty(b => b.UnitsUsed, b => b.UnitsUsed + units), ct);
             return;
         }
         await ChangeInMemoryAsync(bookingId, used => used + units, ct);
@@ -66,12 +66,12 @@ public class EntitlementStore(BookingDbContext db, TimeProvider time)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(units);
         if (db.Database.IsRelational())
-            return await db.Bookings.Where(b => b.Id == bookingId && b.UnitsUsed + units <= b.UnitsTotal)
+            return await db.Accesses.Where(b => b.Id == bookingId && b.UnitsUsed + units <= b.UnitsTotal)
                 .ExecuteUpdateAsync(s => s.SetProperty(b => b.UnitsUsed, b => b.UnitsUsed + units), ct) > 0;
         await InMemoryGate.WaitAsync(ct);
         try
         {
-            var row = await db.Bookings.SingleOrDefaultAsync(b => b.Id == bookingId, ct);
+            var row = await db.Accesses.SingleOrDefaultAsync(b => b.Id == bookingId, ct);
             if (row is null || row.UnitsUsed + units > row.UnitsTotal) return false;
             row.UnitsUsed += units;
             await db.SaveChangesAsync(ct);
@@ -84,7 +84,7 @@ public class EntitlementStore(BookingDbContext db, TimeProvider time)
     public virtual async Task ConsumeAndRecordAsync(BookingEntity package, long units, Guid? apiKeyId, CancellationToken ct)
     {
         await ConsumeAsync(package.Id, units, ct);
-        db.UsageRecords.Add(new UsageRecord { Id = Guid.NewGuid(), BookingId = package.Id, ApiKeyId = apiKeyId, Kind = package.Kind, Units = units, CreatedAt = time.GetUtcNow() });
+        db.UsageRecords.Add(new UsageRecord { Id = Guid.NewGuid(), AccessId = package.Id, ApiKeyId = apiKeyId, Kind = package.Kind, Units = units, CreatedAt = time.GetUtcNow() });
         await db.SaveChangesAsync(ct);
     }
 
@@ -94,17 +94,17 @@ public class EntitlementStore(BookingDbContext db, TimeProvider time)
         ArgumentOutOfRangeException.ThrowIfNegative(units);
         if (db.Database.IsRelational())
         {
-            await db.Bookings.Where(b => b.Id == bookingId)
+            await db.Accesses.Where(b => b.Id == bookingId)
                 .ExecuteUpdateAsync(s => s.SetProperty(b => b.UnitsUsed, b => b.UnitsUsed >= units ? b.UnitsUsed - units : 0L), ct);
             return;
         }
         await ChangeInMemoryAsync(bookingId, used => Math.Max(0, used - units), ct);
     }
 
-    IQueryable<BookingEntity> Candidates(string clientUserId, string practitionerSlug, OfferingKind kind, Guid? offeringId)
+    IQueryable<BookingEntity> Candidates(string clientUserId, string practitionerSlug, PackageKind kind, Guid? offeringId)
     {
-        var q = db.Bookings.AsNoTracking().Where(b => b.ClientUserId == clientUserId && b.PractitionerSlug == practitionerSlug && b.Kind == kind);
-        return offeringId is { } o ? q.Where(b => b.OfferingId == o) : q;
+        var q = db.Accesses.AsNoTracking().Where(b => b.ClientUserId == clientUserId && b.PractitionerSlug == practitionerSlug && b.Kind == kind);
+        return offeringId is { } o ? q.Where(b => b.PackageId == o) : q;
     }
 
     async Task ChangeInMemoryAsync(Guid bookingId, Func<long, long> change, CancellationToken ct)
@@ -112,7 +112,7 @@ public class EntitlementStore(BookingDbContext db, TimeProvider time)
         await InMemoryGate.WaitAsync(ct);
         try
         {
-            var row = await db.Bookings.SingleOrDefaultAsync(b => b.Id == bookingId, ct);
+            var row = await db.Accesses.SingleOrDefaultAsync(b => b.Id == bookingId, ct);
             if (row is null) return;
             row.UnitsUsed = change(row.UnitsUsed);
             await db.SaveChangesAsync(ct);

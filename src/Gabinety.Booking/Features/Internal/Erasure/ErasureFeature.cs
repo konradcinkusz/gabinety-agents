@@ -5,7 +5,7 @@ using Gabinety.Booking.Features.Payouts;
 using Gabinety.Booking.Persistence;
 using Gabinety.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
+using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 
 namespace Gabinety.Booking.Features.Internal.Erasure;
 
@@ -54,7 +54,7 @@ public sealed class ErasureFeature : IServiceFeature
         return Results.NoContent();
     }
 
-    static async Task<(int Bookings, int Records)> EraseAllAsync(BookingDbContext db, string userId, string token, CancellationToken ct)
+    static async Task<(int Accesses, int Records)> EraseAllAsync(BookingDbContext db, string userId, string token, CancellationToken ct)
     {
         db.ChangeTracker.Clear(); // a retried execution strategy starts from the database, not from a half-applied tracker
         int bookings = 0, records = 0;
@@ -62,12 +62,12 @@ public sealed class ErasureFeature : IServiceFeature
         // Rows leave the filter as they are updated, so each pass takes the next batch and the loop ends when none is left.
         while (true)
         {
-            var batch = await db.Bookings.Where(b => b.ClientUserId == userId || b.PractitionerUserId == userId).OrderBy(b => b.Id).Take(BatchSize).ToListAsync(ct);
+            var batch = await db.Accesses.Where(b => b.ClientUserId == userId || b.PractitionerUserId == userId).OrderBy(b => b.Id).Take(BatchSize).ToListAsync(ct);
             if (batch.Count == 0) break;
 
-            var clientRows = batch.Where(b => b.ClientUserId == userId).ToDictionary(b => b.Id, b => b.PractitionerId);
-            var fees = clientRows.Count == 0 ? [] : await db.LedgerEntries.Where(l => l.PairKey != null && clientRows.Keys.Contains(l.BookingId)).ToListAsync(ct);
-            foreach (var l in fees) l.PairKey = PairKey.For(token, clientRows[l.BookingId]);
+            var clientRows = batch.Where(b => b.ClientUserId == userId).ToDictionary(b => b.Id, b => b.AgentId);
+            var fees = clientRows.Count == 0 ? [] : await db.LedgerEntries.Where(l => l.PairKey != null && clientRows.Keys.Contains(l.AccessId)).ToListAsync(ct);
+            foreach (var l in fees) l.PairKey = PairKey.For(token, clientRows[l.AccessId]);
 
             foreach (var b in batch) Anonymise(b, userId, token);
             await db.SaveChangesAsync(ct);
@@ -121,7 +121,7 @@ public sealed class ErasureFeature : IServiceFeature
         {   // the practitioner's own data: a personal meeting link and the offering title; a client's erasure must not touch them
             b.PractitionerUserId = token;
             b.MeetingUrlSnapshot = null;
-            b.OfferingTitle = ErasedBrief;
+            b.PackageTitle = ErasedBrief;
         }
     }
 }

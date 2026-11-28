@@ -28,8 +28,8 @@ public static class RatingSummaryStore
                 """, ct);
             return;
         }
-        var row = await db.RatingSummaries.SingleOrDefaultAsync(x => x.PractitionerId == practitionerId, ct);
-        if (row is null) db.RatingSummaries.Add(new RatingSummary { PractitionerId = practitionerId, Count = countDelta, Sum = sumDelta, Version = 1 });
+        var row = await db.RatingSummaries.SingleOrDefaultAsync(x => x.AgentId == practitionerId, ct);
+        if (row is null) db.RatingSummaries.Add(new RatingSummary { AgentId = practitionerId, Count = countDelta, Sum = sumDelta, Version = 1 });
         else { row.Count += countDelta; row.Sum += sumDelta; row.Version++; }
         await db.SaveChangesAsync(ct);
     }

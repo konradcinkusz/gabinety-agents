@@ -1,6 +1,6 @@
 @page "/dostep/potwierdzenie/{BookingId:guid}"
 @attribute [Authorize]
-@inject BookingClient Bookings
+@inject BookingClient Accesses
 @inject NavigationManager Navigation
 @inject TimeProvider Time
 @inject Gabinety.Web.Hosting.WebOptions Site
@@ -29,7 +29,7 @@ else if (_booking is { } b)
         @if (confirmed) {<div class="callout callout--success" role="status">@BookFlowText.Confirmation.Confirmed</div>}
         else if (b.Status == "PendingPayment") {<div class="callout callout--info" role="status">@BookFlowText.Confirmation.Pending <a href="@CurrentPath">@BookFlowText.Confirmation.Refresh</a></div>}
         else {<div class="callout callout--warning" role="status">@BookFlowText.Confirmation.Other</div>}
-        <ConsultationSummary Offering="@b.OfferingTitle" Party="@BookingFormat.Name(b.Practitioner.DisplayName)" Units="@BookingFormat.UnitsLine(b.Kind, b.UnitsTotal)"
+        <ConsultationSummary Package="@b.PackageTitle" Party="@BookingFormat.Name(b.Agent.DisplayName)" Units="@BookingFormat.UnitsLine(b.Kind, b.UnitsTotal)"
                              Validity="@string.Format(BookFlowText.Summary.ValidUntil, BookingFormat.ValidUntil(b.EndUtc))" PriceMinor="b.Price.AmountMinor">
             <p class="muted" data-testid="confirmation-state">@BookFlowText.Confirmation.State: <BookingBadge Badge="Badge.ForBooking(b.Status)" /></p>
         </ConsultationSummary>
@@ -47,7 +47,7 @@ else if (_booking is { } b)
                         <h3>@BookFlowText.Confirmation.ConnectTitle</h3>
                         <dl class="dl">
                             <dt>@BookFlowText.Confirmation.ConnectBaseUrl</dt><dd><code data-testid="connect-base-url">@Site.ApiBaseUrl</code></dd>
-                            <dt>@BookFlowText.Confirmation.ConnectModel</dt><dd><code data-testid="connect-model">@b.Practitioner.Slug</code></dd>
+                            <dt>@BookFlowText.Confirmation.ConnectModel</dt><dd><code data-testid="connect-model">@b.Agent.Slug</code></dd>
                         </dl>
                         <p class="muted">@BookFlowText.Confirmation.ConnectHint</p>
                     </div>
@@ -74,7 +74,7 @@ else if (_booking is { } b)
 
     protected override async Task OnInitializedAsync()
     {
-        var result = await Bookings.GetAsync(BookingId);
+        var result = await Accesses.GetAsync(BookingId);
         if (!result.IsOk)
         {
             if (result.Failure!.IsUnauthenticated) { Navigation.NavigateTo(ReturnTarget.LoginUrl(ReturnTarget.Safe(CurrentPath))); return; }

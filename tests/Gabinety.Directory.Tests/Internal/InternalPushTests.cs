@@ -6,7 +6,7 @@ namespace Gabinety.Directory.Tests.Internal;
 
 public class InternalPushTests(InternalFactory f) : IClassFixture<InternalFactory>
 {
-    static Task<Gabinety.Directory.Features.Profiles.Practitioner> Approved(InternalFactory f) => f.Seed(PractitionerStatus.Approved, x =>
+    static Task<Gabinety.Directory.Features.Profiles.Agent> Approved(InternalFactory f) => f.Seed(AgentStatus.Approved, x =>
     {
         x.Headline = "demo"; x.RankingScore = 1m; x.RankingVersion = "old";
     });
@@ -101,7 +101,7 @@ public class InternalPushTests(InternalFactory f) : IClassFixture<InternalFactor
     [Fact]
     public async Task A_practitioner_that_is_not_Approved_keeps_the_pushed_values_but_is_not_scored()
     {
-        var p = await f.Seed(PractitionerStatus.Suspended, x => { x.RankingScore = 0; x.RankingVersion = ""; });
+        var p = await f.Seed(AgentStatus.Suspended, x => { x.RankingScore = 0; x.RankingVersion = ""; });
         Assert.Equal(HttpStatusCode.NoContent, (await Ik.PutReputation(f.Internal(), p.Id, 5, 4.0, 1)).StatusCode);
         var a = await f.Load(p.Id);
         Assert.Equal(5, a.RatingCount);

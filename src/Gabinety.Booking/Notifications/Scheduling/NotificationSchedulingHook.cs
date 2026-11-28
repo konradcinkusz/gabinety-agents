@@ -24,21 +24,21 @@ public sealed class NotificationSchedulingHook(INotificationWriter writer) : IBo
     {
         switch (context.To)
         {
-            case BookingStatus.Confirmed when context.From == BookingStatus.PendingPayment:
+            case AccessStatus.Confirmed when context.From == AccessStatus.PendingPayment:
                 await ScheduleConfirmedAsync(context, ct);
                 break;
-            case BookingStatus.CancelledByClient or BookingStatus.LateCancelledByClient or BookingStatus.CancelledByPractitioner or BookingStatus.ClientNoShow:
-                await writer.CancelUnsentAsync(context.Booking.Id, RemovedWhenNotHeld, ct);
+            case AccessStatus.CancelledByClient or AccessStatus.LateCancelledByClient or AccessStatus.CancelledByPractitioner or AccessStatus.ClientNoShow:
+                await writer.CancelUnsentAsync(context.Access.Id, RemovedWhenNotHeld, ct);
                 // the practitioner's cancel (their own, or the cascade of a suspension) is news to the client: the Cancelled template of T-04.09a; the client's own cancel is not
-                if (context.To == BookingStatus.CancelledByPractitioner)
-                    await writer.ScheduleAsync(context.Booking, NotificationKind.Cancelled, context.Booking.ClientUserId, context.Now, ct);
+                if (context.To == AccessStatus.CancelledByPractitioner)
+                    await writer.ScheduleAsync(context.Access, NotificationKind.Cancelled, context.Access.ClientUserId, context.Now, ct);
                 break;
         }
     }
 
     async Task ScheduleConfirmedAsync(BookingTransitionContext c, CancellationToken ct)
     {
-        var b = c.Booking;
+        var b = c.Access;
         await writer.ScheduleAsync(b, NotificationKind.BookingConfirmed, b.ClientUserId, c.Now, ct);
         await writer.ScheduleAsync(b, NotificationKind.BookingConfirmed, b.PractitionerUserId, c.Now, ct);
 

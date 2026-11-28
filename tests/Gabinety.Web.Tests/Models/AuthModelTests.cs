@@ -120,9 +120,9 @@ public class SiteNavigationTests
     public void The_footer_offers_the_way_in_to_a_visitor_and_to_a_client_and_the_panel_to_a_practitioner()
     {
         var visitor = SiteNavigation.Footer(null, practitioner: false);
-        Assert.Equal(("/rejestracja", "Zostań dostawcą"), (visitor.Practitioner.Href, visitor.Practitioner.Label));
-        Assert.Equal(("/panel-agenta", "Zostań dostawcą"), (SiteNavigation.Footer(User("User"), false).Practitioner.Href, SiteNavigation.Footer(User("User"), false).Practitioner.Label));
-        var member = SiteNavigation.Footer(User("User"), practitioner: true).Practitioner;
+        Assert.Equal(("/rejestracja", "Zostań dostawcą"), (visitor.Agent.Href, visitor.Agent.Label));
+        Assert.Equal(("/panel-agenta", "Zostań dostawcą"), (SiteNavigation.Footer(User("User"), false).Agent.Href, SiteNavigation.Footer(User("User"), false).Agent.Label));
+        var member = SiteNavigation.Footer(User("User"), practitioner: true).Agent;
         Assert.Equal(("/panel-agenta", "Panel dostawcy"), (member.Href, member.Label));
         Assert.Equal(["/regulamin", "/polityka-prywatnosci"], visitor.Legal.Select(i => i.Href));
     }

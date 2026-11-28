@@ -27,7 +27,7 @@ public sealed class ListView(ListState state, TaxonomyDto taxonomy, SitemapDto s
     public string Intro => TechName is not null ? string.Format(Pl.ListPage.CategoryTechIntro, Title) : ProblemName is not null ? string.Format(Pl.ListPage.CategoryIntro, Title) : Pl.ListPage.AllIntro;
 
     SitemapCategoryDto? Category => sitemap.Categories.FirstOrDefault(c => c.Path == State.Path);
-    public int Count => Category?.PractitionerCount ?? 0;
+    public int Count => Category?.AgentCount ?? 0;
 
     /// <summary>
     /// The count line (F-05): it must never contradict the list. The unfiltered first page of a category is counted by the sitemap; a filtered variant or a later page has no total (the

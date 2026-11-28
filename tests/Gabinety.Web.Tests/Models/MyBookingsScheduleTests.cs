@@ -12,7 +12,7 @@ public class MyBookingsScheduleTests
     static DateTimeOffset Utc(int month, int day, int hour, int minute = 0) => new(2026, month, day, hour, minute, 0, TimeSpan.Zero);
 
     static BookingViewDto At(DateTimeOffset start, string status = "Confirmed", string title = "x") =>
-        Sample.Booking(title, status) with { StartUtc = start, EndUtc = start.AddHours(1) };
+        Sample.Access(title, status) with { StartUtc = start, EndUtc = start.AddHours(1) };
 
     [Theory]
     [InlineData("2026-11-22T08:30:00Z", "dziś, 09:30")]
@@ -47,8 +47,8 @@ public class MyBookingsScheduleTests
             At(Utc(11, 10, 12), "Completed", "Zakończona"),
         };
         var (upcoming, past) = MyBookingsSchedule.Split(items, Now);
-        Assert.Equal(["Przed płatnością", "Dalsza"], upcoming.Select(b => b.OfferingTitle));
-        Assert.Equal(["Wygasła", "Późno odwołana", "Odwołana", "Anulowana", "Zakończona"], past.Select(b => b.OfferingTitle));
+        Assert.Equal(["Przed płatnością", "Dalsza"], upcoming.Select(b => b.PackageTitle));
+        Assert.Equal(["Wygasła", "Późno odwołana", "Odwołana", "Anulowana", "Zakończona"], past.Select(b => b.PackageTitle));
     }
 
     [Theory]
@@ -66,8 +66,8 @@ public class MyBookingsScheduleTests
     {
         var items = new[] { At(Now.AddHours(-1), title: "Teraz"), At(Now.AddMinutes(-59), title: "Za minutę") };
         var (upcoming, past) = MyBookingsSchedule.Split(items, Now);
-        Assert.Equal(["Za minutę"], upcoming.Select(b => b.OfferingTitle));
-        Assert.Equal(["Teraz"], past.Select(b => b.OfferingTitle));
+        Assert.Equal(["Za minutę"], upcoming.Select(b => b.PackageTitle));
+        Assert.Equal(["Teraz"], past.Select(b => b.PackageTitle));
         Assert.Empty(MyBookingsSchedule.Split([], Now).Upcoming);
     }
 }

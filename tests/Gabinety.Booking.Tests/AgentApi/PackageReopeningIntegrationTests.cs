@@ -6,7 +6,7 @@ using Gabinety.Contracts.Booking;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 using AgentTask = Gabinety.Booking.Features.AgentApi.AgentTask;
 using AgentTaskStatus = Gabinety.Booking.Features.AgentApi.AgentTaskStatus;
 using Gabinety.Contracts.Directory;
@@ -46,18 +46,18 @@ public class PackageReopeningIntegrationTests : IAsyncLifetime
         Assert.Equal(1, await Reopen.Complete(host));
         await using (var db = NewDb())
         {
-            var done = await db.Bookings.AsNoTracking().SingleAsync(b => b.Id == package);
-            Assert.Equal((BookingStatus.Completed, true), (done.Status, done.FeeMinor is not null));
-            Assert.Single(await db.LedgerEntries.AsNoTracking().Where(l => l.BookingId == package && l.Kind == LedgerKind.PlatformFee).ToListAsync());
+            var done = await db.Accesses.AsNoTracking().SingleAsync(b => b.Id == package);
+            Assert.Equal((AccessStatus.Completed, true), (done.Status, done.FeeMinor is not null));
+            Assert.Single(await db.LedgerEntries.AsNoTracking().Where(l => l.AccessId == package && l.Kind == LedgerKind.PlatformFee).ToListAsync());
         }
 
         await Reopen.FailAll(host, client);
 
         await using (var db = NewDb())
         {
-            var b = await db.Bookings.AsNoTracking().SingleAsync(x => x.Id == package);
-            Assert.Equal((BookingStatus.Confirmed, 0L, null, null, null, null), (b.Status, b.UnitsUsed, b.FeeMinor, b.PayoutMinor, b.PayoutDueAt, b.EndedAt));
-            Assert.Empty(await db.LedgerEntries.AsNoTracking().Where(l => l.BookingId == package && l.Kind == LedgerKind.PlatformFee).ToListAsync());
+            var b = await db.Accesses.AsNoTracking().SingleAsync(x => x.Id == package);
+            Assert.Equal((AccessStatus.Confirmed, 0L, null, null, null, null), (b.Status, b.UnitsUsed, b.FeeMinor, b.PayoutMinor, b.PayoutDueAt, b.EndedAt));
+            Assert.Empty(await db.LedgerEntries.AsNoTracking().Where(l => l.AccessId == package && l.Kind == LedgerKind.PlatformFee).ToListAsync());
             Assert.Equal(AgentTaskStatus.Failed, (await db.AgentTasks.AsNoTracking().SingleAsync(t => t.Id == tasks[0])).Status);
         }
 
@@ -65,7 +65,7 @@ public class PackageReopeningIntegrationTests : IAsyncLifetime
         Assert.True((await host.ClientFor(client).PostAsync($"/api/v1/bookings/{package}/tasks", TaskFx.Json(new { input = Reopen.Input }))).IsSuccessStatusCode);
         Assert.Equal(1, await Reopen.Complete(host));
         await using var after = NewDb();
-        Assert.Single(await after.LedgerEntries.AsNoTracking().Where(l => l.BookingId == package && l.Kind == LedgerKind.PlatformFee).ToListAsync());
+        Assert.Single(await after.LedgerEntries.AsNoTracking().Where(l => l.AccessId == package && l.Kind == LedgerKind.PlatformFee).ToListAsync());
     }
 
     [Fact]
@@ -77,19 +77,19 @@ public class PackageReopeningIntegrationTests : IAsyncLifetime
             var (package, _) = await Reopen.Ordered(host, client, Slug, Offer);
             await Reopen.Complete(host);
             long payout;
-            await using (var db = NewDb()) payout = (await db.Bookings.AsNoTracking().SingleAsync(b => b.Id == package)).PayoutMinor!.Value;
+            await using (var db = NewDb()) payout = (await db.Accesses.AsNoTracking().SingleAsync(b => b.Id == package)).PayoutMinor!.Value;
             await host.Seed(db =>
             {
-                db.Payouts.Add(new Payout { Id = Guid.NewGuid(), BookingId = package, PractitionerId = host.Practitioner, AmountMinor = payout, Status = status, ProviderRef = "demo-ref", CreatedAt = host.Clock.GetUtcNow() });
-                if (entry) db.LedgerEntries.Add(new LedgerEntry { Id = Guid.NewGuid(), BookingId = package, Kind = LedgerKind.PractitionerPayout, AmountMinor = payout, CreatedAt = host.Clock.GetUtcNow() });
+                db.Payouts.Add(new Payout { Id = Guid.NewGuid(), AccessId = package, AgentId = host.Agent, AmountMinor = payout, Status = status, ProviderRef = "demo-ref", CreatedAt = host.Clock.GetUtcNow() });
+                if (entry) db.LedgerEntries.Add(new LedgerEntry { Id = Guid.NewGuid(), AccessId = package, Kind = LedgerKind.PractitionerPayout, AmountMinor = payout, CreatedAt = host.Clock.GetUtcNow() });
             });
 
             await Reopen.FailAll(host, client);
 
             await using var check = NewDb();
-            var b = await check.Bookings.AsNoTracking().SingleAsync(x => x.Id == package);
-            Assert.Equal((BookingStatus.Completed, 0L, payout), (b.Status, b.UnitsUsed, b.PayoutMinor));
-            Assert.Single(await check.LedgerEntries.AsNoTracking().Where(l => l.BookingId == package && l.Kind == LedgerKind.PlatformFee).ToListAsync());
+            var b = await check.Accesses.AsNoTracking().SingleAsync(x => x.Id == package);
+            Assert.Equal((AccessStatus.Completed, 0L, payout), (b.Status, b.UnitsUsed, b.PayoutMinor));
+            Assert.Single(await check.LedgerEntries.AsNoTracking().Where(l => l.AccessId == package && l.Kind == LedgerKind.PlatformFee).ToListAsync());
         }
     }
 
@@ -99,11 +99,11 @@ public class PackageReopeningIntegrationTests : IAsyncLifetime
         for (var round = 0; round < 25; round++)
         {
             var client = AgentApiFx.NewUser();
-            var package = await AgentApiFx.Package(host, client, Slug, OfferingKind.Tasks, total: 1, used: 1, offering: Offer);
+            var package = await AgentApiFx.Package(host, client, Slug, PackageKind.Tasks, total: 1, used: 1, offering: Offer);
             var now = host.Clock.GetUtcNow();
             await host.Seed(db => db.AgentTasks.Add(new AgentTask
             {
-                Id = Guid.NewGuid(), BookingId = package, ClientUserId = client, PractitionerSlug = Slug, OfferingId = Offer, Status = AgentTaskStatus.Running, InputText = Reopen.Input,
+                Id = Guid.NewGuid(), AccessId = package, ClientUserId = client, PractitionerSlug = Slug, PackageId = Offer, Status = AgentTaskStatus.Running, InputText = Reopen.Input,
                 Attempts = 3, CreatedAt = now.AddHours(-2), StartedAt = now.AddHours(-1), // on its last start and past the timeout: this run fails it
             }));
 
@@ -111,9 +111,9 @@ public class PackageReopeningIntegrationTests : IAsyncLifetime
             await Task.WhenAll(Task.Run(() => Reopen.Complete(host)), Task.Run(() => Reopen.Complete(host)), Task.Run(() => TaskFx.Job(host, client).RunOnceAsync(now, default)));
 
             await using var db = NewDb();
-            var b = await db.Bookings.AsNoTracking().SingleAsync(x => x.Id == package);
-            Assert.True((b.Status, b.UnitsUsed, b.FeeMinor) == (BookingStatus.Confirmed, 0L, null), $"round {round}: {b.Status}, used {b.UnitsUsed}, fee {b.FeeMinor}");
-            Assert.Empty(await db.LedgerEntries.AsNoTracking().Where(l => l.BookingId == package && l.Kind == LedgerKind.PlatformFee).ToListAsync());
+            var b = await db.Accesses.AsNoTracking().SingleAsync(x => x.Id == package);
+            Assert.True((b.Status, b.UnitsUsed, b.FeeMinor) == (AccessStatus.Confirmed, 0L, null), $"round {round}: {b.Status}, used {b.UnitsUsed}, fee {b.FeeMinor}");
+            Assert.Empty(await db.LedgerEntries.AsNoTracking().Where(l => l.AccessId == package && l.Kind == LedgerKind.PlatformFee).ToListAsync());
         }
     }
 }

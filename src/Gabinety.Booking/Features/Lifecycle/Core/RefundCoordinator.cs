@@ -36,7 +36,7 @@ public sealed class RefundCoordinator(IPaymentProvider provider)
     public static void Record(BookingTransitionContext context, RefundTicket ticket)
     {
         if (ticket.ConfirmedNow && context.Payment is { } payment)
-            RefundLedger.Record(context.Db, context.Booking.Id, payment, ticket.AmountMinor, context.Now);
+            RefundLedger.Record(context.Db, context.Access.Id, payment, ticket.AmountMinor, context.Now);
     }
 }
 
@@ -48,7 +48,7 @@ public static class RefundLedger
     {
         if (amountMinor is not > 0 || payment.RefundedMinor >= payment.AmountMinor) return WebhookOutcome.Ignored;
         if (payment.RefundedMinor + amountMinor > payment.AmountMinor) return WebhookOutcome.Rejected;
-        db.LedgerEntries.Add(new LedgerEntry { Id = Guid.CreateVersion7(), BookingId = bookingId, Kind = LedgerKind.Refund, AmountMinor = amountMinor.Value, CreatedAt = now });
+        db.LedgerEntries.Add(new LedgerEntry { Id = Guid.CreateVersion7(), AccessId = bookingId, Kind = LedgerKind.Refund, AmountMinor = amountMinor.Value, CreatedAt = now });
         payment.RefundedMinor += amountMinor.Value;
         payment.Status = payment.RefundedMinor == payment.AmountMinor ? PaymentStatus.Refunded : PaymentStatus.PartiallyRefunded;
         payment.UpdatedAt = now;

@@ -8,13 +8,13 @@ namespace Gabinety.Web.Tests.Pages;
 /// <summary>The mock checkout (fake profile only, fail closed), the confirmation, and the page the payment provider returns to.</summary>
 public class CheckoutAndConfirmationTests
 {
-    static readonly string Checkout = $"/checkout/mock/{BookingId}";
-    static readonly string Confirmation = $"/dostep/potwierdzenie/{BookingId}";
+    static readonly string Checkout = $"/checkout/mock/{AccessId}";
+    static readonly string Confirmation = $"/dostep/potwierdzenie/{AccessId}";
 
     static async Task<ClientAreaFixture> Fake(BookingDetailDto? booking = null, Action<WebFactory>? configure = null)
     {
         var f = await ClientAreaFixture.SignedIn(w => { w.With("GABINETY_FAKE", "1"); configure?.Invoke(w); });
-        f.Web.Booking.Respond = r => r.RequestUri!.AbsolutePath.EndsWith("/payments/simulate") ? FakeBackend.Json(new { outcome = "PaymentSucceeded" }) : FakeBackend.Json(booking ?? Pending());
+        f.Web.Access.Respond = r => r.RequestUri!.AbsolutePath.EndsWith("/payments/simulate") ? FakeBackend.Json(new { outcome = "PaymentSucceeded" }) : FakeBackend.Json(booking ?? Pending());
         return f;
     }
 
@@ -28,7 +28,7 @@ public class CheckoutAndConfirmationTests
         await using var f = await ClientAreaFixture.SignedIn(); // no GABINETY_FAKE, the Development ASP.NET environment is not the fake profile
         var page = await f.Browser.GetAsync(Checkout);
         Assert.Equal(HttpStatusCode.NotFound, page.Status);
-        Assert.Empty(f.Web.Booking.Requests);
+        Assert.Empty(f.Web.Access.Requests);
         Assert.DoesNotContain("Symuluj", page.Html);
     }
 
@@ -45,7 +45,7 @@ public class CheckoutAndConfirmationTests
     public async Task The_checkout_exists_exactly_when_the_booking_service_would_accept_the_simulated_payment(string key, string value, string? provider, bool exists)
     {
         await using var f = await ClientAreaFixture.SignedIn(w => { w.With(key, value); if (provider is not null) w.With("Payments:Provider", provider); });
-        f.Web.Booking.Respond = _ => FakeBackend.Json(Pending());
+        f.Web.Access.Respond = _ => FakeBackend.Json(Pending());
         Assert.Equal(exists ? HttpStatusCode.OK : HttpStatusCode.NotFound, (await f.Browser.GetAsync(Checkout)).Status);
     }
 
@@ -55,7 +55,7 @@ public class CheckoutAndConfirmationTests
         await using var f = await ClientAreaFixture.Visitor(w => w.With("GABINETY_FAKE", "1"));
         var page = await f.Browser.GetAsync(Checkout);
         Assert.Equal(HttpStatusCode.Found, page.Status);
-        Assert.Equal($"/logowanie?redirect=%2Fcheckout%2Fmock%2F{BookingId}", page.Location);
+        Assert.Equal($"/logowanie?redirect=%2Fcheckout%2Fmock%2F{AccessId}", page.Location);
     }
 
     // ---- the page
@@ -97,7 +97,7 @@ public class CheckoutAndConfirmationTests
         await using var confirmed = await Fake(Detail("Confirmed"));
         var page = await confirmed.Browser.GetAsync(Checkout);
         Assert.Equal("Ten zakup nie oczekuje już na płatność.", page.TextOf(".callout p"));
-        Assert.Equal($"/dostep/potwierdzenie/{BookingId}", page.One(".callout a")!.GetAttribute("href"));
+        Assert.Equal($"/dostep/potwierdzenie/{AccessId}", page.One(".callout a")!.GetAttribute("href"));
         Assert.Empty(page.All("form"));
 
         await using var expired = await Fake(Detail("Expired", payment: "Failed"));
@@ -119,7 +119,7 @@ public class CheckoutAndConfirmationTests
     public async Task A_booking_that_cannot_be_read_says_refresh_the_page_with_the_link_that_does_it()
     {
         await using var f = await Fake();
-        f.Web.Booking.Respond = _ => FakeBackend.Problem(HttpStatusCode.TooManyRequests, "rate_limited");
+        f.Web.Access.Respond = _ => FakeBackend.Problem(HttpStatusCode.TooManyRequests, "rate_limited");
         var page = await f.Browser.GetAsync(Checkout);
         var alert = page.One("[data-testid=unavailable]")!;
         Assert.Equal("alert", alert.GetAttribute("role"));
@@ -133,7 +133,7 @@ public class CheckoutAndConfirmationTests
     public async Task Another_users_booking_is_a_404_not_a_leak(int status)
     {
         await using var f = await Fake();
-        f.Web.Booking.Respond = _ => FakeBackend.Problem((HttpStatusCode)status, status == 404 ? "not_found" : "forbidden");
+        f.Web.Access.Respond = _ => FakeBackend.Problem((HttpStatusCode)status, status == 404 ? "not_found" : "forbidden");
         Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync(Checkout)).Status);
     }
 
@@ -146,11 +146,11 @@ public class CheckoutAndConfirmationTests
         var page = await f.Post(Checkout, "checkout", ("Model.Outcome", "succeeded"));
         Assert.Equal(HttpStatusCode.Found, page.Status);
         Assert.Equal(Confirmation, page.Location);
-        var call = f.Web.Booking.Requests.Single(r => r.Method == HttpMethod.Post);
+        var call = f.Web.Access.Requests.Single(r => r.Method == HttpMethod.Post);
         Assert.Equal("/api/v1/payments/simulate", call.PathAndQuery);
         Assert.StartsWith("Bearer eyJ", call.Authorization);
         using var body = JsonDocument.Parse(call.Body!);
-        Assert.Equal(BookingId.ToString(), body.RootElement.GetProperty("bookingId").GetString());
+        Assert.Equal(AccessId.ToString(), body.RootElement.GetProperty("bookingId").GetString());
         Assert.Equal("succeeded", body.RootElement.GetProperty("outcome").GetString());
     }
 
@@ -160,7 +160,7 @@ public class CheckoutAndConfirmationTests
         await using var f = await Fake();
         var page = await f.Post(Checkout, "checkout", ("Model.Outcome", "failed"));
         Assert.Equal(HttpStatusCode.OK, page.Status);
-        Assert.Equal("failed", JsonDocument.Parse(f.Web.Booking.Requests.Single(r => r.Method == HttpMethod.Post).Body!).RootElement.GetProperty("outcome").GetString());
+        Assert.Equal("failed", JsonDocument.Parse(f.Web.Access.Requests.Single(r => r.Method == HttpMethod.Post).Body!).RootElement.GetProperty("outcome").GetString());
         var alert = page.One(".callout--danger[role=alert]")!;
         Assert.Contains("Płatność nie powiodła się. Dostęp nie został aktywowany.", alert.TextContent);
         Assert.Equal("/agent/demo-anna-demowska", alert.QuerySelector("a")!.GetAttribute("href"));
@@ -174,7 +174,7 @@ public class CheckoutAndConfirmationTests
     public async Task A_refused_simulation_is_an_alert_in_our_words(int status, string text)
     {
         await using var f = await Fake();
-        f.Web.Booking.Respond = r => r.Method == HttpMethod.Post ? FakeBackend.Problem((HttpStatusCode)status, "forbidden") : FakeBackend.Json(Pending());
+        f.Web.Access.Respond = r => r.Method == HttpMethod.Post ? FakeBackend.Problem((HttpStatusCode)status, "forbidden") : FakeBackend.Json(Pending());
         var page = await f.Post(Checkout, "checkout", ("Model.Outcome", "succeeded"));
         Assert.Equal(text, page.One(".callout--danger[role=alert]")!.TextContent);
         Assert.DoesNotContain("SERVER-TITLE-MUST-NOT-APPEAR", page.Html);
@@ -186,23 +186,23 @@ public class CheckoutAndConfirmationTests
     {
         await using var f = await Fake();
         await f.Post(Checkout, "checkout", ("Model.Outcome", outcome));
-        Assert.DoesNotContain(f.Web.Booking.Requests, r => r.Method == HttpMethod.Post);
+        Assert.DoesNotContain(f.Web.Access.Requests, r => r.Method == HttpMethod.Post);
     }
 
     [Fact]
     public async Task A_post_to_the_checkout_outside_the_fake_profile_is_a_404_and_simulates_nothing()
     {
         await using var f = await ClientAreaFixture.SignedIn();
-        f.Web.Booking.Respond = _ => FakeBackend.Json(Pending());
+        f.Web.Access.Respond = _ => FakeBackend.Json(Pending());
         var request = new HttpRequestMessage(HttpMethod.Post, Checkout) { Content = new FormUrlEncodedContent([new("_handler", "checkout"), new("Model.Outcome", "succeeded")]) };
         var page = await f.Browser.SendAsync(request);
         Assert.NotEqual(HttpStatusCode.Found, page.Status);
-        Assert.Empty(f.Web.Booking.Requests);
+        Assert.Empty(f.Web.Access.Requests);
     }
 
     // ---- confirmation
 
-    static Task<ClientAreaFixture> Open(BookingDetailDto booking) => ClientAreaFixture.SignedIn(w => { }).ContinueWith(t => { t.Result.Web.Booking.Respond = _ => FakeBackend.Json(booking); return t.Result; });
+    static Task<ClientAreaFixture> Open(BookingDetailDto booking) => ClientAreaFixture.SignedIn(w => { }).ContinueWith(t => { t.Result.Web.Access.Respond = _ => FakeBackend.Json(booking); return t.Result; });
 
     [Fact]
     public async Task A_confirmed_booking_says_so_in_the_exact_words_with_the_summary_the_name_the_state_and_the_ways_on()
@@ -217,7 +217,7 @@ public class CheckoutAndConfirmationTests
         Assert.Equal("Aktywny", page.One("[data-testid=confirmation-state] .badge")!.TextContent);
         Assert.DoesNotContain(" ·", page.TextOf(".booking-summary")); // no separator glued to nothing (F-03)
         // C-02: a task package leads to the first task and to the keys; there is no calendar file and no meeting link
-        Assert.Equal([$"/moje/dostepy/{BookingId}?role=client#zadania", "/moje/klucze", $"/moje/dostepy/{BookingId}?role=client", "/agenci"], page.All(".form-actions a").Select(a => a.GetAttribute("href")));
+        Assert.Equal([$"/moje/dostepy/{AccessId}?role=client#zadania", "/moje/klucze", $"/moje/dostepy/{AccessId}?role=client", "/agenci"], page.All(".form-actions a").Select(a => a.GetAttribute("href")));
         Assert.Equal(["Zleć pierwsze zadanie", "Utwórz klucz API", "Zobacz dostęp", "Wróć do wyszukiwarki"], page.All(".form-actions a").Select(a => a.TextContent.Trim()));
         Assert.Empty(page.All("a[target=_blank]")); Assert.DoesNotContain("kalendarz", page.Html); Assert.DoesNotContain("spotkania", page.Text);
         Assert.Empty(page.All("[data-testid=connect]")); // a task package has no API connection steps
@@ -293,7 +293,7 @@ public class CheckoutAndConfirmationTests
     public async Task A_confirmation_that_cannot_be_read_says_refresh_the_page_J3()
     {
         await using var f = await Open(Detail());
-        f.Web.Booking.Respond = _ => FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable");
+        f.Web.Access.Respond = _ => FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable");
         var page = await f.Browser.GetAsync(Confirmation);
         Assert.Contains("Odśwież stronę", page.One("[data-testid=unavailable]")!.TextContent);
         Assert.Equal("alert", page.One("[data-testid=unavailable]")!.GetAttribute("role"));
@@ -304,10 +304,10 @@ public class CheckoutAndConfirmationTests
     public async Task The_confirmation_of_an_unknown_booking_is_a_404_and_a_visitor_goes_to_sign_in()
     {
         await using var f = await Open(Detail());
-        f.Web.Booking.Respond = _ => FakeBackend.Problem(HttpStatusCode.NotFound, "not_found");
+        f.Web.Access.Respond = _ => FakeBackend.Problem(HttpStatusCode.NotFound, "not_found");
         Assert.Equal(HttpStatusCode.NotFound, (await f.Browser.GetAsync(Confirmation)).Status);
         await using var visitor = await ClientAreaFixture.Visitor();
-        Assert.Equal($"/logowanie?redirect=%2Fdostep%2Fpotwierdzenie%2F{BookingId}", (await visitor.Browser.GetAsync(Confirmation)).Location);
+        Assert.Equal($"/logowanie?redirect=%2Fdostep%2Fpotwierdzenie%2F{AccessId}", (await visitor.Browser.GetAsync(Confirmation)).Location);
     }
 
     // ---- where the payment provider returns the browser (Stripe Checkout success URL)
@@ -316,11 +316,11 @@ public class CheckoutAndConfirmationTests
     public async Task The_return_page_of_the_provider_leads_to_the_confirmation_and_needs_a_session()
     {
         await using var f = await Open(Detail());
-        var page = await f.Browser.GetAsync($"/bookings/{BookingId}");
+        var page = await f.Browser.GetAsync($"/bookings/{AccessId}");
         Assert.Equal(HttpStatusCode.Found, page.Status);
         Assert.Equal(Confirmation, page.Location);
         await using var visitor = await ClientAreaFixture.Visitor();
-        Assert.StartsWith("/logowanie?redirect=", (await visitor.Browser.GetAsync($"/bookings/{BookingId}")).Location);
+        Assert.StartsWith("/logowanie?redirect=", (await visitor.Browser.GetAsync($"/bookings/{AccessId}")).Location);
     }
 
     // ---- UX-021: the steps, the headings, "Co dalej", the notice at the width of the summary

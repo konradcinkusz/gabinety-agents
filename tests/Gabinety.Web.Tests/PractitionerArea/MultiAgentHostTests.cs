@@ -13,7 +13,7 @@ public class MultiAgentHostTests
     sealed class Agents
     {
         public readonly List<PractitionerPrivateDto> List = [];
-        public readonly List<BookingViewDto> Bookings = [];
+        public readonly List<BookingViewDto> Accesses = [];
         public int Max = 10;
 
         public Agents(params string[] slugs) { foreach (var s in slugs) Add(s); }
@@ -26,7 +26,7 @@ public class MultiAgentHostTests
         public void Attach(WebFactory web)
         {
             web.Directory.Respond = Directory;
-            web.Booking.Respond = Booking;
+            web.Access.Respond = Access;
         }
 
         static HttpResponseMessage Problem(HttpStatusCode status, string code, string? field = null)
@@ -59,10 +59,10 @@ public class MultiAgentHostTests
             return new HttpResponseMessage(HttpStatusCode.NotFound);
         }
 
-        HttpResponseMessage Booking(HttpRequestMessage r)
+        HttpResponseMessage Access(HttpRequestMessage r)
         {
             var path = r.RequestUri!.AbsolutePath;
-            if (path == "/api/v1/me/bookings") return FakeBackend.Json(new PageDto<BookingViewDto>(Bookings, null));
+            if (path == "/api/v1/me/bookings") return FakeBackend.Json(new PageDto<BookingViewDto>(Accesses, null));
             if (path == "/api/v1/me/payments/account") return FakeBackend.Json(new PaymentAccountDto("Stripe", "none"));
             return new HttpResponseMessage(HttpStatusCode.NotFound);
         }
@@ -83,7 +83,7 @@ public class MultiAgentHostTests
         return (web, browser, world);
     }
 
-    static void TwoBookings(Agents w) { w.Bookings.Add(Agents.Bought("demo-alfa", "Pakiet Alfa")); w.Bookings.Add(Agents.Bought("demo-beta", "Pakiet Beta")); w.Bookings.Add(Agents.Bought("demo-beta", "Pakiet Beta 2")); }
+    static void TwoBookings(Agents w) { w.Accesses.Add(Agents.Bought("demo-alfa", "Pakiet Alfa")); w.Accesses.Add(Agents.Bought("demo-beta", "Pakiet Beta")); w.Accesses.Add(Agents.Bought("demo-beta", "Pakiet Beta 2")); }
 
     [Fact]
     public async Task With_two_agents_the_dashboard_lists_them_and_totals_the_purchases_of_all()
@@ -115,7 +115,7 @@ public class MultiAgentHostTests
         var tabs = page.All("nav.tabs a").Select(a => a.GetAttribute("href")).ToList();
         Assert.Equal(["/panel-agenta?agent=demo-beta", "/panel-agenta/profil?agent=demo-beta", "/panel-agenta/oferty?agent=demo-beta", "/panel-agenta/platnosci?agent=demo-beta"], tabs);
         Assert.Contains(web.Directory.Requests, r => r.PathAndQuery == "/api/v1/me/practitioner?agent=demo-beta");
-        Assert.Contains(web.Booking.Requests, r => r.PathAndQuery == "/api/v1/me/payments/account?agent=demo-beta");
+        Assert.Contains(web.Access.Requests, r => r.PathAndQuery == "/api/v1/me/payments/account?agent=demo-beta");
     }
 
     [Fact]
@@ -133,7 +133,7 @@ public class MultiAgentHostTests
 
         Assert.Contains(web.Directory.Requests, r => r.PathAndQuery == "/api/v1/me/practitioner?agent=demo-beta");
         Assert.Contains(web.Directory.Requests, r => r.PathAndQuery == "/api/v1/me/practitioner/offerings?agent=demo-beta");
-        Assert.Contains(web.Booking.Requests, r => r.PathAndQuery == "/api/v1/me/payments/account?agent=demo-beta");
+        Assert.Contains(web.Access.Requests, r => r.PathAndQuery == "/api/v1/me/payments/account?agent=demo-beta");
         Assert.DoesNotContain(web.Directory.Requests, r => r.PathAndQuery.StartsWith("/api/v1/me/practitioner") && !r.PathAndQuery.Contains("agent=") && r.Method == HttpMethod.Put);
     }
 
@@ -168,7 +168,7 @@ public class MultiAgentHostTests
         Assert.Equal("Panel dostawcy", page.TextOf("h1"));
         Assert.Null(page.One("[data-testid=agent-bar]"));
         Assert.All(page.All("nav.tabs a"), a => Assert.DoesNotContain("agent=", a.GetAttribute("href")));
-        Assert.All(web.Directory.Requests.Concat(web.Booking.Requests), r => Assert.DoesNotContain("agent=", r.PathAndQuery));
+        Assert.All(web.Directory.Requests.Concat(web.Access.Requests), r => Assert.DoesNotContain("agent=", r.PathAndQuery));
     }
 
     [Fact]

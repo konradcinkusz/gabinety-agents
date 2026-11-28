@@ -6,8 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Testcontainers.PostgreSql;
-using BookingStatus = Gabinety.Billing.BookingStatus;
-using BookingTrigger = Gabinety.Billing.BookingTrigger;
+using AccessStatus = Gabinety.Billing.AccessStatus;
+using AccessTrigger = Gabinety.Billing.AccessTrigger;
 
 namespace Gabinety.Booking.Tests;
 
@@ -45,19 +45,19 @@ public class FeeIntegrationTests : IAsyncLifetime
             // A new pair every round; the two bookings are 1 and 2 days ahead (inside the 60-day horizon, no overlap for the practitioner).
             var client = Fee.NewClient();
             var practitioner = Guid.NewGuid();
-            var a = await Fee.Seed(host, BookingStatus.Confirmed, client, practitioner, 25000, TimeSpan.FromDays(1));
-            var b = await Fee.Seed(host, BookingStatus.Confirmed, client, practitioner, 25000, TimeSpan.FromDays(2));
+            var a = await Fee.Seed(host, AccessStatus.Confirmed, client, practitioner, 25000, TimeSpan.FromDays(1));
+            var b = await Fee.Seed(host, AccessStatus.Confirmed, client, practitioner, 25000, TimeSpan.FromDays(2));
 
-            var results = await Task.WhenAll(new[] { a, b }.Select(id => Task.Run(() => Fee.Apply(host, id, BookingTrigger.CompletionWindowElapsed))));
+            var results = await Task.WhenAll(new[] { a, b }.Select(id => Task.Run(() => Fee.Apply(host, id, AccessTrigger.CompletionWindowElapsed))));
             Assert.All(results, r => Assert.True(r.Applied, $"round {round}"));
 
             await using var db = Db();
             var rows = await db.LedgerEntries.Where(l => l.Kind == LedgerKind.PlatformFee && l.PairKey == $"{client}:{practitioner}").ToListAsync();
             Assert.Single(rows);
-            var fees = await db.Bookings.Where(x => x.Id == a || x.Id == b).Select(x => new { x.Id, x.FeeMinor, x.PayoutMinor }).ToListAsync();
+            var fees = await db.Accesses.Where(x => x.Id == a || x.Id == b).Select(x => new { x.Id, x.FeeMinor, x.PayoutMinor }).ToListAsync();
             Assert.Equal(new long?[] { 0, 3750 }, fees.Select(f => f.FeeMinor).Order().ToArray());
             Assert.Equal(new long?[] { 21250, 25000 }, fees.Select(f => f.PayoutMinor).Order().ToArray());
-            Assert.Equal(rows[0].BookingId, fees.Single(f => f.FeeMinor == 3750).Id);
+            Assert.Equal(rows[0].AccessId, fees.Single(f => f.FeeMinor == 3750).Id);
         }
     }
 
@@ -67,10 +67,10 @@ public class FeeIntegrationTests : IAsyncLifetime
         // The fee row is taken: the second insert hits ON CONFLICT DO NOTHING (0 rows), the transition still commits and the fee is 0.
         var client = Fee.NewClient();
         var practitioner = Guid.NewGuid();
-        var a = await Fee.Seed(host, BookingStatus.Confirmed, client, practitioner, 10000, TimeSpan.FromDays(1));
-        var b = await Fee.Seed(host, BookingStatus.Confirmed, client, practitioner, 10000, TimeSpan.FromDays(2));
-        await Fee.Apply(host, a, BookingTrigger.CompletionWindowElapsed);
-        await Fee.Apply(host, b, BookingTrigger.CompletionWindowElapsed);
+        var a = await Fee.Seed(host, AccessStatus.Confirmed, client, practitioner, 10000, TimeSpan.FromDays(1));
+        var b = await Fee.Seed(host, AccessStatus.Confirmed, client, practitioner, 10000, TimeSpan.FromDays(2));
+        await Fee.Apply(host, a, AccessTrigger.CompletionWindowElapsed);
+        await Fee.Apply(host, b, AccessTrigger.CompletionWindowElapsed);
         Assert.Equal((1500L, 0L), ((await Life.Row(host, a)).FeeMinor, (await Life.Row(host, b)).FeeMinor));
         Assert.Single(await Fee.FeeRows(host, client, practitioner));
     }
@@ -80,15 +80,15 @@ public class FeeIntegrationTests : IAsyncLifetime
     {
         var client = "demo-" + Guid.NewGuid().ToString("N") + new string('z', 27); // 64 characters: the spec format would be 101
         var practitioner = Guid.NewGuid();
-        var a = await Fee.Seed(host, BookingStatus.Confirmed, client, practitioner, 25000, TimeSpan.FromDays(1));
-        var b = await Fee.Seed(host, BookingStatus.Confirmed, client, practitioner, 25000, TimeSpan.FromDays(2));
-        var results = await Task.WhenAll(new[] { a, b }.Select(id => Task.Run(() => Fee.Apply(host, id, BookingTrigger.CompletionWindowElapsed))));
+        var a = await Fee.Seed(host, AccessStatus.Confirmed, client, practitioner, 25000, TimeSpan.FromDays(1));
+        var b = await Fee.Seed(host, AccessStatus.Confirmed, client, practitioner, 25000, TimeSpan.FromDays(2));
+        var results = await Task.WhenAll(new[] { a, b }.Select(id => Task.Run(() => Fee.Apply(host, id, AccessTrigger.CompletionWindowElapsed))));
         Assert.All(results, r => Assert.True(r.Applied));
 
         await using var db = Db();
         var row = Assert.Single(await db.LedgerEntries.Where(l => l.Kind == LedgerKind.PlatformFee && l.PairKey == PairKey.For(client, practitioner)).ToListAsync());
         Assert.StartsWith("h:", row.PairKey);
-        Assert.Equal(new long?[] { 0, 3750 }, (await db.Bookings.Where(x => x.Id == a || x.Id == b).Select(x => x.FeeMinor).ToListAsync()).Order().ToArray());
+        Assert.Equal(new long?[] { 0, 3750 }, (await db.Accesses.Where(x => x.Id == a || x.Id == b).Select(x => x.FeeMinor).ToListAsync()).Order().ToArray());
     }
 
     [Fact]
@@ -96,11 +96,11 @@ public class FeeIntegrationTests : IAsyncLifetime
     {
         await using var db = Db();
         var booking = Guid.NewGuid();
-        db.Payouts.Add(new Payout { Id = Guid.NewGuid(), BookingId = booking, PractitionerId = Guid.NewGuid(), AmountMinor = 21250, Status = PayoutStatus.Pending, CreatedAt = DateTimeOffset.UnixEpoch });
+        db.Payouts.Add(new Payout { Id = Guid.NewGuid(), AccessId = booking, AgentId = Guid.NewGuid(), AmountMinor = 21250, Status = PayoutStatus.Pending, CreatedAt = DateTimeOffset.UnixEpoch });
         await db.SaveChangesAsync();
 
         await using var db2 = Db();
-        db2.Payouts.Add(new Payout { Id = Guid.NewGuid(), BookingId = booking, PractitionerId = Guid.NewGuid(), AmountMinor = 1, Status = PayoutStatus.Pending, CreatedAt = DateTimeOffset.UnixEpoch });
+        db2.Payouts.Add(new Payout { Id = Guid.NewGuid(), AccessId = booking, AgentId = Guid.NewGuid(), AmountMinor = 1, Status = PayoutStatus.Pending, CreatedAt = DateTimeOffset.UnixEpoch });
         var ex = await Assert.ThrowsAsync<DbUpdateException>(() => db2.SaveChangesAsync());
         Assert.Equal(PostgresErrorCodes.UniqueViolation, Assert.IsType<PostgresException>(ex.InnerException).SqlState);
 

@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Gabinety.Directory.Features.Profiles;
 
 /// <summary>Row of `practitioners` (CONTRACTS 3.1). Later tasks fill the rating, reputation, stats and ranking columns.</summary>
-public sealed class Practitioner
+public sealed class Agent
 {
     public Guid Id { get; set; }
     /// <summary>The provider account that owns the agent. Not unique since E-04: one account may own up to <c>Directory:MaxAgentsPerProvider</c> agents.</summary>
@@ -20,7 +20,7 @@ public sealed class Practitioner
     public bool NipValid { get; set; }
     public string? PortfolioUrl { get; set; }
     public string? MeetingUrlDefault { get; set; }
-    public PractitionerStatus Status { get; set; }
+    public AgentStatus Status { get; set; }
     public string? StatusReason { get; set; }
     public DateTimeOffset? ApprovedAt { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
@@ -46,9 +46,9 @@ public sealed class Practitioner
     public DateTimeOffset? GithubChallengeExpiresAt { get; set; }
 }
 
-public sealed class PractitionerConfiguration : IEntityTypeConfiguration<Practitioner>
+public sealed class PractitionerConfiguration : IEntityTypeConfiguration<Agent>
 {
-    public void Configure(EntityTypeBuilder<Practitioner> b)
+    public void Configure(EntityTypeBuilder<Agent> b)
     {
         b.ToTable("practitioners");
         b.HasKey(x => x.Id);

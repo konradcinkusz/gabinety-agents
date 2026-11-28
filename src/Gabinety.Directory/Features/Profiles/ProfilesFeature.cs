@@ -48,8 +48,8 @@ public sealed class ProfilesFeature : IServiceFeature
 
     static string? UserId(ClaimsPrincipal u) => u.FindFirst("sub")?.Value ?? u.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-    /// <summary>Keeps the e-mail snapshot of the token (<see cref="Practitioner.ContactEmail"/>) current. A token without a usable address leaves the stored one alone. Does not save.</summary>
-    static void Snapshot(Practitioner p, ClaimsPrincipal user)
+    /// <summary>Keeps the e-mail snapshot of the token (<see cref="Agent.ContactEmail"/>) current. A token without a usable address leaves the stored one alone. Does not save.</summary>
+    static void Snapshot(Agent p, ClaimsPrincipal user)
     {
         if (UserEmail.From(user) is { } e && e != p.ContactEmail) p.ContactEmail = e;
     }
@@ -57,7 +57,7 @@ public sealed class ProfilesFeature : IServiceFeature
     static string? Bearer(HttpContext ctx) =>
         ctx.Request.Headers.Authorization.ToString() is { } h && h.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) ? h[7..].Trim() : null;
 
-    static async Task<PractitionerPrivate> View(Practitioner p, HttpContext ctx, IEmailVerifiedLookup email, CancellationToken ct) =>
+    static async Task<AgentPrivate> View(Agent p, HttpContext ctx, IEmailVerifiedLookup email, CancellationToken ct) =>
         new(p.Id, p.Slug, p.Status, p.StatusReason, p.DisplayName, p.Headline, p.Bio, p.PortfolioUrl, p.MeetingUrlDefault, p.Nip,
             Bearer(ctx) is { } t && await email.IsVerifiedAsync(t, ct), p.GithubLinked, p.NipValid, p.GithubLogin);
 
@@ -69,7 +69,7 @@ public sealed class ProfilesFeature : IServiceFeature
 
     enum Inserted { Created, TooMany, SlugTaken }
 
-    static async Task<IResult> Create(CreatePractitionerRequest req, ClaimsPrincipal user, HttpContext ctx, DirectoryDbContext db,
+    static async Task<IResult> Create(CreateAgentRequest req, ClaimsPrincipal user, HttpContext ctx, DirectoryDbContext db,
         IEmailVerifiedLookup email, IConfiguration config, TimeProvider time, CancellationToken ct)
     {
         if (UserId(user) is not { } uid) return Results.Unauthorized();
@@ -82,15 +82,15 @@ public sealed class ProfilesFeature : IServiceFeature
         for (var n = 1; n <= SlugAttempts + 1; n++)
         {
             var slug = SlugGenerator.WithSuffix(baseSlug, n);
-            if (await db.Practitioners.AnyAsync(x => x.Slug == slug, ct)) { continue; }
-            var p = new Practitioner { Id = Guid.NewGuid(), UserId = uid, Slug = slug, DisplayName = name, ContactEmail = UserEmail.From(user), Status = PractitionerStatus.Draft, CreatedAt = now, UpdatedAt = now };
+            if (await db.Agents.AnyAsync(x => x.Slug == slug, ct)) { continue; }
+            var p = new Agent { Id = Guid.NewGuid(), UserId = uid, Slug = slug, DisplayName = name, ContactEmail = UserEmail.From(user), Status = AgentStatus.Draft, CreatedAt = now, UpdatedAt = now };
             switch (await Insert(db, p, max, ct))
             {
                 case Inserted.TooMany: return Problem(422, ErrorCodes.TooManyAgents, $"At most {max} agents per account");
                 case Inserted.Created: return Results.Created(Route, await View(p, ctx, email, ct));
             }
         }
-        return Problem(409, ErrorCodes.PractitionerExists, "Slug could not be allocated, try again"); // practically unreachable
+        return Problem(409, ErrorCodes.AgentExists, "Slug could not be allocated, try again"); // practically unreachable
     }
 
     /// <summary>
@@ -98,12 +98,12 @@ public sealed class ProfilesFeature : IServiceFeature
     /// after the other, so the limit cannot be exceeded by a race; the unique slug index decides a race for the slug (<see cref="Inserted.SlugTaken"/>: the caller tries the next
     /// slug). InMemory has no locks or transactions.
     /// </summary>
-    static async Task<Inserted> Insert(DirectoryDbContext db, Practitioner p, int max, CancellationToken ct)
+    static async Task<Inserted> Insert(DirectoryDbContext db, Agent p, int max, CancellationToken ct)
     {
         if (!db.Database.IsRelational())
         {
-            if (await db.Practitioners.CountAsync(x => x.UserId == p.UserId, ct) >= max) return Inserted.TooMany;
-            db.Practitioners.Add(p);
+            if (await db.Agents.CountAsync(x => x.UserId == p.UserId, ct) >= max) return Inserted.TooMany;
+            db.Agents.Add(p);
             try { await db.SaveChangesAsync(ct); return Inserted.Created; }
             catch (DbUpdateException) { db.Entry(p).State = EntityState.Detached; return Inserted.SlugTaken; }
         }
@@ -113,8 +113,8 @@ public sealed class ProfilesFeature : IServiceFeature
             db.ChangeTracker.Clear(); // a retry starts from the database, not from a half-applied attempt
             await using var tx = await db.Database.BeginTransactionAsync(ct);
             await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtextextended({p.UserId}, 0))", ct);
-            if (await db.Practitioners.CountAsync(x => x.UserId == p.UserId, ct) >= max) return Inserted.TooMany;
-            db.Practitioners.Add(p);
+            if (await db.Agents.CountAsync(x => x.UserId == p.UserId, ct) >= max) return Inserted.TooMany;
+            db.Agents.Add(p);
             try { await db.SaveChangesAsync(ct); }
             catch (DbUpdateException)
             {
@@ -131,8 +131,8 @@ public sealed class ProfilesFeature : IServiceFeature
     static async Task<IResult> List(ClaimsPrincipal user, DirectoryDbContext db, CancellationToken ct)
     {
         if (UserId(user) is not { } uid) return Results.Unauthorized();
-        var rows = await db.Practitioners.AsNoTracking().Where(x => x.UserId == uid).OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).ToListAsync(ct); // order, then project
-        return Results.Ok(new { items = rows.Select(p => new PractitionerSummary(p.Id, p.Slug, p.DisplayName, p.Headline, p.Status, p.StatusReason)) });
+        var rows = await db.Agents.AsNoTracking().Where(x => x.UserId == uid).OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).ToListAsync(ct); // order, then project
+        return Results.Ok(new { items = rows.Select(p => new AgentSummary(p.Id, p.Slug, p.DisplayName, p.Headline, p.Status, p.StatusReason)) });
     }
 
     static async Task<IResult> Get(string? agent, ClaimsPrincipal user, HttpContext ctx, DirectoryDbContext db, IEmailVerifiedLookup email, CancellationToken ct)
@@ -145,7 +145,7 @@ public sealed class ProfilesFeature : IServiceFeature
         return Results.Ok(await View(p, ctx, email, ct));
     }
 
-    static async Task<IResult> Update(UpdatePractitionerRequest req, string? agent, ClaimsPrincipal user, HttpContext ctx, DirectoryDbContext db,
+    static async Task<IResult> Update(UpdateAgentRequest req, string? agent, ClaimsPrincipal user, HttpContext ctx, DirectoryDbContext db,
         IEmailVerifiedLookup email, IChecklistFacts facts, INipValidator nips, IContactDetailDetector contact, IConfiguration config,
         TimeProvider time, CancellationToken ct)
     {
@@ -175,7 +175,7 @@ public sealed class ProfilesFeature : IServiceFeature
             return Problem(422, ErrorCodes.ContactDetailsNotAllowed, "Contact details are not allowed in the profile text");
 
         var nipChanged = nip != p.Nip;
-        if (nipChanged && p.Status == PractitionerStatus.Approved &&
+        if (nipChanged && p.Status == AgentStatus.Approved &&
             PractitionerStateMachine.TryTransition(p.Status, PractitionerTrigger.NipChanged, out var next))
         {
             p.Status = next;

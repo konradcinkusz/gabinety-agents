@@ -47,15 +47,15 @@ public class NotificationIntegrationTests
         var due = DateTimeOffset.UtcNow;
 
         await using var db = Db(pg.GetConnectionString());
-        db.Notifications.Add(new() { Id = Guid.NewGuid(), BookingId = booking, Kind = NotificationKind.Reminder1h, ToUserId = "demo-client", DueAt = due });
+        db.Notifications.Add(new() { Id = Guid.NewGuid(), AccessId = booking, Kind = NotificationKind.Reminder1h, ToUserId = "demo-client", DueAt = due });
         await db.SaveChangesAsync();
 
         await using var db2 = Db(pg.GetConnectionString());
-        db2.Notifications.Add(new() { Id = Guid.NewGuid(), BookingId = booking, Kind = NotificationKind.Reminder1h, ToUserId = "demo-client", DueAt = due });
+        db2.Notifications.Add(new() { Id = Guid.NewGuid(), AccessId = booking, Kind = NotificationKind.Reminder1h, ToUserId = "demo-client", DueAt = due });
         await Assert.ThrowsAsync<DbUpdateException>(() => db2.SaveChangesAsync());
 
         db2.ChangeTracker.Clear();
-        db2.Notifications.Add(new() { Id = Guid.NewGuid(), BookingId = booking, Kind = NotificationKind.Reminder1h, ToUserId = "demo-practitioner", DueAt = due }); // another user: fine
+        db2.Notifications.Add(new() { Id = Guid.NewGuid(), AccessId = booking, Kind = NotificationKind.Reminder1h, ToUserId = "demo-practitioner", DueAt = due }); // another user: fine
         await db2.SaveChangesAsync();
     }
 
@@ -79,11 +79,11 @@ public class NotificationIntegrationTests
         {
             for (var i = 0; i < 40; i++)
             {
-                var n = new Notification { Id = Guid.NewGuid(), BookingId = booking, Kind = NotificationKind.Reminder24h, ToUserId = $"demo-user-{i:D3}", DueAt = now };
+                var n = new Notification { Id = Guid.NewGuid(), AccessId = booking, Kind = NotificationKind.Reminder24h, ToUserId = $"demo-user-{i:D3}", DueAt = now };
                 ids.Add(n.Id);
                 seed.Notifications.Add(n);
             }
-            seed.Bookings.Add(new() { Id = booking, ClientUserId = "demo-client", PractitionerUserId = "demo-practitioner", OfferingTitle = "demo-offering", StartUtc = now.AddDays(2), EndUtc = now.AddDays(2).AddHours(1), IdempotencyKey = Guid.NewGuid(), CreatedAt = now, Status = Gabinety.Billing.BookingStatus.Confirmed });
+            seed.Accesses.Add(new() { Id = booking, ClientUserId = "demo-client", PractitionerUserId = "demo-practitioner", PackageTitle = "demo-offering", StartUtc = now.AddDays(2), EndUtc = now.AddDays(2).AddHours(1), IdempotencyKey = Guid.NewGuid(), CreatedAt = now, Status = Gabinety.Billing.AccessStatus.Confirmed });
             await seed.SaveChangesAsync();
         }
 

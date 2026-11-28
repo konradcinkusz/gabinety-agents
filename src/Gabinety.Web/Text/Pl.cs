@@ -171,11 +171,11 @@ public static class Pl
         public const string Title = "Wylogowanie", MetaTitle = "Wylogowanie | Gabinety Tech", Body = "Czy chcesz się wylogować?", Submit = "Wyloguj się";
     }
 
-    public static class Bookings
+    public static class Accesses
     {
         public const string Title = "Moje dostępy", MetaTitle = "Moje dostępy | Gabinety Tech";
         public const string Upcoming = "Aktywne", Past = "Zakończone", Today = "dziś", Tomorrow = "jutro", InDays = "za {0} dni", StatusFilterLabel = "Filtruj według statusu";
-        public const string RoleLabel = "Pokaż dostępy jako", Client = "Klient", Practitioner = "Dostawca";
+        public const string RoleLabel = "Pokaż dostępy jako", Client = "Klient", Agent = "Dostawca";
         public const string StatusLabel = "Status", AllStatuses = "Wszystkie", Loading = "Ładowanie dostępów…", Empty = "Brak dostępów w tym widoku.", More = "Pokaż więcej";
         public const string PartyPractitioner = "Agent", PartyClient = "Klient";
         public const string SignedOut = "Sesja wygasła. Zaloguj się ponownie.", SignInAgain = "Zaloguj się";

@@ -22,14 +22,14 @@ public static class Kit
 
     public static string Id() => "demo-" + Guid.NewGuid().ToString("n");
 
-    public static OfferingRequest Valid(string title = "Przegląd kodu .NET", string description = "Review jednego modułu aplikacji",
+    public static PackageRequest Valid(string title = "Przegląd kodu .NET", string description = "Review jednego modułu aplikacji",
         int duration = 30, long price = 10000, string problem = "code-review", string[]? techs = null, string? meeting = null) =>
         new(title, description, duration, price, problem, techs ?? ["dotnet"], meeting);
 
-    public static async Task<HttpClient> Practitioner(ProfileFactory f, string? sub = null)
+    public static async Task<HttpClient> Agent(ProfileFactory f, string? sub = null)
     {
         var c = f.ClientFor(sub ?? Id());
-        var r = await c.PostAsJsonAsync("/api/v1/me/practitioner", new CreatePractitionerRequest("Demo " + Guid.NewGuid().ToString("n")[..12]));
+        var r = await c.PostAsJsonAsync("/api/v1/me/practitioner", new CreateAgentRequest("Demo " + Guid.NewGuid().ToString("n")[..12]));
         Assert.Equal(HttpStatusCode.Created, r.StatusCode);
         return c;
     }
@@ -40,23 +40,23 @@ public static class Kit
         return (await r.Content.ReadFromJsonAsync<ApiProblem>(J))!;
     }
 
-    public static async Task<OfferingPrivate> Created(HttpClient c, OfferingRequest req)
+    public static async Task<PackagePrivate> Created(HttpClient c, PackageRequest req)
     {
         var r = await c.PostAsJsonAsync(Url, req);
         Assert.Equal(HttpStatusCode.Created, r.StatusCode);
-        return (await r.Content.ReadFromJsonAsync<OfferingPrivate>(J))!;
+        return (await r.Content.ReadFromJsonAsync<PackagePrivate>(J))!;
     }
 
-    public static async Task<List<OfferingPrivate>> List(HttpClient c) =>
+    public static async Task<List<PackagePrivate>> List(HttpClient c) =>
         (await c.GetFromJsonAsync<ItemsDto>(Url, J))!.Items;
 
-    public sealed record ItemsDto(List<OfferingPrivate> Items);
+    public sealed record ItemsDto(List<PackagePrivate> Items);
 
     public static async Task<decimal> Completeness(ProfileFactory f, string userId)
     {
         using var scope = f.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<DirectoryDbContext>();
-        return (await db.Practitioners.AsNoTracking().SingleAsync(p => p.UserId == userId)).ProfileCompleteness;
+        return (await db.Agents.AsNoTracking().SingleAsync(p => p.UserId == userId)).ProfileCompleteness;
     }
 
     public static async Task WaitForSeed(ProfileFactory f)

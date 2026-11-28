@@ -68,7 +68,7 @@ else if (Profile is not null)
         var f = Posted;
         _v = new(f.Text("displayName"), f.Text("headline"), f.Text("bio"), f.Text("portfolioUrl"), f.Text("nip"));
         static string? Blank(string s) => s.Length == 0 ? null : s; // an empty optional field is omitted, not sent as null (CONTRACTS 0)
-        var r = await Practitioner.SaveProfileAsync(new UpdatePractitionerBody(_v.DisplayName, _v.Headline, _v.Bio, Blank(_v.PortfolioUrl), Blank(_v.Nip)));
+        var r = await Agent.SaveProfileAsync(new UpdatePractitionerBody(_v.DisplayName, _v.Headline, _v.Bio, Blank(_v.PortfolioUrl), Blank(_v.Nip)));
         if (r.IsOk) { Done(PractitionerPaths.Profile, FlashKey.Saved); return; }
         foreach (var (field, message) in FieldErrors.From(r.Failure!, new Dictionary<string, string?> { ["headline"] = _v.Headline, ["bio"] = _v.Bio })) _errors[field] = message;
         if (_errors.Count == 0) _general = FieldErrors.General(r.Failure!, PlPractitioner.Common.Unavailable);

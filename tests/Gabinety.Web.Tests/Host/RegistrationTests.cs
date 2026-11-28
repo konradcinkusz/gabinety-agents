@@ -5,7 +5,7 @@ namespace Gabinety.Web.Tests.Pipeline;
 /// <summary>/rejestracja: static form post, every problem at once (F-06), no internal versions printed (F-07), the 202 and 2FA states as real pages (ADR-0010 task 2).</summary>
 public class RegistrationTests
 {
-    static WebFactory Web() { var w = new WebFactory(); w.Booking.Respond = _ => FakeBackend.Json(new Gabinety.Web.Api.PageDto<Gabinety.Web.Api.BookingViewDto>([], null)); return w; }
+    static WebFactory Web() { var w = new WebFactory(); w.Access.Respond = _ => FakeBackend.Json(new Gabinety.Web.Api.PageDto<Gabinety.Web.Api.BookingViewDto>([], null)); return w; }
 
     static Dictionary<string, string> Form(string email = "demo-new@demo.example", string password = "Demo-Dev-Passw0rd!", bool consent = true, string? terms = FakeIdentity.ConsentVersion, string? privacy = FakeIdentity.ConsentVersion)
     {

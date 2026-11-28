@@ -11,13 +11,13 @@ public sealed record Badge(string Label, BadgeKind Kind)
 
     public static Badge ForBooking(string status) => status switch
     {
-        "PendingPayment" => new(Pl.Bookings.Statuses[status], BadgeKind.Warning),
-        "Confirmed" => new(Pl.Bookings.Statuses[status], BadgeKind.Info),
-        "Completed" => new(Pl.Bookings.Statuses[status], BadgeKind.Success),
-        "CancelledByClient" or "Expired" or "Resolved" => new(Pl.Bookings.Statuses[status], BadgeKind.Neutral),
-        "LateCancelledByClient" or "Disputed" => new(Pl.Bookings.Statuses[status], BadgeKind.Warning),
-        "CancelledByPractitioner" or "ClientNoShow" => new(Pl.Bookings.Statuses[status], BadgeKind.Danger),
-        _ => new(Pl.Bookings.UnknownStatus, BadgeKind.Neutral),
+        "PendingPayment" => new(Pl.Accesses.Statuses[status], BadgeKind.Warning),
+        "Confirmed" => new(Pl.Accesses.Statuses[status], BadgeKind.Info),
+        "Completed" => new(Pl.Accesses.Statuses[status], BadgeKind.Success),
+        "CancelledByClient" or "Expired" or "Resolved" => new(Pl.Accesses.Statuses[status], BadgeKind.Neutral),
+        "LateCancelledByClient" or "Disputed" => new(Pl.Accesses.Statuses[status], BadgeKind.Warning),
+        "CancelledByPractitioner" or "ClientNoShow" => new(Pl.Accesses.Statuses[status], BadgeKind.Danger),
+        _ => new(Pl.Accesses.UnknownStatus, BadgeKind.Neutral),
     };
 
     public static Badge ForPayment(string status) => status switch

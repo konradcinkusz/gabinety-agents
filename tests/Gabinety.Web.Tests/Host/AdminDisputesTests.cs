@@ -7,19 +7,19 @@ namespace Gabinety.Web.Tests.AdminPages;
 /// <summary>/admin/spory: the card (P-ADM-3), the J6 hooks, the three-step resolve flow, the amount bounds, the conflicts and the stale post.</summary>
 public class AdminDisputesTests
 {
-    static readonly Guid BookingId = Guid.Parse("0b9e1d2c-7a5f-4c3e-9b1a-2d4e6f8a0b1c");
+    static readonly Guid AccessId = Guid.Parse("0b9e1d2c-7a5f-4c3e-9b1a-2d4e6f8a0b1c");
     const string Open = "/admin/spory?status=open";
 
     static async Task<(AdminHost Host, AdminDisputeDto Dispute)> HostWithDisputeAsync(long price = 18000, bool bookingReadable = true, string practitionerName = "")
     {
         var host = await AdminHost.StartAsync();
-        var dispute = AdminHost.Dispute(BookingId);
+        var dispute = AdminHost.Dispute(AccessId);
         var practitionerId = Guid.NewGuid();
-        host.Web.Booking.Respond = r => (r.Method.Method, r.RequestUri!.AbsolutePath) switch
+        host.Web.Access.Respond = r => (r.Method.Method, r.RequestUri!.AbsolutePath) switch
         {
             ("GET", "/api/v1/admin/disputes") => AdminHost.Paged(dispute),
-            ("GET", var p) when p == $"/api/v1/bookings/{BookingId}" => bookingReadable ? FakeBackend.Json(AdminHost.BookingOf(BookingId, price, practitionerName: practitionerName, practitionerId: practitionerId)) : FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable"),
-            ("POST", var p) when p == $"/api/v1/admin/bookings/{BookingId}/resolve" => AdminHost.NoContent(),
+            ("GET", var p) when p == $"/api/v1/bookings/{AccessId}" => bookingReadable ? FakeBackend.Json(AdminHost.BookingOf(AccessId, price, practitionerName: practitionerName, practitionerId: practitionerId)) : FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable"),
+            ("POST", var p) when p == $"/api/v1/admin/bookings/{AccessId}/resolve" => AdminHost.NoContent(),
             _ => new HttpResponseMessage(HttpStatusCode.NotFound),
         };
         host.Web.Directory.Respond = r => r.RequestUri!.AbsolutePath == $"/api/v1/admin/practitioners/{practitionerId}" ? FakeBackend.Json(AdminHost.DetailOf(practitionerId, "Anna Demowska")) : new HttpResponseMessage(HttpStatusCode.NotFound);
@@ -37,7 +37,7 @@ public class AdminDisputesTests
         Assert.Equal("Reklamacje", Assert.Single(page.All("h1")).TextContent);
         var card = Assert.Single(page.All("main ul[aria-label] > li"));
         var text = Page.Squash(card.TextContent).Replace(' ', ' ');
-        Assert.Contains(BookingId.ToString(), text); // J6: the listitem that names the booking id
+        Assert.Contains(AccessId.ToString(), text); // J6: the listitem that names the booking id
         Assert.Contains("Usługa niezgodna z opisem", card.QuerySelector("h2")!.TextContent);
         Assert.Contains("Audyt kodu .NET", text); // the offer
         Assert.Contains("180,00 zł", text); // the amount at issue (P-ADM-1)
@@ -71,7 +71,7 @@ public class AdminDisputesTests
     {
         var (host, _) = await HostWithDisputeAsync();
         await using var _h = host;
-        var page = await host.Browser.GetAsync($"{Open}&rozstrzygnij={BookingId}");
+        var page = await host.Browser.GetAsync($"{Open}&rozstrzygnij={AccessId}");
         var card = Assert.Single(page.All("main ul[aria-label] > li"));
         Assert.Equal(["Wypłać dostawcy", "Zwróć klientowi całość", "Zwróć klientowi część"], card.QuerySelectorAll("input[type=radio]").Select(r => Page.Squash(r.ParentElement!.QuerySelector("span")!.ChildNodes[0].TextContent)));
         Assert.Equal("Kwota zwrotu w zł", card.QuerySelector("label[for^=amount]")!.TextContent);
@@ -80,7 +80,7 @@ public class AdminDisputesTests
         Assert.Contains(card.QuerySelectorAll("button"), b => b.TextContent.Trim() == "Przejdź do potwierdzenia");
         Assert.DoesNotContain(card.QuerySelectorAll("button"), b => b.TextContent.Contains("Potwierdź rozstrzygnięcie"));
         Assert.NotNull(card.QuerySelector("form[method=post] input[name=__RequestVerificationToken]"));
-        Assert.DoesNotContain(host.Web.Booking.Requests, r => r.Method == HttpMethod.Post);
+        Assert.DoesNotContain(host.Web.Access.Requests, r => r.Method == HttpMethod.Post);
     }
 
     [Fact]
@@ -88,8 +88,8 @@ public class AdminDisputesTests
     {
         var (host, _) = await HostWithDisputeAsync();
         await using var _h = host;
-        var url = $"{Open}&rozstrzygnij={BookingId}";
-        var form = $"resolve-{BookingId}";
+        var url = $"{Open}&rozstrzygnij={AccessId}";
+        var form = $"resolve-{AccessId}";
         var edit = await host.Browser.GetAsync(url);
 
         // step 1 -> 2: nothing is sent to the service, the page says what the money does
@@ -102,14 +102,14 @@ public class AdminDisputesTests
         Assert.Contains("Tej decyzji nie można cofnąć", consequence);
         Assert.Contains(card.QuerySelectorAll("button"), b => b.TextContent.Trim() == "Potwierdź rozstrzygnięcie");
         Assert.Contains(card.QuerySelectorAll("button"), b => b.TextContent.Trim() == "Wróć");
-        Assert.DoesNotContain(host.Web.Booking.Requests, r => r.Method == HttpMethod.Post);
+        Assert.DoesNotContain(host.Web.Access.Requests, r => r.Method == HttpMethod.Post);
 
         // step 3: the confirm posts what the confirm step carries, and goes back to the open list with the message
         var confirm = await host.PostAsync(review, url, form, ("step", "confirm"));
         Assert.Equal(HttpStatusCode.Redirect, confirm.Status);
         Assert.Equal("/admin/spory?status=open&flash=admin-dispute-resolved", confirm.Location);
-        var post = Assert.Single(host.Web.Booking.Requests, r => r.Method == HttpMethod.Post);
-        Assert.Equal($"/api/v1/admin/bookings/{BookingId}/resolve", post.PathAndQuery);
+        var post = Assert.Single(host.Web.Access.Requests, r => r.Method == HttpMethod.Post);
+        Assert.Equal($"/api/v1/admin/bookings/{AccessId}/resolve", post.PathAndQuery);
         Assert.NotNull(post.Authorization);
         var json = AdminHost.Body(post);
         Assert.Equal(("refund_partial", 10000L, "Częściowy zwrot po sprawdzeniu zgłoszenia, test."), (json.GetProperty("resolution").GetString(), json.GetProperty("refundMinor").GetInt64(), json.GetProperty("note").GetString()));
@@ -122,11 +122,11 @@ public class AdminDisputesTests
     {
         var (host, _) = await HostWithDisputeAsync();
         await using var _h = host;
-        var url = $"{Open}&rozstrzygnij={BookingId}";
+        var url = $"{Open}&rozstrzygnij={AccessId}";
         var edit = await host.Browser.GetAsync(url);
-        var done = await host.PostAsync(edit, url, $"resolve-{BookingId}", ("resolution", resolution), ("amount", "99,00"), ("note", "Notatka o dziesięciu znakach"), ("step", "confirm"));
+        var done = await host.PostAsync(edit, url, $"resolve-{AccessId}", ("resolution", resolution), ("amount", "99,00"), ("note", "Notatka o dziesięciu znakach"), ("step", "confirm"));
         Assert.Equal(HttpStatusCode.Redirect, done.Status);
-        var json = AdminHost.Body(Assert.Single(host.Web.Booking.Requests, r => r.Method == HttpMethod.Post));
+        var json = AdminHost.Body(Assert.Single(host.Web.Access.Requests, r => r.Method == HttpMethod.Post));
         Assert.Equal(resolution, json.GetProperty("resolution").GetString());
         Assert.Equal(System.Text.Json.JsonValueKind.Null, json.GetProperty("refundMinor").ValueKind); // a stray amount is not sent
         Assert.Equal("Notatka o dziesięciu znakach", json.GetProperty("note").GetString());
@@ -142,9 +142,9 @@ public class AdminDisputesTests
     {
         var (host, _h) = await HostWithDisputeAsync();
         await using var _d = host;
-        var url = $"{Open}&rozstrzygnij={BookingId}";
+        var url = $"{Open}&rozstrzygnij={AccessId}";
         var edit = await host.Browser.GetAsync(url);
-        var answer = await host.PostAsync(edit, url, $"resolve-{BookingId}", ("resolution", resolution), ("amount", amount), ("note", "krótka"), ("step", "confirm")); // the confirm is forged straight away: still validated
+        var answer = await host.PostAsync(edit, url, $"resolve-{AccessId}", ("resolution", resolution), ("amount", amount), ("note", "krótka"), ("step", "confirm")); // the confirm is forged straight away: still validated
         Assert.Equal(HttpStatusCode.OK, answer.Status);
         var summary = answer.One("[data-testid=resolve-problems]")!;
         Assert.Equal("alert", summary.GetAttribute("role"));
@@ -153,7 +153,7 @@ public class AdminDisputesTests
         Assert.Contains("Podaj notatkę: od 10 do 500 znaków.", text); // all problems at once
         Assert.Equal("krótka", answer.One("textarea[name=note]")!.TextContent.Trim());
         Assert.Equal("true", answer.One("textarea[name=note]")!.GetAttribute("aria-invalid"));
-        Assert.DoesNotContain(host.Web.Booking.Requests, r => r.Method == HttpMethod.Post);
+        Assert.DoesNotContain(host.Web.Access.Requests, r => r.Method == HttpMethod.Post);
         Assert.DoesNotContain(answer.All("button"), b => b.TextContent.Contains("Potwierdź rozstrzygnięcie"));
     }
 
@@ -162,10 +162,10 @@ public class AdminDisputesTests
     {
         var (host, _) = await HostWithDisputeAsync();
         await using var _h = host;
-        var url = $"{Open}&rozstrzygnij={BookingId}";
+        var url = $"{Open}&rozstrzygnij={AccessId}";
         var edit = await host.Browser.GetAsync(url);
-        var review = await host.PostAsync(edit, url, $"resolve-{BookingId}", ("resolution", "refund_partial"), ("amount", "42,5"), ("note", "Notatka o dziesięciu znakach"), ("step", "review"));
-        var back = await host.PostAsync(review, url, $"resolve-{BookingId}", ("step", "back"));
+        var review = await host.PostAsync(edit, url, $"resolve-{AccessId}", ("resolution", "refund_partial"), ("amount", "42,5"), ("note", "Notatka o dziesięciu znakach"), ("step", "review"));
+        var back = await host.PostAsync(review, url, $"resolve-{AccessId}", ("step", "back"));
         Assert.Equal("42,5", back.One("input[name=amount]")!.GetAttribute("value"));
         Assert.Equal("Notatka o dziesięciu znakach", back.One("textarea[name=note]")!.TextContent.Trim());
         Assert.True(back.One("input[type=radio][value=refund_partial]")!.HasAttribute("checked"));
@@ -180,11 +180,11 @@ public class AdminDisputesTests
     {
         var (host, _) = await HostWithDisputeAsync();
         await using var _h = host;
-        var ok = host.Web.Booking.Respond;
-        host.Web.Booking.Respond = r => r.Method == HttpMethod.Post ? FakeBackend.Problem(status, code) : ok(r);
-        var url = $"{Open}&rozstrzygnij={BookingId}";
+        var ok = host.Web.Access.Respond;
+        host.Web.Access.Respond = r => r.Method == HttpMethod.Post ? FakeBackend.Problem(status, code) : ok(r);
+        var url = $"{Open}&rozstrzygnij={AccessId}";
         var edit = await host.Browser.GetAsync(url);
-        var answer = await host.PostAsync(edit, url, $"resolve-{BookingId}", ("resolution", "release"), ("amount", ""), ("note", "Notatka o dziesięciu znakach"), ("step", "confirm"));
+        var answer = await host.PostAsync(edit, url, $"resolve-{AccessId}", ("resolution", "release"), ("amount", ""), ("note", "Notatka o dziesięciu znakach"), ("step", "confirm"));
         Assert.Equal(HttpStatusCode.OK, answer.Status);
         Assert.Contains(expected, answer.Text);
         Assert.DoesNotContain("SERVER-TITLE", answer.Html);
@@ -198,16 +198,16 @@ public class AdminDisputesTests
         var (host, _) = await HostWithDisputeAsync();
         await using var _h = host;
         var resolved = false;
-        var ok = host.Web.Booking.Respond;
-        host.Web.Booking.Respond = r => resolved && r.RequestUri!.AbsolutePath == "/api/v1/admin/disputes" ? AdminHost.Paged<AdminDisputeDto>() : ok(r);
-        var url = $"{Open}&rozstrzygnij={BookingId}";
+        var ok = host.Web.Access.Respond;
+        host.Web.Access.Respond = r => resolved && r.RequestUri!.AbsolutePath == "/api/v1/admin/disputes" ? AdminHost.Paged<AdminDisputeDto>() : ok(r);
+        var url = $"{Open}&rozstrzygnij={AccessId}";
         var edit = await host.Browser.GetAsync(url);
         resolved = true; // somebody else resolved it between the page and the click
-        var answer = await host.PostAsync(edit, url, $"resolve-{BookingId}", ("resolution", "release"), ("note", "Notatka o dziesięciu znakach"), ("step", "confirm"));
+        var answer = await host.PostAsync(edit, url, $"resolve-{AccessId}", ("resolution", "release"), ("note", "Notatka o dziesięciu znakach"), ("step", "confirm"));
         Assert.Equal(HttpStatusCode.OK, answer.Status);
         Assert.Contains(PlAdmin.Common.StaleForm, answer.Text);
         Assert.Empty(answer.All("main ul[aria-label] > li"));
-        Assert.DoesNotContain(host.Web.Booking.Requests, r => r.Method == HttpMethod.Post); // nothing was resolved a second time
+        Assert.DoesNotContain(host.Web.Access.Requests, r => r.Method == HttpMethod.Post); // nothing was resolved a second time
     }
 
     [Fact]
@@ -215,17 +215,17 @@ public class AdminDisputesTests
     {
         var (host, _) = await HostWithDisputeAsync();
         await using var _h = host;
-        var forged = await host.PostRawAsync($"{Open}&rozstrzygnij={BookingId}", [KeyValuePair.Create("_handler", $"resolve-{BookingId}"), KeyValuePair.Create("resolution", "refund_full"), KeyValuePair.Create("note", "Notatka o dziesięciu znakach"), KeyValuePair.Create("step", "confirm")]);
+        var forged = await host.PostRawAsync($"{Open}&rozstrzygnij={AccessId}", [KeyValuePair.Create("_handler", $"resolve-{AccessId}"), KeyValuePair.Create("resolution", "refund_full"), KeyValuePair.Create("note", "Notatka o dziesięciu znakach"), KeyValuePair.Create("step", "confirm")]);
         Assert.Equal(HttpStatusCode.BadRequest, forged.Status);
-        Assert.DoesNotContain(host.Web.Booking.Requests, r => r.Method == HttpMethod.Post);
+        Assert.DoesNotContain(host.Web.Access.Requests, r => r.Method == HttpMethod.Post);
     }
 
     [Fact]
     public async Task The_resolved_tab_shows_the_outcome_and_the_note_and_offers_no_form()
     {
         await using var host = await AdminHost.StartAsync();
-        var done = AdminHost.Dispute(BookingId) with { ResolvedAt = new DateTimeOffset(2026, 11, 25, 9, 30, 0, TimeSpan.Zero), Resolution = "refund_partial", Note = "Częściowy zwrot po sprawdzeniu." };
-        host.Web.Booking.Respond = r => r.RequestUri!.AbsolutePath == "/api/v1/admin/disputes" ? AdminHost.Paged(done) : FakeBackend.Json(AdminHost.BookingOf(BookingId, payment: "PartiallyRefunded", refunded: 10000));
+        var done = AdminHost.Dispute(AccessId) with { ResolvedAt = new DateTimeOffset(2026, 11, 25, 9, 30, 0, TimeSpan.Zero), Resolution = "refund_partial", Note = "Częściowy zwrot po sprawdzeniu." };
+        host.Web.Access.Respond = r => r.RequestUri!.AbsolutePath == "/api/v1/admin/disputes" ? AdminHost.Paged(done) : FakeBackend.Json(AdminHost.BookingOf(AccessId, payment: "PartiallyRefunded", refunded: 10000));
         host.Web.Directory.Respond = _ => new HttpResponseMessage(HttpStatusCode.NotFound);
         var page = await host.Browser.GetAsync("/admin/spory?status=resolved");
         var text = Page.Squash(page.TextOf("main ul[aria-label] > li")).Replace(' ', ' ');
@@ -235,7 +235,7 @@ public class AdminDisputesTests
         Assert.Contains("Zwrócona częściowo", text);
         Assert.Contains("25 lis 2026, 10:30", text);
         Assert.Empty(page.All("main button"));
-        Assert.Contains("status=resolved", host.Web.Booking.Requests[0].PathAndQuery);
+        Assert.Contains("status=resolved", host.Web.Access.Requests[0].PathAndQuery);
         Assert.StartsWith("Rozstrzygnięte", page.TextOf(".segmented a.chip[aria-current=true]"));
     }
 
@@ -249,7 +249,7 @@ public class AdminDisputesTests
         await using var _h = host;
         var page = await host.Browser.GetAsync("/admin/spory" + query);
         Assert.Equal(HttpStatusCode.OK, page.Status);
-        var asked = host.Web.Booking.Requests[0].PathAndQuery;
+        var asked = host.Web.Access.Requests[0].PathAndQuery;
         Assert.Contains("status=open", asked);
         Assert.DoesNotContain("banana", asked);
         Assert.DoesNotContain("script", asked, StringComparison.OrdinalIgnoreCase);
@@ -259,7 +259,7 @@ public class AdminDisputesTests
     public async Task A_service_that_is_down_is_an_alert_with_the_unavailable_hook_and_the_page_still_renders()
     {
         await using var host = await AdminHost.StartAsync();
-        host.Web.Booking.Respond = _ => FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable");
+        host.Web.Access.Respond = _ => FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable");
         var page = await host.Browser.GetAsync(Open);
         Assert.Equal(HttpStatusCode.OK, page.Status);
         Assert.Equal(PlAdmin.Disputes.Unavailable, page.TextOf("[data-testid=unavailable]"));
@@ -274,7 +274,7 @@ public class AdminDisputesTests
         await using var host = await AdminHost.StartAsync();
         var disputes = Enumerable.Range(0, 12).Select(_ => AdminHost.Dispute()).ToArray();
         int active = 0, peak = 0;
-        host.Web.Booking.Respond = r =>
+        host.Web.Access.Respond = r =>
         {
             if (r.RequestUri!.AbsolutePath == "/api/v1/admin/disputes") return AdminHost.Paged(disputes);
             var now = Interlocked.Increment(ref active);

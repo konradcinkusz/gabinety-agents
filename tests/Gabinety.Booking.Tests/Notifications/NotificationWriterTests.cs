@@ -2,7 +2,7 @@ using Gabinety.Booking.Notifications;
 using Gabinety.Booking.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
+using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
 
 namespace Gabinety.Booking.Tests;
 
@@ -22,7 +22,7 @@ public class NotificationWriterTests
             Assert.False(writer.Schedule(booking, NotificationKind.Reminder24h, "demo-client", Due.AddHours(1)));
             await scope.ServiceProvider.GetRequiredService<BookingDbContext>().SaveChangesAsync();
         }
-        var rows = await t.Host.Query(db => db.Notifications.AsNoTracking().Where(n => n.BookingId == booking.Id).ToListAsync());
+        var rows = await t.Host.Query(db => db.Notifications.AsNoTracking().Where(n => n.AccessId == booking.Id).ToListAsync());
         var row = Assert.Single(rows);
         Assert.Equal((NotificationKind.Reminder24h, "demo-client", Due, 0, (DateTimeOffset?)null), (row.Kind, row.ToUserId, row.DueAt, row.Attempts, row.SentAt));
     }
@@ -37,9 +37,9 @@ public class NotificationWriterTests
         Assert.True(writer.Schedule(booking, NotificationKind.BookingConfirmed, "demo-client", Due));
         Assert.True(writer.Schedule(booking, NotificationKind.BookingConfirmed, "demo-practitioner", Due));
         Assert.True(writer.Schedule(booking, NotificationKind.Reminder1h, "demo-client", Due));
-        Assert.Empty(await t.Host.Query(db => db.Notifications.Where(n => n.BookingId == booking.Id).ToListAsync())); // nothing saved yet
+        Assert.Empty(await t.Host.Query(db => db.Notifications.Where(n => n.AccessId == booking.Id).ToListAsync())); // nothing saved yet
         await scope.ServiceProvider.GetRequiredService<BookingDbContext>().SaveChangesAsync();
-        Assert.Equal(3, (await t.Host.Query(db => db.Notifications.Where(n => n.BookingId == booking.Id).ToListAsync())).Count);
+        Assert.Equal(3, (await t.Host.Query(db => db.Notifications.Where(n => n.AccessId == booking.Id).ToListAsync())).Count);
     }
 
     [Fact]
@@ -53,7 +53,7 @@ public class NotificationWriterTests
         Assert.False(await writer.ScheduleAsync(booking, NotificationKind.Cancelled, "demo-client", Due, default));
         Assert.True(await writer.ScheduleAsync(booking, NotificationKind.Cancelled, "demo-practitioner", Due, default));
         await scope.ServiceProvider.GetRequiredService<BookingDbContext>().SaveChangesAsync();
-        Assert.Equal(2, (await t.Host.Query(db => db.Notifications.Where(n => n.BookingId == booking.Id).ToListAsync())).Count);
+        Assert.Equal(2, (await t.Host.Query(db => db.Notifications.Where(n => n.AccessId == booking.Id).ToListAsync())).Count);
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public class NotificationWriterTests
             Assert.Equal(2, await writer.CancelUnsentAsync(booking, [NotificationKind.Reminder24h, NotificationKind.Reminder1h], default));
             await scope.ServiceProvider.GetRequiredService<BookingDbContext>().SaveChangesAsync();
         }
-        var left = (await t.Host.Query(db => db.Notifications.AsNoTracking().Where(n => n.BookingId == booking || n.BookingId == other).Select(n => n.Id).ToListAsync())).ToHashSet();
+        var left = (await t.Host.Query(db => db.Notifications.AsNoTracking().Where(n => n.AccessId == booking || n.AccessId == other).Select(n => n.Id).ToListAsync())).ToHashSet();
         Assert.Equal(new HashSet<Guid> { r1Sent.Id, review.Id, otherBooking.Id }, left);
         Assert.DoesNotContain(r24.Id, left);
         Assert.DoesNotContain(r1.Id, left);
@@ -90,7 +90,7 @@ public class NotificationWriterTests
         writer.Schedule(booking, NotificationKind.Reminder24h, "demo-client", Due);
         Assert.Equal(1, await writer.CancelUnsentAsync(booking.Id, [NotificationKind.Reminder24h], default));
         await scope.ServiceProvider.GetRequiredService<BookingDbContext>().SaveChangesAsync();
-        Assert.Empty(await t.Host.Query(db => db.Notifications.Where(n => n.BookingId == booking.Id).ToListAsync()));
+        Assert.Empty(await t.Host.Query(db => db.Notifications.Where(n => n.AccessId == booking.Id).ToListAsync()));
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public class NotificationWriterTests
         using var db = new BookingDbContextFactory().CreateDbContext([]);
         var e = db.Model.FindEntityType(typeof(Notification))!;
         Assert.Equal("notifications", e.GetTableName());
-        Assert.Contains(e.GetIndexes(), i => i.IsUnique && i.Properties.Select(p => p.Name).SequenceEqual(["BookingId", "Kind", "ToUserId"]));
+        Assert.Contains(e.GetIndexes(), i => i.IsUnique && i.Properties.Select(p => p.Name).SequenceEqual(["AccessId", "Kind", "ToUserId"]));
         Assert.Equal(typeof(string), e.FindProperty("Kind")!.GetProviderClrType());
         Assert.Equal(["attempts", "booking_id", "due_at", "id", "kind", "sent_at", "to_user_id"],
             e.GetProperties().Select(p => p.GetColumnName()).Order().ToArray());

@@ -38,7 +38,7 @@
         @if (view.ResultCount(_page?.Items.Count ?? 0, _page?.NextCursor is not null) is { } count)
         {
             <p class="result-summary cluster">
-                <span class="result-summary__total">@ListFormat.PractitionerCount(count)</span>
+                <span class="result-summary__total">@ListFormat.AgentCount(count)</span>
                 <span class="muted" data-testid="count">@string.Format(Pl.ListPage.Count, count)</span>
             </p>
         }
@@ -69,7 +69,7 @@
                 <ul class="results" data-testid="practitioner-list">
                     @foreach (var p in _page.Items)
                     {
-                        <li><PractitionerCard Practitioner="p" CategoryNames="view.ProblemNames" /></li>
+                        <li><AgentCard Agent="p" CategoryNames="view.ProblemNames" /></li>
                     }
                 </ul>
             }

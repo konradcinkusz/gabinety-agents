@@ -48,7 +48,7 @@ public class MultiAgentIntegrationTests
         var calls = clients.Select((c, i) => Task.Run(async () =>
         {
             gate.Wait();
-            return await c.PostAsJsonAsync(Me, new CreatePractitionerRequest($"Demo Wyścig {i} {Guid.NewGuid().ToString("n")[..6]}"));
+            return await c.PostAsJsonAsync(Me, new CreateAgentRequest($"Demo Wyścig {i} {Guid.NewGuid().ToString("n")[..6]}"));
         })).ToList();
         gate.Set();
         var results = await Task.WhenAll(calls);
@@ -71,8 +71,8 @@ public class MultiAgentIntegrationTests
         var (pg, f) = await Start();
         await using var _ = pg; using var __ = f;
         var c = f.ClientFor(Id());
-        var a = (await (await c.PostAsJsonAsync(Me, new CreatePractitionerRequest("Demo PG Alfa " + Guid.NewGuid().ToString("n")[..6]))).Content.ReadFromJsonAsync<PractitionerPrivate>(J))!;
-        var b = (await (await c.PostAsJsonAsync(Me, new CreatePractitionerRequest("Demo PG Beta " + Guid.NewGuid().ToString("n")[..6]))).Content.ReadFromJsonAsync<PractitionerPrivate>(J))!;
+        var a = (await (await c.PostAsJsonAsync(Me, new CreateAgentRequest("Demo PG Alfa " + Guid.NewGuid().ToString("n")[..6]))).Content.ReadFromJsonAsync<AgentPrivate>(J))!;
+        var b = (await (await c.PostAsJsonAsync(Me, new CreateAgentRequest("Demo PG Beta " + Guid.NewGuid().ToString("n")[..6]))).Content.ReadFromJsonAsync<AgentPrivate>(J))!;
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, (await c.PostAsJsonAsync($"{Me}/offerings", Valid())).StatusCode); // two agents, none named
         Assert.Equal(HttpStatusCode.Created, (await c.PostAsJsonAsync($"{Me}/offerings?agent={b.Slug}", Valid())).StatusCode);

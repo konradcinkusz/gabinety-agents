@@ -17,19 +17,19 @@ public static class NotificationTemplates
 
     static Template For(NotificationKind kind, bool forPractitioner) => kind switch
     {
-        NotificationKind.BookingConfirmed when forPractitioner => new("Masz nową rezerwację", "Masz nową rezerwację.", "Szczegóły rezerwacji", Booking),
-        NotificationKind.BookingConfirmed => new("Rezerwacja potwierdzona", "Twoja rezerwacja została potwierdzona.", "Szczegóły rezerwacji", Booking),
-        NotificationKind.Reminder24h => new("Przypomnienie: konsultacja już jutro", "Przypominamy, że Twoja konsultacja odbędzie się za 24 godziny.", "Szczegóły rezerwacji", Booking),
-        NotificationKind.Reminder1h => new("Przypomnienie: konsultacja za godzinę", "Przypominamy, że Twoja konsultacja zaczyna się za godzinę.", "Szczegóły rezerwacji", Booking),
-        NotificationKind.Cancelled => new("Rezerwacja została anulowana", "Rezerwacja została anulowana.", "Szczegóły rezerwacji", Booking),
+        NotificationKind.BookingConfirmed when forPractitioner => new("Masz nową rezerwację", "Masz nową rezerwację.", "Szczegóły rezerwacji", Access),
+        NotificationKind.BookingConfirmed => new("Rezerwacja potwierdzona", "Twoja rezerwacja została potwierdzona.", "Szczegóły rezerwacji", Access),
+        NotificationKind.Reminder24h => new("Przypomnienie: konsultacja już jutro", "Przypominamy, że Twoja konsultacja odbędzie się za 24 godziny.", "Szczegóły rezerwacji", Access),
+        NotificationKind.Reminder1h => new("Przypomnienie: konsultacja za godzinę", "Przypominamy, że Twoja konsultacja zaczyna się za godzinę.", "Szczegóły rezerwacji", Access),
+        NotificationKind.Cancelled => new("Rezerwacja została anulowana", "Rezerwacja została anulowana.", "Szczegóły rezerwacji", Access),
         NotificationKind.ReviewRequest => new("Jak minęła konsultacja? Wystaw opinię", "Dziękujemy za skorzystanie z platformy. Podziel się opinią o konsultacji.", "Wystaw opinię", "/moje/opinie/{0}"),
-        NotificationKind.DisputeOpened => new("Zgłoszono spór dotyczący rezerwacji", "Do rezerwacji zgłoszono spór. Wypłata jest wstrzymana do jego rozstrzygnięcia.", "Szczegóły rezerwacji", Booking),
-        NotificationKind.DisputeResolved => new("Spór dotyczący rezerwacji został rozstrzygnięty", "Spór dotyczący rezerwacji został rozstrzygnięty.", "Szczegóły rezerwacji", Booking),
-        NotificationKind.PayoutSent => new("Wypłata została wysłana", "Wypłata za konsultację została wysłana.", "Szczegóły rezerwacji", Booking),
+        NotificationKind.DisputeOpened => new("Zgłoszono spór dotyczący rezerwacji", "Do rezerwacji zgłoszono spór. Wypłata jest wstrzymana do jego rozstrzygnięcia.", "Szczegóły rezerwacji", Access),
+        NotificationKind.DisputeResolved => new("Spór dotyczący rezerwacji został rozstrzygnięty", "Spór dotyczący rezerwacji został rozstrzygnięty.", "Szczegóły rezerwacji", Access),
+        NotificationKind.PayoutSent => new("Wypłata została wysłana", "Wypłata za konsultację została wysłana.", "Szczegóły rezerwacji", Access),
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "no template for this kind"),
     };
 
-    const string Booking = "/moje/dostepy/{0}";
+    const string Access = "/moje/dostepy/{0}";
 
     /// <param name="siteBaseUrl"><c>Site:BaseUrl</c>; a trailing slash is trimmed here too.</param>
     public static RenderedEmail Render(NotificationKind kind, string siteBaseUrl, Guid bookingId, DateTimeOffset startUtc, bool forPractitioner = false)

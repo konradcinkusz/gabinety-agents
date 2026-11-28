@@ -54,7 +54,7 @@ public class ReplyTests
 
         var e = Assert.Single(await h.EventsOf(id));
         Assert.Equal((ModerationEventKind.Replied, user, (string?)null), (e.Kind, e.Actor, e.Note));
-        Assert.Null(await h.Query(db => Task.FromResult(db.RatingSummaries.SingleOrDefault(s => s.PractitionerId == pract))));
+        Assert.Null(await h.Query(db => Task.FromResult(db.RatingSummaries.SingleOrDefault(s => s.AgentId == pract))));
     }
 
     [Fact]

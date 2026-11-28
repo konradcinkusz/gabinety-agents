@@ -31,9 +31,9 @@ public class SearchFactory : VerificationFactory
         await Kit.WaitForSeed(this);
         await Db(async db =>
         {
-            db.Offerings.RemoveRange(db.Offerings);
+            db.Packages.RemoveRange(db.Packages);
             db.VerificationEvents.RemoveRange(db.VerificationEvents);
-            db.Practitioners.RemoveRange(db.Practitioners);
+            db.Agents.RemoveRange(db.Agents);
             await db.SaveChangesAsync();
             var known = Expected.Problems.Select(x => (x.Slug, x.NamePl, CategoryKind.Problem)).Concat(Expected.Techs.Select(x => (x.Slug, x.NamePl, CategoryKind.Tech))).ToList();
             var rows = await db.Categories.ToListAsync();
@@ -48,41 +48,41 @@ public class SearchFactory : VerificationFactory
     }
 
     /// <summary>Adds a practitioner with its offerings. Status Approved by default; ApprovedAt counts up from Epoch unless set.</summary>
-    public Task<Practitioner> Seed(PractitionerStatus status = PractitionerStatus.Approved, Action<Practitioner>? configure = null, params Spec[] offerings) => Db(async db =>
+    public Task<Agent> Seed(AgentStatus status = AgentStatus.Approved, Action<Agent>? configure = null, params Spec[] offerings) => Db(async db =>
     {
         var n = Guid.NewGuid().ToString("n");
         var k = Interlocked.Increment(ref _n);
-        var p = new Practitioner
+        var p = new Agent
         {
             Id = Guid.NewGuid(), UserId = "demo-" + n, Slug = "demo-" + n[..16], DisplayName = "Demo " + n[..8], Headline = "Senior .NET reviewer",
             Bio = "Demo bio", Status = status, CreatedAt = Epoch, UpdatedAt = Epoch.AddMinutes(k),
-            ApprovedAt = status == PractitionerStatus.Approved ? Epoch.AddMinutes(k) : null, RankingScore = 50, RankingVersion = "2026-11-v1",
+            ApprovedAt = status == AgentStatus.Approved ? Epoch.AddMinutes(k) : null, RankingScore = 50, RankingVersion = "2026-11-v1",
         };
         configure?.Invoke(p);
-        db.Practitioners.Add(p);
+        db.Agents.Add(p);
         foreach (var (s, i) in offerings.Select((s, i) => (s, i)))
-            db.Offerings.Add(new Gabinety.Directory.Features.Offerings.Offering
+            db.Packages.Add(new Gabinety.Directory.Features.Offerings.Package
             {
-                Id = Guid.NewGuid(), PractitionerId = p.Id, Title = "Demo offering", Description = "d", DurationMinutes = (short)s.Duration, PriceMinor = s.Price,
+                Id = Guid.NewGuid(), AgentId = p.Id, Title = "Demo offering", Description = "d", DurationMinutes = (short)s.Duration, PriceMinor = s.Price,
                 Currency = "PLN", ProblemSlug = s.Problem, TechSlugs = s.Techs ?? ["dotnet"], IsActive = s.Active, CreatedAt = Epoch.AddMinutes(k).AddSeconds(i),
             });
         await db.SaveChangesAsync();
         return p;
     });
 
-    public Task<Practitioner> Approved(Action<Practitioner>? configure = null, params Spec[] offerings) =>
-        Seed(PractitionerStatus.Approved, configure, offerings.Length == 0 ? [new Spec()] : offerings);
+    public Task<Agent> Approved(Action<Agent>? configure = null, params Spec[] offerings) =>
+        Seed(AgentStatus.Approved, configure, offerings.Length == 0 ? [new Spec()] : offerings);
 }
 
 public static class Sk
 {
     public static readonly JsonSerializerOptions J = PublicJson.Options;
 
-    public static async Task<Page<PractitionerCard>> Get(HttpClient c, string query = "")
+    public static async Task<Page<AgentCard>> Get(HttpClient c, string query = "")
     {
         var r = await c.GetAsync("/api/v1/practitioners" + query);
         Assert.Equal(System.Net.HttpStatusCode.OK, r.StatusCode);
-        return (await r.Content.ReadFromJsonAsync<Page<PractitionerCard>>(J))!;
+        return (await r.Content.ReadFromJsonAsync<Page<AgentCard>>(J))!;
     }
 
     public static async Task<List<Guid>> Ids(HttpClient c, string query = "") => (await Get(c, query)).Items.Select(i => i.Id).ToList();

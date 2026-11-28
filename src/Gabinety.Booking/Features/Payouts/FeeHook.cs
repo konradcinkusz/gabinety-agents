@@ -6,8 +6,8 @@ using Gabinety.Booking.Persistence;
 using Gabinety.Contracts.Booking;
 using Gabinety.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Features.Payouts;
 
@@ -21,27 +21,27 @@ public sealed class FeeHook(IConfiguration config, PlatformFeeClaims claims) : I
     public const int DefaultRateBps = 1500;
 
     /// <summary>The part of the price the platform charges on, or null when this status carries no fee (full refund, not money-complete).</summary>
-    public static Money? Kept(BookingStatus status, string? resolution, Money price, long refundedMinor) => status switch
+    public static Money? Kept(AccessStatus status, string? resolution, Money price, long refundedMinor) => status switch
     {
-        BookingStatus.Completed or BookingStatus.ClientNoShow or BookingStatus.LateCancelledByClient => price,
-        BookingStatus.Resolved when resolution == "release" => price,
-        BookingStatus.Resolved when resolution == "refund_partial" => price.Minus(Money.Pln(refundedMinor)),
+        AccessStatus.Completed or AccessStatus.ClientNoShow or AccessStatus.LateCancelledByClient => price,
+        AccessStatus.Resolved when resolution == "release" => price,
+        AccessStatus.Resolved when resolution == "refund_partial" => price.Minus(Money.Pln(refundedMinor)),
         _ => null,
     };
 
     public async Task OnTransitionAsync(BookingTransitionContext context, CancellationToken ct)
     {
-        var b = context.Booking;
-        if (context.From == BookingStatus.Completed && context.To == BookingStatus.Disputed)
+        var b = context.Access;
+        if (context.From == AccessStatus.Completed && context.To == AccessStatus.Disputed)
         {
-            claims.Release(PairKey.For(b.ClientUserId, b.PractitionerId)); // the dispute reopened the money: its unpaid PlatformFee row was removed (DisputeFeature), so the InMemory stand-in lets go too
+            claims.Release(PairKey.For(b.ClientUserId, b.AgentId)); // the dispute reopened the money: its unpaid PlatformFee row was removed (DisputeFeature), so the InMemory stand-in lets go too
             return;
         }
-        if (context.From == BookingStatus.Completed && context.To == BookingStatus.Confirmed)
+        if (context.From == AccessStatus.Completed && context.To == AccessStatus.Confirmed)
         {
             // a refunded unit reopened the package (PackageReopening): its unpaid PlatformFee row was removed in this transaction. The InMemory stand-in lets the pair go only when this booking held it.
-            if (context.Db.ChangeTracker.Entries<LedgerEntry>().Any(e => e.State == EntityState.Deleted && e.Entity.BookingId == b.Id && e.Entity.Kind == LedgerKind.PlatformFee))
-                claims.Release(PairKey.For(b.ClientUserId, b.PractitionerId));
+            if (context.Db.ChangeTracker.Entries<LedgerEntry>().Any(e => e.State == EntityState.Deleted && e.Entity.AccessId == b.Id && e.Entity.Kind == LedgerKind.PlatformFee))
+                claims.Release(PairKey.For(b.ClientUserId, b.AgentId));
             return;
         }
         if (b.FeeMinor is not null) return; // computed once
@@ -64,7 +64,7 @@ public sealed class FeeHook(IConfiguration config, PlatformFeeClaims claims) : I
     /// <summary>Writes the PlatformFee row for the pair; false when the pair already has one. The unique partial index decides a race.</summary>
     async Task<bool> ClaimPairAsync(BookingTransitionContext context, BookingEntity b, long feeMinor, CancellationToken ct)
     {
-        var pairKey = PairKey.For(b.ClientUserId, b.PractitionerId); // spec format when it fits varchar(80), hashed otherwise
+        var pairKey = PairKey.For(b.ClientUserId, b.AgentId); // spec format when it fits varchar(80), hashed otherwise
         var id = Guid.CreateVersion7();
         if (context.Db.Database.IsNpgsql())
         {
@@ -82,7 +82,7 @@ public sealed class FeeHook(IConfiguration config, PlatformFeeClaims claims) : I
         if (!await claims.TryClaimAsync(context.Db, pairKey, ct)) return false;
         context.Db.LedgerEntries.Add(new LedgerEntry
         {
-            Id = id, BookingId = b.Id, Kind = LedgerKind.PlatformFee, AmountMinor = feeMinor, PairKey = pairKey, CreatedAt = context.Now,
+            Id = id, AccessId = b.Id, Kind = LedgerKind.PlatformFee, AmountMinor = feeMinor, PairKey = pairKey, CreatedAt = context.Now,
         });
         return true;
     }
@@ -97,10 +97,10 @@ public static class MoneyReopening
 {
     public static void Reopen(BookingTransitionContext c)
     {
-        c.Booking.FeeMinor = null;
-        c.Booking.PayoutMinor = null;
-        c.Booking.PayoutDueAt = null;
-        c.Db.LedgerEntries.RemoveRange(c.Db.LedgerEntries.Where(l => l.BookingId == c.Booking.Id && l.Kind == LedgerKind.PlatformFee).ToList());
+        c.Access.FeeMinor = null;
+        c.Access.PayoutMinor = null;
+        c.Access.PayoutDueAt = null;
+        c.Db.LedgerEntries.RemoveRange(c.Db.LedgerEntries.Where(l => l.AccessId == c.Access.Id && l.Kind == LedgerKind.PlatformFee).ToList());
     }
 }
 

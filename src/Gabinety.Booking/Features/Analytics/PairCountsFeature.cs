@@ -45,19 +45,19 @@ public sealed class PairCountsFeature : IServiceFeature
         if (errors.Count > 0) return PaymentWebhookFeature.Problem(ErrorCodes.ValidationFailed, "Validation failed", 400, null, errors);
 
         var take = Math.Min(limit ?? DefaultLimit, MaxLimit);
-        var q = db.Bookings.AsNoTracking()
-            .Where(b => db.Payments.Any(p => p.BookingId == b.Id && Kept.Contains(p.Status)));
+        var q = db.Accesses.AsNoTracking()
+            .Where(b => db.Payments.Any(p => p.AccessId == b.Id && Kept.Contains(p.Status)));
         if (hasCursor)
-            q = q.Where(b => string.Compare(b.ClientUserId, afterClient) > 0 || (b.ClientUserId == afterClient && b.PractitionerId.CompareTo(afterPractitioner) > 0));
-        var rows = await q.GroupBy(b => new { b.ClientUserId, b.PractitionerId })
-            .Select(g => new { g.Key.ClientUserId, g.Key.PractitionerId, Count = g.Count() })
+            q = q.Where(b => string.Compare(b.ClientUserId, afterClient) > 0 || (b.ClientUserId == afterClient && b.AgentId.CompareTo(afterPractitioner) > 0));
+        var rows = await q.GroupBy(b => new { b.ClientUserId, b.AgentId })
+            .Select(g => new { g.Key.ClientUserId, g.Key.AgentId, Count = g.Count() })
             .Where(g => g.Count >= min)
-            .OrderBy(g => g.ClientUserId).ThenBy(g => g.PractitionerId)
+            .OrderBy(g => g.ClientUserId).ThenBy(g => g.AgentId)
             .Take(take + 1).ToListAsync(ct);
         var more = rows.Count > take;
         if (more) rows.RemoveAt(take);
-        var items = rows.Select(r => new PairCountDto(PairKey.For(r.ClientUserId, r.PractitionerId), r.ClientUserId, r.PractitionerId, r.Count)).ToList();
-        return Results.Json(new Page<PairCountDto>(items, more ? Encode(rows[^1].ClientUserId, rows[^1].PractitionerId) : null));
+        var items = rows.Select(r => new PairCountDto(PairKey.For(r.ClientUserId, r.AgentId), r.ClientUserId, r.AgentId, r.Count)).ToList();
+        return Results.Json(new Page<PairCountDto>(items, more ? Encode(rows[^1].ClientUserId, rows[^1].AgentId) : null));
     }
 
     // base64url(client) . practitioner(N): the client id is arbitrary text, base64url has no '.', so the split is unambiguous.

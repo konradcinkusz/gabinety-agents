@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using System.Net;
 using System.Net.Http.Json;
 using Gabinety.Contracts.Directory;
@@ -6,7 +7,7 @@ using Gabinety.ServiceDefaults;
 namespace Gabinety.Reputation.Clients;
 
 /// <summary>GET /internal/v1/practitioners/by-user/{userId} (CONTRACTS 3.6).</summary>
-public sealed record DirectoryPractitioner(Guid PractitionerId, PractitionerStatus Status);
+public sealed record DirectoryPractitioner([property: JsonPropertyName("practitionerId")] Guid AgentId, AgentStatus Status);
 
 /// <summary>Directory did not answer in budget (connection failure, timeout or 5xx after the retry). The message never carries the URL or the key.</summary>
 public sealed class DirectoryUnavailableException(Exception? inner = null) : Exception("Directory is unavailable.", inner);

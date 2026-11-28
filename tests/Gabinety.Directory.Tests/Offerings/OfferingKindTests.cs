@@ -16,35 +16,35 @@ public class OfferingKindTests(OfferingFactory f) : IClassFixture<OfferingFactor
     [Fact]
     public async Task Chat_offering_returns_kind_and_units()
     {
-        var c = await Practitioner(f);
-        var created = await Created(c, Valid() with { Kind = OfferingKind.Chat, Units = 500 });
-        Assert.Equal(OfferingKind.Chat, created.Kind);
+        var c = await Agent(f);
+        var created = await Created(c, Valid() with { Kind = PackageKind.Chat, Units = 500 });
+        Assert.Equal(PackageKind.Chat, created.Kind);
         Assert.Equal(500, created.Units);
         var listed = Assert.Single(await List(c));
-        Assert.Equal(OfferingKind.Chat, listed.Kind);
+        Assert.Equal(PackageKind.Chat, listed.Kind);
         Assert.Equal(500, listed.Units);
     }
 
     [Fact]
     public async Task Request_without_kind_defaults_to_tasks_and_one_unit()
     {
-        var req = JsonSerializer.Deserialize<OfferingRequest>(
+        var req = JsonSerializer.Deserialize<PackageRequest>(
             """{"title":"Przegląd kodu .NET","description":"","durationMinutes":30,"priceMinor":10000,"problemSlug":"code-review","techSlugs":["dotnet"]}""", J)!;
-        Assert.Equal(OfferingKind.Tasks, req.Kind);
+        Assert.Equal(PackageKind.Tasks, req.Kind);
         Assert.Equal(1, req.Units);
 
-        var c = await Practitioner(f);
+        var c = await Agent(f);
         var created = await Created(c, req);
-        Assert.Equal(OfferingKind.Tasks, created.Kind);
+        Assert.Equal(PackageKind.Tasks, created.Kind);
         Assert.Equal(1, created.Units);
     }
 
     [Theory]
-    [InlineData(OfferingKind.Tasks, 0, false)] [InlineData(OfferingKind.Tasks, 1, true)] [InlineData(OfferingKind.Tasks, 1000, true)] [InlineData(OfferingKind.Tasks, 1001, false)]
-    [InlineData(OfferingKind.Chat, 99, false)] [InlineData(OfferingKind.Chat, 100, true)] [InlineData(OfferingKind.Chat, 100000, true)] [InlineData(OfferingKind.Chat, 100001, false)]
-    public async Task Units_range_depends_on_kind(OfferingKind kind, int units, bool ok)
+    [InlineData(PackageKind.Tasks, 0, false)] [InlineData(PackageKind.Tasks, 1, true)] [InlineData(PackageKind.Tasks, 1000, true)] [InlineData(PackageKind.Tasks, 1001, false)]
+    [InlineData(PackageKind.Chat, 99, false)] [InlineData(PackageKind.Chat, 100, true)] [InlineData(PackageKind.Chat, 100000, true)] [InlineData(PackageKind.Chat, 100001, false)]
+    public async Task Units_range_depends_on_kind(PackageKind kind, int units, bool ok)
     {
-        var c = await Practitioner(f);
+        var c = await Agent(f);
         var r = await c.PostAsJsonAsync(Url, Valid() with { Kind = kind, Units = units });
         if (ok) { Assert.Equal(HttpStatusCode.Created, r.StatusCode); return; }
         Assert.Equal(HttpStatusCode.UnprocessableEntity, r.StatusCode);
@@ -55,11 +55,11 @@ public class OfferingKindTests(OfferingFactory f) : IClassFixture<OfferingFactor
     [Fact]
     public async Task Update_replaces_kind_and_units()
     {
-        var c = await Practitioner(f);
+        var c = await Agent(f);
         var o = await Created(c, Valid());
-        var r = await c.PutAsJsonAsync($"{Url}/{o.Id}", Valid() with { Kind = OfferingKind.Chat, Units = 1000 });
+        var r = await c.PutAsJsonAsync($"{Url}/{o.Id}", Valid() with { Kind = PackageKind.Chat, Units = 1000 });
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
-        var updated = (await r.Content.ReadFromJsonAsync<OfferingPrivate>(J))!;
-        Assert.Equal((OfferingKind.Chat, 1000), (updated.Kind, updated.Units));
+        var updated = (await r.Content.ReadFromJsonAsync<PackagePrivate>(J))!;
+        Assert.Equal((PackageKind.Chat, 1000), (updated.Kind, updated.Units));
     }
 }

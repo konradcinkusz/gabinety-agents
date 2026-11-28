@@ -20,7 +20,7 @@ public class PractitionerResolverTests
         public Task<bool> IsAliveAsync(CancellationToken ct) => throw new NotSupportedException();
     }
 
-    static DirectoryAgent Agent(Guid id, string slug = "demo-agent") => new(id, PractitionerStatus.Approved, slug);
+    static DirectoryAgent Agent(Guid id, string slug = "demo-agent") => new(id, AgentStatus.Approved, slug);
 
     [Fact]
     public async Task A_cached_user_is_asked_again_only_after_60_seconds()
@@ -30,14 +30,14 @@ public class PractitionerResolverTests
         var dir = new Counting(_ => [Agent(id)]);
         var resolver = new PractitionerResolver(dir, clock);
 
-        Assert.Equal(id, (await resolver.ResolveAsync("demo-user-1", null, default)).PractitionerId);
+        Assert.Equal(id, (await resolver.ResolveAsync("demo-user-1", null, default)).AgentId);
         clock.Advance(TimeSpan.FromSeconds(59));
-        Assert.Equal(id, (await resolver.ResolveAsync("demo-user-1", null, default)).PractitionerId);
+        Assert.Equal(id, (await resolver.ResolveAsync("demo-user-1", null, default)).AgentId);
         Assert.Equal(1, dir.Calls);
         clock.Advance(TimeSpan.FromSeconds(2)); // 61 s since the first answer
-        Assert.Equal(id, (await resolver.ResolveAsync("demo-user-1", null, default)).PractitionerId);
+        Assert.Equal(id, (await resolver.ResolveAsync("demo-user-1", null, default)).AgentId);
         Assert.Equal(2, dir.Calls);
-        Assert.Equal(id, (await resolver.ResolveAsync("demo-user-2", null, default)).PractitionerId);
+        Assert.Equal(id, (await resolver.ResolveAsync("demo-user-2", null, default)).AgentId);
         Assert.Equal(3, dir.Calls); // another user is a separate entry
     }
 
@@ -49,12 +49,12 @@ public class PractitionerResolverTests
         var current = first;
         var dir = new Counting(_ => [Agent(current)]);
         var resolver = new PractitionerResolver(dir, new ManualClock());
-        Assert.Equal(first, (await resolver.ResolveAsync("demo-user-1", null, default)).PractitionerId);
+        Assert.Equal(first, (await resolver.ResolveAsync("demo-user-1", null, default)).AgentId);
 
         current = second; // the Directory was reset and reseeded: the same user has a new practitioner id
-        Assert.Equal(first, (await resolver.ResolveAsync("demo-user-1", null, default)).PractitionerId); // still inside the 60 s
+        Assert.Equal(first, (await resolver.ResolveAsync("demo-user-1", null, default)).AgentId); // still inside the 60 s
         resolver.Clear();
-        Assert.Equal(second, (await resolver.ResolveAsync("demo-user-1", null, default)).PractitionerId);
+        Assert.Equal(second, (await resolver.ResolveAsync("demo-user-1", null, default)).AgentId);
     }
 
     [Fact]
@@ -75,8 +75,8 @@ public class PractitionerResolverTests
 
         Assert.Equal(new AgentResolution(null, true), await resolver.ResolveAsync("demo-user-1", null, default));
         Assert.Equal(new AgentResolution(null, true), await resolver.ResolveAsync("demo-user-1", "  ", default));
-        Assert.Equal(b, (await resolver.ResolveAsync("demo-user-1", "demo-b", default)).PractitionerId);
-        Assert.Equal(a, (await resolver.ResolveAsync("demo-user-1", " demo-a ", default)).PractitionerId);
+        Assert.Equal(b, (await resolver.ResolveAsync("demo-user-1", "demo-b", default)).AgentId);
+        Assert.Equal(a, (await resolver.ResolveAsync("demo-user-1", " demo-a ", default)).AgentId);
     }
 
     [Fact]
@@ -93,10 +93,10 @@ public class PractitionerResolverTests
         var known = new List<DirectoryAgent> { Agent(a, "demo-a") };
         var dir = new Counting(_ => [.. known]);
         var resolver = new PractitionerResolver(dir, new ManualClock());
-        Assert.Equal(a, (await resolver.ResolveAsync("demo-user-1", "demo-a", default)).PractitionerId);
+        Assert.Equal(a, (await resolver.ResolveAsync("demo-user-1", "demo-a", default)).AgentId);
 
         known.Add(Agent(b, "demo-b")); // created after the list was cached
-        Assert.Equal(b, (await resolver.ResolveAsync("demo-user-1", "demo-b", default)).PractitionerId);
+        Assert.Equal(b, (await resolver.ResolveAsync("demo-user-1", "demo-b", default)).AgentId);
         Assert.Equal(2, dir.Calls);
         Assert.Equal(new AgentResolution(null, false), await resolver.ResolveAsync("demo-user-1", "demo-c", default));
         Assert.Equal(3, dir.Calls); // an unknown slug costs one more call, not a loop

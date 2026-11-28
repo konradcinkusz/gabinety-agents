@@ -95,7 +95,7 @@ public static class PlPractitioner
 
     public static class Checklist
     {
-        public const string Headline = "Nagłówek profilu", Bio = "Opis (co najmniej 200 znaków)", Offering = "Co najmniej jeden aktywny pakiet", Github = "Połączone konto GitHub";
+        public const string Headline = "Nagłówek profilu", Bio = "Opis (co najmniej 200 znaków)", Package = "Co najmniej jeden aktywny pakiet", Github = "Połączone konto GitHub";
         public const string Nip = "Poprawny numer NIP", Portfolio = "Link do portfolio", Email = "Potwierdzony adres e-mail";
         public const string HelpProfile = "Uzupełnij w zakładce Profil.", HelpOffers = "Dodaj pakiet w zakładce Pakiety.", HelpGithub = "Połącz konto poniżej.";
         public const string HelpNip = "Wpisz NIP w zakładce Profil.", HelpPortfolio = "Dodaj link w zakładce Profil.", HelpEmail = "Kliknij link z wiadomości, którą wysłaliśmy przy rejestracji.";

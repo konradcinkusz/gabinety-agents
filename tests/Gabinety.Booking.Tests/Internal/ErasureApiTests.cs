@@ -8,8 +8,8 @@ using Gabinety.Booking.Features.Payments;
 using Gabinety.Booking.Features.Payouts;
 using Gabinety.Contracts.Booking;
 using Microsoft.EntityFrameworkCore;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -38,7 +38,7 @@ public class ErasureApiTests
         return h.CreateClient().SendAsync(req);
     }
 
-    internal static async Task<Guid> SeedBooking(CreateHost h, string client, string practitionerUser, BookingStatus status = BookingStatus.Confirmed,
+    internal static async Task<Guid> SeedBooking(CreateHost h, string client, string practitionerUser, AccessStatus status = AccessStatus.Confirmed,
         Guid? practitioner = null, Guid? key = null, bool withTexts = true, bool withMoney = true, int day = 1)
     {
         var id = Guid.NewGuid();
@@ -46,35 +46,35 @@ public class ErasureApiTests
         var start = h.Clock.GetUtcNow().AddDays(day);
         await h.Seed(db =>
         {
-            db.Bookings.Add(new BookingEntity
+            db.Accesses.Add(new BookingEntity
             {
-                Id = id, ClientUserId = client, PractitionerId = pid, PractitionerUserId = practitionerUser, OfferingId = h.Offering, OfferingTitle = "demo-offering",
+                Id = id, ClientUserId = client, AgentId = pid, PractitionerUserId = practitionerUser, PackageId = h.Package, PackageTitle = "demo-offering",
                 DurationMinutes = 60, PriceMinor = 12345, StartUtc = start, EndUtc = start.AddHours(1), Status = status,
                 StatusReason = withTexts ? SecretReason : null, BriefText = SecretBrief, BriefProblemSlug = "demo-problem", BriefAiAssisted = true, MeetingUrlSnapshot = MeetingUrl,
                 DisputeKind = withTexts ? "other" : null, DisputeText = withTexts ? SecretDispute : null, FeeMinor = 1851, PayoutMinor = 10494,
                 IdempotencyKey = key ?? Guid.NewGuid(), CreatedAt = h.Clock.GetUtcNow(), ConfirmedAt = h.Clock.GetUtcNow(),
             });
             if (!withMoney) return;
-            db.Payments.Add(new Payment { Id = Guid.NewGuid(), BookingId = id, Provider = "Mock", ProviderPaymentId = "pay_" + id.ToString("N"), AmountMinor = 12345, Status = PaymentStatus.Succeeded, RefundedMinor = 0, CreatedAt = h.Clock.GetUtcNow(), UpdatedAt = h.Clock.GetUtcNow() });
+            db.Payments.Add(new Payment { Id = Guid.NewGuid(), AccessId = id, Provider = "Mock", ProviderPaymentId = "pay_" + id.ToString("N"), AmountMinor = 12345, Status = PaymentStatus.Succeeded, RefundedMinor = 0, CreatedAt = h.Clock.GetUtcNow(), UpdatedAt = h.Clock.GetUtcNow() });
             db.LedgerEntries.AddRange(
-                new LedgerEntry { Id = Guid.NewGuid(), BookingId = id, Kind = LedgerKind.ClientCharge, AmountMinor = 12345, CreatedAt = h.Clock.GetUtcNow() },
-                new LedgerEntry { Id = Guid.NewGuid(), BookingId = id, Kind = LedgerKind.PlatformFee, AmountMinor = 1851, PairKey = PairKey.For(client, pid), CreatedAt = h.Clock.GetUtcNow() });
-            db.Payouts.Add(new Payout { Id = Guid.NewGuid(), BookingId = id, PractitionerId = pid, AmountMinor = 10494, Status = PayoutStatus.Pending, ProviderRef = "ref-" + id.ToString("N"), CreatedAt = h.Clock.GetUtcNow() });
+                new LedgerEntry { Id = Guid.NewGuid(), AccessId = id, Kind = LedgerKind.ClientCharge, AmountMinor = 12345, CreatedAt = h.Clock.GetUtcNow() },
+                new LedgerEntry { Id = Guid.NewGuid(), AccessId = id, Kind = LedgerKind.PlatformFee, AmountMinor = 1851, PairKey = PairKey.For(client, pid), CreatedAt = h.Clock.GetUtcNow() });
+            db.Payouts.Add(new Payout { Id = Guid.NewGuid(), AccessId = id, AgentId = pid, AmountMinor = 10494, Status = PayoutStatus.Pending, ProviderRef = "ref-" + id.ToString("N"), CreatedAt = h.Clock.GetUtcNow() });
         });
         return id;
     }
 
-    static Task<BookingEntity> Row(CreateHost h, Guid id) => h.Query(db => db.Bookings.AsNoTracking().SingleAsync(b => b.Id == id));
+    static Task<BookingEntity> Row(CreateHost h, Guid id) => h.Query(db => db.Accesses.AsNoTracking().SingleAsync(b => b.Id == id));
 
-    static Task<(int Bookings, int Records)> RowsMatching(CreateHost h, string userId) => h.Query(async db =>
-        (await db.Bookings.CountAsync(b => b.ClientUserId == userId || b.PractitionerUserId == userId),
+    static Task<(int Accesses, int Records)> RowsMatching(CreateHost h, string userId) => h.Query(async db =>
+        (await db.Accesses.CountAsync(b => b.ClientUserId == userId || b.PractitionerUserId == userId),
          await db.IdempotencyRecords.CountAsync(r => r.ClientUserId == userId)));
 
     /// <summary>Every money row of a booking as one string (a record of lists would compare by reference).</summary>
     static Task<string> MoneyOf(CreateHost h, Guid bookingId) => h.Query(async db => string.Join("|",
-        (await db.LedgerEntries.AsNoTracking().Where(l => l.BookingId == bookingId).OrderBy(l => l.Id).ToListAsync()).Select(l => $"L {l.Id} {l.Kind} {l.AmountMinor} {l.CreatedAt:O}")
-        .Concat((await db.Payments.AsNoTracking().Where(p => p.BookingId == bookingId).ToListAsync()).Select(p => $"P {p.Id} {p.Provider} {p.ProviderPaymentId} {p.AmountMinor} {p.Status} {p.RefundedMinor}"))
-        .Concat((await db.Payouts.AsNoTracking().Where(p => p.BookingId == bookingId).ToListAsync()).Select(p => $"O {p.Id} {p.PractitionerId} {p.AmountMinor} {p.Status} {p.ProviderRef}"))));
+        (await db.LedgerEntries.AsNoTracking().Where(l => l.AccessId == bookingId).OrderBy(l => l.Id).ToListAsync()).Select(l => $"L {l.Id} {l.Kind} {l.AmountMinor} {l.CreatedAt:O}")
+        .Concat((await db.Payments.AsNoTracking().Where(p => p.AccessId == bookingId).ToListAsync()).Select(p => $"P {p.Id} {p.Provider} {p.ProviderPaymentId} {p.AmountMinor} {p.Status} {p.RefundedMinor}"))
+        .Concat((await db.Payouts.AsNoTracking().Where(p => p.AccessId == bookingId).ToListAsync()).Select(p => $"O {p.Id} {p.AgentId} {p.AmountMinor} {p.Status} {p.ProviderRef}"))));
 
     [Fact]
     public async Task Both_roles_of_the_erased_user_lose_the_texts_and_the_ids_and_the_old_id_matches_no_row()
@@ -82,7 +82,7 @@ public class ErasureApiTests
         using var h = NewHost();
         var user = NewUser("u"); var other = NewUser("other");
         var asClient = await SeedBooking(h, user, other);
-        var asPractitioner = await SeedBooking(h, other, user, BookingStatus.Disputed);
+        var asPractitioner = await SeedBooking(h, other, user, AccessStatus.Disputed);
         var oldKey = Guid.NewGuid();
         await h.Seed(db => db.IdempotencyRecords.Add(new IdempotencyRecord { ClientUserId = user, IdempotencyKey = oldKey, RequestHash = "h", ResponseStatus = 201, ResponseBody = "{\"id\":\"x\"}", CreatedAt = h.Clock.GetUtcNow() }));
 
@@ -100,8 +100,8 @@ public class ErasureApiTests
             Assert.Equal(("demo-problem", true, 12345L), (b.BriefProblemSlug, b.BriefAiAssisted, b.PriceMinor));
             Assert.Equal((1851L, 10494L, "other"), (b.FeeMinor, b.PayoutMinor, b.DisputeKind));
         }
-        Assert.Equal(BookingStatus.Confirmed, c.Status);
-        Assert.Equal(BookingStatus.Disputed, p.Status);
+        Assert.Equal(AccessStatus.Confirmed, c.Status);
+        Assert.Equal(AccessStatus.Disputed, p.Status);
 
         Assert.Equal((0, 0), await RowsMatching(h, user));
         var rec = await h.Query(db => db.IdempotencyRecords.AsNoTracking().SingleAsync(r => r.IdempotencyKey == oldKey));
@@ -120,10 +120,10 @@ public class ErasureApiTests
         await Erase(h, user);
 
         Assert.Equal(before, await MoneyOf(h, id)); // ids, amounts, kinds, status, provider refs: all as they were
-        var fee = await h.Query(db => db.LedgerEntries.AsNoTracking().SingleAsync(l => l.BookingId == id && l.Kind == LedgerKind.PlatformFee));
+        var fee = await h.Query(db => db.LedgerEntries.AsNoTracking().SingleAsync(l => l.AccessId == id && l.Kind == LedgerKind.PlatformFee));
         Assert.DoesNotContain(user, fee.PairKey);
         Assert.Equal(PairKey.For(Token(user), pid), fee.PairKey); // still one per (client, practitioner), now under the opaque token
-        var charge = await h.Query(db => db.LedgerEntries.AsNoTracking().SingleAsync(l => l.BookingId == id && l.Kind == LedgerKind.ClientCharge));
+        var charge = await h.Query(db => db.LedgerEntries.AsNoTracking().SingleAsync(l => l.AccessId == id && l.Kind == LedgerKind.ClientCharge));
         Assert.Null(charge.PairKey);
         var b = await Row(h, id);
         Assert.Equal((12345L, 1851L, 10494L), (b.PriceMinor, b.FeeMinor, b.PayoutMinor));
@@ -135,8 +135,8 @@ public class ErasureApiTests
         using var h = NewHost();
         h.OwnerUserId = NewUser("prac");
         var user = NewUser("u"); var bystander = NewUser("by");
-        var shared = await SeedBooking(h, user, h.OwnerUserId, practitioner: h.Practitioner);
-        var theirs = await SeedBooking(h, bystander, h.OwnerUserId, practitioner: h.Practitioner, day: 2);
+        var shared = await SeedBooking(h, user, h.OwnerUserId, practitioner: h.Agent);
+        var theirs = await SeedBooking(h, bystander, h.OwnerUserId, practitioner: h.Agent, day: 2);
         var untouchedBefore = await Row(h, theirs);
 
         await Erase(h, user);
@@ -181,16 +181,16 @@ public class ErasureApiTests
         await h.Seed(db =>
         {
             for (var i = 0; i < n; i++)
-                db.Bookings.Add(new BookingEntity
+                db.Accesses.Add(new BookingEntity
                 {
-                    Id = Guid.NewGuid(), ClientUserId = user, PractitionerId = Guid.NewGuid(), PractitionerUserId = other, OfferingId = h.Offering, OfferingTitle = "demo-offering",
+                    Id = Guid.NewGuid(), ClientUserId = user, AgentId = Guid.NewGuid(), PractitionerUserId = other, PackageId = h.Package, PackageTitle = "demo-offering",
                     DurationMinutes = 60, PriceMinor = 100, StartUtc = h.Clock.GetUtcNow().AddDays(1), EndUtc = h.Clock.GetUtcNow().AddDays(1).AddHours(1),
-                    Status = BookingStatus.Completed, BriefText = SecretBrief, IdempotencyKey = Guid.NewGuid(), CreatedAt = h.Clock.GetUtcNow(),
+                    Status = AccessStatus.Completed, BriefText = SecretBrief, IdempotencyKey = Guid.NewGuid(), CreatedAt = h.Clock.GetUtcNow(),
                 });
         });
         Assert.Equal(HttpStatusCode.NoContent, (await Erase(h, user)).StatusCode);
         Assert.Equal((0, 0), await RowsMatching(h, user));
-        Assert.Equal(n, await h.Query(db => db.Bookings.CountAsync(b => b.ClientUserId == Token(user) && b.BriefText == "[usunięto]")));
+        Assert.Equal(n, await h.Query(db => db.Accesses.CountAsync(b => b.ClientUserId == Token(user) && b.BriefText == "[usunięto]")));
     }
 
     [Fact]
@@ -203,7 +203,7 @@ public class ErasureApiTests
         Assert.Equal(HttpStatusCode.NoContent, (await Erase(h, prac)).StatusCode);
 
         var b = await Row(h, id);
-        Assert.Equal((null, ErasureFeature.ErasedBrief, "[usunięto]"), (b.MeetingUrlSnapshot, b.OfferingTitle, b.OfferingTitle));
+        Assert.Equal((null, ErasureFeature.ErasedBrief, "[usunięto]"), (b.MeetingUrlSnapshot, b.PackageTitle, b.PackageTitle));
         Assert.Equal((client, Token(prac), "[usunięto]"), (b.ClientUserId, b.PractitionerUserId, b.BriefText)); // the client's id stays; the brief is erased in both roles (task rule)
         var res = await h.ClientFor(client).GetAsync($"/api/v1/bookings/{id}");
         Assert.Equal(HttpStatusCode.OK, res.StatusCode);
@@ -220,7 +220,7 @@ public class ErasureApiTests
         await Erase(h, client);
 
         var b = await Row(h, id);
-        Assert.Equal((MeetingUrl, "demo-offering", prac), (b.MeetingUrlSnapshot, b.OfferingTitle, b.PractitionerUserId));
+        Assert.Equal((MeetingUrl, "demo-offering", prac), (b.MeetingUrlSnapshot, b.PackageTitle, b.PractitionerUserId));
     }
 
     [Theory]

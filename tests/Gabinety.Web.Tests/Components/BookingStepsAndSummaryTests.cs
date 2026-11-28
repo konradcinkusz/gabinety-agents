@@ -33,7 +33,7 @@ public class BookingStepsTests : BunitContext
     [Fact]
     public void The_summary_has_no_time_and_no_change_link_only_agent_units_validity_and_price()
     {
-        var cut = Render<ConsultationSummary>(p => p.Add(c => c.Offering, "Audyt").Add(c => c.Units, "10 zadań, typowy czas ok. 30 min").Add(c => c.Validity, "30 dni od zakupu").Add(c => c.PriceMinor, 100));
+        var cut = Render<ConsultationSummary>(p => p.Add(c => c.Package, "Audyt").Add(c => c.Units, "10 zadań, typowy czas ok. 30 min").Add(c => c.Validity, "30 dni od zakupu").Add(c => c.PriceMinor, 100));
         Assert.Equal(["Pakiet", "Zawartość", "Ważność", "Do zapłaty"], cut.FindAll("dt").Select(d => d.TextContent));
         Assert.Empty(cut.FindAll("a"));
     }

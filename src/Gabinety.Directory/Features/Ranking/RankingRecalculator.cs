@@ -11,9 +11,9 @@ namespace Gabinety.Directory.Features.Ranking;
 public static class RankingRecalculator
 {
     /// <returns>true when the row was scored, false for a row that is not Approved (left untouched).</returns>
-    public static bool Recompute(Practitioner p)
+    public static bool Recompute(Agent p)
     {
-        if (p.Status != PractitionerStatus.Approved) return false;
+        if (p.Status != AgentStatus.Approved) return false;
         p.RankingScore = (decimal)Ranker.Score(new RankingInput(p.RatingCount, (double)p.RatingAvg, p.CompletedCount, p.PractitionerCancelCount,
             p.NoShowUpheldCount, (double)p.ProfileCompleteness, p.OpenSlots14d));
         p.RankingVersion = RankingRules.Version;

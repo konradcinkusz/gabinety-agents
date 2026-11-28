@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Gabinety.Booking.Features.Bookings.Entities;
 
 /// <summary>A booking of one offering at one time (CONTRACTS 4.1). Status is stored as the enum NAME: the exclusion constraint reads it as a string.</summary>
-public sealed class Booking
+public sealed class Access
 {
     public Guid Id { get; set; }
     public string ClientUserId { get; set; } = "";
@@ -17,23 +17,23 @@ public sealed class Booking
     /// Personal data: never logged, never in a response or an export, set to null by the erasure endpoint. Null for a booking made before the column existed.
     /// </summary>
     public string? ClientEmail { get; set; }
-    public Guid PractitionerId { get; set; }
+    public Guid AgentId { get; set; }
     public string PractitionerUserId { get; set; } = "";
-    public Guid OfferingId { get; set; }
-    public string OfferingTitle { get; set; } = "";
+    public Guid PackageId { get; set; }
+    public string PackageTitle { get; set; } = "";
     public short DurationMinutes { get; set; }
     public long PriceMinor { get; set; }
     /// <summary>Start and end of the package's validity (A-02): purchase time and purchase time plus Access:ValidityDays.</summary>
     public DateTimeOffset StartUtc { get; set; }
     public DateTimeOffset EndUtc { get; set; }
     /// <summary>The kind of the purchased package (Tasks or Chat), copied from the offering.</summary>
-    public OfferingKind Kind { get; set; } = OfferingKind.Tasks;
+    public PackageKind Kind { get; set; } = PackageKind.Tasks;
     /// <summary>Tasks: number of tasks. Chat: tokens (the offering counts thousands).</summary>
     public long UnitsTotal { get; set; }
     public long UnitsUsed { get; set; }
     /// <summary>The agent's slug, copied from the offering when the package was bought.</summary>
     public string PractitionerSlug { get; set; } = "";
-    public BookingStatus Status { get; set; }
+    public AccessStatus Status { get; set; }
     public string? StatusReason { get; set; }
     public string BriefText { get; set; } = "";
     public string? BriefProblemSlug { get; set; }
@@ -57,9 +57,9 @@ public sealed class Booking
     public DateTimeOffset? ResolvedAt { get; set; }
 }
 
-sealed class BookingConfiguration : IEntityTypeConfiguration<Booking>
+sealed class BookingConfiguration : IEntityTypeConfiguration<Access>
 {
-    public void Configure(EntityTypeBuilder<Booking> b)
+    public void Configure(EntityTypeBuilder<Access> b)
     {
         b.ToTable("bookings");
         b.HasKey(x => x.Id);
@@ -67,15 +67,15 @@ sealed class BookingConfiguration : IEntityTypeConfiguration<Booking>
         b.Property(x => x.ClientUserId).HasColumnName("client_user_id").HasMaxLength(64);
         b.Property(x => x.ClientDisplayName).HasColumnName("client_display_name").HasMaxLength(60);
         b.Property(x => x.ClientEmail).HasColumnName("client_email").HasMaxLength(254);
-        b.Property(x => x.PractitionerId).HasColumnName("practitioner_id");
+        b.Property(x => x.AgentId).HasColumnName("practitioner_id");
         b.Property(x => x.PractitionerUserId).HasColumnName("practitioner_user_id").HasMaxLength(64);
-        b.Property(x => x.OfferingId).HasColumnName("offering_id");
-        b.Property(x => x.OfferingTitle).HasColumnName("offering_title").HasMaxLength(120);
+        b.Property(x => x.PackageId).HasColumnName("offering_id");
+        b.Property(x => x.PackageTitle).HasColumnName("offering_title").HasMaxLength(120);
         b.Property(x => x.DurationMinutes).HasColumnName("duration_minutes");
         b.Property(x => x.PriceMinor).HasColumnName("price_minor");
         b.Property(x => x.StartUtc).HasColumnName("start_utc");
         b.Property(x => x.EndUtc).HasColumnName("end_utc");
-        b.Property(x => x.Kind).HasColumnName("kind").HasConversion<string>().HasMaxLength(10).HasDefaultValue(OfferingKind.Tasks);
+        b.Property(x => x.Kind).HasColumnName("kind").HasConversion<string>().HasMaxLength(10).HasDefaultValue(PackageKind.Tasks);
         b.Property(x => x.UnitsTotal).HasColumnName("units_total");
         b.Property(x => x.UnitsUsed).HasColumnName("units_used").HasDefaultValue(0L);
         b.Property(x => x.PractitionerSlug).HasColumnName("practitioner_slug").HasMaxLength(60).IsRequired().HasDefaultValue("");
@@ -99,7 +99,7 @@ sealed class BookingConfiguration : IEntityTypeConfiguration<Booking>
         b.Property(x => x.DisputeText).HasColumnName("dispute_text").HasMaxLength(1000);
         b.Property(x => x.DisputeResolution).HasColumnName("dispute_resolution").HasMaxLength(20);
         b.Property(x => x.ResolvedAt).HasColumnName("resolved_at");
-        b.HasIndex(x => new { x.PractitionerId, x.StartUtc });
+        b.HasIndex(x => new { x.AgentId, x.StartUtc });
         b.HasIndex(x => new { x.ClientUserId, x.IdempotencyKey }).IsUnique();
         b.HasIndex(x => new { x.Status, x.HoldExpiresAt });
     }

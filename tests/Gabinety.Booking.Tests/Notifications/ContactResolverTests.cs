@@ -11,7 +11,7 @@ namespace Gabinety.Booking.Tests;
 /// </summary>
 public class ContactResolverTests
 {
-    const string Practitioner = "demo-practitioner-user", Address = "demo-jan@demo.invalid";
+    const string Agent = "demo-practitioner-user", Address = "demo-jan@demo.invalid";
 
     sealed class Rig
     {
@@ -26,7 +26,7 @@ public class ContactResolverTests
         {
             Directory.Override = (r, _) =>
             {
-                if (r.RequestUri!.AbsolutePath != $"/internal/v1/practitioners/{Practitioner}/contact") return new HttpResponseMessage(HttpStatusCode.NotFound);
+                if (r.RequestUri!.AbsolutePath != $"/internal/v1/practitioners/{Agent}/contact") return new HttpResponseMessage(HttpStatusCode.NotFound);
                 Interlocked.Increment(ref ContactCalls);
                 return AddressOf is null ? new HttpResponseMessage(HttpStatusCode.NotFound) : FakeDirectory.Json(new { email = AddressOf });
             };
@@ -34,7 +34,7 @@ public class ContactResolverTests
             Resolver = new ContactResolver(client, Clock, new LoggerFactory([Logs]).CreateLogger<ContactResolver>());
         }
 
-        public Task<string?> Practitioner_(string user = Practitioner) => Resolver.ResolveAddressAsync(new ContactLookup(user, true, null), CancellationToken.None);
+        public Task<string?> Practitioner_(string user = Agent) => Resolver.ResolveAddressAsync(new ContactLookup(user, true, null), CancellationToken.None);
     }
 
     [Fact]
@@ -135,7 +135,7 @@ public class ContactResolverTests
         var r = new Rig();
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => r.Resolver.ResolveAddressAsync(new ContactLookup(Practitioner, true, null), cts.Token));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => r.Resolver.ResolveAddressAsync(new ContactLookup(Agent, true, null), cts.Token));
     }
 
     [Fact]

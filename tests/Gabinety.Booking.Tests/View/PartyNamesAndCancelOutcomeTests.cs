@@ -7,8 +7,8 @@ using Gabinety.Booking.Features.Internal.Erasure;
 using Gabinety.Booking.Features.Lifecycle.Cancel;
 using Gabinety.Booking.Features.Payments;
 using Gabinety.Contracts.Booking;
-using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Booking;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using BookingEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -44,11 +44,11 @@ public class PartyNamesTests
     {
         await using var h = Life.Host(new RecordingProvider());
         h.NameClaim = "demo-client-1@example.test";
-        var id = await Life.Seed(h, BookingStatus.Confirmed, H24 * 3);
+        var id = await Life.Seed(h, AccessStatus.Confirmed, H24 * 3);
         // unique parties: the in-memory database is shared by the hosts of one test process and the list shows 12 rows a page
         var client = "demo-client-" + Guid.NewGuid().ToString("n");
         var practitioner = "demo-practitioner-" + Guid.NewGuid().ToString("n");
-        await h.Seed(db => { var b = db.Bookings.Single(x => x.Id == id); b.ClientDisplayName = "Klient D."; b.ClientUserId = client; b.PractitionerUserId = practitioner; });
+        await h.Seed(db => { var b = db.Accesses.Single(x => x.Id == id); b.ClientDisplayName = "Klient D."; b.ClientUserId = client; b.PractitionerUserId = practitioner; });
 
         var asClient = await Get(h.ClientFor(client), $"/api/v1/bookings/{id}");
         Assert.Equal("Demo Practitioner", asClient.GetProperty("practitioner").GetProperty("displayName").GetString());
@@ -74,7 +74,7 @@ public class PartyNamesTests
         h.NameClaim = "demo-client-1@example.test";
         var created = await CreateHost.Post(h.ClientFor(Life.Client), h.Req(), Guid.NewGuid().ToString());
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
-        var row = Assert.Single(await h.Bookings());
+        var row = Assert.Single(await h.Accesses());
         Assert.Equal("Klient D.", row.ClientDisplayName);
     }
 
@@ -82,8 +82,8 @@ public class PartyNamesTests
     public async Task A_row_without_a_snapshot_reads_Klient()
     {
         await using var h = Life.Host(new RecordingProvider());
-        var id = await Life.Seed(h, BookingStatus.Confirmed, H24 * 3);
-        var v = await Get(h.ClientFor(Life.Practitioner), $"/api/v1/bookings/{id}");
+        var id = await Life.Seed(h, AccessStatus.Confirmed, H24 * 3);
+        var v = await Get(h.ClientFor(Life.Agent), $"/api/v1/bookings/{id}");
         Assert.Equal("Klient", v.GetProperty("client").GetProperty("displayName").GetString());
     }
 
@@ -91,10 +91,10 @@ public class PartyNamesTests
     public async Task Erased_users_read_Usuniety_uzytkownik_on_both_sides()
     {
         await using var h = Life.Host(new RecordingProvider());
-        var id = await Life.Seed(h, BookingStatus.Confirmed, H24 * 3);
+        var id = await Life.Seed(h, AccessStatus.Confirmed, H24 * 3);
         var clientToken = ErasureFeature.Token(Life.Client);
-        var practitionerToken = ErasureFeature.Token(Life.Practitioner);
-        await h.Seed(db => { var b = db.Bookings.Single(x => x.Id == id); b.ClientUserId = clientToken; b.ClientDisplayName = null; b.PractitionerUserId = practitionerToken; });
+        var practitionerToken = ErasureFeature.Token(Life.Agent);
+        await h.Seed(db => { var b = db.Accesses.Single(x => x.Id == id); b.ClientUserId = clientToken; b.ClientDisplayName = null; b.PractitionerUserId = practitionerToken; });
 
         var asClient = await Get(h.ClientFor(clientToken), $"/api/v1/bookings/{id}");
         Assert.Equal("Usunięty użytkownik", asClient.GetProperty("practitioner").GetProperty("displayName").GetString());
@@ -116,7 +116,7 @@ public class PartyNamesTests
     {
         await using var h = Life.Host(new RecordingProvider());
         h.DirectoryDown = true;
-        var id = await Life.Seed(h, BookingStatus.Confirmed, H24 * 3);
+        var id = await Life.Seed(h, AccessStatus.Confirmed, H24 * 3);
         var v = await Get(h.ClientFor(Life.Client), $"/api/v1/bookings/{id}");
         Assert.Equal("Programista", v.GetProperty("practitioner").GetProperty("displayName").GetString());
     }
@@ -136,7 +136,7 @@ public class CancelOutcomeTests
     public async Task The_outcome_shown_before_the_client_cancels_is_the_outcome_of_the_cancel(int startInSeconds, string outcome, long refund, string paymentStatus)
     {
         await using var h = Life.Host(new RecordingProvider());
-        var id = await Life.Seed(h, BookingStatus.Confirmed, TimeSpan.FromSeconds(startInSeconds));
+        var id = await Life.Seed(h, AccessStatus.Confirmed, TimeSpan.FromSeconds(startInSeconds));
 
         var view = JsonDocument.Parse(await h.ClientFor(Life.Client).GetStringAsync($"/api/v1/bookings/{id}")).RootElement;
         Assert.True(view.GetProperty("canCancel").GetBoolean());
@@ -153,12 +153,12 @@ public class CancelOutcomeTests
     public async Task The_practitioner_is_always_told_full_refund_and_a_booking_that_cannot_be_cancelled_has_no_outcome()
     {
         await using var h = Life.Host(new RecordingProvider());
-        var soon = await Life.Seed(h, BookingStatus.Confirmed, TimeSpan.FromMinutes(30));
-        var v = JsonDocument.Parse(await h.ClientFor(Life.Practitioner).GetStringAsync($"/api/v1/bookings/{soon}")).RootElement;
+        var soon = await Life.Seed(h, AccessStatus.Confirmed, TimeSpan.FromMinutes(30));
+        var v = JsonDocument.Parse(await h.ClientFor(Life.Agent).GetStringAsync($"/api/v1/bookings/{soon}")).RootElement;
         Assert.Equal("full_refund", v.GetProperty("cancelOutcome").GetProperty("outcome").GetString());
         Assert.Equal(10000, v.GetProperty("cancelOutcome").GetProperty("refund").GetProperty("amountMinor").GetInt64());
 
-        var done = await Life.Seed(h, BookingStatus.Completed, -H24);
+        var done = await Life.Seed(h, AccessStatus.Completed, -H24);
         var d = JsonDocument.Parse(await h.ClientFor(Life.Client).GetStringAsync($"/api/v1/bookings/{done}")).RootElement;
         Assert.False(d.GetProperty("canCancel").GetBoolean());
         Assert.Equal(JsonValueKind.Null, d.GetProperty("cancelOutcome").ValueKind);
@@ -168,7 +168,7 @@ public class CancelOutcomeTests
     public void The_planner_is_the_single_source_at_the_boundary_and_names_partial_only_for_a_part_refund()
     {
         var start = new DateTimeOffset(2026, 12, 1, 10, 0, 0, TimeSpan.Zero);
-        var b = new BookingEntity { Status = BookingStatus.Confirmed, StartUtc = start, EndUtc = start.AddHours(1), PriceMinor = 18000 };
+        var b = new BookingEntity { Status = AccessStatus.Confirmed, StartUtc = start, EndUtc = start.AddHours(1), PriceMinor = 18000 };
         Assert.Equal((CancelOutcomeKind.FullRefund, 18000L), Tuple(CancelPlanner.Plan(b, byClient: true, start - H24)));
         Assert.Equal((CancelOutcomeKind.FullRefund, 18000L), Tuple(CancelPlanner.Plan(b, byClient: true, start - H24 + S)));
         Assert.Equal((CancelOutcomeKind.FullRefund, 18000L), Tuple(CancelPlanner.Plan(b, byClient: true, start + 10 * H24)));
@@ -178,7 +178,7 @@ public class CancelOutcomeTests
         Assert.Null(CancelPlanner.Plan(b, byClient: true, start - H24));             // a used package is not cancelled by the client (A-03)
         Assert.Equal((CancelOutcomeKind.FullRefund, 18000L), Tuple(CancelPlanner.Plan(b, byClient: false, start + S))); // the practitioner's withdrawal is not blocked by use
         b.UnitsUsed = 0;
-        b.Status = BookingStatus.Completed;
+        b.Status = AccessStatus.Completed;
         Assert.Null(CancelPlanner.Plan(b, byClient: true, start - H24));             // the state table
     }
 
@@ -202,7 +202,7 @@ public class DisputeWindowTests
     [InlineData(73 * 3600 + 1, false)]
     public void canDispute_is_true_for_a_Completed_booking_until_end_plus_72h(int offsetSeconds, bool expected)
     {
-        var b = new BookingEntity { ClientUserId = "demo-client", PractitionerUserId = "demo-practitioner", Status = BookingStatus.Completed, StartUtc = Start, EndUtc = Start + H, EndedAt = Start + H };
+        var b = new BookingEntity { ClientUserId = "demo-client", PractitionerUserId = "demo-practitioner", Status = AccessStatus.Completed, StartUtc = Start, EndUtc = Start + H, EndedAt = Start + H };
         var now = Start + TimeSpan.FromSeconds(offsetSeconds);
         Assert.Equal(expected, BookingPermissions.For(b, "demo-client", new Clock(now)).CanDispute);
         Assert.False(BookingPermissions.For(b, "demo-practitioner", new Clock(now)).CanDispute);

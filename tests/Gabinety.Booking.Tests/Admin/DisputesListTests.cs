@@ -1,6 +1,6 @@
 using System.Net;
 using System.Text.Json;
-using BookingStatus = Gabinety.Billing.BookingStatus;
+using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;
 
@@ -38,8 +38,8 @@ public class DisputesListTests
         await using var h = Adm.Host(new RecordingProvider());
         var now = h.Clock.GetUtcNow();
         var (open, openClient) = await Adm.Seed(h, kind: "practitioner_no_show", openedAt: now.AddHours(-2));
-        var (done, _) = await Adm.Seed(h, BookingStatus.Resolved, resolution: "refund_partial", openedAt: now.AddHours(-9), resolvedAt: now.AddHours(-1));
-        foreach (var s in Enum.GetValues<BookingStatus>().Where(s => s is not (BookingStatus.Disputed or BookingStatus.Resolved))) await Adm.Seed(h, s);
+        var (done, _) = await Adm.Seed(h, AccessStatus.Resolved, resolution: "refund_partial", openedAt: now.AddHours(-9), resolvedAt: now.AddHours(-1));
+        foreach (var s in Enum.GetValues<AccessStatus>().Where(s => s is not (AccessStatus.Disputed or AccessStatus.Resolved))) await Adm.Seed(h, s);
 
         var openItems = await All(h);
         Assert.Equal([open.ToString()], Mine(openItems, h));
