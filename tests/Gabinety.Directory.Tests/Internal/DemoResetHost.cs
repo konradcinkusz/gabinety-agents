@@ -34,7 +34,7 @@ public sealed class CapturingLoggerProvider : ILoggerProvider
 /// demo- practitioner, so it must not share "directorydb" with the parallel tests of the process. No GitHub double: the lookup is whatever the profile registers.
 /// A primary handler that throws for every outgoing HTTP call proves whether the host tried the network.
 /// </summary>
-public sealed class DemoResetHost(IReadOnlyDictionary<string, string> profile) : OfferingFactory
+public sealed class DemoResetHost(IReadOnlyDictionary<string, string> profile) : PackageFactory
 {
     public const string Key = "demo-internal-key-0002";
     readonly string _db = "demoreset-" + Guid.NewGuid().ToString("n");

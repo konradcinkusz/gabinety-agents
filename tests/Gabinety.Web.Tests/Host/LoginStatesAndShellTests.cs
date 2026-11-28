@@ -299,7 +299,7 @@ public class ShellTests
     }
 
     [Fact]
-    public async Task A_practitioner_sees_the_panel_in_the_menu_and_the_footer_and_the_directory_is_asked_once_a_minute_per_session()
+    public async Task A_agent_sees_the_panel_in_the_menu_and_the_footer_and_the_directory_is_asked_once_a_minute_per_session()
     {
         await using var web = Web();
         Agent(web, "018f0000-0000-7000-8000-0000000000e1");

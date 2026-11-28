@@ -26,7 +26,7 @@ public class ReplyTests
     }
 
     [Fact]
-    public async Task The_reviewed_practitioner_replies_once_and_the_public_list_shows_the_reply()
+    public async Task The_reviewed_agent_replies_once_and_the_public_list_shows_the_reply()
     {
         var (h, user, pract) = Arrange(); using var _ = h;
         var id = await h.SeedReview(pract);
@@ -74,7 +74,7 @@ public class ReplyTests
     }
 
     [Fact]
-    public async Task Another_practitioner_gets_404_and_nothing_is_written()
+    public async Task Another_agent_gets_404_and_nothing_is_written()
     {
         var (h, _, pract) = Arrange(); using var _h = h;
         var other = $"demo-other-{Guid.NewGuid():N}"; h.Directory.Add(other);
@@ -89,7 +89,7 @@ public class ReplyTests
     }
 
     [Fact]
-    public async Task A_client_who_is_no_practitioner_gets_404_and_so_does_an_unknown_review()
+    public async Task A_client_who_is_no_agent_gets_404_and_so_does_an_unknown_review()
     {
         var (h, user, pract) = Arrange(); using var _ = h;
         var id = await h.SeedReview(pract);
@@ -114,7 +114,7 @@ public class ReplyTests
     [Theory]
     [InlineData(ReviewStatus.Held)]
     [InlineData(ReviewStatus.Rejected)]
-    public async Task A_review_that_is_not_Published_is_404_to_its_own_practitioner_and_stays_without_a_reply(ReviewStatus status)
+    public async Task A_review_that_is_not_Published_is_404_to_its_own_agent_and_stays_without_a_reply(ReviewStatus status)
     {
         var (h, user, pract) = Arrange(); using var _ = h;
         var id = await h.SeedReview(pract, status);

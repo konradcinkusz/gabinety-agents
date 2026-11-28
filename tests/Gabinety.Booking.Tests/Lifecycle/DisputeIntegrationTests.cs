@@ -34,7 +34,7 @@ public class DisputeIntegrationTests : IAsyncLifetime
     AccessDbContext Db() => new(new DbContextOptionsBuilder<AccessDbContext>().UseNpgsql(cs).Options);
 
     [Fact]
-    public async Task Two_concurrent_disputes_of_one_booking_give_one_200_and_one_409_and_the_winners_text_is_kept()
+    public async Task Two_concurrent_disputes_of_one_access_give_one_200_and_one_409_and_the_winners_text_is_kept()
     {
         for (var round = 0; round < 10; round++)
         {

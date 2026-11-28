@@ -10,7 +10,7 @@ public class DirectoryClientTests
         new(new HttpClient(h) { BaseAddress = new Uri(FakeDirectory.BaseUrl) }, FakeDirectory.Key, retryDelay: TimeSpan.Zero, timeout: timeout);
 
     [Fact]
-    public async Task GetOffering_returns_a_typed_result_and_sends_the_internal_key()
+    public async Task GetPackage_returns_a_typed_result_and_sends_the_internal_key()
     {
         var package = Guid.NewGuid();
         var agent = Guid.NewGuid();

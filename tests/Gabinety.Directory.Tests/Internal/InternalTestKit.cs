@@ -29,7 +29,7 @@ public class InternalFactory : VerificationFactory
         return c;
     }
 
-    public Task<Package> SeedOffering(Agent p, string? meetingUrl = null, bool active = true, long price = 15000, short minutes = 60) => Db(async db =>
+    public Task<Package> SeedPackage(Agent p, string? meetingUrl = null, bool active = true, long price = 15000, short minutes = 60) => Db(async db =>
     {
         var o = new Package
         {
@@ -41,7 +41,7 @@ public class InternalFactory : VerificationFactory
         return o;
     });
 
-    public Task<List<Package>> OfferingsOf(Guid agentId) => Db(db => db.Packages.AsNoTracking().Where(o => o.AgentId == agentId).ToListAsync());
+    public Task<List<Package>> PackagesOf(Guid agentId) => Db(db => db.Packages.AsNoTracking().Where(o => o.AgentId == agentId).ToListAsync());
 }
 
 public static class Ik

@@ -4,7 +4,7 @@ using Gabinety.Web.Components.Pages.Bookings;
 namespace Gabinety.Web.Tests.Models;
 
 /// <summary>The plain C# of the list's sections and of the start in words (UX-030): no renderer, no clock but the one passed in.</summary>
-public class MyBookingsScheduleTests
+public class MyAccessesScheduleTests
 {
     // 22 November 2026 at 11:00 in Warsaw (10:00 UTC). In November Warsaw is UTC+1.
     static readonly DateTimeOffset Now = new(2026, 11, 22, 10, 0, 0, TimeSpan.Zero);
@@ -53,7 +53,7 @@ public class MyBookingsScheduleTests
 
     [Theory]
     [InlineData("Completed")] [InlineData("NoShow")] [InlineData("Disputed")] [InlineData("DisputeResolved")] [InlineData("CancelledByClientNoRefund")]
-    public void Only_a_booking_awaiting_payment_or_confirmed_is_upcoming_whatever_its_start_says(string status)
+    public void Only_a_access_awaiting_payment_or_confirmed_is_upcoming_whatever_its_start_says(string status)
     {
         // seeded data made with a moved test clock has a completed booking that starts in the future of the real clock
         var (upcoming, past) = MyAccessesSchedule.Split([At(Now.AddDays(2), status, "Z przyszłością")], Now);

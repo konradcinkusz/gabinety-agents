@@ -73,7 +73,7 @@ public class AutoCompleteTests : IDisposable
     }
 
     [Fact]
-    public async Task A_disputed_booking_is_never_completed_even_when_its_id_comes_from_a_stale_selection()
+    public async Task A_disputed_access_is_never_completed_even_when_its_id_comes_from_a_stale_selection()
     {
         var disputed = await Auto.Seed(h, Auto.Window + TimeSpan.FromHours(5), AccessStatus.Disputed);
         var job = Auto.Job(h);

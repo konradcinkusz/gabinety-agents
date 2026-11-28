@@ -78,11 +78,11 @@ public class AdminSharedMarkupTests
     }
 
     [Fact]
-    public async Task The_resolve_form_offers_its_three_options_as_option_cards_in_an_option_group_and_the_booking_id_is_text_not_a_link()
+    public async Task The_resolve_form_offers_its_three_options_as_option_cards_in_an_option_group_and_the_access_id_is_text_not_a_link()
     {
         await using var host = await AdminHost.StartAsync();
         var dispute = AdminHost.Dispute(AccessId);
-        host.Web.Access.Respond = r => r.RequestUri!.AbsolutePath == "/api/v1/admin/disputes" ? AdminHost.Paged(dispute) : FakeBackend.Json(AdminHost.BookingOf(AccessId));
+        host.Web.Access.Respond = r => r.RequestUri!.AbsolutePath == "/api/v1/admin/disputes" ? AdminHost.Paged(dispute) : FakeBackend.Json(AdminHost.AccessOf(AccessId));
         var page = await host.Browser.GetAsync($"/admin/spory?status=open&rozstrzygnij={AccessId}");
 
         var card = Assert.Single(page.All("main ul[aria-label] > li.card"));

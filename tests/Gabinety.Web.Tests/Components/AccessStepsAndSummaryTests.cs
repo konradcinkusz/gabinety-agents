@@ -7,7 +7,7 @@ using static Gabinety.Web.Tests.Pages.ClientAreaFixture;
 namespace Gabinety.Web.Tests.Rendering;
 
 /// <summary>C-02: the step list and the package summary.</summary>
-public class BookingStepsTests : BunitContext
+public class AccessStepsTests : BunitContext
 {
     [Theory]
     [InlineData(0)] [InlineData(1)] [InlineData(2)]
@@ -39,7 +39,7 @@ public class BookingStepsTests : BunitContext
     }
 }
 
-public class BookingFormUx020Tests
+public class AccessFormUx020Tests
 {
     [Fact]
     public async Task The_form_shows_the_first_step_the_hold_notice_and_the_refund_rule_and_no_time()

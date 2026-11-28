@@ -47,7 +47,7 @@ public class PairKeyTests
     }
 
     [Fact]
-    public async Task A_second_booking_of_a_long_id_pair_gets_fee_zero_and_the_first_the_fee()
+    public async Task A_second_access_of_a_long_id_pair_gets_fee_zero_and_the_first_the_fee()
     {
         await using var h = Life.Host(new RecordingProvider());
         var client = "demo-" + Guid.NewGuid().ToString("N") + new string('z', 27); // 64 characters

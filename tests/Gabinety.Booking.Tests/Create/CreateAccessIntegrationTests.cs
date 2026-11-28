@@ -9,7 +9,7 @@ namespace Gabinety.Booking.Tests;
 
 /// <summary>Booking creation on real PostgreSQL 17 through the real HTTP pipeline: unique keys, retrying execution strategy.</summary>
 [Trait("tier", "integration")]
-public class CreateBookingIntegrationTests : IAsyncLifetime
+public class CreateAccessIntegrationTests : IAsyncLifetime
 {
     PostgreSqlContainer pg = null!;
     string cs = "";
@@ -41,7 +41,7 @@ public class CreateBookingIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Two_requests_with_the_same_key_at_once_create_one_booking_and_both_answers_carry_the_same_booking_id()
+    public async Task Two_requests_with_the_same_key_at_once_create_one_access_and_both_answers_carry_the_same_access_id()
     {
         for (var round = 0; round < 10; round++)
         {

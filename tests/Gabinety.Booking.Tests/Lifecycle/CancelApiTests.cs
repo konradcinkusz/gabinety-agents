@@ -75,7 +75,7 @@ public class CancelApiTests
     }
 
     [Fact]
-    public async Task The_practitioner_may_still_withdraw_a_package_that_was_used()
+    public async Task The_agent_may_still_withdraw_a_package_that_was_used()
     {
         var p = new RecordingProvider();
         await using var h = Life.Host(p);
@@ -91,7 +91,7 @@ public class CancelApiTests
     [InlineData(60 * 60 * 2)]       // two hours ahead
     [InlineData(-30 * 60)]          // in progress
     [InlineData(-(60 * 60 - 1))]    // 1 s before the end of a 1 h session that started 59 m 59 s ago
-    public async Task A_practitioner_cancel_always_refunds_in_full_before_the_end(int startInSeconds)
+    public async Task A_agent_cancel_always_refunds_in_full_before_the_end(int startInSeconds)
     {
         var p = new RecordingProvider();
         await using var h = Life.Host(p);
@@ -107,7 +107,7 @@ public class CancelApiTests
     }
 
     [Fact]
-    public async Task A_practitioner_cancel_at_or_after_the_end_is_409()
+    public async Task A_agent_cancel_at_or_after_the_end_is_409()
     {
         var p = new RecordingProvider();
         await using var h = Life.Host(p);
@@ -172,7 +172,7 @@ public class CancelApiTests
     }
 
     [Fact]
-    public async Task The_idempotency_key_is_stable_per_booking_and_reason_and_a_replayed_provider_confirmation_does_not_double_record()
+    public async Task The_idempotency_key_is_stable_per_access_and_reason_and_a_replayed_provider_confirmation_does_not_double_record()
     {
         var p = new RecordingProvider();
         await using var h = Life.Host(p);
@@ -251,11 +251,11 @@ public class CancelApiTests
     }
 
     [Fact]
-    public async Task The_full_path_works_from_a_booking_created_and_paid_through_the_API()
+    public async Task The_full_path_works_from_a_access_created_and_paid_through_the_API()
     {
         var p = new RecordingProvider();
         await using var h = Life.Host(p);
-        var (id, _) = await Pay.CreateBooking(h, Life.Client); // valid from now for 30 days, nothing used
+        var (id, _) = await Pay.CreateAccess(h, Life.Client); // valid from now for 30 days, nothing used
         Assert.Equal(HttpStatusCode.OK, (await Pay.Simulate(h.ClientFor(Life.Client), id, "succeeded")).StatusCode);
         var r = await Life.Cancel(h, id, Life.Client);
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);

@@ -7,14 +7,14 @@ using static Gabinety.Directory.Tests.Offerings.Kit;
 namespace Gabinety.Directory.Tests.Offerings;
 
 /// <summary>A-01: an offering is a package with a kind and a number of units.</summary>
-public class OfferingKindTests(OfferingFactory f) : IClassFixture<OfferingFactory>, IAsyncLifetime
+public class PackageKindTests(PackageFactory f) : IClassFixture<PackageFactory>, IAsyncLifetime
 {
     public async Task InitializeAsync() => await WaitForSeed(f);
 
     public Task DisposeAsync() => Task.CompletedTask;
 
     [Fact]
-    public async Task Chat_offering_returns_kind_and_units()
+    public async Task Chat_package_returns_kind_and_units()
     {
         var c = await Agent(f);
         var created = await Created(c, Valid() with { Kind = PackageKind.Chat, Units = 500 });

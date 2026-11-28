@@ -65,7 +65,7 @@ sealed class FakeDirectory : HttpMessageHandler
 }
 
 /// <summary>Booking host with an in-memory RSA key as its "JWKS", the audience "booking-test" and a fake Directory.</summary>
-sealed class BookingFactory : WebApplicationFactory<Program>
+sealed class AccessFactory : WebApplicationFactory<Program>
 {
     public const string Audience = "booking-test", Issuer = "https://issuer.demo.invalid";
     readonly RSA _rsa = RSA.Create(2048);

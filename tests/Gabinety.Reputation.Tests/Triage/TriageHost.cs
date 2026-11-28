@@ -42,7 +42,7 @@ sealed class TriageHost : WebApplicationFactory<Program>
     public const string GoodText = "Synthetyczna opinia TRIAGE-TEKST-NIE-DO-LOGU: spotkanie było rzeczowe i pomocne.";
     readonly RSA _rsa = RSA.Create(2048);
     readonly string _db = "triage-" + Guid.NewGuid();
-    public FakeBooking Access { get; } = new();
+    public FakeAccess Access { get; } = new();
     public ReviewsClock Clock { get; } = new();
     public ReviewsLogSink Logs { get; } = new();
     public FakeAssistant Assistant { get; } = new();
@@ -64,7 +64,7 @@ sealed class TriageHost : WebApplicationFactory<Program>
         builder.ConfigureServices(s =>
         {
             s.RemoveAll<IAccessClient>();
-            s.AddSingleton<IAccessClient>(new AccessClient(new HttpClient(Access) { BaseAddress = new Uri(FakeBooking.BaseUrl) }, FakeBooking.Key, retryDelay: TimeSpan.Zero));
+            s.AddSingleton<IAccessClient>(new AccessClient(new HttpClient(Access) { BaseAddress = new Uri(FakeAccess.BaseUrl) }, FakeAccess.Key, retryDelay: TimeSpan.Zero));
             s.RemoveAll<IAssistantClient>();
             s.AddSingleton<IAssistantClient>(Assistant);
             s.RemoveAll<TimeProvider>();
@@ -95,7 +95,7 @@ sealed class TriageHost : WebApplicationFactory<Program>
     public Task<List<ModerationEvent>> EventsOf(Guid reviewId) => Query(db => db.ModerationEvents.AsNoTracking().Where(e => e.ReviewId == reviewId).OrderBy(e => e.At).ThenBy(e => e.Kind).ToListAsync());
 
     /// <summary>A reviewable booking for a new user; returns (user, practitioner, booking).</summary>
-    public (string User, Guid Agent, Guid Access) NewBooking()
+    public (string User, Guid Agent, Guid Access) NewAccess()
     {
         var user = "demo-" + Guid.NewGuid().ToString("N")[..8];
         var pract = Guid.NewGuid();

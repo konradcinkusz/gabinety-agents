@@ -67,7 +67,7 @@ public static class Kit
 }
 
 /// <summary>Directory host without the per-user rate limit (these tests make far more than 60 calls a minute from one address).</summary>
-public class OfferingFactory : ProfileFactory
+public class PackageFactory : ProfileFactory
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -88,7 +88,7 @@ public class OfferingFactory : ProfileFactory
 }
 
 /// <summary>Host with the price limits changed through configuration.</summary>
-public sealed class PriceConfigFactory : OfferingFactory
+public sealed class PriceConfigFactory : PackageFactory
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {

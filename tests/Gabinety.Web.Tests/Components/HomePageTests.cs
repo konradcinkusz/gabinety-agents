@@ -24,7 +24,7 @@ public class HomePageTests : BunitContext
     ]);
 
     PageDto<AgentCardDto> _cards = Sample.Cards(5);
-    bool _taxonomyDown, _sitemapDown, _practitionersDown;
+    bool _taxonomyDown, _sitemapDown, _agentsDown;
 
     public HomePageTests()
     {
@@ -37,7 +37,7 @@ public class HomePageTests : BunitContext
     {
         "/api/v1/taxonomy" when _taxonomyDown => throw new HttpRequestException("down"),
         "/api/v1/sitemap" when _sitemapDown => throw new HttpRequestException("down"),
-        "/api/v1/practitioners" when _practitionersDown => throw new HttpRequestException("down"),
+        "/api/v1/practitioners" when _agentsDown => throw new HttpRequestException("down"),
         "/api/v1/taxonomy" => FakeBackend.Json(_taxonomy),
         "/api/v1/sitemap" => FakeBackend.Json(_sitemap),
         "/api/v1/practitioners" => FakeBackend.Json(_cards),
@@ -55,7 +55,7 @@ public class HomePageTests : BunitContext
     static string Plain(string text) => text.Replace(' ', ' ');
 
     [Fact]
-    public void Each_tile_has_its_own_sentence_and_the_practitioner_count_from_the_sitemap()
+    public void Each_tile_has_its_own_sentence_and_the_agent_count_from_the_sitemap()
     {
         var cut = Open();
         var tiles = cut.FindAll("[data-testid=categories] > li");
@@ -94,7 +94,7 @@ public class HomePageTests : BunitContext
     }
 
     [Fact]
-    public void The_featured_row_shows_three_practitioners_as_card_links_with_their_price()
+    public void The_featured_row_shows_three_agents_as_card_links_with_their_price()
     {
         var cut = Open();
         var region = cut.Find("[data-testid=featured]");
@@ -110,7 +110,7 @@ public class HomePageTests : BunitContext
     [Fact]
     public void The_featured_region_fails_soft_and_the_rest_of_the_page_stays()
     {
-        _practitionersDown = true;
+        _agentsDown = true;
         var cut = Open();
         Assert.Empty(cut.FindAll("[data-testid=featured]"));
         Assert.Empty(cut.FindAll("#home-featured"));

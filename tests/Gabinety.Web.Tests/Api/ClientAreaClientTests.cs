@@ -22,7 +22,7 @@ public class ClientAreaClientTests
     static readonly Guid Id = Guid.Parse("018f0000-0000-7000-8000-0000000000b1");
 
     [Fact]
-    public async Task The_task_list_is_read_in_the_snake_case_shape_Booking_writes_with_both_dates()
+    public async Task The_task_list_is_read_in_the_snake_case_shape_Access_writes_with_both_dates()
     {
         var (client, backend) = Accesses();
         backend.Respond = _ => FakeBackend.Raw("""[{"id":"018f0000-0000-7000-8000-0000000000c1","status":"succeeded","output":"Gotowe.","created_at":"2026-11-23T18:26:00.2989739Z","completed_at":"2026-11-23T18:26:00.6302108Z"},{"id":"018f0000-0000-7000-8000-0000000000c2","status":"queued","output":null,"created_at":"2026-11-23T18:27:00Z","completed_at":null}]""");

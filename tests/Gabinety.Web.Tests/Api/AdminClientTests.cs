@@ -35,7 +35,7 @@ public class AdminClientTests : IClassFixture<WebFactory>
     }
 
     [Fact]
-    public async Task The_four_practitioner_actions_post_to_their_own_path_and_only_reject_and_suspend_carry_the_trimmed_reason()
+    public async Task The_four_agent_actions_post_to_their_own_path_and_only_reject_and_suspend_carry_the_trimmed_reason()
     {
         var (client, scope) = Get<DirectoryClient>(); using var _ = scope;
         _web.Directory.Respond = _ => new HttpResponseMessage(HttpStatusCode.NoContent);

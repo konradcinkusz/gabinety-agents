@@ -37,7 +37,7 @@ public class NotificationIntegrationTests
     }
 
     [Fact]
-    public async Task The_unique_index_rejects_a_duplicate_booking_kind_and_user()
+    public async Task The_unique_index_rejects_a_duplicate_access_kind_and_user()
     {
         await using var pg = await Pg();
         using var host = Host(pg.GetConnectionString(), new(), new());

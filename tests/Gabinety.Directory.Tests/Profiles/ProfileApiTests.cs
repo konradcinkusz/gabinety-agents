@@ -25,7 +25,7 @@ public sealed class FakeEmail : IEmailVerifiedLookup
 }
 
 /// <summary>The Booking double of the suspension and erasure cascade: records the calls, can fail, and can look at the world at the moment of the call.</summary>
-public sealed class FakeBooking : Gabinety.Directory.Clients.IAccessClient
+public sealed class FakeAccess : Gabinety.Directory.Clients.IAccessClient
 {
     public readonly List<Guid> Calls = [];
     public bool Down;
@@ -44,7 +44,7 @@ public class ProfileFactory : WebApplicationFactory<Program>
     const string Audience = "directory-test", Issuer = "https://issuer.demo.invalid";
     readonly RSA _rsa = RSA.Create(2048);
     public FakeEmail Email { get; } = new();
-    public FakeBooking Access { get; } = new();
+    public FakeAccess Access { get; } = new();
     protected virtual string Provider => "InMemory";
     protected virtual string? ConnectionString => null;
 

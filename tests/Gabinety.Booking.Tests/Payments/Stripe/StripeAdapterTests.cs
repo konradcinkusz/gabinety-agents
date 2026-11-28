@@ -26,7 +26,7 @@ public class StripeAdapterTests
     // ---- checkout ----
 
     [Fact]
-    public async Task Checkout_posts_a_payment_mode_session_in_zloty_with_the_booking_the_idempotency_key_and_the_documented_headers()
+    public async Task Checkout_posts_a_payment_mode_session_in_zloty_with_the_access_the_idempotency_key_and_the_documented_headers()
     {
         var h = Stripe();
         var r = await Fx.Provider(h).CreateCheckoutAsync(Checkout(), default);
@@ -77,7 +77,7 @@ public class StripeAdapterTests
     }
 
     [Fact]
-    public async Task A_long_offering_title_is_cut_to_what_the_product_name_allows_and_form_characters_survive_encoding()
+    public async Task A_long_package_title_is_cut_to_what_the_product_name_allows_and_form_characters_survive_encoding()
     {
         var h = Stripe();
         await Fx.Provider(h).CreateCheckoutAsync(Checkout(title: "A&B=C+ć " + new string('x', 400)), default);
@@ -148,7 +148,7 @@ public class StripeAdapterTests
     // ---- connected accounts ----
 
     [Fact]
-    public async Task An_express_account_is_created_in_Poland_with_transfers_requested_and_one_key_per_practitioner()
+    public async Task An_express_account_is_created_in_Poland_with_transfers_requested_and_one_key_per_agent()
     {
         var h = Stripe();
         Assert.Equal("acct_1Qx0demo", await Fx.Provider(h).CreateAccountAsync(Agent, default));

@@ -11,7 +11,7 @@ namespace Gabinety.Web.Tests.PractitionerAreaTests;
 /// The practitioner area's DTO copies against the real contracts, in both directions: what the services answer must read into the copies, and what the web sends must read into the services' own
 /// request types with the same values (a renamed field fails here and not as a blank column or a silently dropped value).
 /// </summary>
-public class PractitionerContractCopiesTests
+public class AgentContractCopiesTests
 {
     static readonly JsonSerializerOptions Services = new(JsonSerializerDefaults.Web); // the services write PractitionerStatus as its PascalCase name (ADR-0012 section 1)
     static readonly Guid Id = Guid.Parse("018f0000-0000-7000-8000-000000000002");

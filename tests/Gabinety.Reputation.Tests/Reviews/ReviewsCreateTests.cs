@@ -52,7 +52,7 @@ public class ReviewsCreateTests
     }
 
     [Fact]
-    public async Task Someone_elses_booking_is_404_and_nothing_is_written()
+    public async Task Someone_elses_access_is_404_and_nothing_is_written()
     {
         using var h = new ReviewsHost();
         string owner = Id(), intruder = Id(); var pract = Guid.NewGuid(); var access = h.Access.Add(owner, pract);
@@ -65,7 +65,7 @@ public class ReviewsCreateTests
     }
 
     [Fact]
-    public async Task An_unknown_booking_is_404()
+    public async Task An_unknown_access_is_404()
     {
         using var h = new ReviewsHost();
         var r = await ReviewsHost.Post(h.ClientFor(Id()), Guid.NewGuid());
@@ -73,7 +73,7 @@ public class ReviewsCreateTests
     }
 
     [Fact]
-    public async Task A_booking_Booking_says_is_not_reviewable_is_422_not_reviewable_and_nothing_is_written()
+    public async Task A_access_Access_says_is_not_reviewable_is_422_not_reviewable_and_nothing_is_written()
     {
         using var h = new ReviewsHost();
         string user = Id(); var pract = Guid.NewGuid(); var access = h.Access.Add(user, pract, reviewable: false);
@@ -87,7 +87,7 @@ public class ReviewsCreateTests
     }
 
     [Fact]
-    public async Task Two_reviews_for_one_booking_give_409_already_reviewed_and_the_summary_counts_one()
+    public async Task Two_reviews_for_one_access_give_409_already_reviewed_and_the_summary_counts_one()
     {
         using var h = new ReviewsHost();
         string user = Id(); var pract = Guid.NewGuid(); var access = h.Access.Add(user, pract);
@@ -117,7 +117,7 @@ public class ReviewsCreateTests
     }
 
     [Fact]
-    public async Task Two_simultaneous_reviews_of_one_booking_give_exactly_one_201_and_one_409()
+    public async Task Two_simultaneous_reviews_of_one_access_give_exactly_one_201_and_one_409()
     {
         using var h = new ReviewsHost();
         string user = Id(); var pract = Guid.NewGuid(); var access = h.Access.Add(user, pract);
@@ -157,7 +157,7 @@ public class ReviewsCreateTests
     [InlineData(6, null)]
     [InlineData(5, "za krótko")]
     [InlineData(5, "")]
-    public async Task Invalid_input_is_422_and_Booking_is_not_asked(int rating, string? shortText)
+    public async Task Invalid_input_is_422_and_Access_is_not_asked(int rating, string? shortText)
     {
         using var h = new ReviewsHost();
         string user = Id(); var access = h.Access.Add(user, Guid.NewGuid());
@@ -177,7 +177,7 @@ public class ReviewsCreateTests
     }
 
     [Fact]
-    public async Task A_Booking_outage_is_503_dependency_unavailable_writes_nothing_and_leaks_neither_url_nor_key()
+    public async Task A_Access_outage_is_503_dependency_unavailable_writes_nothing_and_leaks_neither_url_nor_key()
     {
         using var h = new ReviewsHost();
         string user = Id(); var pract = Guid.NewGuid(); var access = h.Access.Add(user, pract);
@@ -188,7 +188,7 @@ public class ReviewsCreateTests
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, r.StatusCode);
         Assert.Equal("dependency_unavailable", JsonDocument.Parse(text).RootElement.GetProperty("code").GetString());
-        Assert.DoesNotContain(FakeBooking.Key, text);
+        Assert.DoesNotContain(FakeAccess.Key, text);
         Assert.DoesNotContain("booking.demo.invalid", text);
         Assert.Empty(await h.ReviewsOf(pract));
     }
@@ -204,8 +204,8 @@ public class ReviewsCreateTests
         var ok = await ReviewsHost.Post(c, h.Access.Add(user, pract), 5, $"{marker} spotkanie było bardzo pomocne i rzeczowe.");
         var heldUser = Id(); var cHeld = h.ClientFor(heldUser);
         var held = await ReviewsHost.Post(cHeld, h.Access.Add(heldUser, pract), 5, $"{marker} zobacz https://spam.demo.invalid/x oraz https://spam2.demo.invalid/y");
-        var dupBooking = h.Access.Add(user, pract, reviewable: false);
-        var notReviewable = await ReviewsHost.Post(c, dupBooking, 5, $"{marker} spotkanie było bardzo pomocne i rzeczowe.");
+        var dupAccess = h.Access.Add(user, pract, reviewable: false);
+        var notReviewable = await ReviewsHost.Post(c, dupAccess, 5, $"{marker} spotkanie było bardzo pomocne i rzeczowe.");
         h.Access.Down = true;
         var down = await ReviewsHost.Post(c, h.Access.Add(user, pract), 5, $"{marker} spotkanie było bardzo pomocne i rzeczowe.");
 

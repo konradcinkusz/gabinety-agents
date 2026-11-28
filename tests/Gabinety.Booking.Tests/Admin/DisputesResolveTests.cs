@@ -42,7 +42,7 @@ public class DisputesResolveTests
     [Theory]
     [InlineData("refund_full", null)]
     [InlineData("refund_partial", 3000L)]
-    public async Task A_Disputed_booking_whose_payment_is_already_refunded_is_409_without_calling_the_provider(string resolution, long? refundMinor)
+    public async Task A_Disputed_access_whose_payment_is_already_refunded_is_409_without_calling_the_provider(string resolution, long? refundMinor)
     {
         var provider = new RecordingProvider();
         await using var h = Adm.Host(provider);
@@ -70,7 +70,7 @@ public class DisputesResolveTests
     }
 
     [Fact]
-    public async Task Anonymous_is_401_and_a_non_admin_is_403_even_a_party_of_the_booking()
+    public async Task Anonymous_is_401_and_a_non_admin_is_403_even_a_party_of_the_access()
     {
         await using var h = Adm.Host(new RecordingProvider());
         var (id, client) = await Adm.Seed(h);
@@ -258,7 +258,7 @@ public class DisputesResolveTests
     }
 
     [Fact]
-    public async Task A_provider_that_is_down_gives_503_and_the_booking_stays_Disputed()
+    public async Task A_provider_that_is_down_gives_503_and_the_access_stays_Disputed()
     {
         await using var h = Adm.Host(new RecordingProvider());
         var previous = h.Configure!;
@@ -280,7 +280,7 @@ public class DisputesResolveTests
     }
 
     [Fact]
-    public async Task The_response_is_the_booking_view_without_the_dispute_text_or_the_note_and_neither_is_logged()
+    public async Task The_response_is_the_access_view_without_the_dispute_text_or_the_note_and_neither_is_logged()
     {
         await using var h = Adm.Host(new RecordingProvider());
         var (id, client) = await Adm.Seed(h);

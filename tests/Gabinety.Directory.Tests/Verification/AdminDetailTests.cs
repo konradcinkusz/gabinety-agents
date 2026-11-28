@@ -91,7 +91,7 @@ public class AdminDetailTests(VerificationFactory f) : IClassFixture<Verificatio
     }
 
     [Fact]
-    public async Task Events_are_oldest_first_for_that_practitioner_only_with_actor_note_and_kind()
+    public async Task Events_are_oldest_first_for_that_agent_only_with_actor_note_and_kind()
     {
         var p = await f.Seed(AgentStatus.Submitted);
         var other = await f.Seed(AgentStatus.Submitted);
@@ -118,7 +118,7 @@ public class AdminDetailTests(VerificationFactory f) : IClassFixture<Verificatio
     }
 
     [Fact]
-    public async Task Events_of_a_practitioner_without_history_is_an_empty_list_not_404()
+    public async Task Events_of_a_agent_without_history_is_an_empty_list_not_404()
     {
         var p = await f.Seed(AgentStatus.Draft);
         var r = await f.As("demo-admin", "Admin").GetAsync($"{Base}/{p.Id}/verification-events");

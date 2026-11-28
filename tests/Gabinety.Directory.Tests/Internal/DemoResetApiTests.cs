@@ -42,7 +42,7 @@ public class DemoResetApiTests
     static async Task<JsonElement> Body(HttpResponseMessage r) => JsonDocument.Parse(await r.Content.ReadAsStringAsync()).RootElement;
 
     [Fact]
-    public async Task Reset_deletes_demo_slug_practitioners_with_their_offerings_and_events_and_keeps_every_other_row()
+    public async Task Reset_deletes_demo_slug_agents_with_their_packages_and_events_and_keeps_every_other_row()
     {
         await using var h = DemoResetHost.Fake();
         var tag = Guid.NewGuid().ToString("n")[..8];
@@ -64,7 +64,7 @@ public class DemoResetApiTests
     }
 
     [Fact]
-    public async Task A_non_demo_practitioner_is_never_touched_even_when_the_only_row_present()
+    public async Task A_non_demo_agent_is_never_touched_even_when_the_only_row_present()
     {
         await using var h = DemoResetHost.Fake();
         await SeedChain(h, "real-" + Guid.NewGuid().ToString("n")[..8], "real-user");

@@ -10,7 +10,7 @@ namespace Gabinety.Booking.Tests;
 
 /// <summary>The keyset predicate of the booking list (start, then <c>Guid.CompareTo</c>) translated by Npgsql: rows with one start page without loss or repeat.</summary>
 [Trait("tier", "integration")]
-public class MyBookingsIntegrationTests : IAsyncLifetime
+public class MyAccessesIntegrationTests : IAsyncLifetime
 {
     PostgreSqlContainer pg = null!;
     CreateHost host = null!;

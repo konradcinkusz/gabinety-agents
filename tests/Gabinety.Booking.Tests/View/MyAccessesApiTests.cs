@@ -11,7 +11,7 @@ using AccessStatus = Gabinety.Billing.AccessStatus;
 namespace Gabinety.Booking.Tests;
 
 /// <summary>GET /api/v1/me/bookings (CONTRACTS 4.2, 0) and the flags of GET /api/v1/bookings/{id}. Every test uses its own random user ids: the InMemory database is shared.</summary>
-public class MyBookingsApiTests
+public class MyAccessesApiTests
 {
     static readonly TimeSpan H = TimeSpan.FromHours(1);
 
@@ -21,7 +21,7 @@ public class MyBookingsApiTests
     }
 
     static async Task<Guid> Seed(CreateHost h, Who w, TimeSpan startIn, AccessStatus status = AccessStatus.Confirmed, Guid? id = null,
-        string? clientOverride = null, string? practitionerOverride = null, long? fee = null, long? payout = null)
+        string? clientOverride = null, string? agentOverride = null, long? fee = null, long? payout = null)
     {
         id ??= Guid.NewGuid();
         var start = h.Clock.GetUtcNow() + startIn;
@@ -29,7 +29,7 @@ public class MyBookingsApiTests
         {
             db.Accesses.Add(new AccessEntity
             {
-                Id = id.Value, ClientUserId = clientOverride ?? w.Client, AgentId = h.Agent, AgentUserId = practitionerOverride ?? w.Agent,
+                Id = id.Value, ClientUserId = clientOverride ?? w.Client, AgentId = h.Agent, AgentUserId = agentOverride ?? w.Agent,
                 PackageId = h.Package, PackageTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 10000, StartUtc = start, EndUtc = start + H,
                 Status = status, BriefText = "demo-brief: private words of the client", IdempotencyKey = Guid.NewGuid(), CreatedAt = h.Clock.GetUtcNow(),
                 MeetingUrlSnapshot = status == AccessStatus.Confirmed ? "https://meet.demo.invalid/secret-room" : null,
@@ -89,13 +89,13 @@ public class MyBookingsApiTests
         var w = Who.New();
         var other = Who.New();
         var asClient = await Seed(h, w, TimeSpan.FromDays(2));
-        var asPractitioner = await Seed(h, other, TimeSpan.FromDays(3), clientOverride: other.Client, practitionerOverride: w.Client); // w.Client is the practitioner here
+        var asAgent = await Seed(h, other, TimeSpan.FromDays(3), clientOverride: other.Client, agentOverride: w.Client); // w.Client is the practitioner here
         var someoneElses = await Seed(h, other, TimeSpan.FromDays(4));
 
         var (_, asC) = await List(h, w.Client, "?role=client");
         var (_, asP) = await List(h, w.Client, "?role=practitioner");
         Assert.Equal([asClient], Ids(asC));
-        Assert.Equal([asPractitioner], Ids(asP));
+        Assert.Equal([asAgent], Ids(asP));
         Assert.DoesNotContain(someoneElses, Ids(asC).Concat(Ids(asP)));
         Assert.Empty(Ids((await List(h, "demo-nobody-" + Guid.NewGuid(), "?role=client")).Item2));
     }

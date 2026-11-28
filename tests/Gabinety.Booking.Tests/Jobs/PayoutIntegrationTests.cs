@@ -28,7 +28,7 @@ public class PayoutIntegrationTests : IAsyncLifetime
     AccessDbContext NewDb() => new(new DbContextOptionsBuilder<AccessDbContext>().UseNpgsql(pg.GetConnectionString()).Options);
 
     [Fact]
-    public async Task Two_payout_jobs_at_once_pay_each_booking_exactly_once_for_every_interleaving()
+    public async Task Two_payout_jobs_at_once_pay_each_access_exactly_once_for_every_interleaving()
     {
         for (var round = 0; round < 3; round++)
         {

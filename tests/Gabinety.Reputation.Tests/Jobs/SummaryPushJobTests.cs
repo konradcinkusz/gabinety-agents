@@ -166,7 +166,7 @@ public class SummaryPushJobTests
     }
 
     [Fact]
-    public async Task An_unknown_practitioner_is_not_pushed_again_in_a_tight_loop_but_is_retried_later_or_when_it_changes()
+    public async Task An_unknown_agent_is_not_pushed_again_in_a_tight_loop_but_is_retried_later_or_when_it_changes()
     {
         await using var h = new InternalHost();
         var p = Guid.NewGuid();

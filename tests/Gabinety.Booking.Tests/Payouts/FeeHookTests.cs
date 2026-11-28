@@ -16,7 +16,7 @@ public class FeeHookTests
     [InlineData(33333, 5000, 28333)]
     [InlineData(5000, 750, 4250)]
     [InlineData(150000, 22500, 127500)]
-    public async Task Completion_of_a_first_booking_takes_the_fee_of_CONTRACTS_9_1(long price, long fee, long payout)
+    public async Task Completion_of_a_first_access_takes_the_fee_of_CONTRACTS_9_1(long price, long fee, long payout)
     {
         await using var h = Host();
         var client = Fee.NewClient();
@@ -59,7 +59,7 @@ public class FeeHookTests
     }
 
     [Fact]
-    public async Task A_different_client_or_a_different_practitioner_is_a_different_pair()
+    public async Task A_different_client_or_a_different_agent_is_a_different_pair()
     {
         await using var h = Host();
         var client = Fee.NewClient();

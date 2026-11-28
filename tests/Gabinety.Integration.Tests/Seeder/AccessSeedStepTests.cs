@@ -14,22 +14,22 @@ namespace Gabinety.Integration.Tests.Seeder;
 /// T-08.01b: the Booking step against in-process Identity, Directory and Booking (InMemory). Expected values are written here, not read from the seeder's plan.
 /// The first run is shared (class fixture) by the read-only tests of this class; the tests that run again or break something use a world of their own.
 /// </summary>
-public sealed class BookingSeedFixture : IAsyncLifetime
+public sealed class AccessSeedFixture : IAsyncLifetime
 {
-    public BookingWorld World { get; } = new();
-    BookingJobDriver _job = null!;
+    public AccessWorld World { get; } = new();
+    AccessJobDriver _job = null!;
 
     public async Task InitializeAsync()
     {
         await World.SeedDirectoryAsync();
-        _job = new BookingJobDriver(World.Access);
-        await BookingWorld.Step().RunAsync(World.Context, CancellationToken.None);
+        _job = new AccessJobDriver(World.Access);
+        await AccessWorld.Step().RunAsync(World.Context, CancellationToken.None);
     }
 
     public async Task DisposeAsync() { await _job.DisposeAsync(); await World.DisposeAsync(); }
 }
 
-public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<BookingSeedFixture>
+public class AccessSeedStepTests(AccessSeedFixture fx) : IClassFixture<AccessSeedFixture>
 {
     // D-01: eleven purchases of packages, no date and no clock. Written here, not read from the plan.
     static readonly Dictionary<string, int> ExpectedPerStatus = new()
@@ -53,12 +53,12 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
         ["demo-booking-pending-1"] = ("Tasks", 1, 0),
     };
 
-    BookingWorld _w => fx.World;
+    AccessWorld _w => fx.World;
 
     [Fact]
-    public async Task Bookings_exist_in_the_expected_count_per_status_read_through_the_API()
+    public async Task Accesses_exist_in_the_expected_count_per_status_read_through_the_API()
     {
-        var counts = BookingWorld.StatusCounts(await _w.AllClientBookings());
+        var counts = AccessWorld.StatusCounts(await _w.AllClientAccesses());
         Assert.True(counts.Count > 0, _w.Log.Text);
         Assert.True(ExpectedPerStatus.OrderBy(p => p.Key).SequenceEqual(counts.OrderBy(p => p.Key)), string.Join(", ", counts.OrderBy(p => p.Key).Select(p => p.Key + "=" + p.Value)));
     }
@@ -71,9 +71,9 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
     }
 
     [Fact]
-    public async Task Every_package_is_of_the_kind_and_size_of_its_offering_and_its_units_used_are_real()
+    public async Task Every_package_is_of_the_kind_and_size_of_its_package_and_its_units_used_are_real()
     {
-        var all = await _w.AllClientBookings();
+        var all = await _w.AllClientAccesses();
         var byKey = all.ToDictionary(b => Regex(b.GetProperty("brief").GetProperty("text").GetString()!));
         Assert.Equal(ExpectedPackages.Keys.Order(), byKey.Keys.Order());
         foreach (var (key, (kind, total, used)) in ExpectedPackages)
@@ -105,7 +105,7 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
     [Fact]
     public async Task Demo_client_has_an_unused_pack_a_used_pack_and_a_Chat_package_and_the_cancelled_one_was_refunded_in_full()
     {
-        var mine = await _w.BookingsOf("demo-client");
+        var mine = await _w.AccessesOf("demo-client");
         Assert.Contains(mine, b => b.GetProperty("kind").GetString() == "Chat" && b.GetProperty("status").GetString() == "Confirmed");
         Assert.Contains(mine, b => b.GetProperty("kind").GetString() == "Tasks" && b.GetProperty("unitsUsed").GetInt64() == 0 && b.GetProperty("canCancel").GetBoolean());
         Assert.Contains(mine, b => b.GetProperty("kind").GetString() == "Tasks" && b.GetProperty("unitsUsed").GetInt64() == 1 && b.GetProperty("canReview").GetBoolean() && !b.GetProperty("canCancel").GetBoolean());
@@ -114,7 +114,7 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
     }
 
     [Fact]
-    public async Task Every_booking_carries_a_demo_key_and_an_idempotency_key_derived_from_it()
+    public async Task Every_access_carries_a_demo_key_and_an_idempotency_key_derived_from_it()
     {
         var rows = await _w.Access.Accesses();
         Assert.Equal(ExpectedPerStatus.Values.Sum(), rows.Count);
@@ -132,10 +132,10 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
     static string Regex(string brief) => System.Text.RegularExpressions.Regex.Match(brief, @"^\[(demo-[a-z0-9-]+)\]").Groups[1].Value;
 
     [Fact]
-    public async Task Completed_bookings_are_reviewable_by_Bookings_internal_endpoint_and_the_others_in_the_review_path_are_not()
+    public async Task Completed_accesses_are_reviewable_by_Accesses_internal_endpoint_and_the_others_in_the_review_path_are_not()
     {
         using var http = _w.Access.CreateClient();
-        http.DefaultRequestHeaders.Add("X-Internal-Key", BookingHost.Key);
+        http.DefaultRequestHeaders.Add("X-Internal-Key", AccessHost.Key);
         var rows = await _w.Access.Accesses();
         var completed = rows.Where(b => b.Status == AccessStatus.Completed).ToList();
         Assert.Equal(3, completed.Count); // the last unit of a single-task package was used, and the real auto-complete job completed it
@@ -151,9 +151,9 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
     }
 
     [Fact]
-    public async Task Demo_client_has_a_Completed_booking_inside_its_dispute_window_and_the_API_says_so()
+    public async Task Demo_client_has_a_Completed_access_inside_its_dispute_window_and_the_API_says_so()
     {
-        var mine = await _w.AllClientBookings();   // demo-client is the first client
+        var mine = await _w.AllClientAccesses();   // demo-client is the first client
         var disputable = mine.Where(b => b.GetProperty("status").GetString() == "Completed" && b.GetProperty("canDispute").GetBoolean()).ToList();
         Assert.NotEmpty(disputable);
         foreach (var b in disputable) // "inside the window" is measured against the service clock, not this machine's
@@ -161,15 +161,15 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
     }
 
     [Fact]
-    public async Task The_pending_booking_has_a_live_hold_and_the_expired_one_does_not()
+    public async Task The_pending_access_has_a_live_hold_and_the_expired_one_does_not()
     {
-        var all = await _w.AllClientBookings();
+        var all = await _w.AllClientAccesses();
         var pending = all.Single(b => b.GetProperty("status").GetString() == "PendingPayment");
         Assert.True(pending.GetProperty("holdExpiresAt").GetDateTimeOffset() > _w.Access.Now);
     }
 
     [Fact]
-    public async Task Dispute_and_resolution_leave_a_Disputed_and_a_Resolved_booking_with_a_release_decision()
+    public async Task Dispute_and_resolution_leave_a_Disputed_and_a_Resolved_access_with_a_release_decision()
     {
         var rows = await _w.Access.Accesses();
         Assert.Equal("release", rows.Single(b => b.Status == AccessStatus.Resolved).DisputeResolution);
@@ -181,7 +181,7 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
     {
         var text = _w.Log.Text;
         Assert.Contains("booking: demo-booking-", text); // the step did log, with demo keys
-        Assert.DoesNotContain(BookingHost.Key, text);
+        Assert.DoesNotContain(AccessHost.Key, text);
         Assert.DoesNotContain(DirectoryHost.Key, text);
         Assert.DoesNotContain(SeedOptions.DevIdentityPassword, text);
         Assert.DoesNotContain("eyJ", text);
@@ -196,7 +196,7 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
         _w.Calls.Requests.Clear();
         var fresh = _w.NewContext(); // a new run as the app does it: the directory step fills the context again, then the booking step must find everything through the API
         await new DirectorySeedStep().RunAsync(fresh, CancellationToken.None);
-        await BookingWorld.Step().RunAsync(fresh, CancellationToken.None);
+        await AccessWorld.Step().RunAsync(fresh, CancellationToken.None);
         Assert.Equal(before, await Snapshot());
         var writes = _w.Calls.Requests.Where(r => r.Method != HttpMethod.Get).ToList();
         Assert.True(writes.Count == 0, "a second run wrote: " + string.Join(", ", writes.Select(w => $"{w.Method} {w.Path}")));
@@ -222,23 +222,23 @@ public class BookingSeedStepTests(BookingSeedFixture fx) : IClassFixture<Booking
 }
 
 /// <summary>Runs that break something or lack something get a world of their own.</summary>
-public class BookingSeedStepFailureTests
+public class AccessSeedStepFailureTests
 {
     [Fact]
     public async Task A_run_that_failed_midway_leaves_what_it_did_and_the_next_run_finishes_without_duplicates()
     {
-        await using var w = new BookingWorld();
+        await using var w = new AccessWorld();
         await w.SeedDirectoryAsync();
-        await using var job = new BookingJobDriver(w.Access);
+        await using var job = new AccessJobDriver(w.Access);
         w.Calls.FailWhen = r => r.RequestUri!.AbsolutePath.EndsWith("/dispute");
 
-        await Assert.ThrowsAnyAsync<Exception>(() => BookingWorld.Step().RunAsync(w.Context, CancellationToken.None));
-        Assert.DoesNotContain(BookingWorld.StatusCounts(await w.AllClientBookings()).Keys, k => k is "Disputed" or "Resolved");
+        await Assert.ThrowsAnyAsync<Exception>(() => AccessWorld.Step().RunAsync(w.Context, CancellationToken.None));
+        Assert.DoesNotContain(AccessWorld.StatusCounts(await w.AllClientAccesses()).Keys, k => k is "Disputed" or "Resolved");
 
         w.Calls.FailWhen = null;
-        await BookingWorld.Step().RunAsync(w.Context, CancellationToken.None);
+        await AccessWorld.Step().RunAsync(w.Context, CancellationToken.None);
 
-        var counts = BookingWorld.StatusCounts(await w.AllClientBookings());
+        var counts = AccessWorld.StatusCounts(await w.AllClientAccesses());
         Assert.Equal(11, counts.Values.Sum());
         Assert.Equal(1, counts["Disputed"]);
         Assert.Equal(1, counts["Resolved"]);
@@ -248,12 +248,12 @@ public class BookingSeedStepFailureTests
     [Fact]
     public async Task Without_the_jobs_the_run_still_finishes_the_other_states_and_says_so()
     {
-        await using var w = new BookingWorld(); // no BookingJobDriver: the tasks stay queued and the used-up packages stay Confirmed
+        await using var w = new AccessWorld(); // no BookingJobDriver: the tasks stay queued and the used-up packages stay Confirmed
         await w.SeedDirectoryAsync();
 
-        await BookingWorld.Step(TimeSpan.Zero).RunAsync(w.Context, CancellationToken.None);
+        await AccessWorld.Step(TimeSpan.Zero).RunAsync(w.Context, CancellationToken.None);
 
-        var counts = BookingWorld.StatusCounts(await w.AllClientBookings());
+        var counts = AccessWorld.StatusCounts(await w.AllClientAccesses());
         Assert.False(counts.ContainsKey("Completed"));
         Assert.Equal(1, counts["Resolved"]);
         Assert.Equal(1, counts["Disputed"]);
@@ -263,9 +263,9 @@ public class BookingSeedStepFailureTests
     }
 
     [Fact]
-    public async Task Reset_calls_Bookings_demo_reset_with_the_internal_key_and_removes_bookings_of_demo_users()
+    public async Task Reset_calls_Accesses_demo_reset_with_the_internal_key_and_removes_accesses_of_demo_users()
     {
-        await using var w = new BookingWorld();
+        await using var w = new AccessWorld();
         await w.SeedDirectoryAsync();
         await w.Access.Db(async db =>
         {
@@ -292,9 +292,9 @@ public class BookingSeedStepFailureTests
     }
 
     [Fact]
-    public async Task Without_a_Booking_endpoint_the_step_says_so_and_does_nothing()
+    public async Task Without_a_Access_endpoint_the_step_says_so_and_does_nothing()
     {
-        await using var w = new BookingWorld();
+        await using var w = new AccessWorld();
         var context = new SeedContext(new SeedOptions("http://localhost", DirectoryHost.Key, DirectoryHost.Authority, SeedOptions.DevIdentityPassword), w.Http, w.Log, TimeProvider.System);
 
         await new AccessSeedStep().RunAsync(context, CancellationToken.None);

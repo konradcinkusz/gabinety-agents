@@ -10,7 +10,7 @@ namespace Gabinety.Web.Tests.PractitionerAreaTests;
 /// the limit of five active offers, the single-use onboarding link) that the pages are tested through real requests and real answers, not through canned ones. It answers like the services:
 /// RFC 9457 with a <c>code</c> and <c>errors</c> keys.
 /// </summary>
-public sealed class PractitionerWorld
+public sealed class AgentWorld
 {
     public sealed class Offer { public Guid Id = Guid.NewGuid(); public string Title = "", Description = "", ProblemSlug = "", MeetingUrl = ""; public int Duration; public long Price; public string[] Techs = []; public bool Active = true; public string Kind = "Tasks"; public int Units = 1; }
 
@@ -21,8 +21,8 @@ public sealed class PractitionerWorld
     public string? PendingGithubLogin { get; set; }
     public bool GithubBioHasCode { get; set; }
     public bool DirectoryDown { get; set; }
-    public bool BookingDown { get; set; }
-    public bool BookingsFail { get; set; }
+    public bool AccessDown { get; set; }
+    public bool AccessesFail { get; set; }
     public List<AccessViewDto> Accesses { get; } = [];
     public string OnboardingUrl { get; set; } = "https://connect.stripe.com/setup/e/acct_test/abc";
     public int OnboardingCalls { get; private set; }
@@ -185,11 +185,11 @@ public sealed class PractitionerWorld
 
     HttpResponseMessage Access(HttpRequestMessage r)
     {
-        if (BookingDown) throw new HttpRequestException("booking is down");
+        if (AccessDown) throw new HttpRequestException("booking is down");
         var path = r.RequestUri!.AbsolutePath;
         if (path == "/api/v1/me/bookings" && r.Method == HttpMethod.Get)
         {
-            if (BookingsFail) return Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable");
+            if (AccessesFail) return Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable");
             return FakeBackend.Json(new PageDto<AccessViewDto>(Accesses, null));
         }
         if (path == "/api/v1/me/payments/account")
@@ -211,16 +211,16 @@ public sealed class PractitionerWorld
 
 }
 
-public static class PractitionerBrowsers
+public static class AgentBrowsers
 {
     /// <summary>How many elements have exactly this text and nothing else (what a journey's <c>getByText(text, {exact: true})</c> counts: strict mode needs one).</summary>
     public static int ExactText(this Page page, string text) => page.All("*").Count(e => e.ChildElementCount == 0 && e.TextContent == text);
 
     /// <summary>A browser signed in through the real form, with the fake world attached to the factory.</summary>
-    public static async Task<(WebFactory Web, Browser Browser, PractitionerWorld World)> SignedIn(Action<PractitionerWorld>? setup = null)
+    public static async Task<(WebFactory Web, Browser Browser, AgentWorld World)> SignedIn(Action<AgentWorld>? setup = null)
     {
         var web = new WebFactory();
-        var world = new PractitionerWorld();
+        var world = new AgentWorld();
         setup?.Invoke(world);
         world.Attach(web);
         var browser = web.NewBrowser();

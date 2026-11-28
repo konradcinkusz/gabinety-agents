@@ -83,12 +83,12 @@ public class MultiAgentHostTests
         return (web, browser, world);
     }
 
-    static void TwoBookings(Agents w) { w.Accesses.Add(Agents.Bought("demo-alfa", "Pakiet Alfa")); w.Accesses.Add(Agents.Bought("demo-beta", "Pakiet Beta")); w.Accesses.Add(Agents.Bought("demo-beta", "Pakiet Beta 2")); }
+    static void TwoAccesses(Agents w) { w.Accesses.Add(Agents.Bought("demo-alfa", "Pakiet Alfa")); w.Accesses.Add(Agents.Bought("demo-beta", "Pakiet Beta")); w.Accesses.Add(Agents.Bought("demo-beta", "Pakiet Beta 2")); }
 
     [Fact]
     public async Task With_two_agents_the_dashboard_lists_them_and_totals_the_purchases_of_all()
     {
-        var (web, browser, _) = await Host(TwoBookings, "demo-alfa", "demo-beta");
+        var (web, browser, _) = await Host(TwoAccesses, "demo-alfa", "demo-beta");
         await using var _w = web;
         var page = await browser.GetAsync("/panel-agenta");
 
@@ -105,7 +105,7 @@ public class MultiAgentHostTests
     [Fact]
     public async Task A_chosen_agent_gets_its_own_dashboard_with_its_own_purchases_and_the_agent_kept_in_the_tabs()
     {
-        var (web, browser, _) = await Host(TwoBookings, "demo-alfa", "demo-beta");
+        var (web, browser, _) = await Host(TwoAccesses, "demo-alfa", "demo-beta");
         await using var _w = web;
         var page = await browser.GetAsync("/panel-agenta?agent=demo-beta");
 

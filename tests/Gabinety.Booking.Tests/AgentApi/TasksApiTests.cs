@@ -93,7 +93,7 @@ public class TasksApiTests
     [InlineData("{\"model\":\"x\",\"input\":\"xxxxxxxxxxxxxxxxxxxxxxxxx\"}")]
     [InlineData("{\"model\":\"x\",\"offering_id\":\"nope\",\"input\":\"xxxxxxxxxxxxxxxxxxxxxxxxx\"}")]
     [InlineData("not json")]
-    public async Task A_missing_model_or_offering_or_a_bad_body_is_400(string body)
+    public async Task A_missing_model_or_package_or_a_bad_body_is_400(string body)
     {
         await using var h = new CreateHost();
         var (key, _) = await AgentApiFx.MakeKey(h, Me);
@@ -102,7 +102,7 @@ public class TasksApiTests
     }
 
     [Fact]
-    public async Task No_package_of_that_offering_is_404_model_not_found_and_a_used_up_one_is_429_insufficient_quota()
+    public async Task No_package_of_that_package_is_404_model_not_found_and_a_used_up_one_is_429_insufficient_quota()
     {
         await using var h = new CreateHost();
         var (key, _) = await AgentApiFx.MakeKey(h, Me);

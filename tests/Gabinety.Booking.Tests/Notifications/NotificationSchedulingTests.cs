@@ -104,7 +104,7 @@ public class NotificationSchedulingTests
     }
 
     [Fact]
-    public async Task A_practitioner_cancel_also_removes_the_unsent_rows_and_tells_the_client_with_Cancelled_due_now()
+    public async Task A_agent_cancel_also_removes_the_unsent_rows_and_tells_the_client_with_Cancelled_due_now()
     {
         using var h = new CreateHost();
         var id = await ConfirmedWithRows(h, TimeSpan.FromHours(72));

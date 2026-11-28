@@ -124,7 +124,7 @@ public class MultiAgentTests(InternalFactory f) : IClassFixture<InternalFactory>
     }
 
     [Fact]
-    public async Task Offerings_belong_to_one_agent_and_the_active_limit_is_per_agent()
+    public async Task Packages_belong_to_one_agent_and_the_active_limit_is_per_agent()
     {
         var c = f.As(Account());
         var a = await Create(c, "Demo Offer A " + Guid.NewGuid().ToString("n")[..6]);
@@ -190,7 +190,7 @@ public class MultiAgentTests(InternalFactory f) : IClassFixture<InternalFactory>
     }
 
     [Fact]
-    public async Task Me_lists_the_agents_and_keeps_the_first_as_practitionerId()
+    public async Task Me_lists_the_agents_and_keeps_the_first_as_agentId()
     {
         var c = f.As(Account());
         var a = await Create(c, "Demo Me A " + Guid.NewGuid().ToString("n")[..6]);
@@ -223,7 +223,7 @@ public class MultiAgentTests(InternalFactory f) : IClassFixture<InternalFactory>
     }
 
     [Fact]
-    public async Task Erasing_the_account_anonymises_every_agent_after_cancelling_each_ones_bookings()
+    public async Task Erasing_the_account_anonymises_every_agent_after_cancelling_each_ones_accesses()
     {
         var sub = Account();
         var one = await f.Seed(AgentStatus.Approved, userId: sub);

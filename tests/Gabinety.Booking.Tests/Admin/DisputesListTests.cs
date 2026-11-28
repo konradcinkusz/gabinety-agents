@@ -64,7 +64,7 @@ public class DisputesListTests
     }
 
     [Fact]
-    public async Task A_booking_moves_from_the_open_list_to_the_resolved_list_when_resolved()
+    public async Task A_access_moves_from_the_open_list_to_the_resolved_list_when_resolved()
     {
         await using var h = Adm.Host(new RecordingProvider());
         var (id, _) = await Adm.Seed(h);

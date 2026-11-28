@@ -68,7 +68,7 @@ public class InternalContactTests(InternalFactory f) : IClassFixture<InternalFac
         {
             x.Headline = "Senior .NET reviewer"; x.Bio = new string('b', 220); x.GithubLinked = true; x.NipValid = true; x.PortfolioUrl = "https://portfolio.example.test/x";
         });
-        await f.SeedOffering(p);
+        await f.SeedPackage(p);
         Assert.Null(await Stored(uid));
         var r = await f.As(uid, email: mail).PostAsync(Url + "/submit", null);
         Assert.Equal(HttpStatusCode.NoContent, r.StatusCode);
@@ -119,7 +119,7 @@ public class InternalContactTests(InternalFactory f) : IClassFixture<InternalFac
             await (await f.As(Id(), "Admin").GetAsync($"/api/v1/admin/practitioners/{p.Id}")).Content.ReadAsStringAsync(),
             await (await f.As(Id(), "Admin").GetAsync("/api/v1/admin/practitioners")).Content.ReadAsStringAsync(),
             await (await f.Internal().GetAsync($"/internal/v1/practitioners/by-user/{uid}")).Content.ReadAsStringAsync(),
-            await (await f.Internal().GetAsync($"/internal/v1/offerings/{(await f.SeedOffering(p)).Id}")).Content.ReadAsStringAsync(),
+            await (await f.Internal().GetAsync($"/internal/v1/offerings/{(await f.SeedPackage(p)).Id}")).Content.ReadAsStringAsync(),
         };
         Assert.All(seen, body => { Assert.DoesNotContain(mail, body); Assert.DoesNotContain("contactEmail", body, StringComparison.OrdinalIgnoreCase); });
         Assert.Equal(mail, await Stored(uid));

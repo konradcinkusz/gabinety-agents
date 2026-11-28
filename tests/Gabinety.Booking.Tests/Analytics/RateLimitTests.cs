@@ -11,41 +11,41 @@ namespace Gabinety.Booking.Tests;
 /// </summary>
 public class RateLimitTests
 {
-    static Task<HttpResponseMessage> PostBooking(HttpClient c) => c.PostAsJsonAsync("/api/v1/bookings", new { });
+    static Task<HttpResponseMessage> PostAccess(HttpClient c) => c.PostAsJsonAsync("/api/v1/bookings", new { });
 
     static async Task<HttpStatusCode> Code(Task<HttpResponseMessage> r) { using var res = await r; return res.StatusCode; }
 
     [Fact]
-    public async Task Bookings_allow_10_a_minute_the_11th_is_429_per_user_and_the_minute_recovers()
+    public async Task Accesses_allow_10_a_minute_the_11th_is_429_per_user_and_the_minute_recovers()
     {
         using var h = new CreateHost();
         var u = h.ClientFor("demo-rl-booker");
-        for (var i = 0; i < 10; i++) Assert.NotEqual(HttpStatusCode.TooManyRequests, await Code(PostBooking(u)));
-        var limited = await PostBooking(u);
+        for (var i = 0; i < 10; i++) Assert.NotEqual(HttpStatusCode.TooManyRequests, await Code(PostAccess(u)));
+        var limited = await PostAccess(u);
         Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
         Assert.Contains("\"code\":\"rate_limited\"", await limited.Content.ReadAsStringAsync());
-        Assert.NotEqual(HttpStatusCode.TooManyRequests, await Code(PostBooking(h.ClientFor("demo-rl-booker-2")))); // another user, same address
+        Assert.NotEqual(HttpStatusCode.TooManyRequests, await Code(PostAccess(h.ClientFor("demo-rl-booker-2")))); // another user, same address
         h.Clock.Advance(TimeSpan.FromSeconds(59));
-        Assert.Equal(HttpStatusCode.TooManyRequests, await Code(PostBooking(u)));
+        Assert.Equal(HttpStatusCode.TooManyRequests, await Code(PostAccess(u)));
         h.Clock.Advance(TimeSpan.FromSeconds(1));
-        Assert.NotEqual(HttpStatusCode.TooManyRequests, await Code(PostBooking(u)));
+        Assert.NotEqual(HttpStatusCode.TooManyRequests, await Code(PostAccess(u)));
     }
 
     [Fact]
-    public async Task Bookings_allow_30_a_day_the_31st_is_429_even_when_the_minute_is_free_and_the_day_recovers()
+    public async Task Accesses_allow_30_a_day_the_31st_is_429_even_when_the_minute_is_free_and_the_day_recovers()
     {
         using var h = new CreateHost();
         var u = h.ClientFor("demo-rl-daily");
         for (var batch = 0; batch < 3; batch++)
         {
-            for (var i = 0; i < 10; i++) Assert.NotEqual(HttpStatusCode.TooManyRequests, await Code(PostBooking(u)));
+            for (var i = 0; i < 10; i++) Assert.NotEqual(HttpStatusCode.TooManyRequests, await Code(PostAccess(u)));
             h.Clock.Advance(TimeSpan.FromMinutes(1)); // the per-minute window is clear after each batch
         }
-        Assert.Equal(HttpStatusCode.TooManyRequests, await Code(PostBooking(u))); // 30 in the last 3 minutes: the day decides
+        Assert.Equal(HttpStatusCode.TooManyRequests, await Code(PostAccess(u))); // 30 in the last 3 minutes: the day decides
         h.Clock.Advance(TimeSpan.FromHours(23));
-        Assert.Equal(HttpStatusCode.TooManyRequests, await Code(PostBooking(u))); // 23 h 57 min after the first batch
+        Assert.Equal(HttpStatusCode.TooManyRequests, await Code(PostAccess(u))); // 23 h 57 min after the first batch
         h.Clock.Advance(TimeSpan.FromHours(1));
-        Assert.NotEqual(HttpStatusCode.TooManyRequests, await Code(PostBooking(u))); // the first batch has left the day
+        Assert.NotEqual(HttpStatusCode.TooManyRequests, await Code(PostAccess(u))); // the first batch has left the day
     }
 
     [Fact]

@@ -18,7 +18,7 @@ public class PayoutTests : IDisposable
     public void Dispose() => h.Dispose();
 
     [Fact]
-    public async Task A_due_completed_booking_is_paid_once_with_the_stable_key_and_ends_Sent_with_one_ledger_entry()
+    public async Task A_due_completed_access_is_paid_once_with_the_stable_key_and_ends_Sent_with_one_ledger_entry()
     {
         var id = await PayJob.Seed(h);
 
@@ -97,7 +97,7 @@ public class PayoutTests : IDisposable
     }
 
     [Fact]
-    public async Task A_booking_disputed_between_selection_and_payout_is_skipped()
+    public async Task A_access_disputed_between_selection_and_payout_is_skipped()
     {
         var id = await PayJob.Seed(h, AccessStatus.Disputed);
         Assert.Equal(0, await PayJob.Job(h, provider).PayAsync([id], h.Clock.GetUtcNow(), default)); // selected earlier, disputed since
@@ -117,7 +117,7 @@ public class PayoutTests : IDisposable
     }
 
     [Fact]
-    public async Task A_resolved_booking_without_payout_due_at_falls_due_at_its_resolution_time()
+    public async Task A_resolved_access_without_payout_due_at_falls_due_at_its_resolution_time()
     {
         var id = await PayJob.Seed(h, AccessStatus.Resolved, "release", setDue: false); // T-04.07c sets no payout_due_at on resolve
         Assert.Equal(1, await PayJob.Job(h, provider).PayDueAsync(h.Clock.GetUtcNow(), default));
@@ -216,7 +216,7 @@ public class PayoutTests : IDisposable
     }
 
     [Fact]
-    public async Task Two_job_instances_at_once_pay_each_booking_exactly_once_whatever_the_interleaving()
+    public async Task Two_job_instances_at_once_pay_each_access_exactly_once_whatever_the_interleaving()
     {
         var ids = new List<Guid>();
         for (var i = 0; i < 8; i++) ids.Add(await PayJob.Seed(h));
@@ -251,7 +251,7 @@ public class PayoutTests : IDisposable
     }
 
     [Fact]
-    public async Task Logs_carry_the_booking_id_and_never_the_key_the_practitioner_or_the_user_ids()
+    public async Task Logs_carry_the_access_id_and_never_the_key_the_agent_or_the_user_ids()
     {
         var id = await PayJob.Seed(h);
         provider.FailNext = 1;
@@ -331,7 +331,7 @@ public class PayoutTests : IDisposable
     }
 
     [Fact]
-    public async Task A_completed_booking_is_not_paid_before_the_claim_window_has_closed()
+    public async Task A_completed_access_is_not_paid_before_the_claim_window_has_closed()
     {
         // payout_due_at = end + 72 h: the dispute window of a package closes then, and the money has not moved before it
         var id = await Life.Seed(h, AccessStatus.Completed, TimeSpan.FromHours(-1)); // starts one hour ago, ends now

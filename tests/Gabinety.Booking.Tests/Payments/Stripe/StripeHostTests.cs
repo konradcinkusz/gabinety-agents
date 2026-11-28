@@ -70,10 +70,10 @@ public sealed class StripeHostTests : IDisposable
     Task MakeReady(bool ready = true, string provider = "Stripe") => h.Seed(db => db.PaymentAccounts.Add(new PaymentAccount
         { AgentId = h.Agent, Provider = provider, ProviderAccountId = "acct_1Qx0demo", Ready = ready, CreatedAt = h.Clock.GetUtcNow(), UpdatedAt = h.Clock.GetUtcNow() }));
 
-    async Task<Guid> NewBooking(string start = "2026-11-18T10:00:00Z")
+    async Task<Guid> NewAccess(string start = "2026-11-18T10:00:00Z")
     {
         await MakeReady();
-        var (id, paymentId) = await Pay.CreateBooking(h, Client, start);
+        var (id, paymentId) = await Pay.CreateAccess(h, Client, start);
         Assert.Equal(session, paymentId);
         return id;
     }
@@ -93,7 +93,7 @@ public sealed class StripeHostTests : IDisposable
     // ---- booking creation ----
 
     [Fact]
-    public async Task A_booking_is_refused_while_the_practitioner_has_no_account_and_nothing_is_created_or_sent_to_Stripe()
+    public async Task A_access_is_refused_while_the_agent_has_no_account_and_nothing_is_created_or_sent_to_Stripe()
     {
         var r = await CreateHost.Post(h.ClientFor(Client), h.Req("2026-11-18T10:00:00Z"), CreateHost.Key());
         Assert.Equal(HttpStatusCode.UnprocessableEntity, r.StatusCode);
@@ -114,9 +114,9 @@ public sealed class StripeHostTests : IDisposable
     }
 
     [Fact]
-    public async Task With_a_ready_account_the_booking_is_created_with_a_Stripe_checkout_and_a_payment_row_for_the_session()
+    public async Task With_a_ready_account_the_access_is_created_with_a_Stripe_checkout_and_a_payment_row_for_the_session()
     {
-        var id = await NewBooking();
+        var id = await NewAccess();
         var p = await h.Query(db => db.Payments.AsNoTracking().SingleAsync(x => x.AccessId == id));
         Assert.Equal("Stripe", p.Provider);
         Assert.Equal(session, p.ProviderPaymentId);
@@ -127,9 +127,9 @@ public sealed class StripeHostTests : IDisposable
     // ---- webhook ----
 
     [Fact]
-    public async Task A_signed_paid_session_confirms_the_booking_once_and_a_redelivery_changes_nothing()
+    public async Task A_signed_paid_session_confirms_the_access_once_and_a_redelivery_changes_nothing()
     {
-        var id = await NewBooking();
+        var id = await NewAccess();
         var paid = Load("event.checkout.session.completed.paid");
 
         var first = await Webhook(paid);
@@ -143,7 +143,7 @@ public sealed class StripeHostTests : IDisposable
     [Fact]
     public async Task An_altered_body_a_wrong_secret_and_a_stale_timestamp_are_401_and_change_nothing_and_the_alert_names_the_event_id_only()
     {
-        var id = await NewBooking();
+        var id = await NewAccess();
         var paid = Load("event.checkout.session.completed.paid");
         var altered = paid.Replace("\"amount_total\": 10000", "\"amount_total\": 1");
 
@@ -157,9 +157,9 @@ public sealed class StripeHostTests : IDisposable
     }
 
     [Fact]
-    public async Task A_paid_event_for_another_amount_or_currency_is_Rejected_with_an_alert_and_the_booking_stays_unpaid()
+    public async Task A_paid_event_for_another_amount_or_currency_is_Rejected_with_an_alert_and_the_access_stays_unpaid()
     {
-        var id = await NewBooking();
+        var id = await NewAccess();
         var cheap = Load("event.checkout.session.completed.paid").Replace("\"amount_total\": 10000", "\"amount_total\": 9999");
         Assert.Equal("Rejected", await Outcome(await Webhook(cheap)));
         var euro = Load("event.checkout.session.async_payment_succeeded").Replace("\"currency\": \"pln\"", "\"currency\": \"eur\"");
@@ -172,9 +172,9 @@ public sealed class StripeHostTests : IDisposable
     [InlineData("event.checkout.session.completed.unpaid")]
     [InlineData("event.account.updated")]
     [InlineData("event.payment_intent.succeeded")]
-    public async Task An_event_Booking_does_not_use_is_acknowledged_and_recorded_as_Ignored(string fixture)
+    public async Task An_event_Access_does_not_use_is_acknowledged_and_recorded_as_Ignored(string fixture)
     {
-        var id = await NewBooking();
+        var id = await NewAccess();
         var r = await Webhook(Load(fixture));
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
         Assert.Equal("Ignored", await Outcome(r));
@@ -183,9 +183,9 @@ public sealed class StripeHostTests : IDisposable
     }
 
     [Fact]
-    public async Task An_expired_session_expires_the_booking_and_an_event_for_a_session_nobody_knows_is_retried_later()
+    public async Task An_expired_session_expires_the_access_and_an_event_for_a_session_nobody_knows_is_retried_later()
     {
-        var id = await NewBooking();
+        var id = await NewAccess();
         var unknown = Load("event.checkout.session.expired").Replace(session, "cs_test_unknown");
         var later = await Webhook(unknown);
         Assert.Equal(HttpStatusCode.Accepted, later.StatusCode);
@@ -198,7 +198,7 @@ public sealed class StripeHostTests : IDisposable
     [Fact]
     public async Task A_payment_after_the_hold_ran_out_is_refunded_in_full_with_a_stable_key()
     {
-        var id = await NewBooking();
+        var id = await NewAccess();
         h.Clock.Advance(TimeSpan.FromMinutes(11)); // the hold is 10 minutes
         Assert.Equal("Applied", await Outcome(await Webhook(Load("event.checkout.session.completed.paid"))));
 
@@ -212,7 +212,7 @@ public sealed class StripeHostTests : IDisposable
     [Fact]
     public async Task A_webhook_for_another_provider_name_is_404_and_simulate_is_403_with_a_real_provider()
     {
-        await NewBooking();
+        await NewAccess();
         var r = await h.CreateClient().PostAsync("/webhooks/payments/mock", new StringContent("{}"));
         Assert.Equal(HttpStatusCode.NotFound, r.StatusCode);
         var sim = await Pay.Simulate(h.ClientFor(Client), Guid.NewGuid(), "succeeded");
@@ -224,7 +224,7 @@ public sealed class StripeHostTests : IDisposable
     [Fact]
     public async Task An_early_client_cancel_asks_Stripe_for_the_refund_and_the_ledger_row_waits_for_the_refund_webhook()
     {
-        var id = await NewBooking();
+        var id = await NewAccess();
         Assert.Equal("Applied", await Outcome(await Webhook(Load("event.checkout.session.completed.paid"))));
         // A package starts at purchase, so the 24 h rule would call every cancel late. The rule is replaced in A-03; until then the booking is moved ahead to keep this test on the early path.
         await h.Seed(db => { var b = db.Accesses.Single(x => x.Id == id); b.StartUtc = b.StartUtc.AddDays(3); b.EndUtc = b.EndUtc.AddDays(3); });
@@ -246,7 +246,7 @@ public sealed class StripeHostTests : IDisposable
     // ---- payout ----
 
     [Fact]
-    public async Task A_due_completed_booking_is_paid_as_a_transfer_to_the_connected_account_and_once()
+    public async Task A_due_completed_access_is_paid_as_a_transfer_to_the_connected_account_and_once()
     {
         await MakeReady();
         var id = await Life.Seed(h, AccessStatus.Completed, TimeSpan.FromDays(-4), provider: "Stripe");
@@ -271,7 +271,7 @@ public sealed class StripeHostTests : IDisposable
     }
 
     [Fact]
-    public async Task A_payout_to_a_practitioner_without_an_account_makes_no_Stripe_call_and_is_counted_as_a_failed_attempt()
+    public async Task A_payout_to_a_agent_without_an_account_makes_no_Stripe_call_and_is_counted_as_a_failed_attempt()
     {
         var id = await Life.Seed(h, AccessStatus.Completed, TimeSpan.FromDays(-4), provider: "Stripe");
         await h.Seed(db =>
@@ -310,7 +310,7 @@ public sealed class StripeHostTests : IDisposable
     }
 
     [Fact]
-    public async Task The_status_is_none_then_pending_then_ready_and_a_ready_account_lets_the_booking_through()
+    public async Task The_status_is_none_then_pending_then_ready_and_a_ready_account_lets_the_access_through()
     {
         var c = Agent();
         Assert.Equal("none", (await (await c.GetAsync("/api/v1/me/payments/account")).Content.ReadFromJsonAsync<JsonElement>()).GetProperty("state").GetString());
@@ -363,7 +363,7 @@ public sealed class StripeHostTests : IDisposable
     }
 
     [Fact]
-    public async Task Only_a_practitioner_can_onboard_and_an_unauthenticated_call_is_401()
+    public async Task Only_a_agent_can_onboard_and_an_unauthenticated_call_is_401()
     {
         Assert.Equal(HttpStatusCode.Forbidden, (await h.ClientFor("demo-somebody-else").PostAsync("/api/v1/me/payments/account/onboarding", null)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await h.ClientFor(null).GetAsync("/api/v1/me/payments/account")).StatusCode);
@@ -383,7 +383,7 @@ public sealed class StripeHostTests : IDisposable
     }
 
     [Fact]
-    public async Task With_the_Mock_provider_there_is_no_onboarding_and_a_booking_needs_no_account()
+    public async Task With_the_Mock_provider_there_is_no_onboarding_and_a_access_needs_no_account()
     {
         using var mock = new CreateHost { OwnerUserId = h.OwnerUserId };
         Assert.Equal(HttpStatusCode.NotFound, (await mock.ClientFor(mock.OwnerUserId).GetAsync("/api/v1/me/payments/account")).StatusCode);
@@ -393,7 +393,7 @@ public sealed class StripeHostTests : IDisposable
     // ---- payout date of a resolved booking ----
 
     [Fact]
-    public async Task A_resolved_booking_falls_due_at_the_moment_of_the_resolution()
+    public async Task A_resolved_access_falls_due_at_the_moment_of_the_resolution()
     {
         using var mock = new CreateHost { MeetingUrl = "https://meet.demo.invalid/room-1" };
         var (id, _) = await Adm.Seed(mock);

@@ -37,7 +37,7 @@ public class DisputesIntegrationTests : IAsyncLifetime
     AccessDbContext Db() => new(new DbContextOptionsBuilder<AccessDbContext>().UseNpgsql(cs).Options);
 
     [Fact]
-    public async Task Two_concurrent_resolves_of_one_booking_give_one_200_and_one_409_and_one_refund()
+    public async Task Two_concurrent_resolves_of_one_access_give_one_200_and_one_409_and_one_refund()
     {
         for (var round = 0; round < 5; round++)
         {

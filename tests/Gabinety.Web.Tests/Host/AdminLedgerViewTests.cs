@@ -23,7 +23,7 @@ public class AdminLedgerViewTests
     static string Money(string text) => text.Replace(' ', ' ');
 
     [Fact]
-    public async Task The_booking_column_shows_the_random_tail_with_the_whole_id_in_a_title_and_no_link()
+    public async Task The_access_column_shows_the_random_tail_with_the_whole_id_in_a_title_and_no_link()
     {
         await using var host = await AdminHost.StartAsync();
         host.Web.Access.Respond = _ => CsvOf(Header + Row("ClientCharge", 18000, 1) + Row("Refund", 10000, 2));
@@ -36,7 +36,7 @@ public class AdminLedgerViewTests
     }
 
     [Fact]
-    public async Task Two_bookings_made_in_the_same_moment_still_read_differently()
+    public async Task Two_accesses_made_in_the_same_moment_still_read_differently()
     {
         await using var host = await AdminHost.StartAsync();
         // the same timestamp prefix (0b9e1d2c) for every row: the old column read the same eight characters on each row

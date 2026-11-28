@@ -188,7 +188,7 @@ public class ClockApiTests
     }
 
     [Fact]
-    public async Task A_booking_created_after_moving_the_clock_uses_the_offset_time_for_created_at_and_the_hold()
+    public async Task A_access_created_after_moving_the_clock_uses_the_offset_time_for_created_at_and_the_hold()
     {
         await using var h = FakeHost();
         await SetOffset(h, 60); // now = 2026-11-16 13:00Z, the slot is Tuesday 10:00Z

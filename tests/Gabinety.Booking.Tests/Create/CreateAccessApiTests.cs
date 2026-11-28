@@ -9,7 +9,7 @@ namespace Gabinety.Booking.Tests;
 
 using Access = Gabinety.Booking.Features.Bookings.Entities.Access;
 
-public class CreateBookingApiTests
+public class CreateAccessApiTests
 {
     const string Client = "demo-client-1";
 
@@ -28,7 +28,7 @@ public class CreateBookingApiTests
     }
 
     [Fact]
-    public async Task Create_answers_201_with_the_hold_the_checkout_url_and_stores_booking_payment_and_idempotency_record()
+    public async Task Create_answers_201_with_the_hold_the_checkout_url_and_stores_access_payment_and_idempotency_record()
     {
         await using var h = await Host();
         var key = CreateHost.Key();
@@ -115,7 +115,7 @@ public class CreateBookingApiTests
     }
 
     [Fact]
-    public async Task Own_offering_is_422()
+    public async Task Own_package_is_422()
     {
         await using var h = await Host(x => x.OwnerUserId = Client);
         await Problem(await CreateHost.Post(h.ClientFor(Client), h.Req(), CreateHost.Key()), (HttpStatusCode)422, "own_offering");
@@ -123,7 +123,7 @@ public class CreateBookingApiTests
     }
 
     [Fact]
-    public async Task An_inactive_offering_is_422_offering_inactive()
+    public async Task An_inactive_package_is_422_package_inactive()
     {
         await using var h = await Host(x => x.Active = false);
         await Problem(await CreateHost.Post(h.ClientFor(Client), h.Req(), CreateHost.Key()), (HttpStatusCode)422, "offering_inactive");
@@ -134,7 +134,7 @@ public class CreateBookingApiTests
     [InlineData("Draft")]
     [InlineData("Submitted")]
     [InlineData("Rejected")]
-    public async Task A_practitioner_who_is_not_Approved_is_422_practitioner_not_bookable(string status)
+    public async Task A_agent_who_is_not_Approved_is_422_agent_not_bookable(string status)
     {
         await using var h = await Host(x => x.Status = status);
         await Problem(await CreateHost.Post(h.ClientFor(Client), h.Req(), CreateHost.Key()), (HttpStatusCode)422, "practitioner_not_bookable");
@@ -142,7 +142,7 @@ public class CreateBookingApiTests
     }
 
     [Fact]
-    public async Task The_check_order_is_own_offering_then_practitioner_not_bookable_then_offering_inactive()
+    public async Task The_check_order_is_own_package_then_agent_not_bookable_then_package_inactive()
     {
         await using var h = await Host(x => { x.OwnerUserId = Client; x.Status = "Suspended"; x.Active = false; });
         var c = h.ClientFor(Client);
@@ -154,7 +154,7 @@ public class CreateBookingApiTests
     }
 
     [Fact]
-    public async Task An_unknown_offering_is_404_and_a_Directory_outage_is_503()
+    public async Task An_unknown_package_is_404_and_a_Directory_outage_is_503()
     {
         await using var h = await Host();
         var c = h.ClientFor(Client);
@@ -164,7 +164,7 @@ public class CreateBookingApiTests
     }
 
     [Fact]
-    public async Task The_same_key_and_body_twice_returns_the_original_response_and_creates_one_booking_and_one_payment()
+    public async Task The_same_key_and_body_twice_returns_the_original_response_and_creates_one_access_and_one_payment()
     {
         await using var h = await Host();
         var c = h.ClientFor(Client);
@@ -203,7 +203,7 @@ public class CreateBookingApiTests
     }
 
     [Fact]
-    public async Task A_different_client_with_the_same_key_gets_its_own_booking()
+    public async Task A_different_client_with_the_same_key_gets_its_own_access()
     {
         await using var h = await Host();
         var key = CreateHost.Key();
@@ -274,7 +274,7 @@ public class CreateBookingApiTests
     }
 
     [Fact]
-    public async Task The_hold_moves_with_Booking_HoldMinutes_and_the_checkout_url_with_Site_BaseUrl()
+    public async Task The_hold_moves_with_Access_HoldMinutes_and_the_checkout_url_with_Site_BaseUrl()
     {
         await using var h = await Host(x => { x.Settings["Booking:HoldMinutes"] = "15"; x.Settings["Site:BaseUrl"] = "https://demo.example.test/"; });
         var body = await (await CreateHost.Post(h.ClientFor(Client), h.Req(), CreateHost.Key())).Body();
@@ -302,7 +302,7 @@ public class CreateBookingApiTests
     }
 
     [Fact]
-    public async Task Two_clients_buying_the_same_offering_in_the_same_second_both_get_201()
+    public async Task Two_clients_buying_the_same_package_in_the_same_second_both_get_201()
     {
         await using var h = await Host();
         var a = h.ClientFor("demo-client-a");
@@ -313,7 +313,7 @@ public class CreateBookingApiTests
     }
 
     [Fact]
-    public async Task Two_requests_with_the_same_key_at_once_create_one_booking_and_both_answer_with_it()
+    public async Task Two_requests_with_the_same_key_at_once_create_one_access_and_both_answer_with_it()
     {
         await using var h = await Host();
         var c = h.ClientFor(Client);
@@ -325,7 +325,7 @@ public class CreateBookingApiTests
     }
 
     [Fact]
-    public void Every_Billing_BookingStatus_exists_in_the_Contracts_enum_and_vice_versa()
+    public void Every_Billing_AccessStatus_exists_in_the_Contracts_enum_and_vice_versa()
     {
         var billing = Enum.GetNames<AccessStatus>().Order().ToArray();
         var contracts = Enum.GetNames<Contracts.Booking.AccessStatus>().Order().ToArray();

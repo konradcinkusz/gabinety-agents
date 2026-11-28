@@ -58,8 +58,8 @@ public sealed class AdminHost : IAsyncDisposable
     public static AdminDisputeDto Dispute(Guid? id = null, string kind = "not_as_described", string text = "Konsultacja różniła się od opisu, dane syntetyczne testu.", string client = "demo-client-2", string agent = "demo-practitioner-4") =>
         new(id ?? Guid.NewGuid(), client, agent, kind, text, new DateTimeOffset(2026, 11, 24, 12, 0, 9, TimeSpan.Zero), null, null, null);
 
-    public static AdminAccessDto BookingOf(Guid id, long price = 18000, string title = "Audyt kodu .NET", string practitionerName = "", Guid? agentId = null, string payment = "Succeeded", long refunded = 0) =>
-        new(id, "Disputed", new DateTimeOffset(2026, 11, 23, 10, 0, 0, TimeSpan.Zero), title, new MoneyDto(price, "PLN"), new AgentRefDto(agentId ?? Guid.NewGuid(), practitionerName, "demo-anna"), null,
+    public static AdminAccessDto AccessOf(Guid id, long price = 18000, string title = "Audyt kodu .NET", string agentName = "", Guid? agentId = null, string payment = "Succeeded", long refunded = 0) =>
+        new(id, "Disputed", new DateTimeOffset(2026, 11, 23, 10, 0, 0, TimeSpan.Zero), title, new MoneyDto(price, "PLN"), new AgentRefDto(agentId ?? Guid.NewGuid(), agentName, "demo-anna"), null,
             new PaymentViewDto(payment, new MoneyDto(refunded, "PLN")));
 
     public static AdminAgentDetailDto DetailOf(Guid id, string name = "Anna Demowska", string status = "Approved") =>

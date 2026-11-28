@@ -62,7 +62,7 @@ public class ContractCopiesTests
     }
 
     [Fact]
-    public void The_practitioner_page() =>
+    public void The_agent_page() =>
         RoundTrip<W.PageDto<W.AgentCardDto>>(
             new Page<AgentCard>([new AgentCard(Id, "demo-anna-demowska", "Anna Demowska", "Audyty", "demo-anna", [Badge.Email, Badge.Github, Badge.Nip, Badge.Approved],
                 new RatingDto(4.5, 12), false, new MoneyDto(25000), ["audyt-kodu"], [30, 60])], "NEXT"),
@@ -83,7 +83,7 @@ public class ContractCopiesTests
 
     [Theory]
     [InlineData(PackageKind.Tasks, 10)] [InlineData(PackageKind.Chat, 500)]
-    public void An_offering_carries_its_kind_as_the_wire_name_and_its_units(PackageKind kind, int units)
+    public void An_package_carries_its_kind_as_the_wire_name_and_its_units(PackageKind kind, int units)
     {
         var real = new Package(Id, "Pakiet", "Opis", 30, new MoneyDto(9900), "audyt-kodu", ["dotnet"], kind, units);
         RoundTrip<W.PackageDto>(real, Plain, c => Assert.Equal((kind.ToString(), units), (c.Kind, c.Units)));
@@ -91,7 +91,7 @@ public class ContractCopiesTests
 
     [Theory]
     [InlineData(AccessStatus.PendingPayment)] [InlineData(AccessStatus.Confirmed)] [InlineData(AccessStatus.LateCancelledByClient)] [InlineData(AccessStatus.Resolved)]
-    public void A_booking_view_with_its_status_as_the_wire_name(AccessStatus status)
+    public void A_access_view_with_its_status_as_the_wire_name(AccessStatus status)
     {
         // Booking serializes BookingStatus with the attribute converter: PascalCase, which is also what the Polish labels are keyed by.
         var real = new AccessView(Id, status, null, At, At.AddHours(1), 60, "Konsultacja", new MoneyDto(25000), new AgentRef(Id, "Anna", "demo-anna"), new ClientRef("demo-client"), null, null, null,
@@ -119,7 +119,7 @@ public class ContractCopiesTests
 
     [Theory]
     [InlineData(PaymentStatus.Succeeded)] [InlineData(PaymentStatus.PartiallyRefunded)]
-    public void The_booking_a_dispute_card_reads_is_the_booking_view_with_the_payment_as_its_wire_name(PaymentStatus payment)
+    public void The_access_a_dispute_card_reads_is_the_access_view_with_the_payment_as_its_wire_name(PaymentStatus payment)
     {
         var real = new AccessView(Id, AccessStatus.Disputed, null, At, At.AddHours(1), 60, "Audyt kodu", new MoneyDto(18000), new AgentRef(Id, "", "demo-anna"), null, null, null, null,
             new PaymentView(payment, new MoneyDto(10000)), null, null, false, false, false, false);
@@ -135,7 +135,7 @@ public class ContractCopiesTests
     static readonly JsonSerializerOptions Plain = new(JsonSerializerDefaults.Web);
 
     [Fact]
-    public void The_booking_detail_with_every_field_the_pages_read()
+    public void The_access_detail_with_every_field_the_pages_read()
     {
         var real = new AccessView(Id, AccessStatus.Confirmed, "powód", At, At.AddHours(1), 60, "Audyt", new MoneyDto(25000), new AgentRef(Id, "Anna", "demo-anna"), new ClientRef("demo-client"),
             new BriefDto("Opis problemu demo, syntetyczny.", "audyt-kodu", true), "https://meet.example/x", At.AddMinutes(10), new PaymentView(PaymentStatus.PartiallyRefunded, new MoneyDto(9000)), new MoneyDto(3750), new MoneyDto(21250),
@@ -152,7 +152,7 @@ public class ContractCopiesTests
     }
 
     [Fact]
-    public void The_booking_detail_without_the_optional_parts_has_no_cancel_outcome()
+    public void The_access_detail_without_the_optional_parts_has_no_cancel_outcome()
     {
         var real = new AccessView(Id, AccessStatus.PendingPayment, null, At, At.AddHours(1), 30, "Audyt", new MoneyDto(25000), new AgentRef(Id, "Anna", "demo-anna"), null, null, null, null,
             new PaymentView(PaymentStatus.Created, new MoneyDto(0)), null, null, false, false, false, false);

@@ -6,15 +6,15 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Gabinety.Web.Tests.PractitionerAreaTests;
 
 /// <summary>The typed clients of the practitioner area, called with a signed-in scope: the bearer, the verb and path, the body, a 204, and what a failure keeps of the server's answer.</summary>
-public class PractitionerClientTests
+public class AgentClientTests
 {
     sealed class Token(string? value) : IAccessTokenSource { public Task<string?> AccessTokenAsync(CancellationToken ct = default) => Task.FromResult(value); }
 
     /// <summary>The real host and handler chain (resilience included) with the token of a signed-in user replaced by a fixed one: a client is called outside a request, which the real token source refuses.</summary>
-    static (WebFactory Web, IServiceScope Scope, PractitionerWorld World) Scoped(string? token = "tok")
+    static (WebFactory Web, IServiceScope Scope, AgentWorld World) Scoped(string? token = "tok")
     {
         var web = new WebFactory();
-        var world = new PractitionerWorld();
+        var world = new AgentWorld();
         world.HaveProfile();
         world.Attach(web);
         var derived = web.WithWebHostBuilder(b => b.ConfigureServices(s => s.AddScoped<IAccessTokenSource>(_ => new Token(token))));
@@ -40,7 +40,7 @@ public class PractitionerClientTests
         await using var _w = web;
         using var _s = scope;
         var client = scope.ServiceProvider.GetRequiredService<AgentClient>();
-        world.Offers.Add(new PractitionerWorld.Offer { Title = "Tytuł oferty", ProblemSlug = "code-review", Duration = 30, Price = 10000 });
+        world.Offers.Add(new AgentWorld.Offer { Title = "Tytuł oferty", ProblemSlug = "code-review", Duration = 30, Price = 10000 });
         var id = world.Offers[0].Id;
         Assert.True((await client.DeactivatePackageAsync(id)).IsOk);
         Assert.True((await client.ActivatePackageAsync(id)).IsOk);

@@ -24,7 +24,7 @@ public class SeederResetTests
         Assert.Equal(args.Count(a => !a.StartsWith("--reset", StringComparison.Ordinal)), rest.Length); // everything else is kept
     }
 
-    static async Task<int> DirectoryPractitioners(DirectoryHost directory)
+    static async Task<int> DirectoryAgents(DirectoryHost directory)
     {
         using var scope = directory.Services.CreateScope();
         return await scope.ServiceProvider.GetRequiredService<DirectoryDbContext>().Agents.CountAsync();
@@ -47,8 +47,8 @@ public class SeederResetTests
     {
         await using var w = new ReputationWorld();
         _ = w.Access.Access.Services;
-        await using var job = new BookingJobDriver(w.Access.Access);
-        await w.SeedDirectoryAndBookingAsync();
+        await using var job = new AccessJobDriver(w.Access.Access);
+        await w.SeedDirectoryAndAccessAsync();
         await ReputationWorld.Step().RunAsync(w.Context, CancellationToken.None);
         await NonDemoRows(w);
         var realReview = Guid.NewGuid();
@@ -62,7 +62,7 @@ public class SeederResetTests
         Assert.Equal(11, (await w.Access.Access.Accesses()).Count(b => b.ClientUserId.StartsWith("demo-")));
         await new ApiKeySeedStep().RunAsync(w.Context, CancellationToken.None);
         Assert.Equal(1, await w.Access.Access.Db(db => db.ApiKeys.CountAsync(k => k.ClientUserId.StartsWith("demo-")))); // the key of demo-client
-        Assert.Equal(10, await DirectoryPractitioners(w.Access.Directory));
+        Assert.Equal(10, await DirectoryAgents(w.Access.Directory));
 
         var code = await SeederApp.RunAsync(w.WithReputation, w.Http, w.Log, TimeProvider.System, CancellationToken.None, mode: SeedMode.ResetOnly);
 
@@ -71,7 +71,7 @@ public class SeederResetTests
         Assert.Equal(["real-client"], (await w.Access.Access.Accesses()).Select(b => b.ClientUserId));
         Assert.Equal(0, await w.Access.Access.Db(db => db.ApiKeys.CountAsync())); // the reset removes the keys, the tasks and the usage of demo- users with their bookings
         Assert.Equal(0, await w.Access.Access.Db(db => db.AgentTasks.CountAsync()));
-        Assert.Equal(0, await DirectoryPractitioners(w.Access.Directory));
+        Assert.Equal(0, await DirectoryAgents(w.Access.Directory));
         var log = w.Log.Text;
         Assert.True(log.IndexOf("reset reputation", StringComparison.Ordinal) is var r && r >= 0
             && log.IndexOf("reset booking", StringComparison.Ordinal) is var b && b > r
@@ -82,7 +82,7 @@ public class SeederResetTests
         code = await SeederApp.RunAsync(w.WithReputation, w.Http, w.Log, TimeProvider.System, CancellationToken.None, mode: SeedMode.ResetThenSeed);
 
         Assert.True(code == 0, w.Log.Text);
-        Assert.Equal(10, await DirectoryPractitioners(w.Access.Directory));
+        Assert.Equal(10, await DirectoryAgents(w.Access.Directory));
         Assert.Equal(11, (await w.Access.Access.Accesses()).Count(x => x.ClientUserId.StartsWith("demo-")));
         Assert.Equal(1, await w.Access.Access.Db(db => db.ApiKeys.CountAsync(k => k.ClientUserId.StartsWith("demo-"))));
         Assert.Equal(1, (await w.Access.Access.Accesses()).Count(x => x.ClientUserId == "real-client"));
@@ -93,7 +93,7 @@ public class SeederResetTests
     [Fact]
     public async Task A_step_without_its_endpoint_is_skipped_by_the_reset_and_says_so()
     {
-        await using var w = new BookingWorld();
+        await using var w = new AccessWorld();
         await w.SeedDirectoryAsync();
         var directoryOnly = new SeedOptions("http://localhost", DirectoryHost.Key, DirectoryHost.Authority, SeedOptions.DevIdentityPassword);
 

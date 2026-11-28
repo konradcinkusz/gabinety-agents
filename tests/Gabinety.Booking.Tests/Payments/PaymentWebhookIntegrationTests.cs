@@ -54,7 +54,7 @@ public class PaymentWebhookIntegrationTests : IAsyncLifetime
         var c = host.ClientFor(null);
         for (var round = 0; round < 10; round++)
         {
-            var (id, pid) = await Pay.CreateBooking(host, "demo-client-" + round, Day(round));
+            var (id, pid) = await Pay.CreateAccess(host, "demo-client-" + round, Day(round));
             var body = Pay.EventJson($"evt_race_{round}", "PaymentSucceeded", pid);
             var sig = Pay.Sign(body);
             var rs = await Task.WhenAll(Task.Run(() => Pay.Webhook(c, body, sig)), Task.Run(() => Pay.Webhook(c, body, sig)));
@@ -68,12 +68,12 @@ public class PaymentWebhookIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task A_success_and_a_failure_for_one_booking_at_once_apply_exactly_one_and_leave_a_consistent_state()
+    public async Task A_success_and_a_failure_for_one_access_at_once_apply_exactly_one_and_leave_a_consistent_state()
     {
         var c = host.ClientFor(null);
         for (var round = 0; round < 10; round++)
         {
-            var (id, pid) = await Pay.CreateBooking(host, "demo-client-x" + round, Day(round + 12));
+            var (id, pid) = await Pay.CreateAccess(host, "demo-client-x" + round, Day(round + 12));
             var ok = Pay.EventJson($"evt_ok_{round}", "PaymentSucceeded", pid);
             var bad = Pay.EventJson($"evt_bad_{round}", "PaymentFailed", pid, null);
             var rs = await Task.WhenAll(Task.Run(() => Pay.Webhook(c, ok, Pay.Sign(ok))), Task.Run(() => Pay.Webhook(c, bad, Pay.Sign(bad))));
@@ -90,7 +90,7 @@ public class PaymentWebhookIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task A_late_success_is_refunded_and_recorded_on_PostgreSQL()
     {
-        var (id, pid) = await Pay.CreateBooking(host, "demo-client-late", Day(30));
+        var (id, pid) = await Pay.CreateAccess(host, "demo-client-late", Day(30));
         host.Clock.Advance(TimeSpan.FromMinutes(11));
         var body = Pay.EventJson("evt_late_1", "PaymentSucceeded", pid);
         Assert.Equal("Applied", await Outcome(await Pay.Webhook(host.ClientFor(null), body, Pay.Sign(body))));

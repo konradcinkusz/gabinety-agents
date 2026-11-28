@@ -3,7 +3,7 @@ using Gabinety.Contracts.Directory;
 
 namespace Gabinety.Booking.Tests;
 
-public class PractitionerResolverTests
+public class AgentResolverTests
 {
     sealed class Counting(Func<string, DirectoryAgent[]> answer) : IDirectoryClient
     {
@@ -58,7 +58,7 @@ public class PractitionerResolverTests
     }
 
     [Fact]
-    public async Task A_non_practitioner_resolves_to_nothing_and_is_not_cached()
+    public async Task A_non_agent_resolves_to_nothing_and_is_not_cached()
     {
         var dir = new Counting(_ => []);
         var resolver = new AgentResolver(dir, new ManualClock());

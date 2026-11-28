@@ -8,7 +8,7 @@ using static Gabinety.Directory.Tests.Offerings.Kit;
 
 namespace Gabinety.Directory.Tests.Offerings;
 
-public class OfferingApiTests(OfferingFactory f) : IClassFixture<OfferingFactory>, IAsyncLifetime
+public class PackageApiTests(PackageFactory f) : IClassFixture<PackageFactory>, IAsyncLifetime
 {
     public async Task InitializeAsync() => await WaitForSeed(f);
 
@@ -121,7 +121,7 @@ public class OfferingApiTests(OfferingFactory f) : IClassFixture<OfferingFactory
     }
 
     [Fact]
-    public async Task Sixth_active_offering_is_too_many_and_deactivating_frees_a_place()
+    public async Task Sixth_active_package_is_too_many_and_deactivating_frees_a_place()
     {
         var c = await Agent(f);
         var made = new List<PackagePrivate>();
@@ -166,7 +166,7 @@ public class OfferingApiTests(OfferingFactory f) : IClassFixture<OfferingFactory
     }
 
     [Fact]
-    public async Task Activate_turns_a_deactivated_offering_back_on_and_is_idempotent()
+    public async Task Activate_turns_a_deactivated_package_back_on_and_is_idempotent()
     {
         var c = await Agent(f);
         var o = await Created(c, Valid());
@@ -177,7 +177,7 @@ public class OfferingApiTests(OfferingFactory f) : IClassFixture<OfferingFactory
     }
 
     [Fact]
-    public async Task A_suspended_practitioner_activating_an_offer_stays_unlisted_and_has_no_public_profile()
+    public async Task A_suspended_agent_activating_an_offer_stays_unlisted_and_has_no_public_profile()
     {
         var uid = Id();
         var c = await Agent(f, uid);
@@ -200,7 +200,7 @@ public class OfferingApiTests(OfferingFactory f) : IClassFixture<OfferingFactory
     }
 
     [Fact]
-    public async Task Activate_refuses_a_sixth_active_offering_and_another_practitioners_offering_is_404()
+    public async Task Activate_refuses_a_sixth_active_package_and_another_agents_package_is_404()
     {
         var c = await Agent(f);
         var first = await Created(c, Valid(title: "Pierwsza oferta"));
@@ -216,7 +216,7 @@ public class OfferingApiTests(OfferingFactory f) : IClassFixture<OfferingFactory
     }
 
     [Fact]
-    public async Task Put_changes_the_offering_and_leaves_the_others_untouched_and_does_not_reactivate()
+    public async Task Put_changes_the_package_and_leaves_the_others_untouched_and_does_not_reactivate()
     {
         var c = await Agent(f);
         var a = await Created(c, Valid(title: "Oferta do zmiany", price: 10000));
@@ -249,7 +249,7 @@ public class OfferingApiTests(OfferingFactory f) : IClassFixture<OfferingFactory
     }
 
     [Fact]
-    public async Task Another_practitioners_offering_is_404_on_put_and_deactivate_and_absent_from_get()
+    public async Task Another_agents_package_is_404_on_put_and_deactivate_and_absent_from_get()
     {
         var owner = await Agent(f);
         var other = await Agent(f);
@@ -265,7 +265,7 @@ public class OfferingApiTests(OfferingFactory f) : IClassFixture<OfferingFactory
     }
 
     [Fact]
-    public async Task User_without_a_practitioner_profile_gets_404_on_all_four_verbs()
+    public async Task User_without_a_agent_profile_gets_404_on_all_four_verbs()
     {
         var c = f.ClientFor(Id());
         foreach (var r in new[]
@@ -290,7 +290,7 @@ public class OfferingApiTests(OfferingFactory f) : IClassFixture<OfferingFactory
     }
 
     [Fact]
-    public async Task Completeness_rises_by_a_quarter_with_the_first_active_offering_and_falls_back_after_deactivation()
+    public async Task Completeness_rises_by_a_quarter_with_the_first_active_package_and_falls_back_after_deactivation()
     {
         var sub = Id();
         var c = await Agent(f, sub);
@@ -306,7 +306,7 @@ public class OfferingApiTests(OfferingFactory f) : IClassFixture<OfferingFactory
     }
 
     [Fact]
-    public async Task Submit_no_longer_lists_offering_once_an_active_one_exists()
+    public async Task Submit_no_longer_lists_package_once_an_active_one_exists()
     {
         var c = await Agent(f);
         var before = await c.PostAsync("/api/v1/me/practitioner/submit", null);
@@ -320,7 +320,7 @@ public class OfferingApiTests(OfferingFactory f) : IClassFixture<OfferingFactory
     }
 }
 
-public class OfferingPriceConfigTests(PriceConfigFactory f) : IClassFixture<PriceConfigFactory>
+public class PackagePriceConfigTests(PriceConfigFactory f) : IClassFixture<PriceConfigFactory>
 {
     [Theory]
     [InlineData(5999, false)] [InlineData(6000, true)] [InlineData(9000, true)] [InlineData(9001, false)]

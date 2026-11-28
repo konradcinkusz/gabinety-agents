@@ -9,13 +9,13 @@ namespace Gabinety.Directory.Tests.Internal;
 public class InternalLookupTests(InternalFactory f) : IClassFixture<InternalFactory>
 {
     [Fact]
-    public async Task Offering_lookup_returns_the_offerings_own_meeting_url()
+    public async Task Package_lookup_returns_the_packages_own_meeting_url()
     {
         var p = await f.Seed(AgentStatus.Approved, x => x.MeetingUrlDefault = "https://meet.example.test/default");
-        var o = await f.SeedOffering(p, meetingUrl: "https://meet.example.test/own", price: 12000, minutes: 30);
+        var o = await f.SeedPackage(p, meetingUrl: "https://meet.example.test/own", price: 12000, minutes: 30);
         var r = await f.Internal().GetAsync($"/internal/v1/offerings/{o.Id}");
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
-        var body = (await r.Content.ReadFromJsonAsync<OfferingLookup>(Ik.J))!;
+        var body = (await r.Content.ReadFromJsonAsync<PackageLookup>(Ik.J))!;
         Assert.Equal(o.Id, body.PackageId);
         Assert.Equal(p.Id, body.AgentId);
         Assert.Equal(p.UserId, body.AgentUserId);
@@ -28,27 +28,27 @@ public class InternalLookupTests(InternalFactory f) : IClassFixture<InternalFact
     }
 
     [Fact]
-    public async Task Offering_lookup_falls_back_to_the_practitioners_default_meeting_url()
+    public async Task Package_lookup_falls_back_to_the_agents_default_meeting_url()
     {
         var p = await f.Seed(AgentStatus.Approved, x => x.MeetingUrlDefault = "https://meet.example.test/default");
-        var o = await f.SeedOffering(p, meetingUrl: null, active: false);
-        var body = (await f.Internal().GetFromJsonAsync<OfferingLookup>($"/internal/v1/offerings/{o.Id}", Ik.J))!;
+        var o = await f.SeedPackage(p, meetingUrl: null, active: false);
+        var body = (await f.Internal().GetFromJsonAsync<PackageLookup>($"/internal/v1/offerings/{o.Id}", Ik.J))!;
         Assert.Equal("https://meet.example.test/default", body.MeetingUrl);
         Assert.False(body.IsActive);
     }
 
     [Fact]
-    public async Task Offering_lookup_has_no_meeting_url_when_neither_is_set_and_reports_a_suspended_status()
+    public async Task Package_lookup_has_no_meeting_url_when_neither_is_set_and_reports_a_suspended_status()
     {
         var p = await f.Seed(AgentStatus.Suspended);
-        var o = await f.SeedOffering(p);
-        var body = (await f.Internal().GetFromJsonAsync<OfferingLookup>($"/internal/v1/offerings/{o.Id}", Ik.J))!;
+        var o = await f.SeedPackage(p);
+        var body = (await f.Internal().GetFromJsonAsync<PackageLookup>($"/internal/v1/offerings/{o.Id}", Ik.J))!;
         Assert.Null(body.MeetingUrl);
         Assert.Equal(AgentStatus.Suspended, body.AgentStatus);
     }
 
     [Fact]
-    public async Task Unknown_offering_is_404() =>
+    public async Task Unknown_package_is_404() =>
         Assert.Equal(HttpStatusCode.NotFound, (await f.Internal().GetAsync($"/internal/v1/offerings/{Guid.NewGuid()}")).StatusCode);
 
     [Fact]
@@ -65,7 +65,7 @@ public class InternalLookupTests(InternalFactory f) : IClassFixture<InternalFact
     }
 
     [Fact]
-    public async Task By_user_of_a_non_practitioner_is_404() =>
+    public async Task By_user_of_a_non_agent_is_404() =>
         Assert.Equal(HttpStatusCode.NotFound, (await f.Internal().GetAsync($"/internal/v1/practitioners/by-user/demo-{Guid.NewGuid():n}")).StatusCode);
 
     [Fact]
@@ -82,7 +82,7 @@ public class InternalLookupTests(InternalFactory f) : IClassFixture<InternalFact
     }
 
     [Fact]
-    public async Task Names_of_an_unknown_practitioner_is_404() =>
+    public async Task Names_of_an_unknown_agent_is_404() =>
         Assert.Equal(HttpStatusCode.NotFound, (await f.Internal().GetAsync($"/internal/v1/practitioners/{Guid.NewGuid()}")).StatusCode);
 
     [Fact]
@@ -90,6 +90,6 @@ public class InternalLookupTests(InternalFactory f) : IClassFixture<InternalFact
         Assert.Equal(HttpStatusCode.Unauthorized, (await f.CreateClient().GetAsync($"/internal/v1/practitioners/{Guid.NewGuid()}")).StatusCode);
 
     // The shapes Booking's DirectoryClient reads (src/Gabinety.Booking/Clients/DirectoryClient.cs).
-    sealed record OfferingLookup([property: JsonPropertyName("offeringId")] Guid PackageId, [property: JsonPropertyName("practitionerId")] Guid AgentId, [property: JsonPropertyName("practitionerUserId")] string AgentUserId, [property: JsonPropertyName("practitionerStatus")] AgentStatus AgentStatus,
+    sealed record PackageLookup([property: JsonPropertyName("offeringId")] Guid PackageId, [property: JsonPropertyName("practitionerId")] Guid AgentId, [property: JsonPropertyName("practitionerUserId")] string AgentUserId, [property: JsonPropertyName("practitionerStatus")] AgentStatus AgentStatus,
         string Title, int DurationMinutes, MoneyDto Price, string? MeetingUrl, bool IsActive);
 }

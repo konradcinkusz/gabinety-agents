@@ -19,9 +19,9 @@ public class DashboardHostTests
     }
 
     [Fact]
-    public async Task An_account_with_no_profile_is_onboarded_and_told_that_any_account_may_become_a_practitioner()
+    public async Task An_account_with_no_profile_is_onboarded_and_told_that_any_account_may_become_a_agent()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn();
+        var (web, browser, _) = await AgentBrowsers.SignedIn();
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta");
         Assert.Equal(HttpStatusCode.OK, page.Status);
@@ -40,7 +40,7 @@ public class DashboardHostTests
     [Fact]
     public async Task Creating_a_gabinet_posts_the_name_with_the_users_bearer_and_redirects_with_a_flash()
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn();
+        var (web, browser, world) = await AgentBrowsers.SignedIn();
         await using var _ = web;
         var response = await browser.Submit("/panel-agenta", "create-profile", [new("displayName", "  Demo Jedyny  ")]);
         Assert.Contains((int)response.Status, new[] { 302, 303 });
@@ -58,7 +58,7 @@ public class DashboardHostTests
     [InlineData("")] [InlineData("a")] [InlineData("   ")]
     public async Task A_name_that_is_too_short_is_refused_inline_before_any_call(string name)
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn();
+        var (web, browser, world) = await AgentBrowsers.SignedIn();
         await using var _ = web;
         var response = await browser.Submit("/panel-agenta", "create-profile", [new("displayName", name)]);
         Assert.Equal(HttpStatusCode.OK, response.Status);
@@ -74,7 +74,7 @@ public class DashboardHostTests
     [Fact]
     public async Task A_draft_shows_its_status_seven_open_steps_and_a_disabled_submit_with_the_reason()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.EmailVerified = false; });
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => { w.HaveProfile(); w.EmailVerified = false; });
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta");
         Assert.Equal("Panel dostawcy", page.TextOf("h1"));
@@ -93,7 +93,7 @@ public class DashboardHostTests
     [Fact]
     public async Task Each_item_of_the_checklist_is_its_own_listitem_whose_name_is_unique_on_the_page_for_the_journey()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta");
         foreach (var name in new[] { "Nagłówek profilu", "Opis (co najmniej 200 znaków)", "Co najmniej jeden aktywny pakiet", "Połączone konto GitHub", "Poprawny numer NIP", "Link do portfolio", "Potwierdzony adres e-mail" })
@@ -104,7 +104,7 @@ public class DashboardHostTests
     [Fact]
     public async Task A_complete_profile_ticks_every_step_and_enables_the_submit_that_then_redirects_with_the_flash()
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.CompleteProfile(); });
+        var (web, browser, world) = await AgentBrowsers.SignedIn(w => { w.HaveProfile(); w.CompleteProfile(); });
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta");
         Assert.All(page.All("[data-item]"), i => Assert.Contains("Gotowe", i.TextContent)); // J2: toContainText("Gotowe")
@@ -123,7 +123,7 @@ public class DashboardHostTests
     [Fact]
     public async Task A_submit_the_service_refuses_names_what_is_missing_in_our_words_and_reads_the_checklist_again()
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.CompleteProfile(); });
+        var (web, browser, world) = await AgentBrowsers.SignedIn(w => { w.HaveProfile(); w.CompleteProfile(); });
         await using var _ = web;
         var response = await browser.Submit("/panel-agenta", "submit-profile", afterGet: () => world.EmailVerified = false);
         Assert.Equal(HttpStatusCode.OK, response.Status);
@@ -137,7 +137,7 @@ public class DashboardHostTests
     [Fact]
     public async Task The_github_link_shows_a_code_then_verifies_it_and_the_dashboard_says_which_account_is_linked()
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
+        var (web, browser, world) = await AgentBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
         var requested = await browser.Submit("/panel-agenta", "github-request", [new("githubLogin", "demo-gh")]);
         Assert.Equal(HttpStatusCode.OK, requested.Status);
@@ -166,7 +166,7 @@ public class DashboardHostTests
     [InlineData("")] [InlineData("zły login!")] [InlineData("-")] [InlineData("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")]
     public async Task A_github_login_that_cannot_exist_is_refused_inline_before_any_call(string login)
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
         var page = await browser.Submit("/panel-agenta", "github-request", [new("githubLogin", login)]);
         if (login == "-") { Assert.Single(web.Directory.Requests, r => r.PathAndQuery.EndsWith("github-link")); return; } // "-" has the allowed alphabet; the service decides the rest
@@ -182,7 +182,7 @@ public class DashboardHostTests
     [Fact]
     public async Task An_approved_dashboard_has_one_public_callout_with_the_profile_link_and_a_hidden_copy_button_and_no_cards_or_checklist()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.CompleteProfile(); w.PaymentState = "pending"; });
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.CompleteProfile(); w.PaymentState = "pending"; });
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta");
         var callout = page.One("[data-testid=public-profile]")!;
@@ -204,7 +204,7 @@ public class DashboardHostTests
     [Fact]
     public async Task An_approved_dashboard_shows_the_active_packages_and_the_five_latest_purchases_newest_first()
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.CompleteProfile(); });
+        var (web, browser, world) = await AgentBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.CompleteProfile(); });
         await using var _ = web;
         for (var i = 7; i >= 1; i--) world.Accesses.Add(Access($"Pakiet {i}", -i, i == 1 ? null : $"Demo Klient {i}") with { UnitsTotal = 10, UnitsUsed = i, EndUtc = DateTimeOffset.UtcNow.AddDays(20) });
         world.Accesses.Add(Access("Minione", -3, status: "Completed") with { EndUtc = DateTimeOffset.UtcNow.AddDays(-1) });
@@ -228,7 +228,7 @@ public class DashboardHostTests
     [Fact]
     public async Task An_approved_dashboard_with_no_purchases_says_so()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.CompleteProfile(); });
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.CompleteProfile(); });
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta");
         Assert.Equal("Nikt nie wykupił jeszcze pakietu Twojego agenta.", page.TextOf("[data-testid=recent-empty]"));
@@ -239,7 +239,7 @@ public class DashboardHostTests
     [InlineData(true)] [InlineData(false)]
     public async Task The_purchases_region_fails_soft_with_a_warning_and_a_retry_while_the_rest_of_the_page_stays(bool serviceDown)
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.CompleteProfile(); w.BookingsFail = !serviceDown; w.BookingDown = serviceDown; });
+        var (web, browser, world) = await AgentBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.CompleteProfile(); w.AccessesFail = !serviceDown; w.AccessDown = serviceDown; });
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta");
         Assert.Equal(HttpStatusCode.OK, page.Status);
@@ -256,7 +256,7 @@ public class DashboardHostTests
     [Fact]
     public async Task A_draft_has_one_checklist_a_progress_element_and_marks_only_the_first_open_row_as_next_with_one_link_per_row()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.CompleteProfile(github: false); w.EmailVerified = false; });
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => { w.HaveProfile(); w.CompleteProfile(github: false); w.EmailVerified = false; });
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta");
         Assert.Single(page.All("ol.checklist")); // the "Co dalej" cards are merged into it
@@ -280,7 +280,7 @@ public class DashboardHostTests
     [Fact]
     public async Task While_steps_are_open_the_submit_is_disabled_and_aria_disabled_with_the_reason_in_the_form_and_when_done_it_is_neither()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.CompleteProfile(github: false); });
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => { w.HaveProfile(); w.CompleteProfile(github: false); });
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta");
         var submit = page.All("button").Single(b => b.TextContent == "Wyślij do weryfikacji");
@@ -289,7 +289,7 @@ public class DashboardHostTests
         Assert.Equal("Uzupełnij jeszcze 1 krok, aby wysłać profil.", page.TextOf("#submit-help"));
         Assert.Same(submit.ParentElement, page.One("#submit-help")!.ParentElement); // the reason is right next to the button
 
-        var (web2, browser2, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.CompleteProfile(); });
+        var (web2, browser2, _) = await AgentBrowsers.SignedIn(w => { w.HaveProfile(); w.CompleteProfile(); });
         await using var _2 = web2;
         var ready = (await browser2.GetAsync("/panel-agenta")).All("button").Single(b => b.TextContent == "Wyślij do weryfikacji");
         Assert.False(ready.HasAttribute("disabled"));
@@ -299,7 +299,7 @@ public class DashboardHostTests
     [Fact]
     public async Task A_submitted_profile_shows_the_same_single_checklist_read_only_without_a_next_badge_or_submit()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Submitted"); w.CompleteProfile(); });
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => { w.HaveProfile("Submitted"); w.CompleteProfile(); });
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta");
         Assert.Equal(7, page.All("[data-item]").Count);
@@ -313,7 +313,7 @@ public class DashboardHostTests
     [InlineData("none", true)] [InlineData("pending", true)] [InlineData("ready", false)] [InlineData(null, false)]
     public async Task The_payments_banner_shows_only_when_a_real_provider_is_on_and_the_account_is_not_ready(string? state, bool banner)
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.CompleteProfile(); w.PaymentState = state; });
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.CompleteProfile(); w.PaymentState = state; });
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta");
         Assert.Equal(banner, page.One("[data-testid=payments-banner]") is not null);
@@ -325,9 +325,9 @@ public class DashboardHostTests
     }
 
     [Fact]
-    public async Task When_booking_is_down_the_dashboard_still_renders_and_shows_no_false_banner()
+    public async Task When_access_is_down_the_dashboard_still_renders_and_shows_no_false_banner()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.CompleteProfile(); w.BookingDown = true; });
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.CompleteProfile(); w.AccessDown = true; });
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta");
         Assert.Equal(HttpStatusCode.OK, page.Status);
@@ -339,7 +339,7 @@ public class DashboardHostTests
     [Fact]
     public async Task When_the_directory_is_down_the_page_says_so_with_a_503_and_a_way_to_retry()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.DirectoryDown = true; });
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => { w.HaveProfile(); w.DirectoryDown = true; });
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta");
         Assert.Equal(HttpStatusCode.ServiceUnavailable, page.Status);
@@ -353,7 +353,7 @@ public class DashboardHostTests
     [Fact]
     public async Task A_rejected_profile_shows_the_reason_and_can_be_sent_again()
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Rejected"); w.CompleteProfile(); });
+        var (web, browser, world) = await AgentBrowsers.SignedIn(w => { w.HaveProfile("Rejected"); w.CompleteProfile(); });
         await using var _ = web;
         world.Profile = world.Profile! with { StatusReason = "Uzupełnij opis profilu" };
         var page = await browser.GetAsync("/panel-agenta");
@@ -365,7 +365,7 @@ public class DashboardHostTests
     [Fact]
     public async Task Text_of_the_profile_is_text_not_markup_and_nothing_of_it_is_logged_by_the_page()
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
+        var (web, browser, world) = await AgentBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
         world.Profile = world.Profile! with { StatusReason = "<img src=x onerror=alert(1)>" };
         var page = await browser.GetAsync("/panel-agenta");
@@ -376,7 +376,7 @@ public class DashboardHostTests
     [Fact]
     public async Task A_profile_that_is_already_submitted_has_no_submit_form_and_a_forged_post_is_refused_before_any_call()
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Submitted"); w.CompleteProfile(); });
+        var (web, browser, world) = await AgentBrowsers.SignedIn(w => { w.HaveProfile("Submitted"); w.CompleteProfile(); });
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta");
         var token = page.One("input[name=__RequestVerificationToken]");
@@ -389,7 +389,7 @@ public class DashboardHostTests
     [Fact]
     public async Task A_code_posted_back_with_the_verify_form_is_shown_only_when_it_has_the_shape_of_ours()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
         var requested = await browser.Submit("/panel-agenta", "github-request", [new("githubLogin", "demo-gh")]);
         var hidden = requested.One("[data-testid=github-code]")!.QuerySelectorAll("input[type=hidden]").ToDictionary(i => i.GetAttribute("name")!, i => i.GetAttribute("value")!);

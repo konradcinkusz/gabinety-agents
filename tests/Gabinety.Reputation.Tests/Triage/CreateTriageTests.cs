@@ -25,7 +25,7 @@ public class CreateTriageTests
     public async Task A_hold_answer_makes_the_review_Held_with_the_reason_from_the_answer(TriageReason reason, string code)
     {
         using var h = new TriageHost();
-        var (user, pract, access) = h.NewBooking();
+        var (user, pract, access) = h.NewAccess();
         h.Assistant.Answer = (_, _) => Hold(reason);
 
         var (status, body) = await Created(await h.Post(user, access, rating: 2));
@@ -45,7 +45,7 @@ public class CreateTriageTests
     public async Task A_none_answer_publishes_and_the_summary_moves_with_it()
     {
         using var h = new TriageHost();
-        var (user, pract, access) = h.NewBooking();
+        var (user, pract, access) = h.NewAccess();
         h.Assistant.Answer = (_, _) => None;
 
         var (status, body) = await Created(await h.Post(user, access, rating: 4));
@@ -63,7 +63,7 @@ public class CreateTriageTests
     public async Task With_the_assistant_down_the_review_is_published_and_flagged_unavailable()
     {
         using var h = new TriageHost();
-        var (user, pract, access) = h.NewBooking();
+        var (user, pract, access) = h.NewAccess();
         h.Assistant.Answer = (_, _) => Down;
 
         var (status, body) = await Created(await h.Post(user, access, rating: 5));
@@ -80,7 +80,7 @@ public class CreateTriageTests
     public async Task A_client_that_throws_is_the_same_as_an_outage_and_nothing_is_logged_from_it()
     {
         using var h = new TriageHost();
-        var (user, pract, access) = h.NewBooking();
+        var (user, pract, access) = h.NewAccess();
         h.Assistant.Answer = (_, t) => throw new HttpRequestException($"{t} {FakeAssistantHandler.Key} {FakeAssistantHandler.BaseUrl}");
 
         var r = await h.Post(user, access);
@@ -94,7 +94,7 @@ public class CreateTriageTests
     public async Task A_review_that_fails_the_rules_is_Held_and_never_reaches_the_assistant()
     {
         using var h = new TriageHost();
-        var (user, pract, access) = h.NewBooking();
+        var (user, pract, access) = h.NewAccess();
 
         var r = await h.Post(user, access, text: "Synthetyczna opinia, kontakt: demo@example.invalid lub +48 600 100 200, polecam.");
 
@@ -109,7 +109,7 @@ public class CreateTriageTests
     public async Task Requests_that_end_before_the_publication_decision_never_reach_the_assistant()
     {
         using var h = new TriageHost();
-        var (user, pract, access) = h.NewBooking();
+        var (user, pract, access) = h.NewAccess();
         var notReviewable = h.Access.Add(user, pract, reviewable: false);
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, (await h.Post(user, access, text: "za krótko")).StatusCode);
@@ -127,7 +127,7 @@ public class CreateTriageTests
     public async Task The_assistant_is_called_before_the_review_is_written_with_the_rating_and_the_trimmed_text()
     {
         using var h = new TriageHost();
-        var (user, pract, access) = h.NewBooking();
+        var (user, pract, access) = h.NewAccess();
         var rowsWhenAsked = -1;
         h.Assistant.Answer = (_, _) =>
         {
@@ -147,7 +147,7 @@ public class CreateTriageTests
         using var h = new TriageHost();
         foreach (var answer in new[] { None, Hold(TriageReason.Abuse), Down })
         {
-            var (user, _, access) = h.NewBooking();
+            var (user, _, access) = h.NewAccess();
             h.Assistant.Answer = (_, _) => answer;
             await h.Post(user, access);
         }

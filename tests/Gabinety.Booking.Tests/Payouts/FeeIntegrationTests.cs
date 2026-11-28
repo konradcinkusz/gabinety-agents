@@ -38,7 +38,7 @@ public class FeeIntegrationTests : IAsyncLifetime
     AccessDbContext Db() => new(new DbContextOptionsBuilder<AccessDbContext>().UseNpgsql(cs).Options);
 
     [Fact]
-    public async Task Two_concurrent_completions_of_two_first_bookings_of_one_pair_write_one_fee_row()
+    public async Task Two_concurrent_completions_of_two_first_accesses_of_one_pair_write_one_fee_row()
     {
         for (var round = 0; round < 10; round++)
         {
@@ -62,7 +62,7 @@ public class FeeIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task A_second_booking_of_a_pair_gets_fee_zero_through_ON_CONFLICT_DO_NOTHING()
+    public async Task A_second_access_of_a_pair_gets_fee_zero_through_ON_CONFLICT_DO_NOTHING()
     {
         // The fee row is taken: the second insert hits ON CONFLICT DO NOTHING (0 rows), the transition still commits and the fee is 0.
         var client = Fee.NewClient();
@@ -92,7 +92,7 @@ public class FeeIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task The_payouts_table_exists_and_booking_id_is_unique()
+    public async Task The_payouts_table_exists_and_access_id_is_unique()
     {
         await using var db = Db();
         var access = Guid.NewGuid();

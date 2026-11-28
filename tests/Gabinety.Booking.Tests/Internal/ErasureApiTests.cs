@@ -38,7 +38,7 @@ public class ErasureApiTests
         return h.CreateClient().SendAsync(req);
     }
 
-    internal static async Task<Guid> SeedBooking(CreateHost h, string client, string practitionerUser, AccessStatus status = AccessStatus.Confirmed,
+    internal static async Task<Guid> SeedAccess(CreateHost h, string client, string agentUser, AccessStatus status = AccessStatus.Confirmed,
         Guid? agent = null, Guid? key = null, bool withTexts = true, bool withMoney = true, int day = 1)
     {
         var id = Guid.NewGuid();
@@ -48,7 +48,7 @@ public class ErasureApiTests
         {
             db.Accesses.Add(new AccessEntity
             {
-                Id = id, ClientUserId = client, AgentId = pid, AgentUserId = practitionerUser, PackageId = h.Package, PackageTitle = "demo-offering",
+                Id = id, ClientUserId = client, AgentId = pid, AgentUserId = agentUser, PackageId = h.Package, PackageTitle = "demo-offering",
                 DurationMinutes = 60, PriceMinor = 12345, StartUtc = start, EndUtc = start.AddHours(1), Status = status,
                 StatusReason = withTexts ? SecretReason : null, BriefText = SecretBrief, BriefProblemSlug = "demo-problem", BriefAiAssisted = true, MeetingUrlSnapshot = MeetingUrl,
                 DisputeKind = withTexts ? "other" : null, DisputeText = withTexts ? SecretDispute : null, FeeMinor = 1851, PayoutMinor = 10494,
@@ -81,8 +81,8 @@ public class ErasureApiTests
     {
         using var h = NewHost();
         var user = NewUser("u"); var other = NewUser("other");
-        var asClient = await SeedBooking(h, user, other);
-        var asPractitioner = await SeedBooking(h, other, user, AccessStatus.Disputed);
+        var asClient = await SeedAccess(h, user, other);
+        var asAgent = await SeedAccess(h, other, user, AccessStatus.Disputed);
         var oldKey = Guid.NewGuid();
         await h.Seed(db => db.IdempotencyRecords.Add(new IdempotencyRecord { ClientUserId = user, IdempotencyKey = oldKey, RequestHash = "h", ResponseStatus = 201, ResponseBody = "{\"id\":\"x\"}", CreatedAt = h.Clock.GetUtcNow() }));
 
@@ -92,7 +92,7 @@ public class ErasureApiTests
         Assert.Equal((ErasureFeature.ErasedBrief, null, null), (c.BriefText, c.StatusReason, c.DisputeText));
         Assert.Equal("[usunięto]", c.BriefText);
         Assert.Equal((Token(user), other), (c.ClientUserId, c.AgentUserId));
-        var p = await Row(h, asPractitioner);
+        var p = await Row(h, asAgent);
         Assert.Equal(("[usunięto]", null, null), (p.BriefText, p.StatusReason, p.DisputeText));
         Assert.Equal((other, Token(user)), (p.ClientUserId, p.AgentUserId));
         foreach (var b in new[] { c, p })
@@ -113,7 +113,7 @@ public class ErasureApiTests
     {
         using var h = NewHost();
         var user = NewUser("u"); var other = NewUser("other"); var pid = Guid.NewGuid();
-        var id = await SeedBooking(h, user, other, agent: pid);
+        var id = await SeedAccess(h, user, other, agent: pid);
         var before = await MoneyOf(h, id);
         Assert.Equal(4, before.Split("|").Length); // two ledger rows, the payment, the payout
 
@@ -130,13 +130,13 @@ public class ErasureApiTests
     }
 
     [Fact]
-    public async Task Other_users_bookings_and_the_counterparty_keep_their_own_data_and_still_see_the_booking()
+    public async Task Other_users_accesses_and_the_counterparty_keep_their_own_data_and_still_see_the_access()
     {
         using var h = NewHost();
         h.OwnerUserId = NewUser("prac");
         var user = NewUser("u"); var bystander = NewUser("by");
-        var shared = await SeedBooking(h, user, h.OwnerUserId, agent: h.Agent);
-        var theirs = await SeedBooking(h, bystander, h.OwnerUserId, agent: h.Agent, day: 2);
+        var shared = await SeedAccess(h, user, h.OwnerUserId, agent: h.Agent);
+        var theirs = await SeedAccess(h, bystander, h.OwnerUserId, agent: h.Agent, day: 2);
         var untouchedBefore = await Row(h, theirs);
 
         await Erase(h, user);
@@ -159,7 +159,7 @@ public class ErasureApiTests
     {
         using var h = NewHost();
         var user = NewUser("u"); var other = NewUser("other");
-        var id = await SeedBooking(h, user, other);
+        var id = await SeedAccess(h, user, other);
         Assert.Equal(HttpStatusCode.NoContent, (await Erase(h, user)).StatusCode);
         var once = await Row(h, id);
         var money = await MoneyOf(h, id);
@@ -173,7 +173,7 @@ public class ErasureApiTests
     }
 
     [Fact]
-    public async Task A_user_with_more_bookings_than_one_batch_is_erased_completely()
+    public async Task A_user_with_more_accesses_than_one_batch_is_erased_completely()
     {
         using var h = NewHost();
         var user = NewUser("u"); var other = NewUser("other");
@@ -194,11 +194,11 @@ public class ErasureApiTests
     }
 
     [Fact]
-    public async Task Erasing_the_practitioner_clears_the_meeting_link_and_the_offering_title_and_the_client_still_sees_the_booking()
+    public async Task Erasing_the_agent_clears_the_meeting_link_and_the_package_title_and_the_client_still_sees_the_access()
     {
         using var h = NewHost();
         var prac = NewUser("prac"); var client = NewUser("client");
-        var id = await SeedBooking(h, client, prac);
+        var id = await SeedAccess(h, client, prac);
 
         Assert.Equal(HttpStatusCode.NoContent, (await Erase(h, prac)).StatusCode);
 
@@ -211,11 +211,11 @@ public class ErasureApiTests
     }
 
     [Fact]
-    public async Task Erasing_the_client_leaves_the_meeting_link_and_the_offering_title_of_the_practitioner()
+    public async Task Erasing_the_client_leaves_the_meeting_link_and_the_package_title_of_the_agent()
     {
         using var h = NewHost();
         var prac = NewUser("prac"); var client = NewUser("client");
-        var id = await SeedBooking(h, client, prac);
+        var id = await SeedAccess(h, client, prac);
 
         await Erase(h, client);
 
@@ -230,7 +230,7 @@ public class ErasureApiTests
     {
         using var h = NewHost();
         var user = NewUser("u");
-        var id = await SeedBooking(h, user, NewUser("other"));
+        var id = await SeedAccess(h, user, NewUser("other"));
         Assert.Equal(HttpStatusCode.Unauthorized, (await Erase(h, user, key)).StatusCode);
         var b = await Row(h, id);
         Assert.Equal((user, SecretBrief), (b.ClientUserId, b.BriefText));
@@ -241,7 +241,7 @@ public class ErasureApiTests
     {
         using var h = NewHost();
         var user = NewUser("u");
-        var id = await SeedBooking(h, user, NewUser("other"));
+        var id = await SeedAccess(h, user, NewUser("other"));
         Assert.Equal(HttpStatusCode.NoContent, (await Erase(h, user)).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await Erase(h, user)).StatusCode);
         Assert.Equal("[usunięto]", (await Row(h, id)).BriefText); // it really ran, so a clean log is not vacuous

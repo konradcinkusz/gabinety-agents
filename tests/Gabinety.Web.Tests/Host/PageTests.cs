@@ -114,7 +114,7 @@ public class PageTests
     }
 
     [Fact]
-    public async Task A_category_with_fewer_than_three_practitioners_is_noindex_and_a_full_one_is_indexed()
+    public async Task A_category_with_fewer_than_three_agents_is_noindex_and_a_full_one_is_indexed()
     {
         foreach (var (count, indexable, robots) in new[] { (2, false, "noindex,follow"), (3, true, "index,follow") })
         {

@@ -5,7 +5,7 @@ using AccessStatus = Gabinety.Billing.AccessStatus;
 namespace Gabinety.Booking.Tests;
 
 /// <summary>BookingPermissions (T-04.07d): the four flags for the caller at <c>now</c>, same windows as the endpoints, at their exact edges.</summary>
-public class BookingPermissionsTests
+public class AccessPermissionsTests
 {
     const string Client = "demo-client", Agent = "demo-practitioner", Stranger = "demo-stranger";
     static readonly DateTimeOffset Start = new(2026, 12, 1, 10, 0, 0, TimeSpan.Zero);
@@ -24,7 +24,7 @@ public class BookingPermissionsTests
     static readonly AccessStatus[] All = Enum.GetValues<AccessStatus>();
 
     [Fact]
-    public void Cancel_client_any_time_while_Confirmed_and_unused_practitioner_only_before_the_end()
+    public void Cancel_client_any_time_while_Confirmed_and_unused_agent_only_before_the_end()
     {
         var b = Row(AccessStatus.Confirmed);
         foreach (var now in new[] { Start - 30 * H, Start - S, Start + S, b.EndUtc - S, b.EndUtc, b.EndUtc + 100 * H })
@@ -149,7 +149,7 @@ public class BookingPermissionsTests
     }
 
     [Fact]
-    public void The_practitioner_sees_brief_and_client_name_from_Confirmed_onward_and_the_client_always()
+    public void The_agent_sees_brief_and_client_name_from_Confirmed_onward_and_the_client_always()
     {
         var names = new Gabinety.Booking.Features.Payments.PartyNames(ClientDisplayName: "demo-client-name");
         foreach (var s in All)
@@ -171,7 +171,7 @@ public class BookingPermissionsTests
     }
 
     [Fact]
-    public void The_resolution_note_of_a_Resolved_booking_is_for_the_admin_only_and_a_cancel_reason_stays_for_the_parties()
+    public void The_resolution_note_of_a_Resolved_access_is_for_the_admin_only_and_a_cancel_reason_stays_for_the_parties()
     {
         static Gabinety.Contracts.Booking.AccessView V(AccessEntity b, string who, bool admin) =>
             Gabinety.Booking.Features.Payments.AccessViewFeature.ToView(b, null, who, admin);

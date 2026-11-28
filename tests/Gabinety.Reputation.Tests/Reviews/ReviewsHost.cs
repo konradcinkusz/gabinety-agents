@@ -48,7 +48,7 @@ sealed class ReviewsLogSink : ILoggerProvider
 }
 
 /// <summary>Stands in for Booking: reviewability answers per booking id, plus switches for "down" and a free-form override.</summary>
-sealed class FakeBooking : HttpMessageHandler
+sealed class FakeAccess : HttpMessageHandler
 {
     public const string Key = "k-test-DO-NOT-LEAK-5678";
     public const string BaseUrl = "http://booking.demo.invalid";
@@ -90,7 +90,7 @@ sealed class ReviewsHost : WebApplicationFactory<Program>
     public const string Audience = "reputation-test", Issuer = "https://issuer.demo.invalid";
     public const string GoodText = "Synthetyczna opinia: spotkanie było rzeczowe i pomocne, polecam.";
     readonly RSA _rsa = RSA.Create(2048);
-    public FakeBooking Access { get; } = new();
+    public FakeAccess Access { get; } = new();
     public ReviewsClock Clock { get; } = new();
     /// <summary>Stands in for Directory: records the pushes the job makes (the real client has no address here).</summary>
     public RecordingReputationClient Directory { get; } = new();
@@ -114,14 +114,14 @@ sealed class ReviewsHost : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseSetting("Identity:Audience", Audience);
-        builder.UseSetting("Backend:Booking", FakeBooking.BaseUrl);
-        builder.UseSetting("Internal:Keys:Booking", FakeBooking.Key);
+        builder.UseSetting("Backend:Booking", FakeAccess.BaseUrl);
+        builder.UseSetting("Internal:Keys:Booking", FakeAccess.Key);
         foreach (var (k, v) in Settings) builder.UseSetting(k, v);
         builder.ConfigureServices(s =>
         {
             s.RemoveAll<IAccessClient>();
             s.AddSingleton<IAccessClient>(new AccessClient(
-                new HttpClient(Access) { BaseAddress = new Uri(FakeBooking.BaseUrl) }, FakeBooking.Key, retryDelay: TimeSpan.Zero));
+                new HttpClient(Access) { BaseAddress = new Uri(FakeAccess.BaseUrl) }, FakeAccess.Key, retryDelay: TimeSpan.Zero));
             s.RemoveAll<IDirectoryReputationClient>();
             s.AddSingleton<IDirectoryReputationClient>(Directory);
             s.RemoveAll<TimeProvider>();

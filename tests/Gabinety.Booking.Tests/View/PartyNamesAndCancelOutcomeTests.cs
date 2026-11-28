@@ -40,7 +40,7 @@ public class PartyNamesTests
     }
 
     [Fact]
-    public async Task Detail_and_list_carry_the_practitioner_name_for_the_client_and_the_client_name_for_the_practitioner()
+    public async Task Detail_and_list_carry_the_agent_name_for_the_client_and_the_client_name_for_the_agent()
     {
         await using var h = Life.Host(new RecordingProvider());
         h.NameClaim = "demo-client-1@example.test";
@@ -55,9 +55,9 @@ public class PartyNamesTests
         Assert.Equal("demo-practitioner", asClient.GetProperty("practitioner").GetProperty("slug").GetString());
         Assert.Equal(JsonValueKind.Null, asClient.GetProperty("client").ValueKind); // a client is not shown to themself
 
-        var asPractitioner = await Get(h.ClientFor(agent), $"/api/v1/bookings/{id}");
-        Assert.Equal("Klient D.", asPractitioner.GetProperty("client").GetProperty("displayName").GetString());
-        Assert.DoesNotContain("example.test", asPractitioner.GetRawText());
+        var asAgent = await Get(h.ClientFor(agent), $"/api/v1/bookings/{id}");
+        Assert.Equal("Klient D.", asAgent.GetProperty("client").GetProperty("displayName").GetString());
+        Assert.DoesNotContain("example.test", asAgent.GetRawText());
 
         var list = await Get(h.ClientFor(client), "/api/v1/me/bookings?role=client");
         // the in-memory database is shared by the hosts of one test process: find the row by id
@@ -68,7 +68,7 @@ public class PartyNamesTests
     }
 
     [Fact]
-    public async Task A_booking_made_with_the_token_stores_Klient_and_an_initial_not_the_address()
+    public async Task A_access_made_with_the_token_stores_Klient_and_an_initial_not_the_address()
     {
         await using var h = Life.Host(new RecordingProvider());
         h.NameClaim = "demo-client-1@example.test";
@@ -93,13 +93,13 @@ public class PartyNamesTests
         await using var h = Life.Host(new RecordingProvider());
         var id = await Life.Seed(h, AccessStatus.Confirmed, H24 * 3);
         var clientToken = ErasureFeature.Token(Life.Client);
-        var practitionerToken = ErasureFeature.Token(Life.Agent);
-        await h.Seed(db => { var b = db.Accesses.Single(x => x.Id == id); b.ClientUserId = clientToken; b.ClientDisplayName = null; b.AgentUserId = practitionerToken; });
+        var agentToken = ErasureFeature.Token(Life.Agent);
+        await h.Seed(db => { var b = db.Accesses.Single(x => x.Id == id); b.ClientUserId = clientToken; b.ClientDisplayName = null; b.AgentUserId = agentToken; });
 
         var asClient = await Get(h.ClientFor(clientToken), $"/api/v1/bookings/{id}");
         Assert.Equal("Usunięty użytkownik", asClient.GetProperty("practitioner").GetProperty("displayName").GetString());
-        var asPractitioner = await Get(h.ClientFor(practitionerToken), $"/api/v1/bookings/{id}");
-        Assert.Equal("Usunięty użytkownik", asPractitioner.GetProperty("client").GetProperty("displayName").GetString());
+        var asAgent = await Get(h.ClientFor(agentToken), $"/api/v1/bookings/{id}");
+        Assert.Equal("Usunięty użytkownik", asAgent.GetProperty("client").GetProperty("displayName").GetString());
     }
 
     [Fact]
@@ -112,7 +112,7 @@ public class PartyNamesTests
     }
 
     [Fact]
-    public async Task When_Directory_is_down_the_view_still_renders_with_a_generic_practitioner_label()
+    public async Task When_Directory_is_down_the_view_still_renders_with_a_generic_agent_label()
     {
         await using var h = Life.Host(new RecordingProvider());
         h.DirectoryDown = true;
@@ -150,7 +150,7 @@ public class CancelOutcomeTests
     }
 
     [Fact]
-    public async Task The_practitioner_is_always_told_full_refund_and_a_booking_that_cannot_be_cancelled_has_no_outcome()
+    public async Task The_agent_is_always_told_full_refund_and_a_access_that_cannot_be_cancelled_has_no_outcome()
     {
         await using var h = Life.Host(new RecordingProvider());
         var soon = await Life.Seed(h, AccessStatus.Confirmed, TimeSpan.FromMinutes(30));
@@ -200,7 +200,7 @@ public class DisputeWindowTests
     [InlineData(73 * 3600 - 1, true)]   // the last second: the end (start + 1 h) + 72 h
     [InlineData(73 * 3600, false)]      // end + 72 h exactly: over
     [InlineData(73 * 3600 + 1, false)]
-    public void canDispute_is_true_for_a_Completed_booking_until_end_plus_72h(int offsetSeconds, bool expected)
+    public void canDispute_is_true_for_a_Completed_access_until_end_plus_72h(int offsetSeconds, bool expected)
     {
         var b = new AccessEntity { ClientUserId = "demo-client", AgentUserId = "demo-practitioner", Status = AccessStatus.Completed, StartUtc = Start, EndUtc = Start + H, EndedAt = Start + H };
         var now = Start + TimeSpan.FromSeconds(offsetSeconds);

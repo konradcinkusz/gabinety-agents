@@ -65,7 +65,7 @@ public class CompletenessTests
     [Fact] public void All_false_is_zero() => Assert.Equal(0.00m, ProfileCompleteness.Compute(false, false, false, false, false, false, false));
     [Fact] public void All_true_is_one() => Assert.Equal(1.00m, ProfileCompleteness.Compute(true, true, true, true, true, true, true));
     [Fact] public void Mixed_headline_bio_nip() => Assert.Equal(0.45m, ProfileCompleteness.Compute(true, true, false, false, false, true, false));
-    [Fact] public void Mixed_offering_github_slots() => Assert.Equal(0.45m, ProfileCompleteness.Compute(false, false, true, true, false, false, true));
+    [Fact] public void Mixed_package_github_slots() => Assert.Equal(0.45m, ProfileCompleteness.Compute(false, false, true, true, false, false, true));
 }
 
 public class StateMachineTests

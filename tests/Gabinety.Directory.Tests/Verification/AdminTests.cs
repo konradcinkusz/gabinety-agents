@@ -147,7 +147,7 @@ public class AdminTransitionTests(VerificationFactory f) : IClassFixture<Verific
     }
 
     [Fact]
-    public async Task Submit_writes_one_Submitted_event_by_the_practitioner()
+    public async Task Submit_writes_one_Submitted_event_by_the_agent()
     {
         var (c, id) = await Ready();
         Assert.Equal(HttpStatusCode.NoContent, (await c.PostAsync(Me + "/submit", null)).StatusCode);

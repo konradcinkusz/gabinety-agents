@@ -64,7 +64,7 @@ public class GithubLinkTests(VerificationFactory f) : IClassFixture<Verification
     }
 
     [Fact]
-    public async Task User_without_a_practitioner_gets_404_on_both_endpoints()
+    public async Task User_without_a_agent_gets_404_on_both_endpoints()
     {
         var c = f.As("demo-nobody-" + Guid.NewGuid().ToString("n"));
         Assert.Equal(HttpStatusCode.NotFound, (await c.PostAsJsonAsync(Link, new GithubLinkRequest("demo-dev"))).StatusCode);
@@ -195,7 +195,7 @@ public class GithubLinkTests(VerificationFactory f) : IClassFixture<Verification
     }
 
     [Fact]
-    public async Task A_handle_already_linked_to_another_practitioner_is_refused_case_insensitively()
+    public async Task A_handle_already_linked_to_another_agent_is_refused_case_insensitively()
     {
         await f.Seed(AgentStatus.Draft, p => { p.GithubLinked = true; p.GithubLogin = "Demo-Taken"; });
         var (c, id) = await Draft();

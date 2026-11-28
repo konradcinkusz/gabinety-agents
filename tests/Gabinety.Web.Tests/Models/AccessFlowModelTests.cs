@@ -8,7 +8,7 @@ using Gabinety.Web.Text;
 namespace Gabinety.Web.Tests.Models;
 
 /// <summary>The plain C# of the booking flow and the client area: no renderer, no host (BLAZOR-WEB-APP section 10).</summary>
-public class BookingFlowModelTests
+public class AccessFlowModelTests
 {
     // ---- the brief
 
@@ -139,7 +139,7 @@ public class BookingFlowModelTests
     [InlineData("CancelledByClient", "Zrezygnowano", BadgeKind.Neutral)] [InlineData("LateCancelledByClient", "Zrezygnowano (bez zwrotu)", BadgeKind.Warning)]
     [InlineData("CancelledByPractitioner", "Wycofany przez dostawcę", BadgeKind.Danger)] [InlineData("Expired", "Wygasł", BadgeKind.Neutral)] [InlineData("ClientNoShow", "Klient nie skorzystał", BadgeKind.Danger)]
     [InlineData("Disputed", "Reklamacja w toku", BadgeKind.Warning)] [InlineData("Resolved", "Reklamacja rozstrzygnięta", BadgeKind.Neutral)] [InlineData("Whatever", "Status nieznany", BadgeKind.Neutral)]
-    public void A_booking_state_has_a_label_and_a_kind(string status, string label, BadgeKind kind) => Assert.Equal((label, kind), (Badge.ForAccess(status).Label, Badge.ForAccess(status).Kind));
+    public void A_access_state_has_a_label_and_a_kind(string status, string label, BadgeKind kind) => Assert.Equal((label, kind), (Badge.ForAccess(status).Label, Badge.ForAccess(status).Kind));
 
     [Theory]
     [InlineData("Succeeded", "Opłacona", BadgeKind.Success)] [InlineData("Refunded", "Zwrócona w całości", BadgeKind.Info)] [InlineData("PartiallyRefunded", "Zwrócona częściowo", BadgeKind.Info)]
@@ -147,7 +147,7 @@ public class BookingFlowModelTests
     public void A_payment_state_has_a_label_and_a_kind(string status, string label, BadgeKind kind) => Assert.Equal((label, kind), (Badge.ForPayment(status).Label, Badge.ForPayment(status).Kind));
 
     [Fact]
-    public void Every_booking_status_the_contract_has_is_mapped_and_the_css_class_follows_the_kind()
+    public void Every_access_status_the_contract_has_is_mapped_and_the_css_class_follows_the_kind()
     {
         foreach (var s in AccessFormat.Statuses) Assert.NotEqual(Pl.Accesses.UnknownStatus, Badge.ForAccess(s).Label);
         Assert.Equal("badge badge--warning", Badge.ForAccess("Disputed").CssClass);
@@ -184,7 +184,7 @@ public class BookingFlowModelTests
     public void A_refund_outside_zero_to_the_price_is_not_believed_and_the_general_rule_stays(long refund) => Assert.Null(CancelOutcome.From(Outcome("partial", refund), Price));
 
     [Fact]
-    public void A_practitioner_is_told_the_client_is_refunded_and_that_they_are_not_paid()
+    public void A_agent_is_told_the_client_is_refunded_and_that_they_are_not_paid()
     {
         var o = CancelOutcome.From(Outcome("full_refund", 18000), Price);
         Assert.Equal("Klient dostanie zwrot 180,00\u00a0zł, a Ty nie otrzymasz wypłaty za ten pakiet.", CancelOutcome.Sentence(o, "practitioner"));

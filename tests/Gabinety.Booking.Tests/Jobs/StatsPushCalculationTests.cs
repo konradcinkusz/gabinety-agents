@@ -22,7 +22,7 @@ public class StatsPushCalculationTests : IDisposable
     [InlineData(AccessStatus.Completed, 1, 0)]
     [InlineData(AccessStatus.ClientNoShow, 0, 0)]
     [InlineData(AccessStatus.Disputed, 0, 0)]
-    public async Task One_booking_in_each_status_moves_the_counts_as_the_rule_says(AccessStatus status, int completed, int cancelled)
+    public async Task One_access_in_each_status_moves_the_counts_as_the_rule_says(AccessStatus status, int completed, int cancelled)
     {
         await StatsFx.Seed(h, status, kind: status == AccessStatus.Disputed ? "practitioner_no_show" : null);
         var s = await StatsFx.StatsOf(h);
@@ -62,7 +62,7 @@ public class StatsPushCalculationTests : IDisposable
     }
 
     [Fact]
-    public async Task Counts_are_per_practitioner_and_add_up()
+    public async Task Counts_are_per_agent_and_add_up()
     {
         await StatsFx.Seed(h, AccessStatus.Completed);
         await StatsFx.Seed(h, AccessStatus.Completed);
@@ -75,20 +75,20 @@ public class StatsPushCalculationTests : IDisposable
     }
 
     [Fact]
-    public async Task The_set_is_practitioners_with_bookings_only()
+    public async Task The_set_is_agents_with_accesses_only()
     {
-        using var withBooking = Life.Host(new RecordingProvider());
-        await StatsFx.Seed(withBooking, AccessStatus.Completed);
+        using var withAccess = Life.Host(new RecordingProvider());
+        await StatsFx.Seed(withAccess, AccessStatus.Completed);
         using var scope = h.Services.CreateScope();
         var all = await scope.ServiceProvider.GetRequiredService<StatsCalculator>().ComputeAsync(default);
         Assert.DoesNotContain(h.Agent, all.Keys);
-        Assert.Contains(withBooking.Agent, all.Keys);
+        Assert.Contains(withAccess.Agent, all.Keys);
         Assert.DoesNotContain(Guid.NewGuid(), all.Keys);
     }
 
     // A-03: an agent is always available, so the reported open slots are a constant (Access:ReportedOpenSlots, default 10 = the ranking's "full availability").
     [Fact]
-    public async Task Open_slots_are_the_constant_whatever_the_bookings()
+    public async Task Open_slots_are_the_constant_whatever_the_accesses()
     {
         await StatsFx.Seed(h, AccessStatus.Completed);                       
         Assert.Equal(StatsCalculator.DefaultReportedOpenSlots, (await StatsFx.StatsOf(h)).OpenSlots14d);

@@ -34,11 +34,11 @@ public class ContactResolverTests
             Resolver = new ContactResolver(client, Clock, new LoggerFactory([Logs]).CreateLogger<ContactResolver>());
         }
 
-        public Task<string?> Practitioner_(string user = Agent) => Resolver.ResolveAddressAsync(new ContactLookup(user, true, null), CancellationToken.None);
+        public Task<string?> Agent_(string user = Agent) => Resolver.ResolveAddressAsync(new ContactLookup(user, true, null), CancellationToken.None);
     }
 
     [Fact]
-    public async Task The_client_address_is_the_booking_snapshot_and_Directory_is_not_asked()
+    public async Task The_client_address_is_the_access_snapshot_and_Directory_is_not_asked()
     {
         var r = new Rig();
         Assert.Equal("demo-client@demo.invalid", await r.Resolver.ResolveAddressAsync(new ContactLookup("demo-client", false, " demo-client@demo.invalid "), default));
@@ -59,25 +59,25 @@ public class ContactResolverTests
     }
 
     [Fact]
-    public async Task The_practitioner_address_comes_from_Directory_with_the_internal_key_and_the_user_id_escaped()
+    public async Task The_agent_address_comes_from_Directory_with_the_internal_key_and_the_user_id_escaped()
     {
         var r = new Rig();
         r.Directory.Override = (req, _) => FakeDirectory.Json(new { email = Address });
-        Assert.Equal(Address, await r.Practitioner_("demo user/1"));
+        Assert.Equal(Address, await r.Agent_("demo user/1"));
         Assert.Equal(FakeDirectory.Key, r.Directory.LastKeyHeader);
     }
 
     [Fact]
-    public async Task A_practitioner_answer_is_cached_for_five_minutes_and_asked_again_after()
+    public async Task A_agent_answer_is_cached_for_five_minutes_and_asked_again_after()
     {
         var r = new Rig();
-        Assert.Equal(Address, await r.Practitioner_());
+        Assert.Equal(Address, await r.Agent_());
         r.Clock.Advance(ContactResolver.CacheFor - TimeSpan.FromSeconds(1));
         r.AddressOf = "demo-changed@demo.invalid";
-        Assert.Equal(Address, await r.Practitioner_()); // still the cached one
+        Assert.Equal(Address, await r.Agent_()); // still the cached one
         Assert.Equal(1, r.ContactCalls);
         r.Clock.Advance(TimeSpan.FromSeconds(1));
-        Assert.Equal("demo-changed@demo.invalid", await r.Practitioner_());
+        Assert.Equal("demo-changed@demo.invalid", await r.Agent_());
         Assert.Equal(2, r.ContactCalls);
     }
 
@@ -85,9 +85,9 @@ public class ContactResolverTests
     public async Task A_missing_address_is_not_cached_so_one_given_later_is_found_on_the_next_attempt()
     {
         var r = new Rig { AddressOf = null };
-        Assert.Null(await r.Practitioner_());
+        Assert.Null(await r.Agent_());
         r.AddressOf = Address;
-        Assert.Equal(Address, await r.Practitioner_());
+        Assert.Equal(Address, await r.Agent_());
         Assert.Equal(2, r.ContactCalls);
     }
 
@@ -95,8 +95,8 @@ public class ContactResolverTests
     public async Task A_cached_address_is_per_user()
     {
         var r = new Rig();
-        Assert.Equal(Address, await r.Practitioner_());
-        Assert.Null(await r.Practitioner_("demo-other-user")); // 404 for him: must not get the first one's address
+        Assert.Equal(Address, await r.Agent_());
+        Assert.Null(await r.Agent_("demo-other-user")); // 404 for him: must not get the first one's address
     }
 
     [Fact]
@@ -104,9 +104,9 @@ public class ContactResolverTests
     {
         var r = new Rig();
         r.Directory.Down = true;
-        Assert.Null(await r.Practitioner_());
+        Assert.Null(await r.Agent_());
         r.Directory.Down = false;
-        Assert.Equal(Address, await r.Practitioner_());
+        Assert.Equal(Address, await r.Agent_());
     }
 
     [Theory]
@@ -117,7 +117,7 @@ public class ContactResolverTests
     {
         var r = new Rig();
         r.Directory.Override = (_, _) => new HttpResponseMessage(status);
-        Assert.Null(await r.Practitioner_());
+        Assert.Null(await r.Agent_());
     }
 
     [Theory]
@@ -126,7 +126,7 @@ public class ContactResolverTests
     public async Task An_unusable_address_from_Directory_is_a_null_address(string email)
     {
         var r = new Rig { AddressOf = email };
-        Assert.Null(await r.Practitioner_());
+        Assert.Null(await r.Agent_());
     }
 
     [Fact]
@@ -142,10 +142,10 @@ public class ContactResolverTests
     public async Task Nothing_the_resolver_logs_carries_an_address_a_user_id_or_the_key()
     {
         var r = new Rig();
-        await r.Practitioner_();
+        await r.Agent_();
         r.Directory.Down = true;
         r.Clock.Advance(TimeSpan.FromHours(1));
-        await r.Practitioner_();
+        await r.Agent_();
         await r.Resolver.ResolveAddressAsync(new ContactLookup("demo-client", false, "demo-client@demo.invalid"), default);
         Assert.NotEmpty(r.Logs.Lines); // the outage was logged...
         foreach (var line in r.Logs.Lines)

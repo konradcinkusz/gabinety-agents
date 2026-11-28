@@ -30,7 +30,7 @@ public class SitemapTests(SearchFactory f)
     }
 
     [Fact]
-    public async Task A_category_is_indexable_from_three_listed_practitioners_not_from_two()
+    public async Task A_category_is_indexable_from_three_listed_agents_not_from_two()
     {
         await f.Reset();
         for (var i = 0; i < 2; i++) await f.Approved(null, new Spec("code-review", ["dotnet"]));
@@ -46,7 +46,7 @@ public class SitemapTests(SearchFactory f)
     }
 
     [Fact]
-    public async Task Only_listed_practitioners_count_each_counts_once_and_empty_pairs_are_omitted()
+    public async Task Only_listed_agents_count_each_counts_once_and_empty_pairs_are_omitted()
     {
         await f.Reset();
         await f.Approved(null, new Spec("code-review", ["dotnet"]), new Spec("code-review", ["dotnet"], 60));   // two offerings, one practitioner
@@ -60,7 +60,7 @@ public class SitemapTests(SearchFactory f)
     }
 
     [Fact]
-    public async Task Practitioners_are_ordered_by_slug_with_updated_at_and_categories_by_path()
+    public async Task Agents_are_ordered_by_slug_with_updated_at_and_categories_by_path()
     {
         await f.Reset();
         var b = await f.Approved(p => { p.Slug = "demo-bbb"; p.UpdatedAt = SearchFactory.Epoch.AddDays(2); }, new Spec("integracja-ai", ["llm"]));
@@ -157,7 +157,7 @@ public class RankingRecomputeCallSiteTests(SearchFactory f)
     }
 
     [Fact]
-    public async Task Creating_an_offering_on_an_Approved_profile_changes_its_completeness_and_so_its_stored_score()
+    public async Task Creating_an_package_on_an_Approved_profile_changes_its_completeness_and_so_its_stored_score()
     {
         await f.Reset();
         var uid = Kit.Id();

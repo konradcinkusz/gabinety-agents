@@ -10,9 +10,9 @@ namespace Gabinety.Directory.Tests.Offerings;
 
 /// <summary>Real PostgreSQL 17 (Docker needed; CI job `integration` runs these): the migration, the column types, the GIN index, the array filter and the lock.</summary>
 [Trait("tier", "integration")]
-public class OfferingIntegrationTests
+public class PackageIntegrationTests
 {
-    sealed class PgFactory(string cs) : OfferingFactory
+    sealed class PgFactory(string cs) : PackageFactory
     {
         protected override string Provider => "PostgreSQL";
         protected override string? ConnectionString => cs;
@@ -41,7 +41,7 @@ public class OfferingIntegrationTests
     }
 
     [Fact]
-    public async Task Migration_creates_offerings_with_a_text_array_a_gin_index_and_restricting_foreign_keys()
+    public async Task Migration_creates_packages_with_a_text_array_a_gin_index_and_restricting_foreign_keys()
     {
         var (pg, f) = await Start();
         await using var _ = pg; using var __ = f;
@@ -77,7 +77,7 @@ public class OfferingIntegrationTests
     }
 
     [Fact]
-    public async Task Six_concurrent_creates_give_exactly_five_created_and_one_too_many_offerings()
+    public async Task Six_concurrent_creates_give_exactly_five_created_and_one_too_many_packages()
     {
         var (pg, f) = await Start();
         await using var _ = pg; using var __ = f;

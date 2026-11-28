@@ -97,7 +97,7 @@ public sealed class PairCountsPostgresFixture : IAsyncLifetime
 public class PairCountsPostgresTests(PairCountsPostgresFixture f) : IClassFixture<PairCountsPostgresFixture>
 {
     [Fact]
-    public async Task A_pair_with_more_than_two_paid_bookings_is_listed_with_its_count_and_a_pair_with_two_is_not()
+    public async Task A_pair_with_more_than_two_paid_accesses_is_listed_with_its_count_and_a_pair_with_two_is_not()
     {
         var p = Guid.NewGuid();
         await f.Seed("demo-pgc-three", p, 3);
@@ -114,7 +114,7 @@ public class PairCountsPostgresTests(PairCountsPostgresFixture f) : IClassFixtur
     }
 
     [Fact]
-    public async Task Only_a_succeeded_or_partially_refunded_payment_counts_the_booking_status_does_not_matter()
+    public async Task Only_a_succeeded_or_partially_refunded_payment_counts_the_access_status_does_not_matter()
     {
         var p = Guid.NewGuid();
         await f.Seed("demo-pgk-ok", p, 1, PaymentStatus.Succeeded, AccessStatus.Confirmed);

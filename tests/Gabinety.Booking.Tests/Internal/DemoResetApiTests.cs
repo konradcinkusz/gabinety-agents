@@ -36,14 +36,14 @@ public class DemoResetApiTests
 
     sealed record Rows([property: JsonPropertyName("booking")] Guid Access, Guid Payment, Guid Ledger);
 
-    static Rows SeedChain(AccessDbContext db, CreateHost h, string clientUser, string practitionerUser, string provider, string? eventId)
+    static Rows SeedChain(AccessDbContext db, CreateHost h, string clientUser, string agentUser, string provider, string? eventId)
     {
         var now = h.Clock.GetUtcNow();
         var key = Guid.NewGuid();
         var id = Guid.NewGuid();
         db.Accesses.Add(new AccessEntity
         {
-            Id = id, ClientUserId = clientUser, AgentId = h.Agent, AgentUserId = practitionerUser,
+            Id = id, ClientUserId = clientUser, AgentId = h.Agent, AgentUserId = agentUser,
             PackageId = h.Package, PackageTitle = "demo-offering", DurationMinutes = 60, PriceMinor = 10000,
             StartUtc = now.AddDays(2), EndUtc = now.AddDays(2).AddHours(1), Status = AccessStatus.Confirmed, BriefText = "demo-brief",
             IdempotencyKey = key, CreatedAt = now,
@@ -64,14 +64,14 @@ public class DemoResetApiTests
             await db.IdempotencyRecords.CountAsync(), await db.WebhookEvents.CountAsync()));
 
     [Fact]
-    public async Task Reset_deletes_demo_bookings_with_their_payments_ledger_idempotency_and_webhook_rows_and_keeps_other_rows()
+    public async Task Reset_deletes_demo_accesses_with_their_payments_ledger_idempotency_and_webhook_rows_and_keeps_other_rows()
     {
         await using var h = Host();
-        Rows asClient = null!, asPractitioner = null!, other = null!;
+        Rows asClient = null!, asAgent = null!, other = null!;
         await h.Seed(db =>
         {
             asClient = SeedChain(db, h, "demo-c1", "real-p1", "Mock", "demo-evt-1");
-            asPractitioner = SeedChain(db, h, "real-c2", "demo-p2", "Mock", null);
+            asAgent = SeedChain(db, h, "real-c2", "demo-p2", "Mock", null);
             other = SeedChain(db, h, "real-c3", "real-p3", "Mock", "evt-real-1");
         });
 
@@ -92,7 +92,7 @@ public class DemoResetApiTests
     }
 
     [Fact]
-    public async Task A_non_demo_booking_is_never_touched_even_when_the_only_row_present()
+    public async Task A_non_demo_access_is_never_touched_even_when_the_only_row_present()
     {
         await using var h = Host();
         await h.Seed(db => SeedChain(db, h, "client-real", "practitioner-real", "Mock", "evt-x"));

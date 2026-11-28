@@ -23,7 +23,7 @@ public class ReviewsIntegrationTests
     }
 
     [Fact]
-    public async Task The_unique_index_refuses_a_second_review_of_one_booking_even_when_the_application_check_is_bypassed()
+    public async Task The_unique_index_refuses_a_second_review_of_one_access_even_when_the_application_check_is_bypassed()
     {
         await using var pg = new PostgreSqlBuilder("postgres:17-alpine").Build();
         await pg.StartAsync();
@@ -45,7 +45,7 @@ public class ReviewsIntegrationTests
     }
 
     [Fact]
-    public async Task Parallel_reviews_of_one_practitioner_lose_no_summary_update()
+    public async Task Parallel_reviews_of_one_agent_lose_no_summary_update()
     {
         await using var pg = new PostgreSqlBuilder("postgres:17-alpine").Build();
         await pg.StartAsync();

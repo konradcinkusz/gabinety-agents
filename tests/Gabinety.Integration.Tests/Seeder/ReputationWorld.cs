@@ -23,9 +23,9 @@ public sealed class ReputationHost : WebApplicationFactory<ReputationApp::Progra
 {
     public const string Key = "demo-reputation-internal-key-for-seeder-tests";
     readonly DevIdentityHost _identity;
-    readonly BookingHost _booking;
+    readonly AccessHost _booking;
 
-    public ReputationHost(DevIdentityHost identity, BookingHost access) { _identity = identity; _booking = access; }
+    public ReputationHost(DevIdentityHost identity, AccessHost access) { _identity = identity; _booking = access; }
 
     protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
     {
@@ -40,7 +40,7 @@ public sealed class ReputationHost : WebApplicationFactory<ReputationApp::Progra
             s.RemoveAll<ReputationDb.ReputationDbContext>();
             s.AddDbContext<ReputationDb.ReputationDbContext>(o => o.UseInMemoryDatabase(dbName));
             s.RemoveAll<ReputationClients.IAccessClient>();
-            s.AddSingleton<ReputationClients.IAccessClient>(new ReputationClients.AccessClient(_booking.CreateDefaultClient(), BookingHost.Key, retryDelay: TimeSpan.Zero));
+            s.AddSingleton<ReputationClients.IAccessClient>(new ReputationClients.AccessClient(_booking.CreateDefaultClient(), AccessHost.Key, retryDelay: TimeSpan.Zero));
             s.PostConfigure<RateLimiterOptions>(o => o.GlobalLimiter = null);
             s.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o => o.BackchannelHttpHandler = _identity.Server.CreateHandler());
         });
@@ -88,7 +88,7 @@ public sealed class ReputationSeedHttp(WorldSeedHttp inner, ReputationHost reput
 /// <summary>Identity, Directory, Booking and Reputation in process. The Directory and Booking steps are run by the test; so is the Reputation step.</summary>
 public sealed class ReputationWorld : IAsyncDisposable
 {
-    public BookingWorld Access { get; } = new();
+    public AccessWorld Access { get; } = new();
     public ReputationHost Reputation { get; }
     public ReputationCalls Calls { get; } = new();
     public SeedContext Context { get; private set; } = null!;
@@ -106,18 +106,18 @@ public sealed class ReputationWorld : IAsyncDisposable
 
     /// <summary>The options a run uses: Booking's plus Reputation's url and key.</summary>
     public SeedOptions WithReputation => _options ??= new SeedOptions("http://localhost", DirectoryHost.Key, DirectoryHost.Authority, SeedOptions.DevIdentityPassword)
-        { AccessUrl = "http://localhost", AccessKey = BookingHost.Key, ReputationUrl = "http://localhost", ReputationKey = ReputationHost.Key };
+        { AccessUrl = "http://localhost", AccessKey = AccessHost.Key, ReputationUrl = "http://localhost", ReputationKey = ReputationHost.Key };
 
     public SeedContext NewContext(SeedOptions? options = null) => new(options ?? WithReputation, Http, Log, TimeProvider.System);
 
     /// <summary>The real Directory and Booking steps (Booking with the completion stand-in running by the caller), leaving a context the Reputation step can use.</summary>
-    public async Task SeedDirectoryAndBookingAsync(bool withCompletionJob = true)
+    public async Task SeedDirectoryAndAccessAsync(bool withCompletionJob = true)
     {
         _ = Access.Access.Services;
         _ = Reputation.Services;
         Context = NewContext();
         await new DirectorySeedStep().RunAsync(Context, CancellationToken.None);
-        await BookingWorld.Step(withCompletionJob ? null : TimeSpan.Zero).RunAsync(Context, CancellationToken.None);
+        await AccessWorld.Step(withCompletionJob ? null : TimeSpan.Zero).RunAsync(Context, CancellationToken.None);
     }
 
     public static ReputationSeedStep Step() => new();

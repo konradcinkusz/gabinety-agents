@@ -84,7 +84,7 @@ public class SummaryPushClientTests
     }
 
     [Fact]
-    public async Task An_unknown_practitioner_is_NotFound_after_a_single_call()
+    public async Task An_unknown_agent_is_NotFound_after_a_single_call()
     {
         handler.Answer = _ => new HttpResponseMessage(HttpStatusCode.NotFound);
         Assert.Equal(PushResult.NotFound, await Client().PushAsync(Id, Body, default));

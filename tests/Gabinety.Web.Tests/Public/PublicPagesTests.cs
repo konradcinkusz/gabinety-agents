@@ -158,7 +158,7 @@ public class ProfilePageTests
     }
 
     [Fact]
-    public async Task F16_a_profile_with_no_packages_says_so_and_the_booking_service_is_not_asked()
+    public async Task F16_a_profile_with_no_packages_says_so_and_the_access_service_is_not_asked()
     {
         await using var none = PublicSupport.Host(PublicSupport.DefaultDirectory(PublicSupport.Profile(packages: [])));
         var noOffers = await Get(none);
@@ -396,7 +396,7 @@ public class ListPageFixesTests
 public class SeoEndpointsTests
 {
     [Fact]
-    public async Task The_sitemap_lists_every_approved_practitioner_and_only_the_indexable_categories()
+    public async Task The_sitemap_lists_every_approved_agent_and_only_the_indexable_categories()
     {
         await using var web = PublicSupport.Host();
         var page = await web.NewBrowser().GetAsync("/sitemap.xml");

@@ -77,7 +77,7 @@ public partial class ArchitectureRules
     static readonly string[] SmtpVendor = ["MailKit", "MimeKit", "BouncyCastle"];
 
     [Fact]
-    public void Only_the_Booking_SMTP_adapter_uses_MailKit_and_exposes_none_of_it()
+    public void Only_the_Access_SMTP_adapter_uses_MailKit_and_exposes_none_of_it()
     {
         var offenders = Repo.Projects().Where(p => p.PackageRefs.Any(r => r is "MailKit" or "MimeKit") && p.Name != "Gabinety.Booking").Select(p => p.File).ToList();
         Assert.True(offenders.Count == 0, $"only src/Gabinety.Booking may reference MailKit, but also: {string.Join(", ", offenders)}");

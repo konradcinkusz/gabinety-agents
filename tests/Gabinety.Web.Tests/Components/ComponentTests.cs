@@ -16,7 +16,7 @@ namespace Gabinety.Web.Tests.Rendering;
 public class PresentationalComponentTests : BunitContext
 {
     [Fact]
-    public void A_card_shows_the_practitioner_with_the_hooks_the_journey_uses()
+    public void A_card_shows_the_agent_with_the_hooks_the_journey_uses()
     {
         var cut = Render<AgentCard>(p => p.Add(c => c.Agent, Sample.Card(badges: ["email", "approved"], rating: new RatingDto(4.5, 12), isNew: false)));
         Assert.Equal("practitioner-card", cut.Find("article").GetAttribute("data-testid"));
@@ -33,7 +33,7 @@ public class PresentationalComponentTests : BunitContext
     }
 
     [Fact]
-    public void A_new_practitioner_is_marked_new_and_a_rating_below_the_threshold_is_not_shown()
+    public void A_new_agent_is_marked_new_and_a_rating_below_the_threshold_is_not_shown()
     {
         var cut = Render<AgentCard>(p => p.Add(c => c.Agent, Sample.Card(badges: [], rating: new RatingDto(5.0, 2), isNew: true)));
         Assert.Equal(["Agent AI", "Nowy"], cut.FindAll(".badge").Select(b => b.TextContent));
@@ -171,7 +171,7 @@ public class LayoutTests : BunitContext
     }
 }
 
-public class MyBookingsTests : BunitContext
+public class MyAccessesTests : BunitContext
 {
     readonly FakeBackend _booking = new();
     readonly FakeBackend _me = new();
@@ -181,7 +181,7 @@ public class MyBookingsTests : BunitContext
 
     sealed class Token(string? value) : IAccessTokenSource { public Task<string?> AccessTokenAsync(CancellationToken ct = default) => Task.FromResult(value); }
 
-    public MyBookingsTests()
+    public MyAccessesTests()
     {
         _auth = AddAuthorization();
         _auth.SetAuthorized("demo-client@demo.example");
@@ -202,7 +202,7 @@ public class MyBookingsTests : BunitContext
     }
 
     [Fact]
-    public void It_lists_the_bookings_with_their_hooks_and_loads_the_client_view_by_default()
+    public void It_lists_the_accesses_with_their_hooks_and_loads_the_client_view_by_default()
     {
         var cut = Open();
         Assert.Equal("Moje dostępy", cut.Find("h1").TextContent);
@@ -413,7 +413,7 @@ public class MyBookingsTests : BunitContext
     }
 
     [Fact]
-    public void The_role_tabs_show_only_for_an_account_with_a_practitioner_profile_or_when_the_directory_cannot_say()
+    public void The_role_tabs_show_only_for_an_account_with_a_agent_profile_or_when_the_directory_cannot_say()
     {
         _me.Respond = _ => FakeBackend.Json(new MeDto("demo-client", null, null, false, false));
         var client = Open();

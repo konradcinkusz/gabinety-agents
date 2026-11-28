@@ -91,7 +91,7 @@ public class ReviewsListTests
     }
 
     [Fact]
-    public async Task A_broken_cursor_is_400_and_an_unknown_practitioner_is_an_empty_page()
+    public async Task A_broken_cursor_is_400_and_an_unknown_agent_is_an_empty_page()
     {
         using var h = new ReviewsHost();
         var c = h.ClientFor(null);

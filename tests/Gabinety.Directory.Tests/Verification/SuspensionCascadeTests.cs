@@ -19,23 +19,23 @@ public class SuspensionCascadeTests(InternalFactory f) : IClassFixture<InternalF
     static async Task<string?> Code(HttpResponseMessage r) => (await Vk.Problem(r)).Code;
 
     [Fact]
-    public async Task Suspending_asks_Booking_once_to_cancel_that_practitioners_future_bookings_after_the_status_is_saved()
+    public async Task Suspending_asks_Access_once_to_cancel_that_agents_future_accesses_after_the_status_is_saved()
     {
         var p = await f.Seed(AgentStatus.Approved);
-        AgentStatus? seenByBooking = null;
-        f.Access.AtCall = async id => seenByBooking = id == p.Id ? (await f.Load(p.Id)).Status : null;
+        AgentStatus? seenByAccess = null;
+        f.Access.AtCall = async id => seenByAccess = id == p.Id ? (await f.Load(p.Id)).Status : null;
         var before = f.Access.Calls.Count(c => c == p.Id);
 
         Assert.Equal(HttpStatusCode.NoContent, (await f.As("demo-admin", "Admin").PostAsJsonAsync($"{Admin}/{p.Id}/suspend", new { reason = Reason })).StatusCode);
 
         Assert.Equal(before + 1, f.Access.Calls.Count(c => c == p.Id));
-        Assert.Equal(AgentStatus.Suspended, seenByBooking); // Booking already refuses new bookings when it runs: no gap for a new one
+        Assert.Equal(AgentStatus.Suspended, seenByAccess); // Booking already refuses new bookings when it runs: no gap for a new one
         Assert.Equal(AgentStatus.Suspended, (await f.Load(p.Id)).Status);
         f.Access.AtCall = null;
     }
 
     [Fact]
-    public async Task When_Booking_fails_the_profile_stays_suspended_and_the_answer_says_the_cancellation_must_be_repeated()
+    public async Task When_Access_fails_the_profile_stays_suspended_and_the_answer_says_the_cancellation_must_be_repeated()
     {
         var p = await f.Seed(AgentStatus.Approved);
         f.Access.Down = true;
@@ -54,7 +54,7 @@ public class SuspensionCascadeTests(InternalFactory f) : IClassFixture<InternalF
     [InlineData("approve", AgentStatus.Submitted)]
     [InlineData("reject", AgentStatus.Submitted)]
     [InlineData("reinstate", AgentStatus.Suspended)]
-    public async Task The_other_admin_actions_do_not_touch_bookings(string action, AgentStatus from)
+    public async Task The_other_admin_actions_do_not_touch_accesses(string action, AgentStatus from)
     {
         var p = await f.Seed(from);
         HttpContent? body = action == "reject" ? JsonContent.Create(new { reason = Reason }) : null;
@@ -63,7 +63,7 @@ public class SuspensionCascadeTests(InternalFactory f) : IClassFixture<InternalF
     }
 
     [Fact]
-    public async Task A_refused_or_unknown_suspension_does_not_call_Booking()
+    public async Task A_refused_or_unknown_suspension_does_not_call_Access()
     {
         var draft = await f.Seed(AgentStatus.Draft);
         var c = f.As("demo-admin", "Admin");
@@ -76,7 +76,7 @@ public class SuspensionCascadeTests(InternalFactory f) : IClassFixture<InternalF
     }
 
     [Fact]
-    public async Task Erasure_cancels_the_future_bookings_first_and_only_then_anonymises()
+    public async Task Erasure_cancels_the_future_accesses_first_and_only_then_anonymises()
     {
         var p = await f.Seed(AgentStatus.Approved, x => x.DisplayName = "Demo Jan Kowalski");
         string? nameAtCall = null;
@@ -91,7 +91,7 @@ public class SuspensionCascadeTests(InternalFactory f) : IClassFixture<InternalF
     }
 
     [Fact]
-    public async Task Erasure_is_refused_with_503_and_leaves_the_row_when_Booking_cannot_cancel_and_a_retry_completes_it()
+    public async Task Erasure_is_refused_with_503_and_leaves_the_row_when_Access_cannot_cancel_and_a_retry_completes_it()
     {
         var p = await f.Seed(AgentStatus.Approved, x => x.DisplayName = "Demo Anna Nowak");
         f.Access.Down = true;
@@ -110,7 +110,7 @@ public class SuspensionCascadeTests(InternalFactory f) : IClassFixture<InternalF
     }
 
     [Fact]
-    public async Task Erasing_an_unknown_subject_or_one_that_was_erased_already_does_not_call_Booking()
+    public async Task Erasing_an_unknown_subject_or_one_that_was_erased_already_does_not_call_Access()
     {
         var before = f.Access.Calls.Count;
         Assert.Equal(HttpStatusCode.NoContent, (await f.Internal().DeleteAsync($"/internal/v1/subjects/demo-{Guid.NewGuid():n}")).StatusCode);

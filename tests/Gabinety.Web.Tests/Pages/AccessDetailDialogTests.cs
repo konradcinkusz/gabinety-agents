@@ -5,7 +5,7 @@ using static Gabinety.Web.Tests.Pages.ClientAreaFixture;
 namespace Gabinety.Web.Tests.Pages;
 
 /// <summary>UX-031: the header block of each state, the cancel / dispute / no-show actions as native dialogs (enhance.js upgrades them, the markup alone is a visible block), the rebook link.</summary>
-public class BookingDetailDialogTests
+public class AccessDetailDialogTests
 {
     static readonly string Detail_ = $"/moje/dostepy/{AccessId}";
     static readonly string Client = Detail_ + "?role=client";
@@ -98,7 +98,7 @@ public class BookingDetailDialogTests
     }
 
     [Fact]
-    public async Task A_completed_booking_leads_with_the_review_and_offers_to_book_again()
+    public async Task A_completed_access_leads_with_the_review_and_offers_to_book_again()
     {
         await using var f = await Open(Detail("Completed", review: true));
         var page = await f.Browser.GetAsync(Client);
@@ -111,15 +111,15 @@ public class BookingDetailDialogTests
     }
 
     [Fact]
-    public async Task A_cancelled_booking_states_the_refund_and_offers_to_book_again_but_not_to_a_practitioner()
+    public async Task A_cancelled_access_states_the_refund_and_offers_to_book_again_but_not_to_a_agent()
     {
         await using var f = await Open(Detail("CancelledByClient", payment: "Refunded", refunded: 25000));
         var page = await f.Browser.GetAsync(Client);
         Assert.Equal($"Zwrot za ten dostęp: {Gabinety.Web.Components.Shared.Money.Pln(25000)}.", page.TextOf("[data-testid=booking-head]"));
         Assert.Contains(page.All("a"), a => a.TextContent == "Wykup ponownie");
         Assert.Matches(@"Zwrócono: 250,00", Page.Squash(page.All(".dl dd").Last().TextContent)); // the hook stays in the dd
-        var asPractitioner = await f.Browser.GetAsync(Detail_ + "?role=practitioner");
-        Assert.DoesNotContain(asPractitioner.All("a"), a => a.TextContent == "Wykup ponownie");
+        var asAgent = await f.Browser.GetAsync(Detail_ + "?role=practitioner");
+        Assert.DoesNotContain(asAgent.All("a"), a => a.TextContent == "Wykup ponownie");
     }
 
     [Fact]
@@ -149,7 +149,7 @@ public class BookingDetailDialogTests
     [InlineData("Confirmed", "demo-slug", null)]
     [InlineData("Completed", "", null)]
     [InlineData("Completed", null, null)]
-    public void The_rebook_target_is_the_profile_of_a_finished_booking_only(string status, string? slug, string? expected) =>
+    public void The_rebook_target_is_the_profile_of_a_finished_access_only(string status, string? slug, string? expected) =>
         Assert.Equal(expected, AccessFormat.RebookHref(status, slug));
 
     [Fact]

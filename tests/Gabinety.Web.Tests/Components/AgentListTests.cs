@@ -6,7 +6,7 @@ using Gabinety.Web.Components.Shared;
 namespace Gabinety.Web.Tests.Rendering;
 
 /// <summary>UX-012: the avatar, the practitioner card (whole-card link, Nowy, one verification badge, categories, price) and the list helpers (plural count, removable filter chips).</summary>
-public class PractitionerListTests : BunitContext
+public class AgentListTests : BunitContext
 {
     static readonly IReadOnlyDictionary<string, string> Names = new Dictionary<string, string>
     {
@@ -56,7 +56,7 @@ public class PractitionerListTests : BunitContext
     [Theory]
     [InlineData(true, 5.0, 2)] // new, with a rating that would otherwise show
     [InlineData(false, null, 0)] // not new but without any rating yet
-    public void A_practitioner_without_a_rating_is_marked_with_the_exact_Nowy_badge(bool isNew, double? average, int count)
+    public void A_agent_without_a_rating_is_marked_with_the_exact_Nowy_badge(bool isNew, double? average, int count)
     {
         var rating = average is { } a ? new RatingDto(a, count) : null;
         var cut = Render<AgentCard>(p => p.Add(c => c.Agent, Card(rating: rating, isNew: isNew)));
@@ -65,7 +65,7 @@ public class PractitionerListTests : BunitContext
     }
 
     [Fact]
-    public void A_verified_practitioner_has_one_success_badge_and_no_other_check()
+    public void A_verified_agent_has_one_success_badge_and_no_other_check()
     {
         var cut = Render<AgentCard>(p => p.Add(c => c.Agent, Card(badges: ["email", "github", "nip", "approved"], rating: new RatingDto(4.8, 25))));
         var badges = cut.FindAll(".badge");

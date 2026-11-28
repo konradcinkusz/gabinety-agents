@@ -40,7 +40,7 @@ public class NotificationFeatureTests
         const string address = "demo-secret-person@demo.invalid";
         using var t = new NotificationHost(services: s => s.AddSingleton<IEmailSender, LogEmailSender>()); // the real default, over the test resolver
         t.Contacts.Addresses["demo-client"] = address;
-        var access = await t.AddBooking();
+        var access = await t.AddAccess();
         var n = t.Add(access.Id, NotificationKind.BookingConfirmed, "demo-client");
         var mail = NotificationTemplates.Render(NotificationKind.BookingConfirmed, "http://localhost:3000", access.Id, access.StartUtc);
 
@@ -66,7 +66,7 @@ public class NotificationFeatureTests
         using var t = new NotificationHost();
         t.Sender.AlwaysFail = true;
         t.Contacts.Addresses["demo-client"] = address;
-        var access = await t.AddBooking();
+        var access = await t.AddAccess();
         t.Add(access.Id, NotificationKind.Cancelled, "demo-client");
         await t.Run();
         var everything = string.Join('\n', t.Host.Logs.Lines);

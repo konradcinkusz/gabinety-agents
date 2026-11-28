@@ -80,7 +80,7 @@ public class ScaleSeedStepTests : IAsyncLifetime
     public Task DisposeAsync() { _directory.Dispose(); _identity.Dispose(); return Task.CompletedTask; }
 
     [Fact]
-    public async Task Factor_3_makes_30_practitioners_and_a_second_run_writes_nothing_new()
+    public async Task Factor_3_makes_30_agents_and_a_second_run_writes_nothing_new()
     {
         var options = new SeedOptions("http://localhost", DirectoryHost.Key, DirectoryHost.Authority, SeedOptions.DevIdentityPassword) { Factor = 3 };
         var http = new TestSeedHttp(_identity, _directory);

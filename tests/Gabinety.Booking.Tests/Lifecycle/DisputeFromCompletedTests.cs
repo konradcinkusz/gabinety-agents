@@ -29,7 +29,7 @@ public class DisputeFromCompletedTests : IDisposable
     }
 
     [Fact]
-    public async Task A_dispute_at_start_plus_60_h_on_a_Completed_booking_succeeds_and_reopens_the_money()
+    public async Task A_dispute_at_start_plus_60_h_on_a_Completed_access_succeeds_and_reopens_the_money()
     {
         var id = await Completed();
         h.Clock.Advance(TimeSpan.FromHours(11)); // start + 60 h
@@ -75,7 +75,7 @@ public class DisputeFromCompletedTests : IDisposable
     }
 
     [Fact]
-    public async Task A_full_refund_after_such_a_dispute_leaves_no_fee_row_so_the_pairs_next_booking_still_earns_the_fee()
+    public async Task A_full_refund_after_such_a_dispute_leaves_no_fee_row_so_the_pairs_next_access_still_earns_the_fee()
     {
         var id = await Completed();
         h.Clock.Advance(TimeSpan.FromHours(11));
@@ -87,7 +87,7 @@ public class DisputeFromCompletedTests : IDisposable
     }
 
     [Fact]
-    public async Task Only_the_client_may_dispute_a_Completed_booking()
+    public async Task Only_the_client_may_dispute_a_Completed_access()
     {
         var id = await Completed();
         Assert.Equal(HttpStatusCode.NotFound, (await DisputeApiTests.Dispute(h, id, "demo-stranger", Body)).StatusCode);

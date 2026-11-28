@@ -149,7 +149,7 @@ public class ReviewsTests
     [Theory]
     [InlineData("already_reviewed", "Ten dostęp ma już opinię")]
     [InlineData("not_reviewable", "Tego dostępu nie można ocenić")]
-    public async Task A_booking_that_has_a_review_or_cannot_have_one_gets_a_card_with_the_way_back(string code, string heading)
+    public async Task A_access_that_has_a_review_or_cannot_have_one_gets_a_card_with_the_way_back(string code, string heading)
     {
         await using var f = await Open(_ => FakeBackend.Problem(HttpStatusCode.Conflict, code));
         var page = await f.Post(Form, "review", ("Model.Rating", "5"), ("Model.Text", Text));

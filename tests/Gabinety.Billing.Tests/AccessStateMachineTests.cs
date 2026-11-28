@@ -4,7 +4,7 @@ using T = Gabinety.Billing.AccessTrigger;
 
 namespace Gabinety.Billing.Tests;
 
-public class BookingStateMachineTests
+public class AccessStateMachineTests
 {
     private static readonly DateTimeOffset Start = new(2030, 1, 10, 12, 0, 0, TimeSpan.Zero);
     private static readonly DateTimeOffset Early = Start.AddHours(-24);

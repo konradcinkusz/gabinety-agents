@@ -16,7 +16,7 @@ namespace Gabinety.Booking.Tests;
 /// goes through the practitioner-cancel transition (CONTRACTS 8.1, 9.2): full refund, <c>CancelledByPractitioner</c>, reason <c>practitioner_suspended</c>,
 /// a <c>Cancelled</c> notification for the client. Holds expire. Idempotent.
 /// </summary>
-public class CancelFutureBookingsApiTests
+public class CancelFutureAccessesApiTests
 {
     const string Key = "k-internal-cancel-future-DO-NOT-LEAK";
     static readonly TimeSpan Day = TimeSpan.FromDays(1);
@@ -61,7 +61,7 @@ public class CancelFutureBookingsApiTests
     }
 
     [Fact]
-    public async Task A_future_confirmed_booking_is_cancelled_by_the_practitioner_with_a_full_refund_and_no_client_penalty()
+    public async Task A_future_confirmed_access_is_cancelled_by_the_agent_with_a_full_refund_and_no_client_penalty()
     {
         var provider = new RecordingProvider();
         await using var h = Host(provider);
@@ -85,7 +85,7 @@ public class CancelFutureBookingsApiTests
     }
 
     [Fact]
-    public async Task Even_a_booking_inside_the_24h_window_is_refunded_in_full()
+    public async Task Even_a_access_inside_the_24h_window_is_refunded_in_full()
     {
         await using var h = Host(new RecordingProvider());
         var id = await Life.Seed(h, AccessStatus.Confirmed, TimeSpan.FromHours(3)); // a client cancel here would be late and refund nothing
@@ -109,7 +109,7 @@ public class CancelFutureBookingsApiTests
     }
 
     [Fact]
-    public async Task Only_future_confirmed_bookings_of_that_practitioner_are_touched_and_holds_expire()
+    public async Task Only_future_confirmed_accesses_of_that_agent_are_touched_and_holds_expire()
     {
         await using var h = Host(new RecordingProvider());
         var future = await Life.Seed(h, AccessStatus.Confirmed, 3 * Day);
@@ -149,7 +149,7 @@ public class CancelFutureBookingsApiTests
     }
 
     [Fact]
-    public async Task An_unknown_practitioner_is_a_no_op_not_an_error()
+    public async Task An_unknown_agent_is_a_no_op_not_an_error()
     {
         await using var h = Host(new RecordingProvider());
         var r = await Call(h, Guid.NewGuid());
@@ -158,7 +158,7 @@ public class CancelFutureBookingsApiTests
     }
 
     [Fact]
-    public async Task A_provider_that_is_down_leaves_the_booking_confirmed_answers_503_and_the_next_call_finishes_it()
+    public async Task A_provider_that_is_down_leaves_the_access_confirmed_answers_503_and_the_next_call_finishes_it()
     {
         var provider = new FlakyProvider(new RecordingProvider()) { Down = true };
         await using var h = Host(provider);

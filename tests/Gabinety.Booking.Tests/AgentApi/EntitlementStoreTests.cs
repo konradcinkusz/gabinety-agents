@@ -43,7 +43,7 @@ public class EntitlementStoreTests
     }
 
     [Fact]
-    public async Task Find_can_ask_for_one_offering()
+    public async Task Find_can_ask_for_one_package()
     {
         await using var h = new CreateHost();
         var wanted = Guid.NewGuid();

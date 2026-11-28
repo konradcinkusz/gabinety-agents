@@ -116,7 +116,7 @@ public class ReviewabilityApiTests
     }
 
     [Fact]
-    public async Task Unknown_booking_is_404_not_found()
+    public async Task Unknown_access_is_404_not_found()
     {
         using var h = NewHost();
         var r = await Get(h, Guid.NewGuid());

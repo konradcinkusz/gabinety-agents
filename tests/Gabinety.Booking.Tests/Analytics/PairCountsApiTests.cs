@@ -58,7 +58,7 @@ public class PairCountsApiTests
         page.GetProperty("items").EnumerateArray().Where(i => i.GetProperty("clientUserId").GetString()!.StartsWith(clientPrefix, StringComparison.Ordinal)).ToList();
 
     [Fact]
-    public async Task Lists_a_pair_with_three_bookings_and_not_one_with_two()
+    public async Task Lists_a_pair_with_three_accesses_and_not_one_with_two()
     {
         using var h = NewHost();
         var p = Guid.NewGuid();
@@ -72,7 +72,7 @@ public class PairCountsApiTests
     }
 
     [Fact]
-    public async Task The_same_client_with_two_practitioners_is_two_pairs_counted_separately()
+    public async Task The_same_client_with_two_agents_is_two_pairs_counted_separately()
     {
         using var h = NewHost();
         var p1 = Guid.NewGuid(); var p2 = Guid.NewGuid();
@@ -88,7 +88,7 @@ public class PairCountsApiTests
     [InlineData(PaymentStatus.Created)]
     [InlineData(PaymentStatus.Failed)]
     [InlineData(PaymentStatus.Refunded)]
-    public async Task A_booking_without_a_kept_payment_does_not_count(PaymentStatus? payment)
+    public async Task A_access_without_a_kept_payment_does_not_count(PaymentStatus? payment)
     {
         using var h = NewHost();
         var p = Guid.NewGuid();
@@ -104,7 +104,7 @@ public class PairCountsApiTests
     [InlineData(PaymentStatus.Succeeded, AccessStatus.LateCancelledByClient)]
     [InlineData(PaymentStatus.PartiallyRefunded, AccessStatus.Resolved)]
     [InlineData(PaymentStatus.PartiallyRefunded, AccessStatus.Completed)]
-    public async Task A_booking_with_a_succeeded_or_partially_refunded_payment_counts_whatever_its_status(PaymentStatus payment, AccessStatus status)
+    public async Task A_access_with_a_succeeded_or_partially_refunded_payment_counts_whatever_its_status(PaymentStatus payment, AccessStatus status)
     {
         using var h = NewHost();
         var p = Guid.NewGuid();
@@ -114,7 +114,7 @@ public class PairCountsApiTests
     }
 
     [Fact]
-    public async Task Refunded_bookings_are_subtracted_from_the_count_not_the_whole_pair()
+    public async Task Refunded_accesses_are_subtracted_from_the_count_not_the_whole_pair()
     {
         using var h = NewHost();
         var p = Guid.NewGuid();

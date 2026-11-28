@@ -53,7 +53,7 @@ public class DirectoryApiTests
     }
 
     [Fact]
-    public async Task Booking_answering_503_because_the_Directory_was_rate_limited_is_waited_out_too()
+    public async Task Access_answering_503_because_the_Directory_was_rate_limited_is_waited_out_too()
     {
         // Booking asks the Directory from the same loopback address as the seeder, so a busy seeder can make Booking's own lookup a 429, which Booking reports as 503.
         var down = () => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable) { Content = new StringContent("""{"code":"dependency_unavailable"}""", System.Text.Encoding.UTF8, "application/json") };

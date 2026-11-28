@@ -121,7 +121,7 @@ public class FlashKeyTests
     public void Text_from_the_query_string_is_never_rendered(string uri) => Assert.Null(FlashKey.Resolve(uri));
 }
 
-public class BookingFormatTests
+public class AccessFormatTests
 {
     [Fact]
     public void Times_are_shown_in_Warsaw_in_winter_and_in_summer()

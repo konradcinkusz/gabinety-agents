@@ -37,7 +37,7 @@ public class AgentApiProxyTests
     }
 
     [Fact]
-    public async Task The_method_path_query_body_and_the_four_headers_reach_Booking_and_the_answer_comes_back_as_it_is()
+    public async Task The_method_path_query_body_and_the_four_headers_reach_Access_and_the_answer_comes_back_as_it_is()
     {
         var (web, seen) = Host(r => new HttpResponseMessage(HttpStatusCode.Accepted)
         {
@@ -65,7 +65,7 @@ public class AgentApiProxyTests
     }
 
     [Fact]
-    public async Task The_session_cookie_and_every_other_cookie_never_reach_Booking_and_the_answers_cookie_never_reaches_the_client()
+    public async Task The_session_cookie_and_every_other_cookie_never_reach_Access_and_the_answers_cookie_never_reaches_the_client()
     {
         var (web, seen) = Host(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}"), Headers = { { "Set-Cookie", "provider=1; Path=/" } } });
         await using var _ = web;
@@ -153,7 +153,7 @@ public class AgentApiProxyTests
     }
 
     [Fact]
-    public async Task The_visitor_address_goes_to_Booking_with_the_proxy_key_and_the_visitors_own_values_are_never_copied()
+    public async Task The_visitor_address_goes_to_Access_with_the_proxy_key_and_the_visitors_own_values_are_never_copied()
     {
         var (web, _) = Host();
         await using var _ = web;
@@ -165,7 +165,7 @@ public class AgentApiProxyTests
     }
 
     [Fact]
-    public async Task When_Booking_does_not_answer_the_client_gets_502_in_the_OpenAI_shape_without_the_exception_text()
+    public async Task When_Access_does_not_answer_the_client_gets_502_in_the_OpenAI_shape_without_the_exception_text()
     {
         var (web, _) = Host(FakeBackend.Throw(new HttpRequestException("connect ECONNREFUSED 10.0.0.7:8080 SECRET-HOST")));
         await using var _ = web;

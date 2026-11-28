@@ -15,7 +15,7 @@ public class InternalErasureTests(InternalFactory f) : IClassFixture<InternalFac
             x.Nip = "1234563218"; x.NipValid = true; x.PortfolioUrl = "https://portfolio.example.test/jan"; x.MeetingUrlDefault = "https://meet.example.test/jan";
             x.StatusReason = "demo reason"; x.GithubChallengeCode = "demo-code"; x.GithubChallengeLogin = "demo-gh"; x.GithubChallengeExpiresAt = DateTimeOffset.UtcNow;
         });
-        var o = await f.SeedOffering(p, meetingUrl: "https://meet.example.test/own");
+        var o = await f.SeedPackage(p, meetingUrl: "https://meet.example.test/own");
         var oldUser = p.UserId; var oldSlug = p.Slug;
 
         var r = await f.Internal().DeleteAsync($"/internal/v1/subjects/{oldUser}");
@@ -35,7 +35,7 @@ public class InternalErasureTests(InternalFactory f) : IClassFixture<InternalFac
         Assert.Null(a.StatusReason);
         Assert.Null(a.GithubChallengeCode); Assert.Null(a.GithubChallengeLogin); Assert.Null(a.GithubChallengeExpiresAt);
 
-        var packages = await f.OfferingsOf(p.Id);
+        var packages = await f.PackagesOf(p.Id);
         var off = Assert.Single(packages);
         Assert.False(off.IsActive);
         Assert.Equal("", off.Title); Assert.Equal("", off.Description); Assert.Null(off.MeetingUrl);
@@ -71,7 +71,7 @@ public class InternalErasureTests(InternalFactory f) : IClassFixture<InternalFac
     }
 
     [Fact]
-    public async Task An_erased_practitioner_no_longer_appears_in_the_public_listing()
+    public async Task An_erased_agent_no_longer_appears_in_the_public_listing()
     {
         var p = await f.Seed(AgentStatus.Approved);
         await f.Internal().DeleteAsync($"/internal/v1/subjects/{p.UserId}");

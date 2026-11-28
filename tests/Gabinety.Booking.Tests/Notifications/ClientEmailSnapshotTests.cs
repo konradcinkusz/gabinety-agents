@@ -29,7 +29,7 @@ public class ClientEmailSnapshotTests
     }
 
     [Fact]
-    public async Task Creating_a_booking_copies_the_email_claim_of_the_token_into_the_row()
+    public async Task Creating_a_access_copies_the_email_claim_of_the_token_into_the_row()
     {
         using var h = await Host();
         var (id, _) = await Create(h);
@@ -41,7 +41,7 @@ public class ClientEmailSnapshotTests
     [InlineData("not-an-address")]
     [InlineData("a@b.invalid,c@d.invalid")]
     [InlineData("Jan <jan@demo.invalid>")]
-    public async Task A_token_without_a_usable_address_still_creates_the_booking_with_no_snapshot(string claim)
+    public async Task A_token_without_a_usable_address_still_creates_the_access_with_no_snapshot(string claim)
     {
         using var h = await Host(claim);
         var (id, _) = await Create(h);
@@ -80,11 +80,11 @@ public class ClientEmailSnapshotTests
     }
 
     [Fact]
-    public async Task Erasing_the_client_nulls_the_snapshot_and_erasing_the_practitioner_leaves_the_clients()
+    public async Task Erasing_the_client_nulls_the_snapshot_and_erasing_the_agent_leaves_the_clients()
     {
         using var h = ErasureApiTests.NewHost();
         var client = ErasureApiTests.NewUser("c"); var agent = ErasureApiTests.NewUser("p");
-        var id = await ErasureApiTests.SeedBooking(h, client, agent);
+        var id = await ErasureApiTests.SeedAccess(h, client, agent);
         await h.Seed(db => db.Accesses.Single(b => b.Id == id).ClientEmail = Address);
 
         Assert.Equal(HttpStatusCode.NoContent, (await ErasureApiTests.Erase(h, agent)).StatusCode);

@@ -9,7 +9,7 @@ public class ApiKeySeedStepTests
     [Fact]
     public async Task The_key_is_created_for_demo_client_the_log_names_only_its_prefix_and_a_second_run_creates_nothing()
     {
-        await using var w = new BookingWorld();
+        await using var w = new AccessWorld();
         await w.SeedDirectoryAsync();
         var step = new ApiKeySeedStep();
 
@@ -35,9 +35,9 @@ public class ApiKeySeedStepTests
     }
 
     [Fact]
-    public async Task Without_a_Booking_endpoint_the_step_says_so_and_does_nothing()
+    public async Task Without_a_Access_endpoint_the_step_says_so_and_does_nothing()
     {
-        await using var w = new BookingWorld();
+        await using var w = new AccessWorld();
         var context = new SeedContext(new SeedOptions("http://localhost", DirectoryHost.Key, DirectoryHost.Authority, SeedOptions.DevIdentityPassword), w.Http, w.Log, TimeProvider.System);
 
         await new ApiKeySeedStep().RunAsync(context, CancellationToken.None);
@@ -47,7 +47,7 @@ public class ApiKeySeedStepTests
     }
 
     [Fact]
-    public void The_step_runs_after_Booking_and_before_Reputation()
+    public void The_step_runs_after_Access_and_before_Reputation()
     {
         var names = SeedSteps.All.Select(s => s.Name).ToList();
         Assert.True(names.IndexOf("booking") < names.IndexOf("apikey") && names.IndexOf("apikey") < names.IndexOf("reputation"));

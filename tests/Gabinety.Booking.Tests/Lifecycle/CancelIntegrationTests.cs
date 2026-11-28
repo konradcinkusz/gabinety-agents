@@ -36,7 +36,7 @@ public class CancelIntegrationTests : IAsyncLifetime
     AccessDbContext Db() => new(new DbContextOptionsBuilder<AccessDbContext>().UseNpgsql(cs).Options);
 
     [Fact]
-    public async Task Two_concurrent_cancels_of_one_booking_give_one_200_one_409_and_one_refund_row()
+    public async Task Two_concurrent_cancels_of_one_access_give_one_200_one_409_and_one_refund_row()
     {
         for (var round = 0; round < 10; round++)
         {

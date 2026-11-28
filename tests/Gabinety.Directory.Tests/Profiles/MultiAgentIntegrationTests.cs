@@ -16,7 +16,7 @@ namespace Gabinety.Directory.Tests.Profiles;
 [Trait("tier", "integration")]
 public class MultiAgentIntegrationTests
 {
-    sealed class PgFactory(string cs) : OfferingFactory
+    sealed class PgFactory(string cs) : PackageFactory
     {
         protected override string Provider => "PostgreSQL";
         protected override string? ConnectionString => cs;
@@ -66,7 +66,7 @@ public class MultiAgentIntegrationTests
     }
 
     [Fact]
-    public async Task Offerings_on_a_chosen_agent_lock_and_change_only_that_agents_row()
+    public async Task Packages_on_a_chosen_agent_lock_and_change_only_that_agents_row()
     {
         var (pg, f) = await Start();
         await using var _ = pg; using var __ = f;

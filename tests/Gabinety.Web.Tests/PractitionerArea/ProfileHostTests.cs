@@ -9,7 +9,7 @@ public class ProfileHostTests
     [Fact]
     public async Task The_form_has_the_labels_the_journey_finds_each_exactly_once_and_the_counters_inside_the_fields()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta/profil");
         Assert.Equal("Profil", page.TextOf("h1"));
@@ -28,7 +28,7 @@ public class ProfileHostTests
     [Fact]
     public async Task The_nip_field_takes_digits_and_exactly_one_label_on_the_page_contains_opis()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta/profil");
         var nip = page.One("#nip")!;
@@ -40,7 +40,7 @@ public class ProfileHostTests
     [Fact]
     public async Task The_preview_beside_the_form_shows_the_saved_name_headline_and_first_lines_of_the_bio()
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w =>
+        var (web, browser, world) = await AgentBrowsers.SignedIn(w =>
         {
             w.HaveProfile();
             w.Profile = w.Profile! with { Headline = "Zapisany nagłówek", Bio = "Pierwsza linia.\nDruga linia.\nTrzecia linia.\nCzwarta linia." };
@@ -61,7 +61,7 @@ public class ProfileHostTests
     [Fact]
     public async Task Saving_sends_the_trimmed_fields_omits_empty_optional_ones_and_redirects_with_the_flash()
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
+        var (web, browser, world) = await AgentBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
         var response = await browser.Submit("/panel-agenta/profil", "profile", [new("headline", "  Testy end to end dla zespołów  "), new("bio", Bio), new("portfolioUrl", "https://demo.example.com/"), new("meetingUrlDefault", ""), new("nip", "5260250274")]);
         Assert.Equal("/panel-agenta/profil?flash=saved", response.Location);
@@ -80,7 +80,7 @@ public class ProfileHostTests
     [Fact]
     public async Task Every_error_is_shown_at_once_in_a_summary_with_links_and_under_each_field_and_the_typed_values_stay()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
         var response = await browser.Submit("/panel-agenta/profil", "profile", [new("displayName", "D"), new("headline", "krótki"), new("nip", "1234567890")]);
         Assert.Equal(HttpStatusCode.OK, response.Status);
@@ -102,7 +102,7 @@ public class ProfileHostTests
     [Fact]
     public async Task A_contact_detail_is_reported_on_the_field_that_has_it_and_nowhere_else()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
         var response = await browser.Submit("/panel-agenta/profil", "profile", [new("headline", "Testy end to end dla zespołów"), new("bio", "Napisz do mnie: jan@example.com")]);
         Assert.Equal(HttpStatusCode.OK, response.Status);
@@ -114,7 +114,7 @@ public class ProfileHostTests
     [Fact]
     public async Task An_account_with_no_profile_is_sent_to_the_dashboard_that_onboards_it()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn();
+        var (web, browser, _) = await AgentBrowsers.SignedIn();
         await using var _ = web;
         foreach (var path in new[] { "/panel-agenta/profil", "/panel-agenta/oferty" })
         {
@@ -135,7 +135,7 @@ public class ProfileHostTests
             Assert.Equal(HttpStatusCode.Found, page.Status);
             Assert.StartsWith("/logowanie?redirect=", page.Location);
         }
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.DirectoryDown = true; });
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => { w.HaveProfile(); w.DirectoryDown = true; });
         await using var _ = web;
         var down = await browser.GetAsync("/panel-agenta/profil");
         Assert.Equal(HttpStatusCode.ServiceUnavailable, down.Status);
@@ -145,7 +145,7 @@ public class ProfileHostTests
     [Fact]
     public async Task The_pages_of_the_area_carry_the_section_tabs_with_the_current_one_marked_and_are_not_for_crawlers()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta/profil");
         var nav = page.One("nav.tabs")!;

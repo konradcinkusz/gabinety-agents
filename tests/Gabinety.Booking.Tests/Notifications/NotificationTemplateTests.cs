@@ -48,7 +48,7 @@ public class NotificationTemplateTests
     public async Task A_trailing_slash_of_Site_BaseUrl_is_trimmed_in_every_link_the_dispatcher_sends()
     {
         using var t = new NotificationHost(setup: h => h.Settings["Site:BaseUrl"] = "https://site.demo.invalid/");
-        var access = await t.AddBooking();
+        var access = await t.AddAccess();
         foreach (var kind in Enum.GetValues<NotificationKind>()) t.Add(access.Id, kind, "demo-client");
         Assert.Equal(Enum.GetValues<NotificationKind>().Length, await t.Run());
         foreach (var m in t.Sender.Sent)
@@ -60,11 +60,11 @@ public class NotificationTemplateTests
     }
 
     [Fact]
-    public async Task No_template_contains_the_brief_or_any_other_free_text_of_the_booking()
+    public async Task No_template_contains_the_brief_or_any_other_free_text_of_the_access()
     {
         const string marker = "MARKER-BRIEF-7f3a91";
         using var t = new NotificationHost();
-        var access = await t.AddBooking(edit: b =>
+        var access = await t.AddAccess(edit: b =>
         {
             b.BriefText = marker + " moje dane osobowe";
             b.PackageTitle = marker + "-title";

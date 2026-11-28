@@ -140,7 +140,7 @@ public class AdminReviewsAndPairsTests
 
     // ---- suspicious pairs
     [Fact]
-    public async Task Suspicious_pairs_are_a_table_with_a_named_practitioner_and_a_short_client_reference()
+    public async Task Suspicious_pairs_are_a_table_with_a_named_agent_and_a_short_client_reference()
     {
         await using var host = await AdminHost.StartAsync();
         host.Web.Reputation.Respond = _ => AdminHost.Paged("NEXT_cursor-1", new SuspiciousPairDto("pair-1", "demo-client-9", AgentId, 4, 4));

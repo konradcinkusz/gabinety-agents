@@ -72,7 +72,7 @@ sealed class NotificationHost : IDisposable
         return n;
     }
 
-    public Task<AccessEntity> AddBooking(Guid? id = null, Action<AccessEntity>? edit = null)
+    public Task<AccessEntity> AddAccess(Guid? id = null, Action<AccessEntity>? edit = null)
     {
         var b = new AccessEntity
         {

@@ -6,13 +6,13 @@ using static Gabinety.Web.Tests.Pages.ClientAreaFixture;
 namespace Gabinety.Web.Tests.Pages;
 
 /// <summary>The booking form against the real host: routes, redirects, antiforgery, the request the Booking service receives, and what the visitor reads when it refuses (journeys J3 and J4 read these hooks).</summary>
-public class BookingFormTests
+public class AccessFormTests
 {
     const string Brief = "Potrzebuję przeglądu architektury prostego prototypu, dane syntetyczne.";
-    static readonly Guid NewBooking = Guid.Parse("018f0000-0000-7000-8000-0000000000c1");
+    static readonly Guid NewAccess = Guid.Parse("018f0000-0000-7000-8000-0000000000c1");
 
     static HttpResponseMessage Created(string url = "/checkout/mock/018f0000-0000-7000-8000-0000000000c1") =>
-        FakeBackend.Json(new CreateAccessResponseDto(NewBooking, "PendingPayment", DateTimeOffset.UtcNow.AddMinutes(10), url), HttpStatusCode.Created);
+        FakeBackend.Json(new CreateAccessResponseDto(NewAccess, "PendingPayment", DateTimeOffset.UtcNow.AddMinutes(10), url), HttpStatusCode.Created);
 
     static async Task<ClientAreaFixture> Open(Func<HttpRequestMessage, HttpResponseMessage>? access = null, Func<HttpRequestMessage, HttpResponseMessage>? assistant = null)
     {
@@ -99,7 +99,7 @@ public class BookingFormTests
     }
 
     [Fact]
-    public async Task An_unknown_profile_and_an_offering_that_is_not_in_it_are_a_404()
+    public async Task An_unknown_profile_and_an_package_that_is_not_in_it_are_a_404()
     {
         await using var f = await Open();
         f.Web.Directory.Respond = r => r.RequestUri!.AbsolutePath.EndsWith("demo-anna-demowska") ? FakeBackend.Json(Profile()) : FakeBackend.Problem(HttpStatusCode.NotFound, "not_found");
@@ -156,12 +156,12 @@ public class BookingFormTests
     // ---- paying
 
     [Fact]
-    public async Task Pay_sends_one_request_with_a_key_no_start_and_the_trimmed_brief_then_redirects_to_the_checkout_of_the_booking()
+    public async Task Pay_sends_one_request_with_a_key_no_start_and_the_trimmed_brief_then_redirects_to_the_checkout_of_the_access()
     {
         await using var f = await Open();
         var page = await f.Post(AccessUrl, "booking", Intent("pay"), ("Model.Brief", $"  {Brief}  "));
         Assert.Equal(HttpStatusCode.Found, page.Status);
-        Assert.Equal($"/checkout/mock/{NewBooking}", page.Location);
+        Assert.Equal($"/checkout/mock/{NewAccess}", page.Location);
         var request = Assert.Single(f.Web.Access.Requests);
         Assert.Equal(HttpMethod.Post, request.Method);
         Assert.Equal("/api/v1/bookings", request.PathAndQuery);
@@ -338,7 +338,7 @@ public class BookingFormTests
     }
 
     [Fact]
-    public async Task Applying_the_proposal_appends_the_edited_text_and_the_booking_is_then_ai_assisted_with_the_problem_slug()
+    public async Task Applying_the_proposal_appends_the_edited_text_and_the_access_is_then_ai_assisted_with_the_problem_slug()
     {
         await using var f = await Open(assistant: _ => Suggestion());
         var applied = await f.Post(AccessUrl, "booking", Intent("apply"), ("Model.Brief", Brief), ("Model.Proposal", "  Moja poprawiona wersja propozycji.  "), ("Model.SuggestedSlug", "audyt-kodu"));

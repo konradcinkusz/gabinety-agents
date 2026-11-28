@@ -10,7 +10,7 @@ public class AdminDisputesTests
     static readonly Guid AccessId = Guid.Parse("0b9e1d2c-7a5f-4c3e-9b1a-2d4e6f8a0b1c");
     const string Open = "/admin/spory?status=open";
 
-    static async Task<(AdminHost Host, AdminDisputeDto Dispute)> HostWithDisputeAsync(long price = 18000, bool bookingReadable = true, string practitionerName = "")
+    static async Task<(AdminHost Host, AdminDisputeDto Dispute)> HostWithDisputeAsync(long price = 18000, bool accessReadable = true, string agentName = "")
     {
         var host = await AdminHost.StartAsync();
         var dispute = AdminHost.Dispute(AccessId);
@@ -18,7 +18,7 @@ public class AdminDisputesTests
         host.Web.Access.Respond = r => (r.Method.Method, r.RequestUri!.AbsolutePath) switch
         {
             ("GET", "/api/v1/admin/disputes") => AdminHost.Paged(dispute),
-            ("GET", var p) when p == $"/api/v1/bookings/{AccessId}" => bookingReadable ? FakeBackend.Json(AdminHost.BookingOf(AccessId, price, practitionerName: practitionerName, agentId: agentId)) : FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable"),
+            ("GET", var p) when p == $"/api/v1/bookings/{AccessId}" => accessReadable ? FakeBackend.Json(AdminHost.AccessOf(AccessId, price, agentName: agentName, agentId: agentId)) : FakeBackend.Problem(HttpStatusCode.ServiceUnavailable, "dependency_unavailable"),
             ("POST", var p) when p == $"/api/v1/admin/bookings/{AccessId}/resolve" => AdminHost.NoContent(),
             _ => new HttpResponseMessage(HttpStatusCode.NotFound),
         };
@@ -27,9 +27,9 @@ public class AdminDisputesTests
     }
 
     [Fact]
-    public async Task A_dispute_card_shows_what_the_administrator_needs_to_decide_and_the_booking_id_as_text_the_J6_hook()
+    public async Task A_dispute_card_shows_what_the_administrator_needs_to_decide_and_the_access_id_as_text_the_J6_hook()
     {
-        var (host, _) = await HostWithDisputeAsync(practitionerName: "");
+        var (host, _) = await HostWithDisputeAsync(agentName: "");
         await using var _h = host;
         var page = await host.Browser.GetAsync(Open);
 
@@ -56,9 +56,9 @@ public class AdminDisputesTests
     }
 
     [Fact]
-    public async Task A_booking_that_cannot_be_read_leaves_the_card_without_the_amount_and_says_so()
+    public async Task A_access_that_cannot_be_read_leaves_the_card_without_the_amount_and_says_so()
     {
-        var (host, _) = await HostWithDisputeAsync(bookingReadable: false);
+        var (host, _) = await HostWithDisputeAsync(accessReadable: false);
         await using var _h = host;
         var card = Assert.Single((await host.Browser.GetAsync(Open)).All("main ul[aria-label] > li"));
         Assert.Contains(PlAdmin.Disputes.AccessUnreadable, card.TextContent);
@@ -225,7 +225,7 @@ public class AdminDisputesTests
     {
         await using var host = await AdminHost.StartAsync();
         var done = AdminHost.Dispute(AccessId) with { ResolvedAt = new DateTimeOffset(2026, 11, 25, 9, 30, 0, TimeSpan.Zero), Resolution = "refund_partial", Note = "Częściowy zwrot po sprawdzeniu." };
-        host.Web.Access.Respond = r => r.RequestUri!.AbsolutePath == "/api/v1/admin/disputes" ? AdminHost.Paged(done) : FakeBackend.Json(AdminHost.BookingOf(AccessId, payment: "PartiallyRefunded", refunded: 10000));
+        host.Web.Access.Respond = r => r.RequestUri!.AbsolutePath == "/api/v1/admin/disputes" ? AdminHost.Paged(done) : FakeBackend.Json(AdminHost.AccessOf(AccessId, payment: "PartiallyRefunded", refunded: 10000));
         host.Web.Directory.Respond = _ => new HttpResponseMessage(HttpStatusCode.NotFound);
         var page = await host.Browser.GetAsync("/admin/spory?status=resolved");
         var text = Page.Squash(page.TextOf("main ul[aria-label] > li")).Replace(' ', ' ');
@@ -269,7 +269,7 @@ public class AdminDisputesTests
     }
 
     [Fact]
-    public async Task At_most_five_booking_reads_run_at_once_for_a_page_of_cards()
+    public async Task At_most_five_access_reads_run_at_once_for_a_page_of_cards()
     {
         await using var host = await AdminHost.StartAsync();
         var disputes = Enumerable.Range(0, 12).Select(_ => AdminHost.Dispute()).ToArray();
@@ -281,7 +281,7 @@ public class AdminDisputesTests
             int seen; while ((seen = Volatile.Read(ref peak)) < now && Interlocked.CompareExchange(ref peak, now, seen) != seen) { }
             Thread.Sleep(30);
             Interlocked.Decrement(ref active);
-            return FakeBackend.Json(AdminHost.BookingOf(Guid.Parse(r.RequestUri.AbsolutePath.Split('/')[^1])));
+            return FakeBackend.Json(AdminHost.AccessOf(Guid.Parse(r.RequestUri.AbsolutePath.Split('/')[^1])));
         };
         host.Web.Directory.Respond = _ => new HttpResponseMessage(HttpStatusCode.NotFound);
         var page = await host.Browser.GetAsync(Open);

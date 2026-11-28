@@ -42,7 +42,7 @@ public class CheckoutAndConfirmationTests
     [InlineData("GABINETY_FAKE", "0", null, false)]
     [InlineData("Environment:Kind", "Production", null, false)]
     [InlineData("Environment:Kind", "Staging", "Mock", false)]
-    public async Task The_checkout_exists_exactly_when_the_booking_service_would_accept_the_simulated_payment(string key, string value, string? provider, bool exists)
+    public async Task The_checkout_exists_exactly_when_the_access_service_would_accept_the_simulated_payment(string key, string value, string? provider, bool exists)
     {
         await using var f = await ClientAreaFixture.SignedIn(w => { w.With(key, value); if (provider is not null) w.With("Payments:Provider", provider); });
         f.Web.Access.Respond = _ => FakeBackend.Json(Pending());
@@ -92,7 +92,7 @@ public class CheckoutAndConfirmationTests
     }
 
     [Fact]
-    public async Task A_booking_that_is_no_longer_pending_says_so_and_confirmed_leads_to_the_booking_else_to_the_profile()
+    public async Task A_access_that_is_no_longer_pending_says_so_and_confirmed_leads_to_the_access_else_to_the_profile()
     {
         await using var confirmed = await Fake(Detail("Confirmed"));
         var page = await confirmed.Browser.GetAsync(Checkout);
@@ -116,7 +116,7 @@ public class CheckoutAndConfirmationTests
     }
 
     [Fact]
-    public async Task A_booking_that_cannot_be_read_says_refresh_the_page_with_the_link_that_does_it()
+    public async Task A_access_that_cannot_be_read_says_refresh_the_page_with_the_link_that_does_it()
     {
         await using var f = await Fake();
         f.Web.Access.Respond = _ => FakeBackend.Problem(HttpStatusCode.TooManyRequests, "rate_limited");
@@ -130,7 +130,7 @@ public class CheckoutAndConfirmationTests
 
     [Theory]
     [InlineData(404)] [InlineData(403)]
-    public async Task Another_users_booking_is_a_404_not_a_leak(int status)
+    public async Task Another_users_access_is_a_404_not_a_leak(int status)
     {
         await using var f = await Fake();
         f.Web.Access.Respond = _ => FakeBackend.Problem((HttpStatusCode)status, status == 404 ? "not_found" : "forbidden");
@@ -140,7 +140,7 @@ public class CheckoutAndConfirmationTests
     // ---- the outcomes
 
     [Fact]
-    public async Task A_successful_payment_is_simulated_with_the_booking_id_and_the_browser_lands_on_the_confirmation()
+    public async Task A_successful_payment_is_simulated_with_the_access_id_and_the_browser_lands_on_the_confirmation()
     {
         await using var f = await Fake();
         var page = await f.Post(Checkout, "checkout", ("Model.Outcome", "succeeded"));
@@ -205,7 +205,7 @@ public class CheckoutAndConfirmationTests
     static Task<ClientAreaFixture> Open(AccessDetailDto access) => ClientAreaFixture.SignedIn(w => { }).ContinueWith(t => { t.Result.Web.Access.Respond = _ => FakeBackend.Json(access); return t.Result; });
 
     [Fact]
-    public async Task A_confirmed_booking_says_so_in_the_exact_words_with_the_summary_the_name_the_state_and_the_ways_on()
+    public async Task A_confirmed_access_says_so_in_the_exact_words_with_the_summary_the_name_the_state_and_the_ways_on()
     {
         await using var f = await Open(Detail("Confirmed", end: Start.AddDays(30)));
         var page = await f.Browser.GetAsync(Confirmation);
@@ -238,7 +238,7 @@ public class CheckoutAndConfirmationTests
     }
 
     [Fact]
-    public async Task Without_a_name_in_the_booking_the_summary_leaves_the_row_out_instead_of_printing_a_placeholder_F03()
+    public async Task Without_a_name_in_the_access_the_summary_leaves_the_row_out_instead_of_printing_a_placeholder_F03()
     {
         await using var f = await Open(Detail("Confirmed", agent: ""));
         var page = await f.Browser.GetAsync(Confirmation);
@@ -256,7 +256,7 @@ public class CheckoutAndConfirmationTests
     }
 
     [Fact]
-    public async Task A_meeting_link_of_a_booking_that_is_not_confirmed_is_not_shown_even_when_the_service_sent_one()
+    public async Task A_meeting_link_of_a_access_that_is_not_confirmed_is_not_shown_even_when_the_service_sent_one()
     {
         await using var f = await Open(Detail("PendingPayment", meeting: "https://meet.example/x", hold: DateTimeOffset.UtcNow.AddMinutes(5)));
         Assert.Empty((await f.Browser.GetAsync(Confirmation)).All("a[target=_blank]"));
@@ -301,7 +301,7 @@ public class CheckoutAndConfirmationTests
     }
 
     [Fact]
-    public async Task The_confirmation_of_an_unknown_booking_is_a_404_and_a_visitor_goes_to_sign_in()
+    public async Task The_confirmation_of_an_unknown_access_is_a_404_and_a_visitor_goes_to_sign_in()
     {
         await using var f = await Open(Detail());
         f.Web.Access.Respond = _ => FakeBackend.Problem(HttpStatusCode.NotFound, "not_found");
@@ -326,7 +326,7 @@ public class CheckoutAndConfirmationTests
     // ---- UX-021: the steps, the headings, "Co dalej", the notice at the width of the summary
 
     [Fact]
-    public async Task The_confirmed_booking_is_titled_as_confirmed_and_any_other_state_keeps_the_plain_title()
+    public async Task The_confirmed_access_is_titled_as_confirmed_and_any_other_state_keeps_the_plain_title()
     {
         await using var confirmed = await Open(Detail("Confirmed"));
         Assert.Equal(["Dostęp aktywny"], (await confirmed.Browser.GetAsync(Confirmation)).All("h1").Select(h => h.TextContent));

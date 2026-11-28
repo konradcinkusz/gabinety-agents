@@ -40,7 +40,7 @@ public class DemoSeederTests(SeederFixture fx) : IClassFixture<SeederFixture>
     }
 
     [Fact]
-    public async Task Approved_practitioners_cover_at_least_three_categories_that_exist_in_the_taxonomy()
+    public async Task Approved_agents_cover_at_least_three_categories_that_exist_in_the_taxonomy()
     {
         using var http = fx.Directory.CreateClient();
         var taxonomy = await http.GetFromJsonAsync<JsonElement>("/api/v1/taxonomy", J);
@@ -57,10 +57,10 @@ public class DemoSeederTests(SeederFixture fx) : IClassFixture<SeederFixture>
     [Fact]
     public async Task At_least_three_agents_have_task_packages_and_a_Chat_package_priced_in_grosz()
     {
-        var perPractitioner = await fx.Db(db => db.Packages.AsNoTracking().Where(o => o.IsActive).GroupBy(o => o.AgentId).Select(g => new { g.Key, N = g.Count(), Min = g.Min(o => o.PriceMinor), Max = g.Max(o => o.PriceMinor) }).ToListAsync());
-        Assert.True(perPractitioner.Count(p => p.N >= 3) >= 3);
-        Assert.All(perPractitioner, p => Assert.InRange(p.Min, 5000, 150000));
-        Assert.All(perPractitioner, p => Assert.InRange(p.Max, 5000, 150000));
+        var perAgent = await fx.Db(db => db.Packages.AsNoTracking().Where(o => o.IsActive).GroupBy(o => o.AgentId).Select(g => new { g.Key, N = g.Count(), Min = g.Min(o => o.PriceMinor), Max = g.Max(o => o.PriceMinor) }).ToListAsync());
+        Assert.True(perAgent.Count(p => p.N >= 3) >= 3);
+        Assert.All(perAgent, p => Assert.InRange(p.Min, 5000, 150000));
+        Assert.All(perAgent, p => Assert.InRange(p.Max, 5000, 150000));
     }
 
     [Fact]

@@ -7,7 +7,7 @@ namespace Gabinety.Booking.Tests;
 public class PayoutsModelTests
 {
     [Fact]
-    public void Payouts_maps_the_columns_of_CONTRACTS_4_1_with_a_unique_booking_id_and_a_string_status()
+    public void Payouts_maps_the_columns_of_CONTRACTS_4_1_with_a_unique_access_id_and_a_string_status()
     {
         using var db = new AccessDbContextFactory().CreateDbContext([]);
         var e = db.Model.FindEntityType(typeof(Payout))!;

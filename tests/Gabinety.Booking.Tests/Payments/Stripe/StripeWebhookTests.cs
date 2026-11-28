@@ -127,7 +127,7 @@ public class StripeWebhookTests
     [Theory]
     [InlineData("event.refund.created.succeeded", "evt_1Qx0RefundCreated")]
     [InlineData("event.refund.updated.succeeded", "evt_1Qx0RefundUpdated")]
-    public void A_succeeded_refund_Booking_asked_for_is_RefundSucceeded_for_the_payment_it_carries(string fixture, string eventId) =>
+    public void A_succeeded_refund_Access_asked_for_is_RefundSucceeded_for_the_payment_it_carries(string fixture, string eventId) =>
         Assert.Equal(new WebhookEvent(eventId, WebhookEventKind.RefundSucceeded, Fx.SessionId, 10000, "PLN"), Map(fixture));
 
     [Theory]

@@ -9,7 +9,7 @@ public class PaymentsHostTests
     [InlineData("pending", "Wymaga uzupełnienia", "Dokończ konfigurację płatności")]
     public async Task An_account_that_is_not_ready_says_so_states_the_consequence_and_offers_the_one_action(string state, string label, string button)
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.PaymentState = state; });
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.PaymentState = state; });
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta/platnosci");
         Assert.Equal(HttpStatusCode.OK, page.Status);
@@ -25,7 +25,7 @@ public class PaymentsHostTests
     [InlineData("pending", "badge badge--warning")]
     public async Task A_card_with_one_badge_one_primary_action_and_what_the_client_sees_while_not_ready(string state, string badgeClass)
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.PaymentState = state; });
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.PaymentState = state; });
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta/platnosci");
         var card = page.One("section.card")!;
@@ -39,7 +39,7 @@ public class PaymentsHostTests
     [Fact]
     public async Task A_ready_account_has_no_client_sentence_and_a_success_badge()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.PaymentState = "ready"; });
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.PaymentState = "ready"; });
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta/platnosci");
         Assert.Equal("badge badge--success", page.One("[data-testid=payments-status]")!.ClassName);
@@ -49,7 +49,7 @@ public class PaymentsHostTests
     [Fact]
     public async Task A_ready_account_says_gotowe_and_has_no_button_and_no_warning()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.PaymentState = "ready"; });
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.PaymentState = "ready"; });
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta/platnosci");
         Assert.Equal("Gotowe", page.TextOf("[data-testid=payments-status]"));
@@ -61,7 +61,7 @@ public class PaymentsHostTests
     [Fact]
     public async Task The_demo_provider_has_nothing_to_set_up_and_says_so()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.PaymentState = null; });
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.PaymentState = null; });
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta/platnosci");
         Assert.Equal(HttpStatusCode.OK, page.Status);
@@ -74,7 +74,7 @@ public class PaymentsHostTests
     [Fact]
     public async Task Starting_shows_the_single_use_link_instead_of_redirecting_and_never_stores_it()
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.PaymentState = "none"; });
+        var (web, browser, world) = await AgentBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.PaymentState = "none"; });
         await using var _ = web;
         var response = await browser.Submit("/panel-agenta/platnosci", "payments-start");
         Assert.Equal(HttpStatusCode.OK, response.Status); // no redirect: the CSP's form-action 'self' would block it in a browser
@@ -95,7 +95,7 @@ public class PaymentsHostTests
     [InlineData("http://connect.stripe.com/x")] [InlineData("javascript:alert(1)")] [InlineData("//evil.example/")] [InlineData("")]
     public async Task A_link_that_is_not_https_is_never_shown(string url)
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.PaymentState = "none"; });
+        var (web, browser, world) = await AgentBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.PaymentState = "none"; });
         await using var _ = web;
         world.OnboardingUrl = url;
         var response = await browser.Submit("/panel-agenta/platnosci", "payments-start");
@@ -108,10 +108,10 @@ public class PaymentsHostTests
     [Fact]
     public async Task A_provider_that_is_down_when_starting_says_so_and_shows_no_server_text()
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.PaymentState = "none"; });
+        var (web, browser, world) = await AgentBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.PaymentState = "none"; });
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta/platnosci");
-        world.BookingDown = true;
+        world.AccessDown = true;
         var form = page.One("form[method=post]")!;
         var hidden = form.QuerySelectorAll("input[type=hidden]").Select(i => KeyValuePair.Create(i.GetAttribute("name")!, i.GetAttribute("value") ?? ""));
         var response = await browser.SendAsync(new HttpRequestMessage(HttpMethod.Post, "/panel-agenta/platnosci") { Content = new FormUrlEncodedContent(hidden) });
@@ -123,7 +123,7 @@ public class PaymentsHostTests
     [Fact]
     public async Task The_return_and_refresh_flags_show_their_message_and_anything_else_shows_nothing()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.PaymentState = "pending"; });
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.PaymentState = "pending"; });
         await using var _ = web;
         var back = await browser.GetAsync("/panel-agenta/platnosci?return=1");
         Assert.Contains("Wróciłeś z konfiguracji", back.TextOf("[data-testid=payments-returned]"));
@@ -142,9 +142,9 @@ public class PaymentsHostTests
     [InlineData("/practitioner/payments", "/panel-agenta/platnosci")]
     [InlineData("/practitioner/payments?return=1&x=https://evil.example", "/panel-agenta/platnosci?return=1")]
     [InlineData("/practitioner/payments?return=%2F%2Fevil.example", "/panel-agenta/platnosci")]
-    public async Task The_address_Booking_gives_Stripe_lands_on_the_page_of_this_host_keeping_only_its_two_flags(string landing, string target)
+    public async Task The_address_Access_gives_Stripe_lands_on_the_page_of_this_host_keeping_only_its_two_flags(string landing, string target)
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile("Approved"));
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => w.HaveProfile("Approved"));
         await using var _ = web;
         var page = await browser.GetAsync(landing);
         Assert.Contains((int)page.Status, new[] { 302, 303 });
@@ -161,15 +161,15 @@ public class PaymentsHostTests
     }
 
     [Fact]
-    public async Task Booking_down_is_a_503_and_an_account_with_no_profile_is_sent_to_the_dashboard()
+    public async Task Access_down_is_a_503_and_an_account_with_no_profile_is_sent_to_the_dashboard()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.BookingDown = true; });
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => { w.HaveProfile("Approved"); w.AccessDown = true; });
         await using var _ = web;
         var down = await browser.GetAsync("/panel-agenta/platnosci");
         Assert.Equal(HttpStatusCode.ServiceUnavailable, down.Status);
         Assert.Equal("alert", down.One("[data-testid=unavailable]")!.GetAttribute("role"));
         Assert.True(down.One("form[method=post]")!.HasAttribute("hidden")); // no action to offer while the state is unknown
-        var (web2, browser2, _) = await PractitionerBrowsers.SignedIn();
+        var (web2, browser2, _) = await AgentBrowsers.SignedIn();
         await using var _2 = web2;
         Assert.Equal("/panel-agenta", (await browser2.GetAsync("/panel-agenta/platnosci")).Location);
     }

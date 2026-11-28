@@ -95,7 +95,7 @@ public class HoldTimerTests : BunitContext
     }
 }
 
-public class BookingComponentsTests : BunitContext
+public class AccessComponentsTests : BunitContext
 {
     [Fact]
     public void The_text_area_is_one_unit_label_hint_control_counter_and_error_linked_together()

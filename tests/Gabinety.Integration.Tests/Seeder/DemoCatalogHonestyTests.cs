@@ -35,21 +35,21 @@ public class DemoCatalogHonestyTests
     }
 
     [Fact]
-    public void Every_seeded_review_lands_on_an_approved_practitioner_so_the_check_above_sees_all_of_them()
+    public void Every_seeded_review_lands_on_an_approved_agent_so_the_check_above_sees_all_of_them()
     {
         var total = DemoCatalog.Agents.Where(p => p.Stats is not null).Sum(p => Seeded(p).Count);
         Assert.Equal(ReputationPlan.All.Length, total);
     }
 
     [Fact]
-    public void The_suspended_practitioner_claims_no_reviews_because_the_seeder_makes_no_booking_for_them()
+    public void The_suspended_agent_claims_no_reviews_because_the_seeder_makes_no_access_for_them()
     {
         var suspended = DemoCatalog.Agents.Single(p => p.Target == DemoStatus.Suspended);
         Assert.Equal(0, suspended.Stats!.Reviews);
     }
 
     [Fact]
-    public void Journey_3_starts_from_an_approved_practitioner_with_no_review()
+    public void Journey_3_starts_from_an_approved_agent_with_no_review()
     {
         Assert.Contains(Approved, p => p.Stats!.Reviews == 0 && Seeded(p).Count == 0);
         Assert.Equal(0, Approved.Single(p => p.Slug == "demo-celina-przykladowska").Stats!.Reviews);
@@ -82,7 +82,7 @@ public class DemoCatalogHonestyTests
     }
 
     [Fact]
-    public void Every_booking_of_the_plan_buys_a_package_the_agent_really_sells_and_orders_tasks_only_on_task_packages()
+    public void Every_access_of_the_plan_buys_a_package_the_agent_really_sells_and_orders_tasks_only_on_task_packages()
     {
         foreach (var b in AccessPlan.All)
         {

@@ -45,7 +45,7 @@ public class SearchProfileTests(SearchFactory f)
     }
 
     [Fact]
-    public async Task An_Approved_profile_is_public_and_carries_the_card_the_bio_and_only_active_offerings()
+    public async Task An_Approved_profile_is_public_and_carries_the_card_the_bio_and_only_active_packages()
     {
         await f.Reset();
         var p = await f.Approved(x => { x.Bio = "Demo bio text"; x.PortfolioUrl = "https://portfolio.example.test/me"; x.CompletedCount = 7; x.RatingCount = 3; x.RatingAvg = 4.5m; },
@@ -91,7 +91,7 @@ public class SearchProfileTests(SearchFactory f)
     }
 
     [Fact]
-    public async Task An_Approved_profile_without_an_active_offering_answers_200_with_no_offerings_and_a_zero_price()
+    public async Task An_Approved_profile_without_an_active_package_answers_200_with_no_packages_and_a_zero_price()
     {
         await f.Reset();
         var p = await f.Seed(AgentStatus.Approved, null, new Spec(Active: false));

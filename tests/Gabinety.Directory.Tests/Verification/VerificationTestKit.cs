@@ -41,7 +41,7 @@ public sealed class FakeGithub : IGithubProfileLookup
 }
 
 /// <summary>Directory host with role-bearing tokens (ProfileFactory's key is private), a hand-moved clock and the lookup double.</summary>
-public class VerificationFactory : OfferingFactory
+public class VerificationFactory : PackageFactory
 {
     public const string RoleClaim = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
     const string Audience = "directory-test", Issuer = "https://issuer.demo.invalid";

@@ -70,7 +70,7 @@ public sealed class RealAuthProductTests(RealAuthFixture auth, ITestOutputHelper
     }
 
     // The three admin surfaces of the services (docs/operations/ROUTE-AUTH.md): each is behind the "Admin" policy, role Admin or SuperAdmin.
-    const string DirectoryAdmin = "/api/v1/admin/practitioners", BookingAdmin = "/api/v1/admin/disputes?status=open", ReputationAdmin = "/api/v1/admin/reviews";
+    const string DirectoryAdmin = "/api/v1/admin/practitioners", AccessAdmin = "/api/v1/admin/disputes?status=open", ReputationAdmin = "/api/v1/admin/reviews";
 
     async Task<HttpStatusCode> Get(string service, string path, string? token)
     {
@@ -85,7 +85,7 @@ public sealed class RealAuthProductTests(RealAuthFixture auth, ITestOutputHelper
 
     [Theory]
     [InlineData("directory", DirectoryAdmin)]
-    [InlineData("booking", BookingAdmin)]
+    [InlineData("booking", AccessAdmin)]
     [InlineData("reputation", ReputationAdmin)]
     public async Task The_admin_routes_admit_a_real_Admin_a_real_SuperAdmin_and_a_user_with_two_roles_and_refuse_everyone_else(string service, string path)
     {
@@ -128,7 +128,7 @@ public sealed class RealAuthProductTests(RealAuthFixture auth, ITestOutputHelper
         var parts = admin.AccessToken.Split('.');
         var altered = string.Join('.', parts[0], parts[1], parts[2][..10] + (parts[2][10] == 'A' ? 'B' : 'A') + parts[2][11..]);
 
-        foreach (var (service, path) in new[] { ("directory", DirectoryAdmin), ("booking", BookingAdmin), ("reputation", ReputationAdmin) })
+        foreach (var (service, path) in new[] { ("directory", DirectoryAdmin), ("booking", AccessAdmin), ("reputation", ReputationAdmin) })
         {
             Assert.Equal(HttpStatusCode.OK, await Get(service, path, admin.AccessToken)); // control: the unaltered token passes
             Assert.Equal(HttpStatusCode.Unauthorized, await Get(service, path, altered));

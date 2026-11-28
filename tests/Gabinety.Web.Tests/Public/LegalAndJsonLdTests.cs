@@ -79,7 +79,7 @@ public class ProfileJsonLdTests
     static JsonElement Parse(string json) => JsonDocument.Parse(json).RootElement;
 
     [Fact]
-    public void The_json_parses_and_names_the_practitioner_the_offers_and_the_links()
+    public void The_json_parses_and_names_the_agent_the_offers_and_the_links()
     {
         var ld = Parse(ProfileJsonLd.Build(PublicSupport.Profile(), "http://localhost/agent/demo-anna-demowska"));
         Assert.Equal(("https://schema.org", "ProfessionalService", "Anna Ąćęł Demowska"), (ld.GetProperty("@context").GetString(), ld.GetProperty("@type").GetString(), ld.GetProperty("name").GetString()));

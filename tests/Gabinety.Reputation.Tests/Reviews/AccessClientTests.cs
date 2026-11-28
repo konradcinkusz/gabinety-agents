@@ -3,14 +3,14 @@ using Gabinety.Reputation.Clients;
 
 namespace Gabinety.Reputation.Tests.Reviews;
 
-public class BookingClientTests
+public class AccessClientTests
 {
     static readonly Guid Access = Guid.NewGuid();
 
-    static (AccessClient Client, FakeBooking Handler) Make()
+    static (AccessClient Client, FakeAccess Handler) Make()
     {
-        var handler = new FakeBooking();
-        return (new AccessClient(new HttpClient(handler) { BaseAddress = new Uri(FakeBooking.BaseUrl + "/") }, FakeBooking.Key, TimeSpan.Zero), handler);
+        var handler = new FakeAccess();
+        return (new AccessClient(new HttpClient(handler) { BaseAddress = new Uri(FakeAccess.BaseUrl + "/") }, FakeAccess.Key, TimeSpan.Zero), handler);
     }
 
     [Fact]
@@ -23,7 +23,7 @@ public class BookingClientTests
         var dto = await client.GetReviewabilityAsync(Access, default);
 
         Assert.Equal($"/internal/v1/bookings/{Access}/reviewability", h.LastPath);
-        Assert.Equal(FakeBooking.Key, h.LastKeyHeader);
+        Assert.Equal(FakeAccess.Key, h.LastKeyHeader);
         Assert.Equal((true, "demo-user-1", pract), (dto!.Reviewable, dto.ClientUserId, dto.AgentId));
         Assert.Equal(new DateTimeOffset(2026, 11, 15, 10, 0, 0, TimeSpan.Zero), dto.CompletedAt);
     }
@@ -40,13 +40,13 @@ public class BookingClientTests
     public async Task A_5xx_is_retried_once_and_the_second_answer_counts()
     {
         var (client, h) = Make();
-        h.Override = (_, n) => n == 1 ? new HttpResponseMessage(HttpStatusCode.BadGateway) : FakeBooking.Json(new { reviewable = true, clientUserId = "demo-u", practitionerId = Guid.NewGuid(), completedAt = (string?)null });
+        h.Override = (_, n) => n == 1 ? new HttpResponseMessage(HttpStatusCode.BadGateway) : FakeAccess.Json(new { reviewable = true, clientUserId = "demo-u", practitionerId = Guid.NewGuid(), completedAt = (string?)null });
         Assert.True((await client.GetReviewabilityAsync(Access, default))!.Reviewable);
         Assert.Equal(2, h.Calls);
     }
 
     [Fact]
-    public async Task Two_failures_are_BookingUnavailable_after_exactly_two_calls_and_the_message_has_no_url_or_key()
+    public async Task Two_failures_are_AccessUnavailable_after_exactly_two_calls_and_the_message_has_no_url_or_key()
     {
         var (client, h) = Make();
         h.Down = true;
@@ -54,7 +54,7 @@ public class BookingClientTests
         var ex = await Assert.ThrowsAsync<AccessUnavailableException>(() => client.GetReviewabilityAsync(Access, default));
 
         Assert.Equal(2, h.Calls);
-        Assert.DoesNotContain(FakeBooking.Key, ex.Message);
+        Assert.DoesNotContain(FakeAccess.Key, ex.Message);
         Assert.DoesNotContain("demo.invalid", ex.Message);
     }
 
@@ -71,7 +71,7 @@ public class BookingClientTests
     public async Task A_slow_answer_is_cut_at_the_timeout_and_counts_as_unavailable()
     {
         var slow = new SlowHandler();
-        var c = new AccessClient(new HttpClient(slow) { BaseAddress = new Uri(FakeBooking.BaseUrl + "/") }, FakeBooking.Key, TimeSpan.Zero, TimeSpan.FromMilliseconds(50));
+        var c = new AccessClient(new HttpClient(slow) { BaseAddress = new Uri(FakeAccess.BaseUrl + "/") }, FakeAccess.Key, TimeSpan.Zero, TimeSpan.FromMilliseconds(50));
 
         await Assert.ThrowsAsync<AccessUnavailableException>(() => c.GetReviewabilityAsync(Access, default));
 

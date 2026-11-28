@@ -11,7 +11,7 @@ public class NotificationWriterTests
     static readonly DateTimeOffset Due = new(2026, 11, 20, 10, 0, 0, TimeSpan.Zero);
 
     [Fact]
-    public async Task Scheduling_the_same_booking_kind_and_user_twice_adds_one_row()
+    public async Task Scheduling_the_same_access_kind_and_user_twice_adds_one_row()
     {
         using var t = new NotificationHost();
         var access = new AccessEntity { Id = Guid.NewGuid() };
@@ -57,7 +57,7 @@ public class NotificationWriterTests
     }
 
     [Fact]
-    public async Task CancelUnsent_removes_only_unsent_rows_of_the_named_kinds_of_that_booking()
+    public async Task CancelUnsent_removes_only_unsent_rows_of_the_named_kinds_of_that_access()
     {
         using var t = new NotificationHost();
         var access = Guid.NewGuid();
@@ -66,7 +66,7 @@ public class NotificationWriterTests
         var r1 = t.Add(access, NotificationKind.Reminder1h, "demo-practitioner", Due);
         var r1Sent = t.Add(access, NotificationKind.Reminder1h, "demo-client", Due, sentAt: Due);
         var review = t.Add(access, NotificationKind.ReviewRequest, "demo-client", Due);
-        var otherBooking = t.Add(other, NotificationKind.Reminder24h, "demo-client", Due);
+        var otherAccess = t.Add(other, NotificationKind.Reminder24h, "demo-client", Due);
 
         using (var scope = t.Host.Services.CreateScope())
         {
@@ -75,7 +75,7 @@ public class NotificationWriterTests
             await scope.ServiceProvider.GetRequiredService<AccessDbContext>().SaveChangesAsync();
         }
         var left = (await t.Host.Query(db => db.Notifications.AsNoTracking().Where(n => n.AccessId == access || n.AccessId == other).Select(n => n.Id).ToListAsync())).ToHashSet();
-        Assert.Equal(new HashSet<Guid> { r1Sent.Id, review.Id, otherBooking.Id }, left);
+        Assert.Equal(new HashSet<Guid> { r1Sent.Id, review.Id, otherAccess.Id }, left);
         Assert.DoesNotContain(r24.Id, left);
         Assert.DoesNotContain(r1.Id, left);
     }

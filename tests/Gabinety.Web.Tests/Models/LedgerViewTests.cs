@@ -7,16 +7,16 @@ namespace Gabinety.Web.Tests.Admin;
 public class LedgerViewTests
 {
     // a UUIDv7-shaped id: the first eight characters are the timestamp, the last eight the random part
-    static readonly Guid BookingA = Guid.Parse("0190b3f2-7c1d-7a4e-9b2f-3c5d8e1f2a6b");
-    static readonly Guid BookingB = Guid.Parse("0190b3f2-7c1d-7a4e-9b2f-3c5d8e1f2a7c");
+    static readonly Guid AccessA = Guid.Parse("0190b3f2-7c1d-7a4e-9b2f-3c5d8e1f2a6b");
+    static readonly Guid AccessB = Guid.Parse("0190b3f2-7c1d-7a4e-9b2f-3c5d8e1f2a7c");
 
     [Fact]
-    public void The_reference_is_the_random_tail_so_two_bookings_from_the_same_moment_tell_apart()
+    public void The_reference_is_the_random_tail_so_two_accesses_from_the_same_moment_tell_apart()
     {
-        Assert.Equal("8e1f2a6b", AdminFormat.IdTail(BookingA));
-        Assert.Equal("8e1f2a7c", AdminFormat.IdTail(BookingB));
-        Assert.Equal(AdminFormat.ShortRef(BookingA), AdminFormat.ShortRef(BookingB)); // the old column: identical rows
-        Assert.NotEqual(AdminFormat.IdTail(BookingA), AdminFormat.IdTail(BookingB));
+        Assert.Equal("8e1f2a6b", AdminFormat.IdTail(AccessA));
+        Assert.Equal("8e1f2a7c", AdminFormat.IdTail(AccessB));
+        Assert.Equal(AdminFormat.ShortRef(AccessA), AdminFormat.ShortRef(AccessB)); // the old column: identical rows
+        Assert.NotEqual(AdminFormat.IdTail(AccessA), AdminFormat.IdTail(AccessB));
     }
 
     [Theory]
@@ -28,7 +28,7 @@ public class LedgerViewTests
     public void The_period_is_written_in_Polish_with_the_genitive_months(string from, string to, string expected) =>
         Assert.Equal(expected, LedgerPeriod.Polish(from, to));
 
-    static LedgerRowDto Row(string kind, long amount) => new(BookingA, kind, amount, "PLN", new DateTimeOffset(2026, 11, 2, 9, 0, 0, TimeSpan.Zero));
+    static LedgerRowDto Row(string kind, long amount) => new(AccessA, kind, amount, "PLN", new DateTimeOffset(2026, 11, 2, 9, 0, 0, TimeSpan.Zero));
 
     [Fact]
     public void Totals_sum_each_kind_in_grosz_in_ledger_order_and_count_its_rows()

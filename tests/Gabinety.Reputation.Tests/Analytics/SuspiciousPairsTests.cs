@@ -40,7 +40,7 @@ public class SuspiciousPairsTests
     }
 
     [Fact]
-    public async Task One_review_of_five_stars_on_a_pair_with_three_bookings_is_listed()
+    public async Task One_review_of_five_stars_on_a_pair_with_three_accesses_is_listed()
     {
         using var h = new AnalyticsHost();
         var p = Guid.NewGuid();
@@ -50,7 +50,7 @@ public class SuspiciousPairsTests
     }
 
     [Fact]
-    public async Task The_join_is_by_the_pair_not_by_the_client_or_the_practitioner_alone()
+    public async Task The_join_is_by_the_pair_not_by_the_client_or_the_agent_alone()
     {
         using var h = new AnalyticsHost();
         var x = Guid.NewGuid(); var y = Guid.NewGuid();
@@ -78,7 +78,7 @@ public class SuspiciousPairsTests
     }
 
     [Fact]
-    public async Task A_pair_the_booking_side_reports_with_two_bookings_is_ignored_even_with_five_stars()
+    public async Task A_pair_the_access_side_reports_with_two_accesses_is_ignored_even_with_five_stars()
     {
         using var h = new AnalyticsHost();
         var p = Guid.NewGuid();
@@ -88,7 +88,7 @@ public class SuspiciousPairsTests
     }
 
     [Fact]
-    public async Task Asks_Booking_for_more_than_two_bookings_with_the_page_limit_and_never_more_than_50()
+    public async Task Asks_Access_for_more_than_two_accesses_with_the_page_limit_and_never_more_than_50()
     {
         using var h = new AnalyticsHost();
         h.Access.Add();
@@ -149,7 +149,7 @@ public class SuspiciousPairsTests
     [InlineData("?limit=-5")]
     [InlineData("?cursor=has%20space")]
     [InlineData("?cursor=%3Cscript%3E")]
-    public async Task A_bad_limit_or_cursor_is_400_and_Booking_is_not_asked(string query)
+    public async Task A_bad_limit_or_cursor_is_400_and_Access_is_not_asked(string query)
     {
         using var h = new AnalyticsHost();
         h.Access.Add();
@@ -160,7 +160,7 @@ public class SuspiciousPairsTests
     }
 
     [Fact]
-    public async Task Booking_unavailable_is_503_dependency_unavailable_with_no_detail()
+    public async Task Access_unavailable_is_503_dependency_unavailable_with_no_detail()
     {
         using var h = new AnalyticsHost();
         h.Access.Unavailable = true;
@@ -176,7 +176,7 @@ public class SuspiciousPairsTests
     [InlineData("User", HttpStatusCode.Forbidden)]
     [InlineData("Practitioner", HttpStatusCode.Forbidden)]
     [InlineData("", HttpStatusCode.Forbidden)]
-    public async Task Only_an_admin_gets_the_list_and_Booking_is_never_asked_for_anyone_else(string? role, HttpStatusCode expected)
+    public async Task Only_an_admin_gets_the_list_and_Access_is_never_asked_for_anyone_else(string? role, HttpStatusCode expected)
     {
         using var h = new AnalyticsHost();
         h.Access.Add();

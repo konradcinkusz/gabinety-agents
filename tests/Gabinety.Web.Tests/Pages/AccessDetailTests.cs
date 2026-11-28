@@ -6,7 +6,7 @@ using static Gabinety.Web.Tests.Pages.ClientAreaFixture;
 namespace Gabinety.Web.Tests.Pages;
 
 /// <summary>The booking detail and its actions (journeys J3, J5, J6): what is shown for each state, what the cancel dialog says (F-11), and what each action sends.</summary>
-public class BookingDetailTests
+public class AccessDetailTests
 {
     static readonly string Detail_ = $"/moje/dostepy/{AccessId}";
     static readonly string Client = Detail_ + "?role=client";
@@ -23,7 +23,7 @@ public class BookingDetailTests
     // ---- what is shown
 
     [Fact]
-    public async Task A_confirmed_paid_booking_shows_every_value_as_a_definition_the_journeys_can_find()
+    public async Task A_confirmed_paid_access_shows_every_value_as_a_definition_the_journeys_can_find()
     {
         await using var f = await Open(Detail(meeting: "https://meet.example/sala"));
         var page = await f.Browser.GetAsync(Client);
@@ -43,7 +43,7 @@ public class BookingDetailTests
     }
 
     [Fact]
-    public async Task For_a_practitioner_the_other_party_is_the_client_and_the_brief_is_the_clients()
+    public async Task For_a_agent_the_other_party_is_the_client_and_the_brief_is_the_clients()
     {
         await using var f = await Open();
         var page = await f.Browser.GetAsync(Detail_ + "?role=practitioner");
@@ -120,7 +120,7 @@ public class BookingDetailTests
     // ---- failures
 
     [Fact]
-    public async Task An_unknown_booking_and_somebody_elses_are_the_same_404_and_a_visitor_goes_to_sign_in()
+    public async Task An_unknown_access_and_somebody_elses_are_the_same_404_and_a_visitor_goes_to_sign_in()
     {
         await using var f = await Open();
         f.Web.Access.Respond = _ => FakeBackend.Problem(HttpStatusCode.NotFound, "not_found");
@@ -176,7 +176,7 @@ public class BookingDetailTests
     }
 
     [Fact]
-    public async Task A_reviewable_booking_offers_the_review_as_the_primary_action()
+    public async Task A_reviewable_access_offers_the_review_as_the_primary_action()
     {
         await using var f = await Open(Detail("Completed", review: true));
         var link = (await f.Browser.GetAsync(Client)).One(".form-actions a.btn--primary")!;
@@ -207,7 +207,7 @@ public class BookingDetailTests
     }
 
     [Fact]
-    public async Task When_the_service_sends_the_outcome_of_this_booking_the_dialog_says_it_and_does_not_repeat_the_rule_F11()
+    public async Task When_the_service_sends_the_outcome_of_this_access_the_dialog_says_it_and_does_not_repeat_the_rule_F11()
     {
         await using var full = await Open(Detail(cancel: true, outcome: new CancelOutcomeDto("full_refund", new MoneyDto(25000, "PLN"))));
         var dialog = (await full.Browser.GetAsync(Client + "&action=cancel")).One("dialog")!;
@@ -230,7 +230,7 @@ public class BookingDetailTests
     }
 
     [Fact]
-    public async Task A_practitioner_is_told_the_client_is_refunded_in_full_and_they_are_not_paid()
+    public async Task A_agent_is_told_the_client_is_refunded_in_full_and_they_are_not_paid()
     {
         await using var f = await Open(Detail(cancel: true));
         var dialog = (await f.Browser.GetAsync(Detail_ + "?role=practitioner&action=cancel")).One("dialog")!;
@@ -307,7 +307,7 @@ public class BookingDetailTests
     }
 
     [Fact]
-    public async Task A_401_during_an_action_goes_to_sign_in_and_back_to_the_booking()
+    public async Task A_401_during_an_action_goes_to_sign_in_and_back_to_the_access()
     {
         await using var f = await Open(Detail(cancel: true), post: _ => FakeBackend.Problem(HttpStatusCode.Unauthorized, "unauthenticated"));
         var page = await f.Post(Client + "&action=cancel", "cancel");

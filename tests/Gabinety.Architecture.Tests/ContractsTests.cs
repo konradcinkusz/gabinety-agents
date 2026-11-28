@@ -25,7 +25,7 @@ public class ContractsTests
     }
 
     [Fact]
-    public void Booking_statuses_are_exactly_the_state_machine_of_CONTRACTS_8_1()
+    public void Access_statuses_are_exactly_the_state_machine_of_CONTRACTS_8_1()
     {
         var expected = new[] { "PendingPayment", "Confirmed", "CancelledByClient", "LateCancelledByClient", "CancelledByPractitioner",
             "Expired", "Completed", "ClientNoShow", "Disputed", "Resolved" };
@@ -53,7 +53,7 @@ public class ContractsTests
     }
 
     [Fact]
-    public void A_booking_request_round_trips()
+    public void A_access_request_round_trips()
     {
         var req = new CreateAccessRequest(Guid.NewGuid(), new BriefDto("Opis problemu dłuższy niż dwadzieścia znaków", "audyt-kodu", true),
             new DateTimeOffset(2026, 12, 1, 9, 30, 0, TimeSpan.Zero));
@@ -65,7 +65,7 @@ public class ContractsTests
     }
 
     [Fact]
-    public void A_booking_request_does_not_need_startUtc()
+    public void A_access_request_does_not_need_startUtc()
     {
         var back = JsonSerializer.Deserialize<CreateAccessRequest>(
             """{"offeringId":"5b0f4f0e-3a56-4c2b-9d5e-0a1b2c3d4e5f","brief":{"text":"Opis problemu dłuższy niż dwadzieścia znaków","aiAssisted":false}}""", Web)!;

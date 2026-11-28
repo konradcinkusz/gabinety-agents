@@ -5,7 +5,7 @@ namespace Gabinety.Web.Tests.PractitionerAreaTests;
 
 public class OffersHostTests
 {
-    static PractitionerWorld.Offer Offer(string title, bool active = true, long price = 18000, int duration = 60) => new() { Title = title, ProblemSlug = "code-review", Duration = duration, Price = price, Active = active };
+    static AgentWorld.Offer Offer(string title, bool active = true, long price = 18000, int duration = 60) => new() { Title = title, ProblemSlug = "code-review", Duration = duration, Price = price, Active = active };
 
     static (string, string)[] Valid(string title = "Przegląd testów end to end", string price = "180") => [("title", title), ("price", price), ("problemSlug", "code-review")];
 
@@ -21,7 +21,7 @@ public class OffersHostTests
     [Fact]
     public async Task The_form_has_the_labels_the_journey_uses_a_select_whose_first_option_is_wybierz_and_a_group_of_technology_checkboxes()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta/oferty?nowa=1");
         Assert.Equal("Pakiety", page.TextOf("h1"));
@@ -40,7 +40,7 @@ public class OffersHostTests
     [Fact]
     public async Task Saving_sends_the_price_as_integer_grosz_the_checked_technologies_and_redirects_with_the_flash_and_the_title_shows_once()
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
+        var (web, browser, world) = await AgentBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
         var response = await browser.Submit("/panel-agenta/oferty?nowa=1", "offer", Fields(("title", "  Przegląd testów end to end  "), ("description", "Omawiamy scenariusze."), ("price", "180,50"), ("problemSlug", "code-review"), ("duration", "60")));
         var body = JsonNode.Parse(web.Directory.Requests.Single(r => r.Method == HttpMethod.Post && r.PathAndQuery.EndsWith("/offerings")).Body!)!;
@@ -60,7 +60,7 @@ public class OffersHostTests
     [Fact]
     public async Task The_checked_technologies_travel_and_more_than_four_are_refused_inline_before_any_call()
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
+        var (web, browser, world) = await AgentBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
         var four = await browser.Submit("/panel-agenta/oferty?nowa=1", "offer", Fields([.. Valid(), ("techs", "dotnet"), ("techs", "react")]));
         Assert.Equal(["dotnet", "react"], world.Offers.Single().Techs);
@@ -80,7 +80,7 @@ public class OffersHostTests
     [InlineData("49,99", false)] [InlineData("1500,01", false)] [InlineData("abc", false)] [InlineData("", false)] [InlineData("250,555", false)]
     public async Task The_price_is_validated_in_the_form_and_a_bad_one_never_reaches_the_service(string price, bool accepted)
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
         var response = await browser.Submit("/panel-agenta/oferty?nowa=1", "offer", Fields(Valid(price: price)));
         Assert.Equal(accepted, (int)response.Status is 302 or 303);
@@ -96,7 +96,7 @@ public class OffersHostTests
     [Fact]
     public async Task All_problems_come_at_once_in_the_summary_each_linked_to_its_field()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
         var response = await browser.Submit("/panel-agenta/oferty?nowa=1", "offer", Fields(("title", "abc"), ("price", "x"), ("problemSlug", "")));
         var summary = response.One("[data-testid=form-summary]")!;
@@ -107,7 +107,7 @@ public class OffersHostTests
     [Fact]
     public async Task A_service_complaint_is_put_on_its_field_and_the_contact_rule_on_the_text_that_looks_like_contact()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
         var response = await browser.Submit("/panel-agenta/oferty?nowa=1", "offer", Fields([.. Valid(), ("description", "Pisz: jan@example.com")]));
         Assert.Equal(HttpStatusCode.OK, response.Status);
@@ -119,7 +119,7 @@ public class OffersHostTests
     [Fact]
     public async Task Disabling_an_offer_needs_a_confirmation_page_state_and_the_first_click_changes_nothing()
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.Offers.Add(Offer("Przegląd testów")); });
+        var (web, browser, world) = await AgentBrowsers.SignedIn(w => { w.HaveProfile(); w.Offers.Add(Offer("Przegląd testów")); });
         await using var _ = web;
         var id = world.Offers[0].Id;
         var list = await browser.GetAsync("/panel-agenta/oferty");
@@ -145,7 +145,7 @@ public class OffersHostTests
     [Fact]
     public async Task Confirming_disables_the_offer_with_a_flash_and_the_list_then_offers_wlacz_which_turns_it_back_on()
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.Offers.Add(Offer("Przegląd testów")); });
+        var (web, browser, world) = await AgentBrowsers.SignedIn(w => { w.HaveProfile(); w.Offers.Add(Offer("Przegląd testów")); });
         await using var _ = web;
         var id = world.Offers[0].Id;
         var done = await browser.Submit($"/panel-agenta/oferty?wylacz={id}", "offer-disable");
@@ -168,7 +168,7 @@ public class OffersHostTests
     [Fact]
     public async Task A_sixth_active_offer_cannot_be_turned_on_and_says_why()
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); for (var i = 0; i < 5; i++) w.Offers.Add(Offer($"Oferta numer {i}")); w.Offers.Add(Offer("Wyłączona oferta", active: false)); });
+        var (web, browser, world) = await AgentBrowsers.SignedIn(w => { w.HaveProfile(); for (var i = 0; i < 5; i++) w.Offers.Add(Offer($"Oferta numer {i}")); w.Offers.Add(Offer("Wyłączona oferta", active: false)); });
         await using var _ = web;
         var off = world.Offers[5].Id;
         var page = await browser.Submit("/panel-agenta/oferty", "offer-enable", Fields(("enable", off.ToString())));
@@ -185,7 +185,7 @@ public class OffersHostTests
     [Fact]
     public async Task Editing_loads_the_offer_with_its_price_in_zloty_and_a_save_replaces_it()
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.Offers.Add(Offer("Przegląd testów", price: 18050)); });
+        var (web, browser, world) = await AgentBrowsers.SignedIn(w => { w.HaveProfile(); w.Offers.Add(Offer("Przegląd testów", price: 18050)); });
         await using var _ = web;
         var id = world.Offers[0].Id;
         var edit = await browser.GetAsync($"/panel-agenta/oferty?edit={id}");
@@ -202,7 +202,7 @@ public class OffersHostTests
     [Fact]
     public async Task A_made_up_or_foreign_id_edits_nothing_and_an_empty_list_says_what_to_do()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
         var page = await browser.GetAsync($"/panel-agenta/oferty?edit={Guid.NewGuid()}&wylacz={Guid.NewGuid()}");
         Assert.Equal(HttpStatusCode.OK, page.Status);
@@ -216,7 +216,7 @@ public class OffersHostTests
     [Fact]
     public async Task The_offer_text_is_text_and_a_failing_taxonomy_still_lets_the_page_render_with_a_message()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.Offers.Add(Offer("<b>Pogrubiona</b>")); });
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => { w.HaveProfile(); w.Offers.Add(Offer("<b>Pogrubiona</b>")); });
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta/oferty");
         Assert.Empty(page.All("b"));
@@ -224,9 +224,9 @@ public class OffersHostTests
     }
 
     [Fact]
-    public async Task An_id_in_the_form_that_is_not_one_of_the_practitioners_offers_creates_a_new_offer_and_never_updates_it()
+    public async Task An_id_in_the_form_that_is_not_one_of_the_agents_offers_creates_a_new_offer_and_never_updates_it()
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
+        var (web, browser, world) = await AgentBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
         var foreign = Guid.NewGuid();
         var response = await browser.Submit("/panel-agenta/oferty?nowa=1", "offer", Fields([.. Valid(), ("id", foreign.ToString())]));
@@ -237,9 +237,9 @@ public class OffersHostTests
     }
 
     [Fact]
-    public async Task Disabling_or_enabling_an_id_that_is_not_the_practitioners_calls_nothing()
+    public async Task Disabling_or_enabling_an_id_that_is_not_the_agents_calls_nothing()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.Offers.Add(Offer("Przegląd testów")); });
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => { w.HaveProfile(); w.Offers.Add(Offer("Przegląd testów")); });
         await using var _ = web;
         var id = Guid.NewGuid().ToString();
         var page = await browser.GetAsync("/panel-agenta/oferty");
@@ -255,7 +255,7 @@ public class OffersHostTests
     [Fact]
     public async Task The_form_is_closed_by_default_the_list_has_a_button_that_opens_it_and_the_count_of_technologies_starts_at_zero()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.Offers.Add(Offer("Przegląd testów")); });
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => { w.HaveProfile(); w.Offers.Add(Offer("Przegląd testów")); });
         await using var _ = web;
         var list = await browser.GetAsync("/panel-agenta/oferty");
         Assert.Null(list.One("form.form"));
@@ -275,7 +275,7 @@ public class OffersHostTests
     [Fact]
     public async Task A_failed_post_from_an_edit_shows_the_form_again_with_its_errors_and_saves_nothing()
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.Offers.Add(Offer("Przegląd testów")); });
+        var (web, browser, world) = await AgentBrowsers.SignedIn(w => { w.HaveProfile(); w.Offers.Add(Offer("Przegląd testów")); });
         await using var _ = web;
         var id = world.Offers[0].Id;
         var post = await browser.Submit($"/panel-agenta/oferty?edit={id}", "offer", Fields(("title", "abc"), ("price", "x"), ("problemSlug", "")));
@@ -289,7 +289,7 @@ public class OffersHostTests
     [Fact]
     public async Task The_headings_never_skip_a_level_and_the_offer_titles_sit_under_the_list_heading()
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.Offers.Add(Offer("Przegląd testów")); });
+        var (web, browser, world) = await AgentBrowsers.SignedIn(w => { w.HaveProfile(); w.Offers.Add(Offer("Przegląd testów")); });
         await using var _ = web;
         var id = world.Offers[0].Id;
         foreach (var path in new[] { "/panel-agenta/oferty", "/panel-agenta/oferty?nowa=1", $"/panel-agenta/oferty?edit={id}" })
@@ -308,7 +308,7 @@ public class OffersHostTests
     [Fact]
     public async Task The_preview_of_the_public_card_shows_the_saved_values_when_editing_and_placeholders_when_creating()
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => { w.HaveProfile(); w.Offers.Add(Offer("Przegląd testów", price: 18050)); });
+        var (web, browser, world) = await AgentBrowsers.SignedIn(w => { w.HaveProfile(); w.Offers.Add(Offer("Przegląd testów", price: 18050)); });
         await using var _ = web;
         var created = await browser.GetAsync("/panel-agenta/oferty?nowa=1");
         Assert.Equal("Podgląd pakietu", created.TextOf("#offer-preview-title"));
@@ -324,7 +324,7 @@ public class OffersHostTests
     [Fact]
     public async Task The_form_has_the_kind_and_units_fields_and_no_meeting_link_field_C04()
     {
-        var (web, browser, _) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
+        var (web, browser, _) = await AgentBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
         var page = await browser.GetAsync("/panel-agenta/oferty?nowa=1");
         Assert.Equal("Rodzaj pakietu", page.One("label[for=kind]")!.TextContent.Replace(" opcjonalnie", "").Trim());
@@ -342,7 +342,7 @@ public class OffersHostTests
     [InlineData("Chat", "abc", "units", "Dla czatu API wpisz liczbę od 100 do 100000 (tysięcy tokenów).")]
     public async Task Units_outside_the_range_of_the_kind_are_refused_inline_before_any_call(string kind, string units, string field, string message)
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
+        var (web, browser, world) = await AgentBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
         var response = await browser.Submit("/panel-agenta/oferty?nowa=1", "offer", Fields([.. Valid(), ("kind", kind), ("units", units)]));
         Assert.Equal(HttpStatusCode.OK, response.Status);
@@ -354,7 +354,7 @@ public class OffersHostTests
     [Fact]
     public async Task A_chat_package_sends_its_kind_and_the_units_in_thousands_of_tokens_and_the_list_says_so()
     {
-        var (web, browser, world) = await PractitionerBrowsers.SignedIn(w => w.HaveProfile());
+        var (web, browser, world) = await AgentBrowsers.SignedIn(w => w.HaveProfile());
         await using var _ = web;
         var response = await browser.Submit("/panel-agenta/oferty?nowa=1", "offer", Fields([.. Valid("Dostęp do API czatu", "99"), ("kind", "Chat"), ("units", "500")]));
         Assert.Contains((int)response.Status, new[] { 302, 303 });

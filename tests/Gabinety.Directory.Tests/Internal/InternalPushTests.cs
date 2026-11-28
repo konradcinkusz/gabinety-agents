@@ -99,7 +99,7 @@ public class InternalPushTests(InternalFactory f) : IClassFixture<InternalFactor
     }
 
     [Fact]
-    public async Task A_practitioner_that_is_not_Approved_keeps_the_pushed_values_but_is_not_scored()
+    public async Task A_agent_that_is_not_Approved_keeps_the_pushed_values_but_is_not_scored()
     {
         var p = await f.Seed(AgentStatus.Suspended, x => { x.RankingScore = 0; x.RankingVersion = ""; });
         Assert.Equal(HttpStatusCode.NoContent, (await Ik.PutReputation(f.Internal(), p.Id, 5, 4.0, 1)).StatusCode);
@@ -110,7 +110,7 @@ public class InternalPushTests(InternalFactory f) : IClassFixture<InternalFactor
     }
 
     [Fact]
-    public async Task Unknown_practitioner_is_404()
+    public async Task Unknown_agent_is_404()
     {
         Assert.Equal(HttpStatusCode.NotFound, (await Ik.PutReputation(f.Internal(), Guid.NewGuid(), 1, 5.0, 1)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await Ik.PutStats(f.Internal(), Guid.NewGuid(), 1, 0, 0, 0, 1)).StatusCode);

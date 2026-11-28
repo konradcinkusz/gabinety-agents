@@ -24,13 +24,13 @@ using AccessStatus = Gabinety.Billing.AccessStatus;
 namespace Gabinety.Integration.Tests.Seeder;
 
 /// <summary>The Booking service in process, in the fake profile (GABINETY_FAKE=1, so the clock and reset endpoints exist), on its own InMemory database and a Directory it reaches in process.</summary>
-public sealed class BookingHost : WebApplicationFactory<BookingApp::Program>
+public sealed class AccessHost : WebApplicationFactory<BookingApp::Program>
 {
     public const string Key = "demo-booking-internal-key-for-seeder-tests";
     readonly DevIdentityHost _identity;
     readonly DirectoryHost _directory;
 
-    public BookingHost(DevIdentityHost identity, DirectoryHost directory) { _identity = identity; _directory = directory; }
+    public AccessHost(DevIdentityHost identity, DirectoryHost directory) { _identity = identity; _directory = directory; }
 
     protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
     {
@@ -69,12 +69,12 @@ public sealed class BookingHost : WebApplicationFactory<BookingApp::Program>
 /// fake platform and become Succeeded) and the auto-complete job (a package whose last unit is used becomes Completed). It writes nothing itself, so the state the seeder's tests read is what the real code made.
 /// Without it the seeded packages stay as the API left them (tasks Queued, used-up packages Confirmed), which is what the "no job" tests want.
 /// </summary>
-public sealed class BookingJobDriver : IAsyncDisposable
+public sealed class AccessJobDriver : IAsyncDisposable
 {
     readonly CancellationTokenSource _stop = new();
     readonly Task _loop;
 
-    public BookingJobDriver(BookingHost access)
+    public AccessJobDriver(AccessHost access)
     {
         _ = access.Services; // build the host here: two threads touching a factory's Services before it exists would build two servers, and two databases
         var tasks = access.Services.GetRequiredService<AgentTaskJob>();
@@ -99,7 +99,7 @@ public sealed class BookingJobDriver : IAsyncDisposable
 }
 
 /// <summary>Records every request to Booking and can fail the ones a test names.</summary>
-public sealed class BookingCalls : DelegatingHandler
+public sealed class AccessCalls : DelegatingHandler
 {
     public List<(HttpMethod Method, string Path)> Requests { get; } = [];
     public Func<HttpRequestMessage, bool>? FailWhen { get; set; }
@@ -112,36 +112,36 @@ public sealed class BookingCalls : DelegatingHandler
     }
 }
 
-public sealed class WorldSeedHttp(DevIdentityHost identity, DirectoryHost directory, BookingHost access, BookingCalls bookingCalls) : ISeedHttp
+public sealed class WorldSeedHttp(DevIdentityHost identity, DirectoryHost directory, AccessHost access, AccessCalls accessCalls) : ISeedHttp
 {
     HttpClient? _booking;
     public HttpClient For(string service) => service switch
     {
         SeedService.Identity => identity.CreateClient(),
         SeedService.Directory => directory.CreateClient(),
-        SeedService.Access => _booking ??= access.CreateDefaultClient(bookingCalls),
+        SeedService.Access => _booking ??= access.CreateDefaultClient(accessCalls),
         _ => throw new InvalidOperationException(service),
     };
 }
 
 /// <summary>Identity, Directory and Booking in process. <see cref="SeedDirectoryAsync"/> runs the real Directory step; the Booking step is run by the test.</summary>
-public sealed class BookingWorld : IAsyncDisposable
+public sealed class AccessWorld : IAsyncDisposable
 {
     public DevIdentityHost Identity { get; } = new();
     public DirectoryHost Directory { get; }
-    public BookingHost Access { get; }
-    public BookingCalls Calls { get; } = new();
+    public AccessHost Access { get; }
+    public AccessCalls Calls { get; } = new();
     public SeedOptions Options { get; }
     public CapturedLog Log { get; } = new();
     public SeedContext Context { get; private set; } = null!;
     public WorldSeedHttp Http { get; }
 
-    public BookingWorld()
+    public AccessWorld()
     {
         Directory = new DirectoryHost(Identity);
-        Access = new BookingHost(Identity, Directory);
+        Access = new AccessHost(Identity, Directory);
         Options = new SeedOptions("http://localhost", DirectoryHost.Key, DirectoryHost.Authority, SeedOptions.DevIdentityPassword)
-            { AccessUrl = "http://localhost", AccessKey = BookingHost.Key };
+            { AccessUrl = "http://localhost", AccessKey = AccessHost.Key };
         Http = new WorldSeedHttp(Identity, Directory, Access, Calls);
     }
 
@@ -159,7 +159,7 @@ public sealed class BookingWorld : IAsyncDisposable
         new() { CompletionWait = wait ?? TimeSpan.FromSeconds(20), CompletionPoll = TimeSpan.FromMilliseconds(25), TaskWait = wait ?? TimeSpan.FromSeconds(20) };
 
     /// <summary>What a person would read: a client's own bookings through the public API, by the client's demo name.</summary>
-    public async Task<List<JsonElement>> BookingsOf(string clientName)
+    public async Task<List<JsonElement>> AccessesOf(string clientName)
     {
         using var http = Access.CreateClient();
         http.DefaultRequestHeaders.Authorization = new("Bearer", await TokenAsync(clientName));
@@ -174,10 +174,10 @@ public sealed class BookingWorld : IAsyncDisposable
         return all;
     }
 
-    public async Task<List<JsonElement>> AllClientBookings()
+    public async Task<List<JsonElement>> AllClientAccesses()
     {
         var all = new List<JsonElement>();
-        foreach (var name in DemoCatalogNames) all.AddRange(await BookingsOf(name));
+        foreach (var name in DemoCatalogNames) all.AddRange(await AccessesOf(name));
         return all;
     }
 

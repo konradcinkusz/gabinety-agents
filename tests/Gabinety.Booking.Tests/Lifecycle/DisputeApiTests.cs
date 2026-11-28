@@ -85,7 +85,7 @@ public class DisputeApiTests
     }
 
     [Fact]
-    public async Task A_second_dispute_of_the_same_booking_is_409()
+    public async Task A_second_dispute_of_the_same_access_is_409()
     {
         await using var h = Life.Host(new RecordingProvider());
         var id = await Life.Seed(h, AccessStatus.Confirmed, -2 * H);
@@ -130,7 +130,7 @@ public class DisputeApiTests
     }
 
     [Fact]
-    public async Task An_unknown_booking_is_404_and_no_token_is_401()
+    public async Task An_unknown_access_is_404_and_no_token_is_401()
     {
         await using var h = Life.Host(new RecordingProvider());
         var id = await Life.Seed(h, AccessStatus.Confirmed, -2 * H);

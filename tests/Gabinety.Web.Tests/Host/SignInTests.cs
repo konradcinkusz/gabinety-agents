@@ -224,7 +224,7 @@ public class SignInTests
     }
 
     [Fact]
-    public async Task The_authenticated_page_says_so_in_an_alert_when_the_booking_service_is_down_and_the_shell_stays()
+    public async Task The_authenticated_page_says_so_in_an_alert_when_the_access_service_is_down_and_the_shell_stays()
     {
         await using var web = Web();
         var browser = web.NewBrowser();
