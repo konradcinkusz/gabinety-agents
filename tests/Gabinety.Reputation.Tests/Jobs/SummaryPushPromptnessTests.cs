@@ -34,7 +34,22 @@ public class SummaryPushPromptnessTests
 
         var push = Assert.Single(await WaitForPushes(h, pract, 1));
         Assert.Equal(new ReputationPush(1, 4m, 1), push);
-        Assert.Equal(1, (await h.SummaryOf(pract))!.PushedVersion);
+        // The job records the push in the Directory first and only then writes pushed_version (it must: the version is marked once Directory ACCEPTED it),
+        // so a reader that has just seen the push may still read the old pushed_version. Wait for the write instead of racing it.
+        Assert.Equal(1, await WaitForPushedVersion(h, pract, 1));
+    }
+
+    static async Task<long> WaitForPushedVersion(ReviewsHost h, Guid agent, long version)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(20);
+        long seen = 0;
+        while (DateTime.UtcNow < deadline)
+        {
+            seen = (await h.SummaryOf(agent))!.PushedVersion;
+            if (seen >= version) return seen;
+            await Task.Delay(25);
+        }
+        return seen;
     }
 
     [Fact]
