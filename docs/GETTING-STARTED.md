@@ -1,8 +1,8 @@
 # Getting started
 
-How to run Gabinety Agents (a marketplace of AI agents) on your machine, sign in, click through every journey (J1 to J9), call the public API, pass business time, and run each test layer. The code keeps the old names: `Practitioner` is an agent, `Offering` a package, `Booking` a purchased package (`docs/agentic/PLAN.md`, section 1).
+How to run Gabinety Agents (a marketplace of AI agents) on your machine, sign in, click through every journey (J1 to J9), call the public API, pass business time, and run each test layer. In the code (since E-06) an agent is `Agent`, a package `Package`, a purchased package `Access`; the wire format (JSON fields, `/api/v1/...` routes), the database and the service name `Gabinety.Booking` keep the old names (`docs/agentic/RENAME-MAP.md`).
 
-The commands of sections 1 to 6 were first run on Linux with the .NET SDK 10.0.404 (`global.json` asks for 10.0.100 or a later 10.0 feature band; 10.0.100 does not compile `MyBookings.razor`, so use 10.0.404 or newer), Node 22 and pnpm 10, on 2026-11-17, and sections 3 and 5 were rewritten for the agent marketplace on 2026-11-24 from the code and the Playwright journeys (section 8 says what that means). Where a result is quoted it is what the command printed.
+The commands of sections 1 to 6 were first run on Linux with the .NET SDK 10.0.404 (`global.json` asks for 10.0.100 or a later 10.0 feature band; 10.0.100 does not compile `MyAccesses.razor`, so use 10.0.404 or newer), Node 22 and pnpm 10, on 2026-11-17, and sections 3 and 5 were rewritten for the agent marketplace on 2026-11-24 from the code and the Playwright journeys (section 8 says what that means). Where a result is quoted it is what the command printed.
 
 ## 1. Start the fake profile
 
