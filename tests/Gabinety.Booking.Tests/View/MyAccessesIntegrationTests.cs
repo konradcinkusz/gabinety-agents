@@ -3,7 +3,7 @@ using System.Text.Json;
 using Gabinety.Booking.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
-using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Accesses.Entities.Access;
 using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;

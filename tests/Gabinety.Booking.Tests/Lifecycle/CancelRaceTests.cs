@@ -1,5 +1,5 @@
 using System.Net;
-using Gabinety.Booking.Features.Bookings.Create;
+using Gabinety.Booking.Features.Accesses.Create;
 using Gabinety.Contracts.Booking;
 using Microsoft.EntityFrameworkCore;
 using AccessStatus = Gabinety.Billing.AccessStatus;

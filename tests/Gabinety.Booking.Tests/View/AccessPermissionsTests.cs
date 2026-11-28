@@ -1,5 +1,5 @@
-using Gabinety.Booking.Features.Bookings.View;
-using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using Gabinety.Booking.Features.Accesses.View;
+using AccessEntity = Gabinety.Booking.Features.Accesses.Entities.Access;
 using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;

@@ -1,5 +1,5 @@
 using System.Net;
-using Gabinety.Booking.Features.Bookings.Create;
+using Gabinety.Booking.Features.Accesses.Create;
 using Gabinety.Booking.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -55,7 +55,7 @@ public class ErasureIntegrationTests : IAsyncLifetime
         Assert.Equal(0, await db.Accesses.CountAsync(x => x.ClientUserId == a || x.ClientUserId == b || x.AgentUserId == a || x.AgentUserId == b));
 
         // the index still guards: a second row of the same (token, key) is refused
-        db.Accesses.Add(new Gabinety.Booking.Features.Bookings.Entities.Access
+        db.Accesses.Add(new Gabinety.Booking.Features.Accesses.Entities.Access
         {
             Id = Guid.NewGuid(), ClientUserId = ErasureApiTests.Token(a), AgentId = Guid.NewGuid(), AgentUserId = agentUser, PackageId = host.Package, PackageTitle = "demo-offering",
             DurationMinutes = 60, PriceMinor = 1, StartUtc = host.Clock.GetUtcNow().AddDays(5), EndUtc = host.Clock.GetUtcNow().AddDays(5).AddHours(1), Status = AccessStatus.Confirmed,
@@ -71,7 +71,7 @@ public class ErasureIntegrationTests : IAsyncLifetime
         await host.Seed(db =>
         {
             for (var i = 0; i < 1203; i++)
-                db.Accesses.Add(new Gabinety.Booking.Features.Bookings.Entities.Access
+                db.Accesses.Add(new Gabinety.Booking.Features.Accesses.Entities.Access
                 {
                     Id = Guid.NewGuid(), ClientUserId = u, AgentId = Guid.NewGuid(), AgentUserId = p, PackageId = host.Package, PackageTitle = "demo-offering",
                     DurationMinutes = 60, PriceMinor = 1, StartUtc = host.Clock.GetUtcNow().AddDays(1), EndUtc = host.Clock.GetUtcNow().AddDays(1).AddHours(1),

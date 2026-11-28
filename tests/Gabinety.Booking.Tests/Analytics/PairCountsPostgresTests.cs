@@ -1,14 +1,14 @@
 using System.Net;
 using System.Text.Json;
 using Gabinety.Booking.Features.Analytics;
-using Gabinety.Booking.Features.Bookings.Create;
+using Gabinety.Booking.Features.Accesses.Create;
 using Gabinety.Booking.Features.Payouts;
 using Gabinety.Booking.Persistence;
 using Gabinety.Contracts.Booking;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
-using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Accesses.Entities.Access;
 using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;

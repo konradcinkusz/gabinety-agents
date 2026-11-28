@@ -19,7 +19,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Gabinety.Booking.Tests;
 
-using Access = Gabinety.Booking.Features.Bookings.Entities.Access;
+using Access = Gabinety.Booking.Features.Accesses.Entities.Access;
 
 /// <summary>Collects every log line (message, structured values and exception) so a test can assert what was NOT logged.</summary>
 sealed class LogSink : ILoggerProvider

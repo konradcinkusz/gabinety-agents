@@ -2,7 +2,7 @@ using Gabinety.ServiceDefaults;
 using Gabinety.Web.Api;
 using Gabinety.Web.Auth;
 using Gabinety.Web.Components.Layout;
-using Gabinety.Web.Components.Pages.Bookings;
+using Gabinety.Web.Components.Pages.Accesses;
 using Gabinety.Web.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;

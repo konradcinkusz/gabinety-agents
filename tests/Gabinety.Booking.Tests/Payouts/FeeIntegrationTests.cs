@@ -1,4 +1,4 @@
-using Gabinety.Booking.Features.Bookings.Create;
+using Gabinety.Booking.Features.Accesses.Create;
 using Gabinety.Booking.Features.Payouts;
 using Gabinety.Booking.Persistence;
 using Gabinety.Contracts.Booking;

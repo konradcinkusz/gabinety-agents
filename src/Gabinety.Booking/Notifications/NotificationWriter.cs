@@ -1,6 +1,6 @@
 using Gabinety.Booking.Persistence;
 using Microsoft.EntityFrameworkCore;
-using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Accesses.Entities.Access;
 
 namespace Gabinety.Booking.Notifications;
 

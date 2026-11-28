@@ -1,5 +1,5 @@
 using Gabinety.Booking.Features.Payments;
-using Gabinety.Booking.Features.Bookings.Create;
+using Gabinety.Booking.Features.Accesses.Create;
 using Gabinety.Booking.Features.Lifecycle.Core;
 using Gabinety.Contracts.Booking;
 using AccessStatus = Gabinety.Billing.AccessStatus;

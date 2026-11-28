@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Gabinety.Booking.Tests;
 
-using Access = Gabinety.Booking.Features.Bookings.Entities.Access;
+using Access = Gabinety.Booking.Features.Accesses.Entities.Access;
 
 public class CreateAccessApiTests
 {

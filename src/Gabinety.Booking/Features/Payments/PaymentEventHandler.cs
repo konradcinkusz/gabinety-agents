@@ -1,13 +1,13 @@
 using Gabinety.Billing;
 using Gabinety.Booking.Clients;
-using Gabinety.Booking.Features.Bookings.Create;
+using Gabinety.Booking.Features.Accesses.Create;
 using Gabinety.Booking.Features.Lifecycle.Core;
 using Gabinety.Booking.Payments.Abstractions;
 using Gabinety.Booking.Persistence;
 using Gabinety.Contracts.Booking;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
-using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Accesses.Entities.Access;
 using AccessStatus = Gabinety.Billing.AccessStatus;
 using ProviderEvent = Gabinety.Booking.Payments.Abstractions.WebhookEvent;
 

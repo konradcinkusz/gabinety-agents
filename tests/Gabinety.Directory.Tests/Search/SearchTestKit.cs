@@ -1,12 +1,12 @@
 using System.Text.Json;
 using Gabinety.Contracts.Common;
 using Gabinety.Contracts.Directory;
-using Gabinety.Directory.Features.Offerings;
+using Gabinety.Directory.Features.Packages;
 using Gabinety.Directory.Features.Profiles;
 using Gabinety.Directory.Features.Search;
 using Gabinety.Directory.Features.Taxonomy;
 using Gabinety.Directory.Persistence;
-using Gabinety.Directory.Tests.Offerings;
+using Gabinety.Directory.Tests.Packages;
 using Gabinety.Directory.Tests.Taxonomy;
 using Gabinety.Directory.Tests.Verification;
 using Microsoft.EntityFrameworkCore;
@@ -61,7 +61,7 @@ public class SearchFactory : VerificationFactory
         configure?.Invoke(p);
         db.Agents.Add(p);
         foreach (var (s, i) in packages.Select((s, i) => (s, i)))
-            db.Packages.Add(new Gabinety.Directory.Features.Offerings.Package
+            db.Packages.Add(new Gabinety.Directory.Features.Packages.Package
             {
                 Id = Guid.NewGuid(), AgentId = p.Id, Title = "Demo offering", Description = "d", DurationMinutes = (short)s.Duration, PriceMinor = s.Price,
                 Currency = "PLN", ProblemSlug = s.Problem, TechSlugs = s.Techs ?? ["dotnet"], IsActive = s.Active, CreatedAt = Epoch.AddMinutes(k).AddSeconds(i),

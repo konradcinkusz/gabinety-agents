@@ -1,6 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
-using Gabinety.Directory.Features.Offerings;
+using Gabinety.Directory.Features.Packages;
 using Gabinety.Directory.Features.Profiles;
 using Gabinety.Directory.Persistence;
 using Gabinety.Directory.Tests.Verification;

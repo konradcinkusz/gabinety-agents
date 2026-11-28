@@ -2,7 +2,7 @@ using Gabinety.Booking.Notifications;
 using Gabinety.Booking.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Accesses.Entities.Access;
 
 namespace Gabinety.Booking.Tests;
 

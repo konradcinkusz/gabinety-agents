@@ -8,7 +8,7 @@ using Gabinety.Contracts.Common;
 using Gabinety.Contracts.Directory;
 using Gabinety.ServiceDefaults;
 using Microsoft.EntityFrameworkCore;
-using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Accesses.Entities.Access;
 
 namespace Gabinety.Booking.Features.AgentApi;
 

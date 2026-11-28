@@ -2,7 +2,7 @@ using System.Buffers.Text;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
-using Gabinety.Directory.Features.Offerings;
+using Gabinety.Directory.Features.Packages;
 
 namespace Gabinety.Directory.Features.Search;
 

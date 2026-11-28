@@ -1,6 +1,6 @@
 using Bunit;
 using Gabinety.Web.Components.Pages.Booking;
-using Gabinety.Web.Components.Pages.Bookings;
+using Gabinety.Web.Components.Pages.Accesses;
 using Gabinety.Web.Tests.Pages;
 using static Gabinety.Web.Tests.Pages.ClientAreaFixture;
 

@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 using System.Net;
 using System.Text.Json;
 using AgentStatus = Gabinety.Contracts.Directory.AgentStatus;
-using Gabinety.Directory.Features.Offerings;
+using Gabinety.Directory.Features.Packages;
 using Gabinety.Directory.Features.Profiles;
 using Gabinety.Directory.Features.Verification;
 using Microsoft.EntityFrameworkCore;

@@ -2,12 +2,12 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Gabinety.Booking.Clients;
-using Gabinety.Booking.Features.Bookings.View;
+using Gabinety.Booking.Features.Accesses.View;
 using Gabinety.Booking.Features.Internal.Erasure;
 using Gabinety.Booking.Features.Lifecycle.Cancel;
 using Gabinety.Booking.Features.Payments;
 using Gabinety.Contracts.Booking;
-using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Accesses.Entities.Access;
 using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Tests;

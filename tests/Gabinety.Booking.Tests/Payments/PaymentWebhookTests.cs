@@ -20,7 +20,7 @@ public class PaymentWebhookTests
     }
 
     static async Task<string> Outcome(HttpResponseMessage r) => (await r.Body()).GetProperty("outcome").GetString()!;
-    static Task<Gabinety.Booking.Features.Bookings.Entities.Access> Access(CreateHost h, Guid id) => h.Query(db => db.Accesses.AsNoTracking().SingleAsync(b => b.Id == id));
+    static Task<Gabinety.Booking.Features.Accesses.Entities.Access> Access(CreateHost h, Guid id) => h.Query(db => db.Accesses.AsNoTracking().SingleAsync(b => b.Id == id));
     static Task<List<Gabinety.Booking.Features.Payments.LedgerEntry>> Ledger(CreateHost h, Guid id) => h.Query(db => db.LedgerEntries.AsNoTracking().Where(l => l.AccessId == id).ToListAsync());
 
     [Fact]

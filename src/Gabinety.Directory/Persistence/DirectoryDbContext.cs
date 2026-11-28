@@ -6,7 +6,7 @@ namespace Gabinety.Directory.Persistence;
 public sealed class DirectoryDbContext(DbContextOptions<DirectoryDbContext> options) : DbContext(options)
 {
     public DbSet<Features.Profiles.Agent> Agents => Set<Features.Profiles.Agent>();
-    public DbSet<Features.Offerings.Package> Packages => Set<Features.Offerings.Package>();
+    public DbSet<Features.Packages.Package> Packages => Set<Features.Packages.Package>();
     public DbSet<Features.Taxonomy.Category> Categories => Set<Features.Taxonomy.Category>();
     public DbSet<Features.Taxonomy.TaxonomyMeta> TaxonomyMeta => Set<Features.Taxonomy.TaxonomyMeta>();
 

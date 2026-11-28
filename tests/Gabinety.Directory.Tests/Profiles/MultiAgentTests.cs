@@ -5,9 +5,9 @@ using Gabinety.Contracts.Common;
 using Gabinety.Contracts.Directory;
 using Gabinety.Directory.Features.Verification;
 using Gabinety.Directory.Tests.Internal;
-using Gabinety.Directory.Tests.Offerings;
+using Gabinety.Directory.Tests.Packages;
 using Gabinety.Directory.Tests.Verification;
-using static Gabinety.Directory.Tests.Offerings.Kit;
+using static Gabinety.Directory.Tests.Packages.Kit;
 
 namespace Gabinety.Directory.Tests.Profiles;
 

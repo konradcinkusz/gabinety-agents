@@ -4,11 +4,11 @@ using System.Text.Json;
 using Gabinety.Contracts.Common;
 using Gabinety.Contracts.Directory;
 using Gabinety.Directory.Persistence;
-using Gabinety.Directory.Tests.Offerings;
+using Gabinety.Directory.Tests.Packages;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Testcontainers.PostgreSql;
-using static Gabinety.Directory.Tests.Offerings.Kit;
+using static Gabinety.Directory.Tests.Packages.Kit;
 
 namespace Gabinety.Directory.Tests.Profiles;
 

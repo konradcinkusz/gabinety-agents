@@ -1,11 +1,11 @@
 using Gabinety.Booking.Features.AgentApi;
 using Gabinety.Booking.Features.ApiKeys;
-using Gabinety.Booking.Features.Bookings.Create;
+using Gabinety.Booking.Features.Accesses.Create;
 using Gabinety.Booking.Features.Payments;
 using Gabinety.Booking.Features.Payouts;
 using Gabinety.Booking.Notifications;
 using Microsoft.EntityFrameworkCore;
-using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Accesses.Entities.Access;
 
 namespace Gabinety.Booking.Persistence;
 

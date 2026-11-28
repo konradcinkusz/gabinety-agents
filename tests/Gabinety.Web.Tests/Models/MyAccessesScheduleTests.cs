@@ -1,5 +1,5 @@
 using Gabinety.Web.Api;
-using Gabinety.Web.Components.Pages.Bookings;
+using Gabinety.Web.Components.Pages.Accesses;
 
 namespace Gabinety.Web.Tests.Models;
 

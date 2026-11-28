@@ -4,7 +4,7 @@ using Gabinety.Booking.Features.Payouts;
 using Gabinety.Contracts.Booking;
 using Gabinety.Contracts.Directory;
 using Microsoft.EntityFrameworkCore;
-using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Accesses.Entities.Access;
 using AccessStatus = Gabinety.Billing.AccessStatus;
 
 namespace Gabinety.Booking.Features.AgentApi;

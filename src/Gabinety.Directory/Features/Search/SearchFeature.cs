@@ -1,8 +1,8 @@
 using System.Text.Json.Serialization;
 using Gabinety.Contracts.Common;
 using Gabinety.Contracts.Directory;
-using Gabinety.Directory.Features.Offerings;
-using Package = Gabinety.Directory.Features.Offerings.Package;
+using Gabinety.Directory.Features.Packages;
+using Package = Gabinety.Directory.Features.Packages.Package;
 using Gabinety.Directory.Features.Profiles;
 using Gabinety.Directory.Features.Taxonomy;
 using Gabinety.Directory.Persistence;

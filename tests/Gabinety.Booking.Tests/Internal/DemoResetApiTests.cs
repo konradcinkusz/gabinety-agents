@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using System.Net;
 using AccessStatus = Gabinety.Billing.AccessStatus;
-using Gabinety.Booking.Features.Bookings.Create;
+using Gabinety.Booking.Features.Accesses.Create;
 using Gabinety.Booking.Features.Internal.TestClock;
 using Gabinety.Booking.Features.Payments;
 using Gabinety.Booking.Persistence;
@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Accesses.Entities.Access;
 
 namespace Gabinety.Booking.Tests;
 

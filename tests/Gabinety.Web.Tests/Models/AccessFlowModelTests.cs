@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Gabinety.Web.Api;
 using Gabinety.Web.Components.Pages.Booking;
-using Gabinety.Web.Components.Pages.Bookings;
+using Gabinety.Web.Components.Pages.Accesses;
 using Gabinety.Web.Components.Pages.Reviews;
 using Gabinety.Web.Text;
 

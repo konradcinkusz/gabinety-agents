@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using Gabinety.Contracts.Directory;
 using Gabinety.Directory.Features.Profiles;
 using Gabinety.Directory.Features.Ranking;
-using Gabinety.Directory.Tests.Offerings;
+using Gabinety.Directory.Tests.Packages;
 using Gabinety.Ranking;
 using Microsoft.EntityFrameworkCore;
 

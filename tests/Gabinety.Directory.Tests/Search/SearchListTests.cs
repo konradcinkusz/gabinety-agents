@@ -2,7 +2,7 @@ using System.Net;
 using System.Text.Json;
 using Gabinety.Contracts.Common;
 using Gabinety.Contracts.Directory;
-using Gabinety.Directory.Tests.Offerings;
+using Gabinety.Directory.Tests.Packages;
 
 namespace Gabinety.Directory.Tests.Search;
 

@@ -1,7 +1,7 @@
 using Bunit;
 using Gabinety.Web.Components.Shared;
 using Gabinety.Web.Components.Pages.Booking;
-using Gabinety.Web.Components.Pages.Bookings;
+using Gabinety.Web.Components.Pages.Accesses;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Gabinety.Web.Tests.Rendering;

@@ -42,7 +42,7 @@
                         @if (b is not null)
                         {
                             <dt>@PlAdmin.Disputes.Price</dt><dd class="num">@AdminFormat.Pln(b.Price.AmountMinor)</dd>
-                            <dt>@PlAdmin.Disputes.Usage</dt><dd data-testid="dispute-usage">@Gabinety.Web.Components.Pages.Bookings.AccessFormat.UsageLine(b.Kind, b.UnitsUsed, b.UnitsTotal)</dd>
+                            <dt>@PlAdmin.Disputes.Usage</dt><dd data-testid="dispute-usage">@Gabinety.Web.Components.Pages.Accesses.AccessFormat.UsageLine(b.Kind, b.UnitsUsed, b.UnitsTotal)</dd>
                             @if (_status == DisputeRules.Open)
                             {
                                 <dt>@PlAdmin.Disputes.MaxRefund</dt><dd class="num">@AdminFormat.Pln(b.Price.AmountMinor)</dd>

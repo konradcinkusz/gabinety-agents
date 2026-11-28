@@ -4,7 +4,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Gabinety.Contracts.Common;
 using Gabinety.Contracts.Directory;
-using Gabinety.Directory.Tests.Offerings;
+using Gabinety.Directory.Tests.Packages;
 using Microsoft.Net.Http.Headers;
 
 namespace Gabinety.Directory.Tests.Search;

@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 using Gabinety.Contracts.Common;
 using Gabinety.Contracts.Directory;
 using Gabinety.Directory.Clients;
-using Gabinety.Directory.Features.Offerings;
+using Gabinety.Directory.Features.Packages;
 using Gabinety.Directory.Features.Profiles;
 using Gabinety.Directory.Features.Ranking;
 using Gabinety.Directory.Persistence;

@@ -99,7 +99,7 @@ public class ContractCopiesTests
         RoundTrip<W.PageDto<W.AccessViewDto>>(new Page<AccessView>([real], null), new JsonSerializerOptions(JsonSerializerDefaults.Web), c =>
         {
             Assert.Equal(status.ToString(), c.Items[0].Status);
-            Assert.Contains(c.Items[0].Status, Components.Pages.Bookings.AccessFormat.Statuses);
+            Assert.Contains(c.Items[0].Status, Components.Pages.Accesses.AccessFormat.Statuses);
             Assert.Equal(At, c.Items[0].StartUtc);
             Assert.Equal("demo-client", c.Items[0].Client!.DisplayName);
         });

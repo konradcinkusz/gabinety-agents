@@ -1,7 +1,7 @@
 using System.Net;
 using Gabinety.Booking.Features.Internal.Erasure;
 using Microsoft.EntityFrameworkCore;
-using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Accesses.Entities.Access;
 
 namespace Gabinety.Booking.Tests;
 

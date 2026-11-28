@@ -1,5 +1,5 @@
 using System.Text.Json.Serialization;
-using Gabinety.Booking.Features.Internal.PractitionerCancellation;
+using Gabinety.Booking.Features.Internal.AgentCancellation;
 using Gabinety.Booking.Persistence;
 using Microsoft.EntityFrameworkCore;
 using AccessStatus = Gabinety.Billing.AccessStatus;

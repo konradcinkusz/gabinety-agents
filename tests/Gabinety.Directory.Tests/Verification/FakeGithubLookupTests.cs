@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using Gabinety.Contracts.Directory;
 using Gabinety.Directory.Features.Verification;
 using Gabinety.Directory.Tests.Internal;
-using Gabinety.Directory.Tests.Offerings;
+using Gabinety.Directory.Tests.Packages;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using static Gabinety.Directory.Tests.Verification.Vk;

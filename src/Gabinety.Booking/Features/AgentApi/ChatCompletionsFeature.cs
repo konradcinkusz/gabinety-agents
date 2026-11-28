@@ -5,7 +5,7 @@ using System.Text.Json.Nodes;
 using Gabinety.Booking.Agents.Abstractions;
 using Gabinety.Contracts.Directory;
 using Gabinety.ServiceDefaults;
-using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Accesses.Entities.Access;
 
 namespace Gabinety.Booking.Features.AgentApi;
 

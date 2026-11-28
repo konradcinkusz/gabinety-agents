@@ -1,4 +1,4 @@
-using Gabinety.Booking.Features.Bookings.Create;
+using Gabinety.Booking.Features.Accesses.Create;
 using Gabinety.Booking.Features.Payments;
 using Gabinety.Booking.Payments.Abstractions;
 using Gabinety.Booking.Persistence;

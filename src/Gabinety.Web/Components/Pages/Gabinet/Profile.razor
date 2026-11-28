@@ -146,7 +146,7 @@
     @if (p.Packages.Count > 0)
     {
         <aside class="card summary" aria-label="@PlPages.Profile.SummaryTitle" data-testid="profile-summary">
-            <p class="summary__price"><span class="muted">@PlPages.Profile.PriceFromLabel</span> <span class="num price">@Gabinety.Web.Components.Pages.Practitioners.ListFormat.Price(p.Packages.Min(o => o.Price.AmountMinor))</span></p>
+            <p class="summary__price"><span class="muted">@PlPages.Profile.PriceFromLabel</span> <span class="num price">@Gabinety.Web.Components.Pages.Agents.ListFormat.Price(p.Packages.Min(o => o.Price.AmountMinor))</span></p>
             <a class="btn btn--primary" href="@($"#oferta-{p.Packages[0].Id}")">@PlPages.Profile.SeeTimes</a>
             <p class="muted">@PlPages.Profile.PaymentNote</p>
         </aside>

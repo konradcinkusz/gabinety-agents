@@ -138,7 +138,7 @@ public class AdminTransitionTests(VerificationFactory f) : IClassFixture<Verific
         Assert.Equal(HttpStatusCode.OK, (await c.PutAsJsonAsync(Me, Full)).StatusCode);
         await f.Db(async db =>
         {
-            db.Packages.Add(new Gabinety.Directory.Features.Offerings.Package { Id = Guid.NewGuid(), AgentId = p.Id, Title = "Demo", Description = "Demo", DurationMinutes = 30, PriceMinor = 10000,
+            db.Packages.Add(new Gabinety.Directory.Features.Packages.Package { Id = Guid.NewGuid(), AgentId = p.Id, Title = "Demo", Description = "Demo", DurationMinutes = 30, PriceMinor = 10000,
                 ProblemSlug = "code-review", IsActive = true, CreatedAt = f.Clock.GetUtcNow() });
             await db.SaveChangesAsync();
             return 0;

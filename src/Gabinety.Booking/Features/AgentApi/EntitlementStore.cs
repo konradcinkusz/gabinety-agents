@@ -2,7 +2,7 @@ using Gabinety.Billing;
 using Gabinety.Booking.Persistence;
 using Gabinety.Contracts.Directory;
 using Microsoft.EntityFrameworkCore;
-using AccessEntity = Gabinety.Booking.Features.Bookings.Entities.Access;
+using AccessEntity = Gabinety.Booking.Features.Accesses.Entities.Access;
 
 namespace Gabinety.Booking.Features.AgentApi;
 
