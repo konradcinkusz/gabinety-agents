@@ -26,10 +26,23 @@ Przykłady: `PractitionerCard` → `AgentCard`, `PractitionerStatus` → `AgentS
 | Literały tekstowe (teksty PL, adresy, klucze konfiguracji, szablony logów) | nie ten etap |
 | Dane historyczne: `docs/ui`, pomiary, `PARITY.md`, stare ADR, `PLAN.md`, `tests/e2e` | zostają bez zmian |
 | Komentarze prozą (nie `cref`) | opis, nie kod |
+| Parametry tras `@page` w Razor (`BookingId`, `OfferingId` w szablonach `/moje/dostepy/{BookingId}`, `/dostep/{OfferingId}` itd.) | Blazor wiąże parametr z szablonu trasy po nazwie właściwości; zmiana nazwy zmieniłaby szablon i `docs/operations/ROUTE-AUTH.md` (test RouteAuditTests) |
+| Parametry handlerów minimal API związane z trasą lub zapytaniem (`practitionerId` w `/api/v1/practitioners/{practitionerId:guid}/reviews`, `bookingId` w `me/bookings/{bookingId:guid}/tasks`, `minBookings` w `pair-counts`) | nazwa jest w adresie; dodano `[FromRoute(Name = ...)]` / `[FromQuery(Name = ...)]`, więc zmienna ma nową nazwę, a adres starą |
+| `extern alias BookingApp` w testach integracyjnych | alias projektu z `.csproj` (projekty bez zmian) |
+| `src/Gabinety.AppHost` | twarde ograniczenie 3 (test `AppHostWiringTests` czyta jego tekst) |
+| Nazwy tabel i kolumn w SQL i w `FromSql` (`bookings`, `practitioner_id`) | schemat bez zmian |
 
 Snapshoty modeli migracji: zmienia się tylko nazwa klasy snapshotu i `typeof(...DbContext)` w `[DbContext]`; nazwy encji w snapshotach (łańcuchy tekstowe) zostają, bo tabele i identyfikatory migracji się nie zmieniają.
 
-## 3. Tabela mapowania identyfikatorów
+## 3. Kolizje z istniejącymi nazwami (rozwiązane ręcznie)
+
+| Stara nazwa | Naiwna nowa nazwa | Powód | Nazwa użyta |
+|---|---|---|---|
+| `DirectoryPractitioner` (Booking) | `DirectoryAgent` | taki typ już istnieje (agent z `Slug`, E-04) | `DirectoryAgentState` |
+| `InternalPractitionerDto` (Directory) | `InternalAgentDto` | taki typ już istnieje (E-04) | `InternalAgentStateDto` |
+| lokalna `practitioner` w `PaymentAccountFeature` | `agent` | `agent` to parametr zapytania `?agent=` tej samej metody | `agentId` |
+
+## 4. Tabela mapowania identyfikatorów
 
 Kolejność zmian w historii: Contracts i Billing, Directory, Booking, Reputation i inne usługi, Web, tools, testy, dokumentacja.
 Nazwa trafia do commita obszaru, w którym jest zadeklarowana jako pierwszym; zmienia się wtedy wszędzie w repozytorium naraz (kompilator pilnuje spójności).
@@ -92,7 +105,7 @@ Nazwa trafia do commita obszaru, w którym jest zadeklarowana jako pierwszym; zm
 | `GetOffering` | `GetPackage` |
 | `IBookingClient` | `IAccessClient` |
 | `InternalOfferingDto` | `InternalPackageDto` |
-| `InternalPractitionerDto` | `InternalAgentDto` |
+| `InternalPractitionerDto` | `InternalAgentStateDto` |
 | `InternalPractitionerNameDto` | `InternalAgentNameDto` |
 | `NoOfferingsYet` | `NoPackagesYet` |
 | `OfferingConfiguration` | `PackageConfiguration` |
@@ -135,7 +148,7 @@ Nazwa trafia do commita obszaru, w którym jest zadeklarowana jako pierwszym; zm
 | `CreateForBookingAsync` | `CreateForAccessAsync` |
 | `DefaultMinBookings` | `DefaultMinAccesses` |
 | `DirectoryOffering` | `DirectoryPackage` |
-| `DirectoryPractitioner` | `DirectoryAgent` |
+| `DirectoryPractitioner` | `DirectoryAgentState` |
 | `DirectoryPractitionerName` | `DirectoryAgentName` |
 | `FutureBookingCanceller` | `FutureAccessCanceller` |
 | `GetOfferingAsync` | `GetPackageAsync` |
