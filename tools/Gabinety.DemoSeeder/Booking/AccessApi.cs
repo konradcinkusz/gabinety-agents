@@ -6,7 +6,7 @@ using System.Text.Json;
 namespace Gabinety.DemoSeeder;
 
 /// <summary>A purchased package as the seeder reads it through <c>GET /api/v1/bookings/{id}</c> or the client's own list. <c>UnitsUsed</c> counts tasks (<c>Tasks</c>) or tokens (<c>Chat</c>).</summary>
-public sealed record BookingInfo(Guid Id, string Status, DateTimeOffset Start, DateTimeOffset End, string? BriefText, string Kind = "Tasks", long UnitsTotal = 0, long UnitsUsed = 0);
+public sealed record AccessInfo(Guid Id, string Status, DateTimeOffset Start, DateTimeOffset End, string? BriefText, string Kind = "Tasks", long UnitsTotal = 0, long UnitsUsed = 0);
 
 /// <summary>One task of a package as the client reads it; <c>Status</c> is <c>queued</c>, <c>running</c>, <c>succeeded</c> or <c>failed</c>.</summary>
 public sealed record TaskInfo(Guid Id, string Status);
@@ -18,7 +18,7 @@ public sealed record ApiKeyInfo(Guid Id, string Name, string Prefix);
 /// The Booking API as the seeder uses it: user calls with a bearer token, the admin resolve, and the internal clock and reset with X-Internal-Key.
 /// Errors name the status and the error code, never a body (a body can carry a brief or a note).
 /// </summary>
-public sealed class BookingApi(HttpClient http, SeedOptions options, TimeProvider time)
+public sealed class AccessApi(HttpClient http, SeedOptions options, TimeProvider time)
 {
     static readonly JsonSerializerOptions J = new(JsonSerializerDefaults.Web);
     const int MaxAttempts = SeedRetry.MaxAttempts;
@@ -31,7 +31,7 @@ public sealed class BookingApi(HttpClient http, SeedOptions options, TimeProvide
         {
             using var req = new HttpRequestMessage(method, path.TrimStart('/'));
             if (bearer is not null) req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
-            if (internalKey) req.Headers.Add("X-Internal-Key", options.BookingKey);
+            if (internalKey) req.Headers.Add("X-Internal-Key", options.AccessKey);
             if (idempotencyKey is { } k) req.Headers.Add("Idempotency-Key", k.ToString());
             if (body is not null) req.Content = JsonContent.Create(body, options: J);
             using var res = await http.SendAsync(req, ct);
@@ -62,7 +62,7 @@ public sealed class BookingApi(HttpClient http, SeedOptions options, TimeProvide
     static JsonElement Need(Reply r, string what, params HttpStatusCode[] ok) =>
         ok.Contains(r.Status) && r.Json is { } j ? j : throw Fail(what, r);
 
-    static BookingInfo ToInfo(JsonElement v) => new(v.GetProperty("id").GetGuid(), v.GetProperty("status").GetString()!, v.GetProperty("startUtc").GetDateTimeOffset(),
+    static AccessInfo ToInfo(JsonElement v) => new(v.GetProperty("id").GetGuid(), v.GetProperty("status").GetString()!, v.GetProperty("startUtc").GetDateTimeOffset(),
         v.GetProperty("endUtc").GetDateTimeOffset(), v.TryGetProperty("brief", out var b) && b.ValueKind == JsonValueKind.Object ? b.GetProperty("text").GetString() : null,
         v.TryGetProperty("kind", out var k) && k.ValueKind == JsonValueKind.String ? k.GetString()! : "Tasks",
         v.TryGetProperty("unitsTotal", out var t) && t.ValueKind == JsonValueKind.Number ? t.GetInt64() : 0,
@@ -93,21 +93,21 @@ public sealed class BookingApi(HttpClient http, SeedOptions options, TimeProvide
     // ---- bookings
 
     /// <summary>Buys a package: no date (a package is valid for 30 days from the purchase, PLAN A-02). The booking is PendingPayment until the simulated payment.</summary>
-    public async Task<BookingInfo> CreateAsync(DemoUser client, Guid idempotencyKey, Guid packageId, string briefText, CancellationToken ct)
+    public async Task<AccessInfo> CreateAsync(DemoUser client, Guid idempotencyKey, Guid packageId, string briefText, CancellationToken ct)
     {
         var body = new { offeringId = packageId, brief = new { text = briefText, problemSlug = (string?)null, aiAssisted = false } };
         var r = await SendAsync(HttpMethod.Post, "/api/v1/bookings", client.AccessToken, false, body, ct, idempotencyKey);
-        if (r.Status == HttpStatusCode.Created && r.Json is { } j) return new BookingInfo(j.GetProperty("bookingId").GetGuid(), j.GetProperty("status").GetString()!, default, default, briefText);
+        if (r.Status == HttpStatusCode.Created && r.Json is { } j) return new AccessInfo(j.GetProperty("bookingId").GetGuid(), j.GetProperty("status").GetString()!, default, default, briefText);
         throw Fail("create booking", r);
     }
 
-    public async Task<BookingInfo> GetAsync(DemoUser user, Guid id, CancellationToken ct) =>
+    public async Task<AccessInfo> GetAsync(DemoUser user, Guid id, CancellationToken ct) =>
         ToInfo(Need(await SendAsync(HttpMethod.Get, $"/api/v1/bookings/{id}", user.AccessToken, false, null, ct), "get booking", HttpStatusCode.OK));
 
     /// <summary>All of the client's own bookings (any status), through the paged list.</summary>
-    public async Task<List<BookingInfo>> MyAccessesAsync(DemoUser client, CancellationToken ct)
+    public async Task<List<AccessInfo>> MyAccessesAsync(DemoUser client, CancellationToken ct)
     {
-        var all = new List<BookingInfo>();
+        var all = new List<AccessInfo>();
         string? cursor = null;
         do
         {

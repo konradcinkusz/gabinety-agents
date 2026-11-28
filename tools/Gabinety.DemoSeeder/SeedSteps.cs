@@ -6,7 +6,7 @@ public static class SeedSteps
     public static IReadOnlyList<ISeedStep> All { get; } = new ISeedStep[]
     {
         new DirectorySeedStep(),
-        new BookingSeedStep(),
+        new AccessSeedStep(),
         new ApiKeySeedStep(),
         new ReputationSeedStep(),
         new ScaleSeedStep(),

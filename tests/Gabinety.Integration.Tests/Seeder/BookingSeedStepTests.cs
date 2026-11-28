@@ -285,7 +285,7 @@ public class BookingSeedStepFailureTests
             return 0;
         });
 
-        var removed = await new BookingSeedStep().ResetAsync(w.Context, CancellationToken.None);
+        var removed = await new AccessSeedStep().ResetAsync(w.Context, CancellationToken.None);
 
         Assert.Equal(1, removed);
         Assert.Equal(["real-client"], (await w.Access.Accesses()).Select(b => b.ClientUserId));
@@ -297,7 +297,7 @@ public class BookingSeedStepFailureTests
         await using var w = new BookingWorld();
         var context = new SeedContext(new SeedOptions("http://localhost", DirectoryHost.Key, DirectoryHost.Authority, SeedOptions.DevIdentityPassword), w.Http, w.Log, TimeProvider.System);
 
-        await new BookingSeedStep().RunAsync(context, CancellationToken.None);
+        await new AccessSeedStep().RunAsync(context, CancellationToken.None);
 
         Assert.Contains("booking: skipped", w.Log.Text);
         Assert.Empty(w.Calls.Requests);

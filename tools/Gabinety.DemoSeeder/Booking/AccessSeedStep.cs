@@ -7,7 +7,7 @@ namespace Gabinety.DemoSeeder;
 /// the last unit of a single-task package lets the service's auto-complete job complete it. Idempotent: a booking is found again by the demo key in its brief and only the steps it
 /// has not yet passed are taken; the tasks already ordered are counted from <c>UnitsUsed</c>.
 /// </summary>
-public sealed class BookingSeedStep : ISeedStep
+public sealed class AccessSeedStep : ISeedStep
 {
     public string Name => "booking";
     public int Order => 200;
@@ -18,20 +18,20 @@ public sealed class BookingSeedStep : ISeedStep
     /// <summary>How long to wait for the agent platform's answers to the tasks just ordered (the task job runs every 5 s). Not an error when it is longer: the tasks stay queued and the rest of the data is valid.</summary>
     public TimeSpan TaskWait { get; init; } = TimeSpan.FromSeconds(30);
 
-    sealed record Work(DemoBooking Plan, DemoUser Client, SeededPractitioner Seeded, BookingInfo Info);
+    sealed record Work(DemoAccess Plan, DemoUser Client, SeededAgent Seeded, AccessInfo Info);
 
     public async Task<int> ResetAsync(SeedContext context, CancellationToken ct)
     {
         if (context.Options.AccessUrl.Length == 0) return -1;
-        if (context.Options.BookingKey.Length == 0) throw new SeedException("booking: Internal:Keys:Booking is not configured");
-        return await new BookingApi(context.Http.For(SeedService.Access), context.Options, context.Time).ResetAsync(ct);
+        if (context.Options.AccessKey.Length == 0) throw new SeedException("booking: Internal:Keys:Booking is not configured");
+        return await new AccessApi(context.Http.For(SeedService.Access), context.Options, context.Time).ResetAsync(ct);
     }
 
     public async Task RunAsync(SeedContext context, CancellationToken ct)
     {
         if (context.Options.AccessUrl.Length == 0) { context.Log.Info("booking: skipped (Backend:Booking is not configured)"); return; }
-        if (context.Options.BookingKey.Length == 0) throw new SeedException("booking: Internal:Keys:Booking is not configured");
-        var api = new BookingApi(context.Http.For(SeedService.Access), context.Options, context.Time);
+        if (context.Options.AccessKey.Length == 0) throw new SeedException("booking: Internal:Keys:Booking is not configured");
+        var api = new AccessApi(context.Http.For(SeedService.Access), context.Options, context.Time);
         var approved = context.Agents.Values.Where(p => p.Status == "Approved" && p.Packages.Count > 0).OrderBy(p => p.Key, StringComparer.Ordinal).ToList();
         if (approved.Count == 0) throw new SeedException("booking: no Approved demo agent with a package (run the directory step first)");
         var clients = context.Clients.OrderBy(c => c.Key, StringComparer.Ordinal).Select(c => c.Value).ToList();
@@ -41,7 +41,7 @@ public sealed class BookingSeedStep : ISeedStep
         var changes = 0;
         var known = await KnownAsync(api, clients, ct);
         var works = new List<Work>();
-        foreach (var plan in BookingPlan.All)
+        foreach (var plan in AccessPlan.All)
         {
             var (work, created) = await BuildAsync(context, api, plan, approved, clients, known, ct);
             if (created) changes++;
@@ -50,14 +50,14 @@ public sealed class BookingSeedStep : ISeedStep
             works.Add(advanced);
         }
 
-        await WaitForCompletedAsync(context, api, works.Where(w => w.Plan.Target == BookingTarget.Completed).ToList(), ct);
+        await WaitForCompletedAsync(context, api, works.Where(w => w.Plan.Target == AccessTarget.Completed).ToList(), ct);
         await WaitForTasksAsync(context, api, works.Where(w => w.Plan.Tasks > 0).ToList(), ct);
-        context.Log.Info($"booking: {BookingPlan.All.Length} demo bookings {(changes == 0 ? "unchanged" : $"changes={changes}")}");
+        context.Log.Info($"booking: {AccessPlan.All.Length} demo bookings {(changes == 0 ? "unchanged" : $"changes={changes}")}");
     }
 
-    static async Task<Dictionary<string, BookingInfo>> KnownAsync(BookingApi api, List<DemoUser> clients, CancellationToken ct)
+    static async Task<Dictionary<string, AccessInfo>> KnownAsync(AccessApi api, List<DemoUser> clients, CancellationToken ct)
     {
-        var known = new Dictionary<string, BookingInfo>();
+        var known = new Dictionary<string, AccessInfo>();
         foreach (var c in clients)
             foreach (var b in await api.MyAccessesAsync(c, ct))
                 if (KeyOf(b) is { } key) known[key] = b;
@@ -65,13 +65,13 @@ public sealed class BookingSeedStep : ISeedStep
     }
 
     /// <summary>The demo key a booking was made under: the <c>[demo-...]</c> at the start of its brief.</summary>
-    internal static string? KeyOf(BookingInfo b) =>
+    internal static string? KeyOf(AccessInfo b) =>
         b.BriefText is { Length: > 2 } t && t[0] == '[' && t.IndexOf(']') is > 1 and var end && DemoNames.IsDemo(t[1..end]) ? t[1..end] : null;
 
     // ---- find or create
 
     /// <summary>The offering a plan buys from an agent: its single-task package, its task pack or its Chat package, found in the catalog and then by title among the agent's offerings.</summary>
-    public static DemoOffering Pick(SeededPractitioner seeded, PackagePick pick)
+    public static DemoPackage Pick(SeededAgent seeded, PackagePick pick)
     {
         var demo = DemoCatalog.Agents.Single(p => p.UserName == seeded.Key);
         var package = pick switch
@@ -83,8 +83,8 @@ public sealed class BookingSeedStep : ISeedStep
         return package ?? throw new SeedException($"booking: {seeded.Key} has no {pick} package in the catalog");
     }
 
-    async Task<(Work Work, bool Created)> BuildAsync(SeedContext context, BookingApi api, DemoBooking plan, List<SeededPractitioner> approved, List<DemoUser> clients,
-        Dictionary<string, BookingInfo> known, CancellationToken ct)
+    async Task<(Work Work, bool Created)> BuildAsync(SeedContext context, AccessApi api, DemoAccess plan, List<SeededAgent> approved, List<DemoUser> clients,
+        Dictionary<string, AccessInfo> known, CancellationToken ct)
     {
         DemoNames.Require(plan.Key);
         var seeded = approved[plan.Agent % approved.Count];
@@ -107,15 +107,15 @@ public sealed class BookingSeedStep : ISeedStep
     // ---- bring each booking forward
 
     /// <summary>Takes every step the booking has not yet passed: payment, the tasks, cancel or claim. Returns the booking as it is then and the writes made.</summary>
-    async Task<(Work Work, int Changes)> AdvanceAsync(BookingApi api, DemoUser admin, Work w, SeedContext context, CancellationToken ct)
+    async Task<(Work Work, int Changes)> AdvanceAsync(AccessApi api, DemoUser admin, Work w, SeedContext context, CancellationToken ct)
     {
         var changes = 0;
         var info = w.Info;
         var target = w.Plan.Target;
 
-        if (info.Status == "PendingPayment" && target != BookingTarget.PendingPayment)
+        if (info.Status == "PendingPayment" && target != AccessTarget.PendingPayment)
         {
-            await api.SimulatePaymentAsync(w.Client, info.Id, target == BookingTarget.Expired ? "failed" : "succeeded", ct); // a failed payment moves the booking to Expired (CONTRACTS 8.1)
+            await api.SimulatePaymentAsync(w.Client, info.Id, target == AccessTarget.Expired ? "failed" : "succeeded", ct); // a failed payment moves the booking to Expired (CONTRACTS 8.1)
             info = await api.GetAsync(w.Client, info.Id, ct);
             changes++;
         }
@@ -133,20 +133,20 @@ public sealed class BookingSeedStep : ISeedStep
 
         switch (target, info.Status)
         {
-            case (BookingTarget.CancelledByClient, "Confirmed"):
+            case (AccessTarget.CancelledByClient, "Confirmed"):
                 await api.CancelAsync(w.Client, info.Id, "Zmiana planów, rezygnuję z pakietu przed pierwszym użyciem.", ct); // nothing used yet: a full refund
                 changes++;
                 break;
-            case (BookingTarget.Disputed or BookingTarget.Resolved, "Confirmed" or "Completed"): // a claim is allowed on a Confirmed or a Completed package, until its end + 72 h
+            case (AccessTarget.Disputed or AccessTarget.Resolved, "Confirmed" or "Completed"): // a claim is allowed on a Confirmed or a Completed package, until its end + 72 h
                 await api.DisputeAsync(w.Client, info.Id, "not_as_described", "Odpowiedź agenta odbiegała od opisu pakietu w ofercie.", ct);
                 changes++;
-                if (target == BookingTarget.Resolved)
+                if (target == AccessTarget.Resolved)
                 {
                     await api.ResolveAsync(admin, info.Id, "release", "Agent wykonał zadanie zgodnie z ofertą, środki dla dostawcy.", ct);
                     changes++;
                 }
                 break;
-            case (BookingTarget.Resolved, "Disputed"): // an earlier run stopped between the claim and the decision
+            case (AccessTarget.Resolved, "Disputed"): // an earlier run stopped between the claim and the decision
                 await api.ResolveAsync(admin, info.Id, "release", "Agent wykonał zadanie zgodnie z ofertą, środki dla dostawcy.", ct);
                 changes++;
                 break;
@@ -155,7 +155,7 @@ public sealed class BookingSeedStep : ISeedStep
     }
 
     /// <summary>Polls the packages until the service's auto-complete job has completed them. Without that job it says so and goes on: the rest of the data is still valid.</summary>
-    async Task WaitForCompletedAsync(SeedContext context, BookingApi api, List<Work> works, CancellationToken ct)
+    async Task WaitForCompletedAsync(SeedContext context, AccessApi api, List<Work> works, CancellationToken ct)
     {
         for (var waited = TimeSpan.Zero; ; waited += CompletionPoll)
         {
@@ -173,7 +173,7 @@ public sealed class BookingSeedStep : ISeedStep
     }
 
     /// <summary>Polls the ordered tasks until the agent platform has answered them (no task is queued or running any more). Counts only: never a task text or an answer.</summary>
-    async Task WaitForTasksAsync(SeedContext context, BookingApi api, List<Work> works, CancellationToken ct)
+    async Task WaitForTasksAsync(SeedContext context, AccessApi api, List<Work> works, CancellationToken ct)
     {
         var pending = 0;
         for (var waited = TimeSpan.Zero; ; waited += CompletionPoll)

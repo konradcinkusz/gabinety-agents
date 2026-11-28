@@ -7,7 +7,7 @@ public sealed record SeedOptions(string DirectoryUrl, string DirectoryKey, strin
 {
     /// <summary>Booking (T-08.01b): <c>Backend:Booking</c> and <c>Internal:Keys:Booking</c>. Init-only so the four-argument constructor of the skeleton stays as it is.</summary>
     public string AccessUrl { get; init; } = "";
-    public string BookingKey { get; init; } = "";
+    public string AccessKey { get; init; } = "";
 
     /// <summary>Reputation (T-08.01c): <c>Backend:Reputation</c> and <c>Internal:Keys:Reputation</c>.</summary>
     public string ReputationUrl { get; init; } = "";
@@ -27,14 +27,14 @@ public sealed record SeedOptions(string DirectoryUrl, string DirectoryKey, strin
         var key = Need("Internal:Keys:Directory");
         var authority = Need("Identity:Authority").TrimEnd('/');
         var access = FirstUrl(c["Backend:Booking"] ?? ""); // optional: without it the Booking step says so and is skipped
-        var bookingKey = c["Internal:Keys:Booking"]?.Trim() ?? "";
+        var accessKey = c["Internal:Keys:Booking"]?.Trim() ?? "";
         var reputation = FirstUrl(c["Backend:Reputation"] ?? ""); // optional: without it the Reputation step says so and is skipped
         var reputationKey = c["Internal:Keys:Reputation"]?.Trim() ?? "";
         var factor = 1;
         if (c["Seed:Factor"] is { Length: > 0 } f && (!int.TryParse(f, out factor) || factor is < 1 or > 1000)) missing.Add("Seed:Factor (an integer from 1 to 1000)");
         if (missing.Count > 0) throw new SeedException("missing configuration: " + string.Join(", ", missing)); // names of keys, never values
         return new SeedOptions(directory, key, authority, c["Identity:DemoPassword"] is { Length: > 0 } p ? p : DevIdentityPassword)
-            { Factor = factor, AccessUrl = access, BookingKey = bookingKey, ReputationUrl = reputation, ReputationKey = reputationKey };
+            { Factor = factor, AccessUrl = access, AccessKey = accessKey, ReputationUrl = reputation, ReputationKey = reputationKey };
     }
 
     /// <summary>The web app's Backend:* values are candidate lists; the seeder takes the first.</summary>

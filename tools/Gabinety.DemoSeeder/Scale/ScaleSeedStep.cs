@@ -31,7 +31,7 @@ public sealed class ScaleSeedStep : ISeedStep
         context.Log.Info($"scale: done, {changed} changes");
     }
 
-    static async Task<int> SeedOneAsync(SeedContext context, DirectoryApi api, DemoUser admin, TaxonomyView taxonomy, ScaledPractitioner p, CancellationToken ct)
+    static async Task<int> SeedOneAsync(SeedContext context, DirectoryApi api, DemoUser admin, TaxonomyView taxonomy, ScaledAgent p, CancellationToken ct)
     {
         DemoNames.Require(p.UserName); DemoNames.Require(p.Slug);
         var user = await context.Identity.SignInAsync(p.UserName, ct);
@@ -50,7 +50,7 @@ public sealed class ScaleSeedStep : ISeedStep
         var existing = (await api.PackagesAsync(user, ct)).Select(o => o.Title).ToHashSet();
         foreach (var o in p.Packages.Where(o => !existing.Contains(o.Title)))
         {
-            await api.CreateOfferingAsync(user, new
+            await api.CreatePackageAsync(user, new
             {
                 title = o.Title, description = o.Description, durationMinutes = o.Minutes, priceMinor = o.PriceMinor,
                 problemSlug = taxonomy.Problems[o.ProblemSlot % taxonomy.Problems.Length], techSlugs = o.TechSlots.Select(t => taxonomy.Techs[t % taxonomy.Techs.Length]).Distinct().ToArray(),

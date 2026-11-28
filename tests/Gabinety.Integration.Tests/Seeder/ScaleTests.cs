@@ -11,7 +11,7 @@ public class ScalePlanTests
     public void Factor_1_adds_nothing()
     {
         Assert.Empty(ScalePlan.Extras(1));
-        Assert.Equal(DemoCatalog.Agents.Length, ScalePlan.TotalPractitioners(1));
+        Assert.Equal(DemoCatalog.Agents.Length, ScalePlan.TotalAgents(1));
     }
 
     [Theory]

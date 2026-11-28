@@ -24,7 +24,7 @@ public sealed class ReputationSeedStep : ISeedStep
         if (context.Options.ReputationUrl.Length == 0) { context.Log.Info("reputation: skipped (Backend:Reputation is not configured)"); return; }
         if (context.Options.ReputationKey.Length == 0) throw new SeedException("reputation: Internal:Keys:Reputation is not configured");
         if (context.Options.AccessUrl.Length == 0) throw new SeedException("reputation: Backend:Booking is not configured (reviews need the bookings)");
-        var accesses = new BookingApi(context.Http.For(SeedService.Access), context.Options, context.Time);
+        var accesses = new AccessApi(context.Http.For(SeedService.Access), context.Options, context.Time);
         var reputation = new ReputationApi(context.Http.For(SeedService.Reputation), context.Time);
         var clients = context.Clients.OrderBy(c => c.Key, StringComparer.Ordinal).Select(c => c.Value).ToList();
         if (clients.Count == 0) throw new SeedException("reputation: no demo clients (run the directory step first)");
@@ -33,7 +33,7 @@ public sealed class ReputationSeedStep : ISeedStep
         var completed = new Dictionary<string, (DemoUser Client, Guid Id)>();
         foreach (var client in clients)
             foreach (var b in await accesses.MyAccessesAsync(client, ct))
-                if (b.Status is "Confirmed" or "Completed" or "Resolved" && b.UnitsUsed > 0 && BookingSeedStep.KeyOf(b) is { } key) completed[key] = (client, b.Id);
+                if (b.Status is "Confirmed" or "Completed" or "Resolved" && b.UnitsUsed > 0 && AccessSeedStep.KeyOf(b) is { } key) completed[key] = (client, b.Id);
         if (completed.Count == 0)
         {
             context.Log.Info("reputation: no used demo package to review (the Booking step orders the tasks through the API)");
@@ -44,9 +44,9 @@ public sealed class ReputationSeedStep : ISeedStep
         foreach (var review in ReputationPlan.All)
         {
             DemoNames.Require(review.Key);
-            if (!completed.TryGetValue(review.BookingKey, out var access))
+            if (!completed.TryGetValue(review.AccessKey, out var access))
             {
-                context.Log.Info($"reputation: {review.Key} skipped, {review.BookingKey} is not a used package");
+                context.Log.Info($"reputation: {review.Key} skipped, {review.AccessKey} is not a used package");
                 continue;
             }
             var (outcome, status) = await reputation.CreateReviewAsync(access.Client, access.Id, review.Rating, review.Text, ct);
@@ -60,7 +60,7 @@ public sealed class ReputationSeedStep : ISeedStep
                     context.Log.Info($"reputation: {review.Key} found");
                     break;
                 case ReviewOutcome.NotReviewable:
-                    context.Log.Info($"reputation: {review.Key} skipped, {review.BookingKey} is past its review window");
+                    context.Log.Info($"reputation: {review.Key} skipped, {review.AccessKey} is past its review window");
                     break;
             }
         }

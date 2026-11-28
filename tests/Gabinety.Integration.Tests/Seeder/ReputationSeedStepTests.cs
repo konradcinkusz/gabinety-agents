@@ -121,7 +121,7 @@ public class ReputationSeedStepTests(ReputationSeedFixture fx) : IClassFixture<R
         Assert.All(ReputationPlan.All, r =>
         {
             Assert.StartsWith("demo-", r.Key);
-            Assert.StartsWith("demo-booking-completed-", r.BookingKey);
+            Assert.StartsWith("demo-booking-completed-", r.AccessKey);
             Assert.InRange(r.Text.Length, 20, 2000);
             Assert.DoesNotMatch(@"https?://|www\.|@|\d{5,}", r.Text); // no link, no contact detail, no long digit run
         });

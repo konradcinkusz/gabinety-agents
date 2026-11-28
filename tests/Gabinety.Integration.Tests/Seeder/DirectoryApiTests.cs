@@ -58,7 +58,7 @@ public class DirectoryApiTests
         // Booking asks the Directory from the same loopback address as the seeder, so a busy seeder can make Booking's own lookup a 429, which Booking reports as 503.
         var down = () => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable) { Content = new StringContent("""{"code":"dependency_unavailable"}""", System.Text.Encoding.UTF8, "application/json") };
         var handler = new Scripted(down(), down(), new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("""{"offsetMinutes":0,"now":"2026-11-17T10:00:00Z"}""", System.Text.Encoding.UTF8, "application/json") });
-        var api = new BookingApi(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") }, Options, new InstantTime());
+        var api = new AccessApi(new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") }, Options, new InstantTime());
 
         var (offset, _) = await api.GetClockAsync(CancellationToken.None);
 

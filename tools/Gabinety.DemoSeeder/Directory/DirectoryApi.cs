@@ -5,9 +5,9 @@ using System.Text.Json;
 
 namespace Gabinety.DemoSeeder;
 
-public sealed record MyPractitioner(Guid Id, string Slug, string Status, string DisplayName, string Headline, string Bio, string? PortfolioUrl,
+public sealed record MyAgent(Guid Id, string Slug, string Status, string DisplayName, string Headline, string Bio, string? PortfolioUrl,
     string? MeetingUrlDefault, string? Nip, bool GithubLinked, string? GithubLogin);
-public sealed record MyOffering(Guid Id, string Title, string Description, int DurationMinutes, long PriceMinor, string ProblemSlug, string[] TechSlugs, bool IsActive, string Kind, int Units);
+public sealed record MyPackage(Guid Id, string Title, string Description, int DurationMinutes, long PriceMinor, string ProblemSlug, string[] TechSlugs, bool IsActive, string Kind, int Units);
 public sealed record TaxonomyView(string[] Problems, string[] Techs);
 
 /// <summary>The Directory API as the seeder uses it: user calls with a bearer token, admin calls, and the internal pushes with X-Internal-Key. Errors carry the status and the error code, never a body.</summary>
@@ -64,22 +64,22 @@ public sealed class DirectoryApi(HttpClient http, SeedOptions options, TimeProvi
 
     // ---- the practitioner's own
 
-    public async Task<MyPractitioner?> GetMineAsync(DemoUser u, CancellationToken ct)
+    public async Task<MyAgent?> GetMineAsync(DemoUser u, CancellationToken ct)
     {
         var r = await SendAsync(HttpMethod.Get, "/api/v1/me/practitioner", u.AccessToken, false, null, ct);
-        return r.Status == HttpStatusCode.NotFound ? null : r.Status == HttpStatusCode.OK ? Read<MyPractitioner>(r, "get profile") : throw Fail("get profile", r);
+        return r.Status == HttpStatusCode.NotFound ? null : r.Status == HttpStatusCode.OK ? Read<MyAgent>(r, "get profile") : throw Fail("get profile", r);
     }
 
-    public async Task<MyPractitioner> CreateAsync(DemoUser u, string displayName, string slug, CancellationToken ct)
+    public async Task<MyAgent> CreateAsync(DemoUser u, string displayName, string slug, CancellationToken ct)
     {
         var r = await SendAsync(HttpMethod.Post, "/api/v1/me/practitioner", u.AccessToken, false, new { displayName, slug }, ct);
-        return r.Status == HttpStatusCode.Created ? Read<MyPractitioner>(r, "create profile") : throw Fail("create profile", r);
+        return r.Status == HttpStatusCode.Created ? Read<MyAgent>(r, "create profile") : throw Fail("create profile", r);
     }
 
-    public async Task<MyPractitioner> UpdateAsync(DemoUser u, object body, CancellationToken ct)
+    public async Task<MyAgent> UpdateAsync(DemoUser u, object body, CancellationToken ct)
     {
         var r = await SendAsync(HttpMethod.Put, "/api/v1/me/practitioner", u.AccessToken, false, body, ct);
-        return r.Status == HttpStatusCode.OK ? Read<MyPractitioner>(r, "update profile") : throw Fail("update profile", r);
+        return r.Status == HttpStatusCode.OK ? Read<MyAgent>(r, "update profile") : throw Fail("update profile", r);
     }
 
     /// <summary>The two-step bio challenge (CONTRACTS 3.3). The code is passed on to verify by the server's own state; it is never returned to a caller or a log.</summary>
@@ -91,22 +91,22 @@ public sealed class DirectoryApi(HttpClient http, SeedOptions options, TimeProvi
         if (v.Status != HttpStatusCode.NoContent) throw Fail("github link verify (needs a GitHub lookup that answers in the fake profile)", v);
     }
 
-    public async Task<IReadOnlyList<MyOffering>> PackagesAsync(DemoUser u, CancellationToken ct)
+    public async Task<IReadOnlyList<MyPackage>> PackagesAsync(DemoUser u, CancellationToken ct)
     {
         var r = await SendAsync(HttpMethod.Get, "/api/v1/me/practitioner/offerings", u.AccessToken, false, null, ct);
         if (r.Status != HttpStatusCode.OK || r.Json is not { } j) throw Fail("list offerings", r);
-        return j.GetProperty("items").EnumerateArray().Select(i => new MyOffering(i.GetProperty("id").GetGuid(), i.GetProperty("title").GetString()!,
+        return j.GetProperty("items").EnumerateArray().Select(i => new MyPackage(i.GetProperty("id").GetGuid(), i.GetProperty("title").GetString()!,
             i.GetProperty("description").GetString()!, i.GetProperty("durationMinutes").GetInt32(), i.GetProperty("price").GetProperty("amountMinor").GetInt64(),
             i.GetProperty("problemSlug").GetString()!, i.GetProperty("techSlugs").EnumerateArray().Select(t => t.GetString()!).ToArray(), i.GetProperty("isActive").GetBoolean(), i.GetProperty("kind").GetString()!, i.GetProperty("units").GetInt32())).ToList();
     }
 
-    public async Task<Guid> CreateOfferingAsync(DemoUser u, object body, CancellationToken ct)
+    public async Task<Guid> CreatePackageAsync(DemoUser u, object body, CancellationToken ct)
     {
         var r = await SendAsync(HttpMethod.Post, "/api/v1/me/practitioner/offerings", u.AccessToken, false, body, ct);
         return r.Status == HttpStatusCode.Created && r.Json is { } j ? j.GetProperty("id").GetGuid() : throw Fail("create offering", r);
     }
 
-    public async Task UpdateOfferingAsync(DemoUser u, Guid id, object body, CancellationToken ct)
+    public async Task UpdatePackageAsync(DemoUser u, Guid id, object body, CancellationToken ct)
     {
         var r = await SendAsync(HttpMethod.Put, $"/api/v1/me/practitioner/offerings/{id}", u.AccessToken, false, body, ct);
         if (r.Status != HttpStatusCode.OK) throw Fail("update offering", r);

@@ -141,7 +141,7 @@ public sealed class BookingWorld : IAsyncDisposable
         Directory = new DirectoryHost(Identity);
         Access = new BookingHost(Identity, Directory);
         Options = new SeedOptions("http://localhost", DirectoryHost.Key, DirectoryHost.Authority, SeedOptions.DevIdentityPassword)
-            { AccessUrl = "http://localhost", BookingKey = BookingHost.Key };
+            { AccessUrl = "http://localhost", AccessKey = BookingHost.Key };
         Http = new WorldSeedHttp(Identity, Directory, Access, Calls);
     }
 
@@ -155,7 +155,7 @@ public sealed class BookingWorld : IAsyncDisposable
     public SeedContext NewContext() => new(Options, Http, Log, TimeProvider.System);
 
     /// <summary>The Booking step as the tests run it: a short wait for the completion job, a quick poll.</summary>
-    public static BookingSeedStep Step(TimeSpan? wait = null) =>
+    public static AccessSeedStep Step(TimeSpan? wait = null) =>
         new() { CompletionWait = wait ?? TimeSpan.FromSeconds(20), CompletionPoll = TimeSpan.FromMilliseconds(25), TaskWait = wait ?? TimeSpan.FromSeconds(20) };
 
     /// <summary>What a person would read: a client's own bookings through the public API, by the client's demo name.</summary>

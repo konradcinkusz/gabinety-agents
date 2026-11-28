@@ -4,19 +4,19 @@ namespace Gabinety.Integration.Tests.Seeder;
 
 /// <summary>
 /// The catalog's rating baseline (what the Directory shows before Reputation pushes anything) must equal the reviews the seeder really writes: a profile never shows
-/// more reviews than exist. The reviews are read from <see cref="ReputationPlan"/>, each on a Completed booking of <see cref="BookingPlan"/>, made with the
+/// more reviews than exist. The reviews are read from <see cref="ReputationPlan"/>, each on a Completed booking of <see cref="AccessPlan"/>, made with the
 /// n-th Approved practitioner (the Booking step orders them by key, which is the catalog order).
 /// </summary>
 public class DemoCatalogHonestyTests
 {
-    static readonly DemoPractitioner[] Approved = DemoCatalog.Agents.Where(p => p.Target == DemoStatus.Approved && p.Packages.Length > 0).OrderBy(p => p.UserName, StringComparer.Ordinal).ToArray();
+    static readonly DemoAgent[] Approved = DemoCatalog.Agents.Where(p => p.Target == DemoStatus.Approved && p.Packages.Length > 0).OrderBy(p => p.UserName, StringComparer.Ordinal).ToArray();
 
-    static (int Count, int Sum) Seeded(DemoPractitioner p)
+    static (int Count, int Sum) Seeded(DemoAgent p)
     {
         var mine = ReputationPlan.All.Where(r =>
         {
-            var access = BookingPlan.All.Single(b => b.Key == r.BookingKey);
-            Assert.Equal(BookingTarget.Completed, access.Target);
+            var access = AccessPlan.All.Single(b => b.Key == r.AccessKey);
+            Assert.Equal(AccessTarget.Completed, access.Target);
             Assert.True(access.Tasks > 0, $"{access.Key} is reviewed, so a task must be ordered on it (a review needs UnitsUsed above 0)");
             return Approved[access.Agent % Approved.Length].Number == p.Number;
         }).ToList();
@@ -84,10 +84,10 @@ public class DemoCatalogHonestyTests
     [Fact]
     public void Every_booking_of_the_plan_buys_a_package_the_agent_really_sells_and_orders_tasks_only_on_task_packages()
     {
-        foreach (var b in BookingPlan.All)
+        foreach (var b in AccessPlan.All)
         {
             var agent = Approved[b.Agent % Approved.Length];
-            var package = BookingSeedStep.Pick(new SeededPractitioner(agent.UserName, "u", Guid.Empty, agent.Slug), b.Package);
+            var package = AccessSeedStep.Pick(new SeededAgent(agent.UserName, "u", Guid.Empty, agent.Slug), b.Package);
             Assert.Contains(package, agent.Packages);
             if (b.Package == PackagePick.Chat) Assert.Equal(0, b.Tasks);
             else Assert.InRange(b.Tasks, 0, package.Units);
