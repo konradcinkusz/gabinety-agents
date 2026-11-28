@@ -48,7 +48,7 @@ public class ContractsTests
             "idempotency_conflict", "practitioner_exists", "already_reviewed", "already_replied", "slot_unavailable", "offering_inactive",
             "own_offering", "practitioner_not_bookable", "submit_incomplete", "too_many_offerings", "contact_details_not_allowed",
             "github_not_linked", "not_reviewable", "invalid_input", "rate_limited", "assistant_unavailable", "dependency_unavailable",
-            "cross_site_request" })
+            "cross_site_request", "too_many_agents" })
             Assert.Contains(c, codes);
     }
 

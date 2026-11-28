@@ -50,7 +50,11 @@ sealed class FakeDirectory : HttpMessageHandler
         if (path.StartsWith(byUser))
         {
             Interlocked.Increment(ref ByUserCalls);
-            return Task.FromResult(Practitioners.TryGetValue(Uri.UnescapeDataString(path[byUser.Length..]), out var id)
+            var rest = path[byUser.Length..];
+            if (rest.EndsWith("/agents")) // E-04: every agent of the account; this double knows one per user
+                return Task.FromResult(Json(new { items = Practitioners.TryGetValue(Uri.UnescapeDataString(rest[..^"/agents".Length]), out var one)
+                    ? new[] { new { practitionerId = one, status = "Draft", slug = "demo-" + one.ToString("n")[..8] } } : [] }));
+            return Task.FromResult(Practitioners.TryGetValue(Uri.UnescapeDataString(rest), out var id)
                 ? Json(new { practitionerId = id, status = "Draft" })
                 : new HttpResponseMessage(HttpStatusCode.NotFound));
         }

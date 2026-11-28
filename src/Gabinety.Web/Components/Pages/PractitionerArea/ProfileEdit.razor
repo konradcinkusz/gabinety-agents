@@ -8,7 +8,7 @@
 
 @if (LoadFailure is not null)
 {
-    <Alert Variant="AlertVariant.Danger" TestId="unavailable">@FailureText(LoadFailure) <a href="@PractitionerPaths.Profile">@PlPractitioner.Common.Retry</a></Alert>
+    <Alert Variant="AlertVariant.Danger" TestId="unavailable">@FailureText(LoadFailure) <a href="@At(PractitionerPaths.Profile)">@PlPractitioner.Common.Retry</a></Alert>
 }
 else if (Profile is not null)
 {

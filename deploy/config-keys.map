@@ -31,6 +31,7 @@ directory     Internal:Keys:Booking                    required    Directory ask
 directory     Backend:Booking                          required
 directory     Directory:Price:MaxMinor                 optional    the owner's constants (CONTRACTS 9): code defaults
 directory     Directory:Price:MinMinor                 optional
+directory     Directory:MaxAgentsPerProvider           optional    E-04: agents one provider account may own, default 10 (code default)
 directory     Ranking:EffectiveFrom                    optional
 
 booking       ConnectionStrings:bookingdb              required

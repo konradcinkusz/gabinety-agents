@@ -69,12 +69,12 @@ public sealed class VerificationFeature : IServiceFeature
 
     // ---- github-link
 
-    static async Task<IResult> RequestLink(GithubLinkRequest? req, ClaimsPrincipal user, DirectoryDbContext db, TimeProvider time, CancellationToken ct)
+    static async Task<IResult> RequestLink(GithubLinkRequest? req, string? agent, ClaimsPrincipal user, DirectoryDbContext db, TimeProvider time, CancellationToken ct)
     {
         if (UserId(user) is not { } uid) return Results.Unauthorized();
         if (!GithubHandle.IsValid(req?.GithubLogin)) return Invalid("githubLogin", "1 to 39 characters of A-Z, a-z, 0-9 and hyphen, not starting or ending with a hyphen");
-        var p = await db.Practitioners.SingleOrDefaultAsync(x => x.UserId == uid, ct);
-        if (p is null) return Problem(404, ErrorCodes.NotFound, "Not found");
+        var (p, rejected) = await OwnAgents.FindAsync(db, uid, agent, ct);
+        if (p is null) return rejected!;
 
         var code = "gabinety-verify-" + RandomNumberGenerator.GetString(Alphabet, 10); // cryptographic RNG, unbiased
         p.GithubChallengeCode = code;
@@ -87,18 +87,19 @@ public sealed class VerificationFeature : IServiceFeature
     static IResult NotLinked(Dictionary<string, string[]>? errors = null) =>
         Problem(422, ErrorCodes.GithubNotLinked, "GitHub profile is not linked", errors);
 
-    static async Task<IResult> VerifyLink(ClaimsPrincipal user, DirectoryDbContext db, IGithubProfileLookup github, IChecklistFacts facts, TimeProvider time, CancellationToken ct)
+    static async Task<IResult> VerifyLink(string? agent, ClaimsPrincipal user, DirectoryDbContext db, IGithubProfileLookup github, IChecklistFacts facts, TimeProvider time, CancellationToken ct)
     {
         if (UserId(user) is not { } uid) return Results.Unauthorized();
-        var p = await db.Practitioners.SingleOrDefaultAsync(x => x.UserId == uid, ct);
-        if (p is null) return Problem(404, ErrorCodes.NotFound, "Not found");
+        var (p, rejected) = await OwnAgents.FindAsync(db, uid, agent, ct);
+        if (p is null) return rejected!;
 
         var now = time.GetUtcNow();
         if (p.GithubChallengeCode is not { } code || p.GithubChallengeLogin is not { } login || p.GithubChallengeExpiresAt is not { } expires || now > expires)
             return NotLinked(); // none pending, or expired: exactly 30 minutes is still valid
 
         var lower = login.ToLowerInvariant();
-        if (await db.Practitioners.AnyAsync(x => x.Id != p.Id && x.GithubLinked && x.GithubLogin != null && x.GithubLogin.ToLower() == lower, ct))
+        // One GitHub profile belongs to one provider account (E-04): the agents of one account may share it, another account's agent may not.
+        if (await db.Practitioners.AnyAsync(x => x.UserId != p.UserId && x.GithubLinked && x.GithubLogin != null && x.GithubLogin.ToLower() == lower, ct))
             return NotLinked(new() { ["githubLogin"] = ["this GitHub account is already linked to another profile"] });
 
         GithubProfile profile;
@@ -114,7 +115,7 @@ public sealed class VerificationFeature : IServiceFeature
         p.UpdatedAt = now;
         VerificationEvents.Record(db, p.Id, VerificationEventKind.GithubLinked, uid, login, time);
         try { await db.SaveChangesAsync(ct); }
-        catch (DbUpdateException) // the unique partial index decided a race for the handle
+        catch (DbUpdateException)
         {
             return NotLinked(new() { ["githubLogin"] = ["this GitHub account is already linked to another profile"] });
         }

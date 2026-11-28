@@ -11,7 +11,7 @@
 
 @if (LoadFailure is not null)
 {
-    <Alert Variant="AlertVariant.Danger" TestId="unavailable">@FailureText(LoadFailure) <a href="@PractitionerPaths.Payments">@PlPractitioner.Common.Retry</a></Alert>
+    <Alert Variant="AlertVariant.Danger" TestId="unavailable">@FailureText(LoadFailure) <a href="@At(PractitionerPaths.Payments)">@PlPractitioner.Common.Retry</a></Alert>
 }
 else if (Profile is not null)
 {
@@ -30,7 +30,7 @@ else if (Profile is not null)
         <div class="card__body stack stack--tight">
             @if (_state == PaymentsState.Unknown)
             {
-                <Alert Variant="AlertVariant.Danger" TestId="unavailable">@PaymentsView.Body(_state) <a href="@PractitionerPaths.Payments">@PlPractitioner.Payments.Retry</a></Alert>
+                <Alert Variant="AlertVariant.Danger" TestId="unavailable">@PaymentsView.Body(_state) <a href="@At(PractitionerPaths.Payments)">@PlPractitioner.Payments.Retry</a></Alert>
             }
             else
             {
@@ -77,6 +77,7 @@ else if (Profile is not null)
 
     protected override async Task OnInitializedAsync()
     {
+        Scheduling.Agent = AgentSlug; // E-04: the payment account is per agent
         if (!await LoadProfileAsync()) return;
         _state = NextSteps.PaymentsOf(await Scheduling.PaymentAccountAsync());
         if (_state == PaymentsState.Unknown && HttpContext is { Response.HasStarted: false }) HttpContext.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;

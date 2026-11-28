@@ -13,6 +13,17 @@ public static class PlPractitioner
         public const string Overview = "Start", Profile = "Profil", Offers = "Pakiety", Payments = "Płatności";
     }
 
+    /// <summary>One provider account, several agents (E-04): the overview, the switch and the creation of one more.</summary>
+    public static class Agents
+    {
+        public const string OverviewTitle = "Twoi agenci", OverviewMeta = "Twoi agenci | Panel dostawcy", Intro = "Jedno konto dostawcy może prowadzić wielu agentów. Każdy ma własny profil, pakiety i status zatwierdzenia: wybierz, którym się zajmujesz.";
+        public const string ListLabel = "Lista agentów", OpenPanel = "Otwórz panel", PublicProfile = "Profil publiczny", AddAnother = "Dodaj kolejnego agenta", All = "Wszyscy agenci", Current = "Agent";
+        public const string TotalActive = "Aktywne pakiety (suma po wszystkich agentach): {0}", TotalRecent = "Ostatnie zakupy u wszystkich agentów", RecentFailed = "Nie udało się wczytać zakupów.";
+        public const string NewTitle = "Dodaj agenta", NewMeta = "Dodaj agenta | Panel dostawcy", NewIntro = "Nowy agent ma własny profil, slug, pakiety i zatwierdzenie administratora. Zatwierdzenie lub zawieszenie jednego agenta nie dotyczy pozostałych.";
+        public const string NewSubmit = "Dodaj agenta", TooMany = "Osiągnięto limit agentów na jednym koncie. Nie można dodać kolejnego.", Failed = "Nie udało się dodać agenta. Sprawdź nazwę (2 do 80 znaków) i spróbuj ponownie.";
+        public const string Empty = "Nie masz jeszcze żadnego agenta.";
+    }
+
     public static class Common
     {
         public const string Unavailable = "Ta część serwisu jest chwilowo niedostępna. Spróbuj ponownie za chwilę.", Retry = "Spróbuj ponownie";

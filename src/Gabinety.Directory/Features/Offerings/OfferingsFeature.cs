@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Gabinety.Directory.Features.Offerings;
 
-/// <summary>/api/v1/me/practitioner/offerings: list, create, replace, deactivate (CONTRACTS 3.3). Every call runs on the caller's own practitioner row.</summary>
+/// <summary>/api/v1/me/practitioner/offerings: list, create, replace, deactivate (CONTRACTS 3.3). Every call runs on one of the caller's own practitioner rows: the one named by <c>?agent=</c> (E-04), or the only one.</summary>
 public sealed class OfferingsFeature : IServiceFeature
 {
     const string Route = "/api/v1/me/practitioner/offerings";
@@ -43,39 +43,43 @@ public sealed class OfferingsFeature : IServiceFeature
         o.ProblemSlug, o.TechSlugs, o.IsActive, o.MeetingUrl, o.Kind, o.Units);
 
     /// <summary>
-    /// Runs <paramref name="body"/> on the caller's practitioner row, or answers 404 when there is none. On PostgreSQL the row is read
-    /// `FOR UPDATE` inside a transaction, so two requests of one practitioner run one after the other (the 5-active-offerings check and the
+    /// Runs <paramref name="body"/> on the caller's practitioner row (the agent named by <paramref name="agent"/>, see <see cref="OwnAgents"/>), or answers 404 / 422. On PostgreSQL the
+    /// row is read `FOR UPDATE` inside a transaction, so two requests of one agent run one after the other (the 5-active-offerings check and the
     /// insert cannot interleave); the retrying execution strategy needs the whole unit inside one delegate. InMemory has no transactions or locks.
     /// </summary>
-    static async Task<IResult> OnOwnRow(DirectoryDbContext db, string uid, CancellationToken ct, Func<Practitioner, Task<IResult>> body)
+    static async Task<IResult> OnOwnRow(DirectoryDbContext db, string uid, string? agent, CancellationToken ct, Func<Practitioner, Task<IResult>> body)
     {
         if (!db.Database.IsRelational())
-            return await db.Practitioners.SingleOrDefaultAsync(x => x.UserId == uid, ct) is { } p ? await body(p) : Problem(404, ErrorCodes.NotFound, "Not found");
+        {
+            var (p, rejected) = await OwnAgents.FindAsync(db, uid, agent, ct);
+            return p is null ? rejected! : await body(p);
+        }
 
+        var slug = string.IsNullOrWhiteSpace(agent) ? null : agent.Trim();
         return await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
             db.ChangeTracker.Clear(); // a retry starts from the database, not from a half-applied attempt
             await using var tx = await db.Database.BeginTransactionAsync(ct);
-            var rows = await db.Practitioners.FromSql($"SELECT * FROM practitioners WHERE user_id = {uid} FOR UPDATE").ToListAsync(ct);
-            if (rows.Count == 0) return Problem(404, ErrorCodes.NotFound, "Not found");
+            var rows = await db.Practitioners.FromSql($"SELECT * FROM practitioners WHERE user_id = {uid} AND (CAST({slug} AS text) IS NULL OR slug = {slug}) ORDER BY created_at, id FOR UPDATE").ToListAsync(ct);
+            if (OwnAgents.Reject(rows.Count, slug) is { } rejected) return rejected;
             var result = await body(rows[0]);
             await tx.CommitAsync(ct);
             return result;
         });
     }
 
-    static async Task<IResult> List(ClaimsPrincipal user, DirectoryDbContext db, CancellationToken ct)
+    static async Task<IResult> List(string? agent, ClaimsPrincipal user, DirectoryDbContext db, CancellationToken ct)
     {
         if (UserId(user) is not { } uid) return Results.Unauthorized();
-        var p = await db.Practitioners.AsNoTracking().SingleOrDefaultAsync(x => x.UserId == uid, ct);
-        if (p is null) return Problem(404, ErrorCodes.NotFound, "Not found");
+        var (p, rejected) = await OwnAgents.FindAsync(db, uid, agent, ct);
+        if (p is null) return rejected!;
         var rows = await db.Offerings.AsNoTracking().Where(o => o.PractitionerId == p.Id).OrderBy(o => o.CreatedAt).ThenBy(o => o.Id).ToListAsync(ct); // order, then project
         return Results.Ok(new { items = rows.Select(View) });
     }
 
-    static Task<IResult> Create(OfferingRequest req, ClaimsPrincipal user, DirectoryDbContext db, IContactDetailDetector contact,
+    static Task<IResult> Create(OfferingRequest req, string? agent, ClaimsPrincipal user, DirectoryDbContext db, IContactDetailDetector contact,
         IConfiguration config, TimeProvider time, CancellationToken ct) =>
-        UserId(user) is not { } uid ? Task.FromResult(Results.Unauthorized()) : OnOwnRow(db, uid, ct, async p =>
+        UserId(user) is not { } uid ? Task.FromResult(Results.Unauthorized()) : OnOwnRow(db, uid, agent, ct, async p =>
         {
             if (await Validate(req, db, contact, config, ct) is { } rejected) return rejected;
             if (await db.Offerings.CountAsync(o => o.PractitionerId == p.Id && o.IsActive, ct) >= MaxActive)
@@ -87,9 +91,9 @@ public sealed class OfferingsFeature : IServiceFeature
             return Results.Created($"{Route}/{o.Id}", View(o));
         });
 
-    static Task<IResult> Update(Guid id, OfferingRequest req, ClaimsPrincipal user, DirectoryDbContext db, IContactDetailDetector contact,
+    static Task<IResult> Update(Guid id, OfferingRequest req, string? agent, ClaimsPrincipal user, DirectoryDbContext db, IContactDetailDetector contact,
         IConfiguration config, TimeProvider time, CancellationToken ct) =>
-        UserId(user) is not { } uid ? Task.FromResult(Results.Unauthorized()) : OnOwnRow(db, uid, ct, async p =>
+        UserId(user) is not { } uid ? Task.FromResult(Results.Unauthorized()) : OnOwnRow(db, uid, agent, ct, async p =>
         {
             var o = await db.Offerings.SingleOrDefaultAsync(x => x.Id == id && x.PractitionerId == p.Id, ct);
             if (o is null) return Problem(404, ErrorCodes.NotFound, "Not found");
@@ -99,8 +103,8 @@ public sealed class OfferingsFeature : IServiceFeature
             return Results.Ok(View(o));
         });
 
-    static Task<IResult> Deactivate(Guid id, ClaimsPrincipal user, DirectoryDbContext db, TimeProvider time, CancellationToken ct) =>
-        UserId(user) is not { } uid ? Task.FromResult(Results.Unauthorized()) : OnOwnRow(db, uid, ct, async p =>
+    static Task<IResult> Deactivate(Guid id, string? agent, ClaimsPrincipal user, DirectoryDbContext db, TimeProvider time, CancellationToken ct) =>
+        UserId(user) is not { } uid ? Task.FromResult(Results.Unauthorized()) : OnOwnRow(db, uid, agent, ct, async p =>
         {
             var o = await db.Offerings.SingleOrDefaultAsync(x => x.Id == id && x.PractitionerId == p.Id, ct);
             if (o is null) return Problem(404, ErrorCodes.NotFound, "Not found");
@@ -110,8 +114,8 @@ public sealed class OfferingsFeature : IServiceFeature
         });
 
     /// <summary>Turns a deactivated offering back on (the practitioner's undo of "Wyłącz"). The limit of 5 active offerings applies; already active: nothing changes, still 204.</summary>
-    static Task<IResult> Activate(Guid id, ClaimsPrincipal user, DirectoryDbContext db, TimeProvider time, CancellationToken ct) =>
-        UserId(user) is not { } uid ? Task.FromResult(Results.Unauthorized()) : OnOwnRow(db, uid, ct, async p =>
+    static Task<IResult> Activate(Guid id, string? agent, ClaimsPrincipal user, DirectoryDbContext db, TimeProvider time, CancellationToken ct) =>
+        UserId(user) is not { } uid ? Task.FromResult(Results.Unauthorized()) : OnOwnRow(db, uid, agent, ct, async p =>
         {
             var o = await db.Offerings.SingleOrDefaultAsync(x => x.Id == id && x.PractitionerId == p.Id, ct);
             if (o is null) return Problem(404, ErrorCodes.NotFound, "Not found");

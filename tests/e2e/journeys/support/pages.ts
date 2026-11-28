@@ -34,7 +34,20 @@ export class RegisterPage {
 
 /** /panel-agenta and its tabs: the practitioner's side of onboarding. */
 export class PractitionerArea {
-  constructor(readonly page: Page) {}
+  /** `agent` is the slug of the agent the panel works on (E-04); leave it out for an account with one agent. */
+  constructor(readonly page: Page, readonly agent?: string) {}
+  /** The address of a panel page for the chosen agent: `?agent=<slug>` is added after any query the page already has. */
+  private at(path: string): string {
+    if (!this.agent) return path;
+    return `${path}${path.includes("?") ? "&" : "?"}agent=${encodeURIComponent(this.agent)}`;
+  }
+  /** E-04: one more agent for the signed-in provider account, from /panel-agenta/nowy; lands in the new agent's panel. */
+  async addAgent(displayName: string) {
+    await gotoInteractive(this.page, "/panel-agenta/nowy");
+    await this.page.getByLabel("Nazwa wyświetlana").fill(displayName);
+    await this.page.getByRole("button", { name: "Dodaj agenta" }).click();
+    await expect(this.page.getByRole("heading", { level: 1, name: "Panel dostawcy" })).toBeVisible();
+  }
   async createProfile(displayName: string) {
     await gotoInteractive(this.page, "/panel-agenta");
     await this.page.getByLabel("Nazwa wyświetlana").fill(displayName);
@@ -46,7 +59,7 @@ export class PractitionerArea {
   offer(title: string): Locator { return this.page.getByRole("list", { name: "Twoje pakiety" }).getByRole("listitem").filter({ hasText: title }); }
 
   async fillProfile(p: { headline: string; bio: string; portfolioUrl: string; nip: string }) {
-    await gotoInteractive(this.page, "/panel-agenta/profil");
+    await gotoInteractive(this.page, this.at("/panel-agenta/profil"));
     await this.page.getByLabel("Nagłówek").fill(p.headline);
     await this.page.getByLabel("Opis").fill(p.bio);
     await this.page.getByLabel("Link do portfolio").fill(p.portfolioUrl);
@@ -56,7 +69,7 @@ export class PractitionerArea {
   }
 
   async addOffering(o: { title: string; description: string; price: string; kind?: "Tasks" | "Chat"; units?: string }) {
-    await gotoInteractive(this.page, "/panel-agenta/oferty?nowa=1"); // the form is closed until "Dodaj pakiet" (UX-042)
+    await gotoInteractive(this.page, this.at("/panel-agenta/oferty?nowa=1")); // the form is closed until "Dodaj pakiet" (UX-042)
     await this.page.getByLabel("Nazwa pakietu").fill(o.title);
     await this.page.getByLabel("Opis pakietu").fill(o.description);
     await this.page.getByLabel("Cena (zł)").fill(o.price);
@@ -70,7 +83,7 @@ export class PractitionerArea {
   }
 
   async linkGithub(login: string) {
-    await gotoInteractive(this.page, "/panel-agenta");
+    await gotoInteractive(this.page, this.at("/panel-agenta"));
     await this.page.getByLabel("Login GitHub").fill(login);
     await this.page.getByRole("button", { name: "Pokaż kod" }).click();
     await this.page.getByRole("button", { name: "Sprawdź kod" }).click();

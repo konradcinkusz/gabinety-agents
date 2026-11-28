@@ -112,13 +112,14 @@ public class ProfileApiTests(ProfileFactory f) : IClassFixture<ProfileFactory>
     }
 
     [Fact]
-    public async Task Duplicate_create_is_409_practitioner_exists()
+    public async Task A_second_create_by_the_same_account_is_a_new_agent_not_a_409()
     {
         var c = As(Id());
-        Assert.Equal(HttpStatusCode.Created, (await c.PostAsJsonAsync(Url, new CreatePractitionerRequest("Demo One"))).StatusCode);
-        var r = await c.PostAsJsonAsync(Url, new CreatePractitionerRequest("Demo One"));
-        Assert.Equal(HttpStatusCode.Conflict, r.StatusCode);
-        Assert.Equal("practitioner_exists", (await Problem(r)).Code);
+        var first = await c.PostAsJsonAsync(Url, new CreatePractitionerRequest("Demo One"));
+        var second = await c.PostAsJsonAsync(Url, new CreatePractitionerRequest("Demo One"));
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, second.StatusCode);
+        Assert.NotEqual((await first.Content.ReadFromJsonAsync<PractitionerPrivate>(J))!.Slug, (await second.Content.ReadFromJsonAsync<PractitionerPrivate>(J))!.Slug);
     }
 
     [Fact]

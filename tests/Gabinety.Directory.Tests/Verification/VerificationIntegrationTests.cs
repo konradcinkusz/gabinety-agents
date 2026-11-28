@@ -42,18 +42,24 @@ public class VerificationIntegrationTests
         Assert.Equal(1, await Count("""select count(*) from "__EFMigrationsHistory" where "MigrationId" = '20261116150000_T-03.05_Verification'"""));
         Assert.Equal(2, await Count("select count(*) from information_schema.tables where table_name in ('verification_events','moderators')"));
         Assert.Equal(3, await Count("select count(*) from information_schema.columns where table_name='practitioners' and column_name in ('github_challenge_code','github_challenge_login','github_challenge_expires_at')"));
-        Assert.Equal(1, await Count("select count(*) from pg_indexes where indexname='ux_practitioners_github_login_linked' and indexdef ilike '%lower%' and indexdef ilike '%github_linked%'"));
+        Assert.Equal(1, await Count("select count(*) from pg_indexes where indexname='ix_practitioners_github_login_linked' and indexdef ilike '%lower%' and indexdef ilike '%github_linked%'"));
     }
 
     [Fact]
-    public async Task The_unique_partial_index_rejects_a_second_linked_practitioner_with_the_same_handle_in_another_case()
+    public async Task The_github_index_is_not_unique_since_E_04_and_the_user_id_index_is_not_unique_either_but_the_slug_stays_unique()
     {
         var (pg, f) = await Start();
         await using var _ = pg; using var __ = f;
-        await f.Seed(PractitionerStatus.Draft, p => { p.GithubLinked = true; p.GithubLogin = "Demo-Dev"; });
-        await f.Seed(PractitionerStatus.Draft, p => { p.GithubLinked = false; p.GithubLogin = "demo-dev"; }); // not linked: allowed
-        var ex = await Assert.ThrowsAsync<DbUpdateException>(() => f.Seed(PractitionerStatus.Draft, p => { p.GithubLinked = true; p.GithubLogin = "demo-DEV"; }));
-        Assert.Equal("23505", (ex.InnerException as PostgresException)?.SqlState);
+        await f.Seed(PractitionerStatus.Draft, p => { p.GithubLinked = true; p.GithubLogin = "Demo-Dev"; }, userId: "demo-one-account");
+        await f.Seed(PractitionerStatus.Draft, p => { p.GithubLinked = true; p.GithubLogin = "demo-DEV"; }, userId: "demo-one-account"); // one account, two agents, one profile
+        await using var conn = new NpgsqlConnection(pg.GetConnectionString());
+        await conn.OpenAsync();
+        async Task<string> Def(string index) { await using var c = new NpgsqlCommand($"select indexdef from pg_indexes where indexname='{index}'", conn); return (string)(await c.ExecuteScalarAsync())!; }
+        Assert.DoesNotContain("UNIQUE", await Def("IX_practitioners_user_id"), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("UNIQUE", await Def("ix_practitioners_github_login_linked"), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("UNIQUE", await Def("IX_practitioners_slug"), StringComparison.OrdinalIgnoreCase);
+        await f.Seed(PractitionerStatus.Draft, p => p.Slug = "demo-same-slug");
+        await Assert.ThrowsAsync<DbUpdateException>(() => f.Seed(PractitionerStatus.Draft, p => p.Slug = "demo-same-slug"));
     }
 
     [Fact]

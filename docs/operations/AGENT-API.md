@@ -2,7 +2,7 @@
 
 Publiczne API usługi Booking. Opisuje to, co jest w kodzie (`src/Gabinety.Booking/Features/AgentApi`, `Agents`, `Jobs/AgentTasks`), nie to, co mówił plan (`docs/agentic/PLAN.md`, sekcje 2.3 i 2.4); tam, gdzie kod różni się od planu, jest to zaznaczone. Nazwy w kodzie zostały dawne: agent to `Practitioner`, pakiet to `Offering`, zakupiony pakiet to `Booking`.
 
-Pole `model` w API to **slug agenta** (np. `demo-bartosz-testowy`).
+Pole `model` w API to **slug agenta** (np. `demo-bartosz-testowy`). Jedno konto dostawcy może prowadzić wielu agentów (E-04); każdy ma własny slug, pakiety i zatwierdzenie, a klient widzi ich jak każdych innych agentów: klucz i `/v1` nie zmieniły się.
 
 ## Uwierzytelnianie
 

@@ -18,7 +18,7 @@ Gabinety Tech sprzedawały konsultacje z programistami (termin, spotkanie, opini
 | 3 | Rozliczanie czatu: suma tokenów wejścia i wyjścia, jedna stawka | z `usage.total_tokens` odpowiedzi dostawcy, po fakcie; ostatnie żądanie może przekroczyć pulę (`UnitsUsed` > `UnitsTotal`). Zakup pakietu `Chat` mnoży jednostki przez 1000. |
 | 4 | Do 5 kluczy na konto, wspólne dla wszystkich agentów | `ApiKeysFeature.MaxActive = 5`; klucz identyfikuje konto, agenta wybiera pole `model`. |
 | 5 | `/v1` w usłudze Booking | tak (`PublicEdge` przepuszcza `/v1`), a strona przekazuje je pod swoim adresem (`AgentApiProxy`); patrz „Decyzje właściciela” 1. |
-| 6 | Jedno konto techniczne na agenta | bez zmian (`practitioner_exists`); zdjęcie ograniczenia to E-04. |
+| 6 | Jedno konto techniczne na agenta | zdjęte w E-04 (jedno konto, do `Directory:MaxAgentsPerProvider` agentów); patrz „Decyzja E-04” niżej. |
 | 7 | Wypłaty i prowizja bez zmian w profilu `fake`, do usunięcia przed prawdziwymi płatnościami | bez zmian; termin wypłaty zmieniony (niżej). Zakres usunięcia: `docs/operations/PAYMENTS-AGENTS.md`. |
 | 8 | Plakietka „Agent AI” wszędzie, gdzie widać nazwę agenta | komponent `AiBadge` na karcie, profilu, w podsumowaniu zakupu, na liście i w szczegółach dostępu; J1 sprawdza kartę i profil. |
 
@@ -115,6 +115,33 @@ Pytanie: `BookingDetail.razor` ustawiał `<meta http-equiv="refresh" content="5"
 - e2e: J5 i J6 nie czekają już na wykonanie zadania tylko po to, by ominąć axe (axe ogląda stronę ze zleceniem „w kolejce”), J3 dodatkowo sprawdza axe zaraz po zleceniu; J3 nadal czeka na odpowiedź agenta (przez „Odśwież listę”), bo sprawdza jej treść. Komentarz w `waitForAnswer` poprawiony.
 
 **Zostaje.** Klient widzi wynik po kliknięciu „Odśwież listę”; jeśli będzie czekał na wyniki dłużej niż kilkadziesiąt sekund, opcja C (skrypt odświeżający, wyłączalny) pozostaje do zrobienia.
+
+## Decyzja E-04: jeden dostawca, wielu agentów (propozycja wykonawcy do potwierdzenia)
+
+Plan, decyzja 6, zakładał „jedno konto techniczne na agenta” i błąd `practitioner_exists`. E-04 to zdejmuje: **jedno konto użytkownika (dostawca) prowadzi wielu agentów**, każdy z własnym profilem, slugiem, pakietami i statusem zatwierdzenia. Nazwy w kodzie bez zmian (`Practitioner` = agent; zmiana nazw to E-06).
+
+**Model.** `practitioners.user_id` przestaje być unikalne (zwykły indeks; migracja `20261128100000_E-04_ManyAgentsPerProvider`, osobna, starych nie ruszano). Slug zostaje globalnie unikalny. Nazwa wyświetlana nie była i nie jest unikalna w bazie (dzisiejsza reguła to tylko unikalny slug; nic nie dodałem).
+
+**Limit.** `Directory:MaxAgentsPerProvider` (domyślnie 10; wartość poniżej 1 to domyślna; wiersz `optional` w `deploy/config-keys.map`). Przekroczenie: 422 `too_many_agents` w kształcie `problem+json` jak `too_many_offerings`. Na PostgreSQL liczenie i wstawienie są jednym krokiem pod blokadą doradczą na id użytkownika, więc dwa równoległe żądania nie przekroczą limitu.
+
+**API (Directory).** `POST /api/v1/me/practitioner` zawsze tworzy **nowego** agenta (201). Nowe `GET /api/v1/me/practitioners` (lista własnych, od najstarszego). Wywołania działające na jednym agencie (`GET`/`PUT /me/practitioner`, `submit`, `offerings...`, `github-link...`) biorą slug w `?agent=`. Konto z jednym agentem może pominąć parametr (zachowanie sprzed E-04: „użytkownik z jednym agentem widzi to samo bez dodatkowego kroku”); przy dwóch i więcej parametr jest wymagany (422 `validation_failed` na polu `agent`), bo ciche wybranie jednego mogłoby zmienić nie tego agenta. Cudzy albo nieznany slug to 404 (nie ujawnia, że istnieje). `GET /api/v1/me` dostaje `agents` (lista), a `practitionerId`/`practitionerStatus` opisują pierwszego (najstarszego) agenta, więc klient napisany na jednego agenta działa bez zmian. Wcześniej `/me` zwracał `practitionerId` zawsze `null` (pole nie było wypełniane); teraz jest wypełnione.
+
+**Uprawnienia.** Edytować agenta może tylko właściciel konta (wiersz z `user_id` = `sub` tokenu). Zatwierdza admin **każdego agenta osobno** (trasy administratora już działały po id agenta). **Zawieszenie jednego agenta nie zawiesza pozostałych**: zawieszenie dotyczy treści i sprzedaży konkretnego agenta (jego profil znika z katalogu, jego pakiety nie są sprzedawane, jego przyszłe dostępy są anulowane z pełnym zwrotem); konto dostawcy i inni agenci nie są ukarani za jednego. Jeśli administrator uzna, że problem dotyczy dostawcy, zawiesza każdego agenta osobno. Odrzucenie i ponowne zgłoszenie też są per agent.
+
+**Profil GitHub.** Dawna reguła „jeden zweryfikowany profil GitHub = jeden agent” (unikalny indeks) uniemożliwiłaby wysłanie drugiego agenta do zatwierdzenia bez drugiego konta GitHub, bo zgłoszenie wymaga `github_linked`. Reguła to teraz „jeden profil GitHub = jedno konto dostawcy”: agenci tego samego konta mogą go współdzielić, agent innego konta nie. Indeks po `lower(github_login)` jest zwykłym indeksem częściowym, a sprawdzenie robi aplikacja (`VerificationFeature`). Utracony jest bezpiecznik bazy przy wyścigu dwóch kont: żeby obie weryfikacje przeszły, kod z wyzwania musi być w opisie profilu GitHub, więc wyścig może wywołać tylko właściciel tego profilu. **Do potwierdzenia przez właściciela**; wycofanie to przywrócenie unikalnego indeksu (przy zdublowanych profilach najpierw trzeba je rozdzielić).
+
+**Konto płatności (Booking).** Zdecydowane: **konto płatności zostaje per agent** (klucz `practitioner_id`, bez zmiany schematu). Powód: wypłaty, `PayoutJob` i sprawdzenie „czy agent może przyjmować pieniądze” przy zakupie już liczą po agencie; wspólne konto na dostawcę wymagałoby nowej tabeli i przepięcia wypłat, a ten kod ma zniknąć w E-03 (sprzedawcą ma być platforma). Cena: dostawca przechodzi onboarding raz na agenta. Wywołania `/api/v1/me/payments/account` biorą `?agent=<slug>` na tych samych zasadach co Directory (jeden agent: bez parametru).
+
+**Powiadomienia i dostępy.** `Booking.PractitionerUserId` to konto dostawcy, więc jego dostępy (wszystkich agentów) widać w jednej liście „jako dostawca”, a e-mail do powiadomień to adres z tokenu zapisany przy agentach (jeden na konto; przy różnicy wygrywa ostatnio zmieniony wiersz). Usunięcie danych konta anonimizuje wszystkich jego agentów po anulowaniu przyszłych dostępów każdego z nich.
+
+**Strona (panel dostawcy).** Wybór agenta to parametr `?agent=<slug>` (nie segment ścieżki: istniejące adresy `/panel-agenta/profil`, `/oferty`, `/platnosci` i ich testy zostają, a formularze, które wysyłają `POST` na bieżący adres, same niosą agenta). Konto z jednym agentem widzi dokładnie to, co dotąd: bez parametru, bez dodatkowego kroku i bez dodatkowego wywołania. Konto z dwoma i więcej: `/panel-agenta` bez parametru pokazuje przegląd („Twoi agenci”: lista z statusami, „Otwórz panel”, suma aktywnych pakietów i ostatnie zakupy po wszystkich agentach; lista zakupów dostawcy w Booking jest per konto, więc suma wynika z niej wprost), a strony jednego agenta bez parametru odsyłają do przeglądu. Z parametrem `?agent=` panel pokazuje wybranego agenta, a jego „ostatnie zakupy” są filtrowane do tego agenta. Nowa strona `/panel-agenta/nowy` dodaje kolejnego agenta (`too_many_agents` jako tekst). Adres powrotu płatności niesie agenta (`/practitioner/payments?agent=<slug>&return=1`).
+
+**Czego ten etap nie robi.**
+- „Moje opinie” (`/moje/opinie`) czyta opinie pierwszego (najstarszego) agenta konta, bo opiera się na `practitionerId` z `/me`; opinie pozostałych agentów nie mają jeszcze widoku w panelu. To znane ograniczenie, nie regresja (wcześniej agent był jeden).
+- Kolejka weryfikacji administratora pokazuje agentów osobno i nie mówi, że dwóch należy do jednego konta (kolejka nie ma pola konta, bo dotąd nie było potrzebne); administrator zatwierdza każdego agenta osobno, tak jak chciał opis zadania.
+- Demonstracyjne dane (`demo-practitioner-N`) zostają „jeden agent na konto”, żeby nie zmieniać zestawu sześciu agentów w katalogu; dostawcę z dwoma agentami tworzy test J9.
+
+**Zgodność wdrożenia.** Nowa trasa wewnętrzna `GET /internal/v1/practitioners/by-user/{userId}/agents`; stara `by-user/{userId}` zostaje i zwraca najstarszego agenta w tym samym kształcie. Migracja zdejmuje tylko ograniczenie, więc można ją wdrożyć przed kodem. Wdrożyć Directory przed Bookingiem.
 
 ## Skutki
 

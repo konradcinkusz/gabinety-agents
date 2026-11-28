@@ -8,7 +8,11 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Gabinety.Directory.Features.Profiles;
 
-/// <summary>/api/v1/me/practitioner: create, read, replace the editable fields, submit for review (CONTRACTS 3.3). Each user sees only the row whose user_id is their token sub.</summary>
+/// <summary>
+/// /api/v1/me/practitioner: create, read, replace the editable fields, submit for review (CONTRACTS 3.3), and (E-04) /api/v1/me/practitioners: the caller's agents.
+/// A user sees only rows whose user_id is their token sub, and may own several (up to <c>Directory:MaxAgentsPerProvider</c>): the calls that work on one agent take its slug as
+/// <c>?agent=</c> (<see cref="OwnAgents"/>); every create adds a new agent.
+/// </summary>
 public sealed class ProfilesFeature : IServiceFeature
 {
     const string Route = "/api/v1/me/practitioner";
@@ -33,6 +37,7 @@ public sealed class ProfilesFeature : IServiceFeature
         g.MapGet("", Get);
         g.MapPut("", Update);
         g.MapPost("submit", Submit);
+        endpoints.MapGet("/api/v1/me/practitioners", List).RequireAuthorization("Authenticated");
     }
 
     static IResult Problem(int status, string code, string title, Dictionary<string, string[]>? errors = null) =>
@@ -62,14 +67,16 @@ public sealed class ProfilesFeature : IServiceFeature
         return trimmed.Length is >= 2 and <= 80 && !trimmed.Any(char.IsControl);
     }
 
+    enum Inserted { Created, TooMany, SlugTaken }
+
     static async Task<IResult> Create(CreatePractitionerRequest req, ClaimsPrincipal user, HttpContext ctx, DirectoryDbContext db,
-        IEmailVerifiedLookup email, TimeProvider time, CancellationToken ct)
+        IEmailVerifiedLookup email, IConfiguration config, TimeProvider time, CancellationToken ct)
     {
         if (UserId(user) is not { } uid) return Results.Unauthorized();
         if (!ValidName(req.DisplayName, out var name)) return Invalid("displayName", "2 to 80 characters, no control characters");
         if (req.Slug is not null && !SlugGenerator.IsValid(req.Slug)) return Invalid("slug", "3 to 60 characters of a-z, 0-9 and single hyphens");
-        if (await db.Practitioners.AnyAsync(x => x.UserId == uid, ct)) return Problem(409, ErrorCodes.PractitionerExists, "Practitioner exists");
 
+        var max = OwnAgents.Max(config);
         var baseSlug = req.Slug ?? SlugGenerator.FromName(name);
         var now = time.GetUtcNow();
         for (var n = 1; n <= SlugAttempts + 1; n++)
@@ -77,37 +84,74 @@ public sealed class ProfilesFeature : IServiceFeature
             var slug = SlugGenerator.WithSuffix(baseSlug, n);
             if (await db.Practitioners.AnyAsync(x => x.Slug == slug, ct)) { continue; }
             var p = new Practitioner { Id = Guid.NewGuid(), UserId = uid, Slug = slug, DisplayName = name, ContactEmail = UserEmail.From(user), Status = PractitionerStatus.Draft, CreatedAt = now, UpdatedAt = now };
-            db.Practitioners.Add(p);
-            try { await db.SaveChangesAsync(ct); }
-            catch (DbUpdateException)
+            switch (await Insert(db, p, max, ct))
             {
-                // The unique indexes decide a race: another request took the user or the slug between our check and the insert.
-                db.Entry(p).State = EntityState.Detached;
-                if (await db.Practitioners.AnyAsync(x => x.UserId == uid, ct)) return Problem(409, ErrorCodes.PractitionerExists, "Practitioner exists");
-                continue;
+                case Inserted.TooMany: return Problem(422, ErrorCodes.TooManyAgents, $"At most {max} agents per account");
+                case Inserted.Created: return Results.Created(Route, await View(p, ctx, email, ct));
             }
-            return Results.Created(Route, await View(p, ctx, email, ct));
         }
         return Problem(409, ErrorCodes.PractitionerExists, "Slug could not be allocated, try again"); // practically unreachable
     }
 
-    static async Task<IResult> Get(ClaimsPrincipal user, HttpContext ctx, DirectoryDbContext db, IEmailVerifiedLookup email, CancellationToken ct)
+    /// <summary>
+    /// Counts the account's agents and inserts the new one as one step. On PostgreSQL a transaction-scoped advisory lock on the user id makes two creates of one account run one
+    /// after the other, so the limit cannot be exceeded by a race; the unique slug index decides a race for the slug (<see cref="Inserted.SlugTaken"/>: the caller tries the next
+    /// slug). InMemory has no locks or transactions.
+    /// </summary>
+    static async Task<Inserted> Insert(DirectoryDbContext db, Practitioner p, int max, CancellationToken ct)
+    {
+        if (!db.Database.IsRelational())
+        {
+            if (await db.Practitioners.CountAsync(x => x.UserId == p.UserId, ct) >= max) return Inserted.TooMany;
+            db.Practitioners.Add(p);
+            try { await db.SaveChangesAsync(ct); return Inserted.Created; }
+            catch (DbUpdateException) { db.Entry(p).State = EntityState.Detached; return Inserted.SlugTaken; }
+        }
+
+        return await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+        {
+            db.ChangeTracker.Clear(); // a retry starts from the database, not from a half-applied attempt
+            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_xact_lock(hashtextextended({p.UserId}, 0))", ct);
+            if (await db.Practitioners.CountAsync(x => x.UserId == p.UserId, ct) >= max) return Inserted.TooMany;
+            db.Practitioners.Add(p);
+            try { await db.SaveChangesAsync(ct); }
+            catch (DbUpdateException)
+            {
+                await tx.RollbackAsync(ct);
+                db.ChangeTracker.Clear();
+                return Inserted.SlugTaken;
+            }
+            await tx.CommitAsync(ct);
+            return Inserted.Created;
+        });
+    }
+
+    /// <summary>GET /api/v1/me/practitioners: the caller's agents, oldest first (E-04). Light rows: no checklist and no e-mail lookup, so the list is one query.</summary>
+    static async Task<IResult> List(ClaimsPrincipal user, DirectoryDbContext db, CancellationToken ct)
     {
         if (UserId(user) is not { } uid) return Results.Unauthorized();
-        var p = await db.Practitioners.SingleOrDefaultAsync(x => x.UserId == uid, ct);
-        if (p is null) return Problem(404, ErrorCodes.NotFound, "Not found");
+        var rows = await db.Practitioners.AsNoTracking().Where(x => x.UserId == uid).OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).ToListAsync(ct); // order, then project
+        return Results.Ok(new { items = rows.Select(p => new PractitionerSummary(p.Id, p.Slug, p.DisplayName, p.Headline, p.Status, p.StatusReason)) });
+    }
+
+    static async Task<IResult> Get(string? agent, ClaimsPrincipal user, HttpContext ctx, DirectoryDbContext db, IEmailVerifiedLookup email, CancellationToken ct)
+    {
+        if (UserId(user) is not { } uid) return Results.Unauthorized();
+        var (p, rejected) = await OwnAgents.FindAsync(db, uid, agent, ct);
+        if (p is null) return rejected!;
         Snapshot(p, user); // the dashboard loads this on sign-in: the address follows a change made in authservice
         if (db.Entry(p).State == EntityState.Modified) await db.SaveChangesAsync(ct);
         return Results.Ok(await View(p, ctx, email, ct));
     }
 
-    static async Task<IResult> Update(UpdatePractitionerRequest req, ClaimsPrincipal user, HttpContext ctx, DirectoryDbContext db,
+    static async Task<IResult> Update(UpdatePractitionerRequest req, string? agent, ClaimsPrincipal user, HttpContext ctx, DirectoryDbContext db,
         IEmailVerifiedLookup email, IChecklistFacts facts, INipValidator nips, IContactDetailDetector contact, IConfiguration config,
         TimeProvider time, CancellationToken ct)
     {
         if (UserId(user) is not { } uid) return Results.Unauthorized();
-        var p = await db.Practitioners.SingleOrDefaultAsync(x => x.UserId == uid, ct);
-        if (p is null) return Problem(404, ErrorCodes.NotFound, "Not found");
+        var (p, rejected) = await OwnAgents.FindAsync(db, uid, agent, ct);
+        if (p is null) return rejected!;
 
         var errors = new Dictionary<string, string[]>();
         if (!ValidName(req.DisplayName, out var name)) errors["displayName"] = ["2 to 80 characters, no control characters"];
@@ -148,12 +192,12 @@ public sealed class ProfilesFeature : IServiceFeature
         return Results.Ok(await View(p, ctx, email, ct));
     }
 
-    static async Task<IResult> Submit(ClaimsPrincipal user, HttpContext ctx, DirectoryDbContext db, IEmailVerifiedLookup email,
+    static async Task<IResult> Submit(string? agent, ClaimsPrincipal user, HttpContext ctx, DirectoryDbContext db, IEmailVerifiedLookup email,
         IChecklistFacts facts, TimeProvider time, CancellationToken ct)
     {
         if (UserId(user) is not { } uid) return Results.Unauthorized();
-        var p = await db.Practitioners.SingleOrDefaultAsync(x => x.UserId == uid, ct);
-        if (p is null) return Problem(404, ErrorCodes.NotFound, "Not found");
+        var (p, rejected) = await OwnAgents.FindAsync(db, uid, agent, ct);
+        if (p is null) return rejected!;
         if (!PractitionerStateMachine.TryTransition(p.Status, PractitionerTrigger.Submit, out var next))
             return Problem(409, ErrorCodes.InvalidTransition, "Invalid transition");
 

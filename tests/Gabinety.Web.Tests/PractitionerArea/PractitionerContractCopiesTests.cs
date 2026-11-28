@@ -34,6 +34,19 @@ public class PractitionerContractCopiesTests
     }
 
     [Fact]
+    public void Me_carries_the_agents_of_the_account_and_the_list_of_agents_reads_into_the_copies()
+    {
+        var other = Guid.Parse("018f0000-0000-7000-8000-000000000003");
+        var me = Read<W.MeDto>(new MeDto("u1", Id, PractitionerStatus.Approved, false, false, [new MeAgent(Id, "demo-a", "Demo A", PractitionerStatus.Approved), new MeAgent(other, "demo-b", "Demo B", PractitionerStatus.Suspended)]));
+        Assert.Equal([("demo-a", "Approved"), ("demo-b", "Suspended")], me.Agents!.Select(a => (a.Slug, a.Status)));
+        Assert.Empty(Read<W.MeDto>(new MeDto("u1", null, null, false, false)).Agents ?? []); // an account with none, or an older service: no agents
+
+        var list = Read<W.PractitionerSummariesDto>(new { items = new[] { new PractitionerSummary(Id, "demo-a", "Demo A", "Nagłówek", PractitionerStatus.Rejected, "Powód") } });
+        var row = Assert.Single(list.Items);
+        Assert.Equal((Id, "demo-a", "Demo A", "Nagłówek", "Rejected", "Powód"), (row.Id, row.Slug, row.DisplayName, row.Headline, row.Status, row.StatusReason));
+    }
+
+    [Fact]
     public void An_offer_reads_into_the_copy_and_the_list_is_wrapped_in_items()
     {
         var offer = new OfferingPrivate(Id, "Tytuł", "Opis", 60, new MoneyDto(18050), "code-review", ["dotnet"], false, "https://meet.google.com/a");

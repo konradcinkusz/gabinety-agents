@@ -39,7 +39,14 @@ public sealed record RankingWeights(double Rating, double Reliability, double Av
 public sealed record RankingConstants(int M, double Mu, int MinReviewsToShowRating, int SlotsForFullAvailability);
 public sealed record RankingRulesDto(string Version, [property: System.Text.Json.Serialization.JsonConverter(typeof(Gabinety.Contracts.Common.UtcInstantConverter))] DateTimeOffset EffectiveFrom, RankingWeights Weights, RankingConstants Constants);
 
-public sealed record MeDto(string UserId, Guid? PractitionerId, PractitionerStatus? PractitionerStatus, bool IsAdmin, bool IsModerator);
+/// <summary>One agent of the signed-in provider account (E-04).</summary>
+public sealed record MeAgent(Guid Id, string Slug, string DisplayName, PractitionerStatus Status);
+
+/// <summary><c>PractitionerId</c> and <c>PractitionerStatus</c> describe the account's first (oldest) agent, so a client written for one agent per account keeps working; <c>Agents</c> lists all of them, oldest first (E-04).</summary>
+public sealed record MeDto(string UserId, Guid? PractitionerId, PractitionerStatus? PractitionerStatus, bool IsAdmin, bool IsModerator, IReadOnlyList<MeAgent>? Agents = null);
+
+/// <summary>One row of <c>GET /api/v1/me/practitioners</c>: the provider's own agents, oldest first (E-04).</summary>
+public sealed record PractitionerSummary(Guid Id, string Slug, string DisplayName, string Headline, PractitionerStatus Status, string? StatusReason);
 
 public sealed record CreatePractitionerRequest([property: Required, StringLength(80, MinimumLength = 2)] string DisplayName,
     [property: StringLength(60, MinimumLength = 3)] string? Slug = null);

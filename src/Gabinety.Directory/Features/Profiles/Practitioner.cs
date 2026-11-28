@@ -8,6 +8,7 @@ namespace Gabinety.Directory.Features.Profiles;
 public sealed class Practitioner
 {
     public Guid Id { get; set; }
+    /// <summary>The provider account that owns the agent. Not unique since E-04: one account may own up to <c>Directory:MaxAgentsPerProvider</c> agents.</summary>
     public string UserId { get; set; } = "";
     public string Slug { get; set; } = "";
     public string DisplayName { get; set; } = "";
@@ -83,8 +84,8 @@ public sealed class PractitionerConfiguration : IEntityTypeConfiguration<Practit
         b.Property(x => x.GithubChallengeCode).HasColumnName("github_challenge_code").HasMaxLength(40);
         b.Property(x => x.GithubChallengeLogin).HasColumnName("github_challenge_login").HasMaxLength(39);
         b.Property(x => x.GithubChallengeExpiresAt).HasColumnName("github_challenge_expires_at");
-        // ux on lower(github_login) where github_linked is raw SQL in migration T-03.05 (EF cannot model an expression index)
-        b.HasIndex(x => x.UserId).IsUnique();
+        // the index on lower(github_login) where github_linked is raw SQL (T-03.05, made non-unique by E-04: EF cannot model an expression index); one GitHub profile per provider account is checked in VerificationFeature
+        b.HasIndex(x => x.UserId); // not unique since E-04: one provider account may own several agents; the slug stays unique
         b.HasIndex(x => x.Slug).IsUnique();
         b.HasIndex(x => new { x.Status, x.RankingScore, x.ApprovedAt, x.Id }).IsDescending(false, true, false, false); // for later: the public listing
     }
